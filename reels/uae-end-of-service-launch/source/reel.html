@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>UAE End of Service Calculator — Premium Launch</title>
+<style>
+  @font-face { font-family: 'Playfair Display'; font-weight: 500; src: url('../../_assets/fonts/playfair-display-latin-500-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Playfair Display'; font-weight: 600; src: url('../../_assets/fonts/playfair-display-latin-600-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Playfair Display'; font-weight: 700; src: url('../../_assets/fonts/playfair-display-latin-700-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Playfair Display'; font-weight: 500; font-style: italic; src: url('../../_assets/fonts/playfair-display-latin-500-italic.woff2') format('woff2'); }
+  @font-face { font-family: 'Inter'; font-weight: 400; src: url('../../_assets/fonts/inter-latin-400-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Inter'; font-weight: 500; src: url('../../_assets/fonts/inter-latin-500-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Inter'; font-weight: 600; src: url('../../_assets/fonts/inter-latin-600-normal.woff2') format('woff2'); }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: #0A1526; }
+  #stage {
+    position: relative; width: 1080px; height: 1920px; overflow: hidden;
+    font-family: 'Inter', sans-serif; color: #F2EFE8;
+    background: radial-gradient(130% 85% at 50% 25%, #122340 0%, #0C1930 50%, #070F1D 100%);
+  }
+  .serif { font-family: 'Playfair Display', serif; }
+
+  #grain { position: absolute; inset: -60px; opacity: 0.55; pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 0.95 0 0 0 0 0.85 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  .haze { position: absolute; left: 50%; top: 45%; width: 1600px; height: 1600px; transform: translate(-50%,-50%);
+    background: radial-gradient(circle, rgba(212,175,106,0.09) 0%, rgba(212,175,106,0) 58%); }
+
+  .scene { position: absolute; inset: 0; visibility: hidden; }
+  .centercol { position: absolute; left: 90px; right: 90px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+
+  .eyebrow { font-size: 27px; font-weight: 600; letter-spacing: 9px; color: #D4AF6A; text-transform: uppercase; }
+  .mask { overflow: hidden; }
+  .h1 { font-size: 100px; font-weight: 600; line-height: 1.16; letter-spacing: -0.5px; }
+  .h2 { font-size: 80px; font-weight: 600; line-height: 1.2; }
+  .ital { font-style: italic; font-weight: 500; color: #D4AF6A; }
+  .rule { height: 2px; background: rgba(212,175,106,0.75); transform-origin: center; }
+  .body { font-size: 35px; font-weight: 400; color: #9FAEC7; line-height: 1.55; }
+
+  /* ledger */
+  .ledger { position: absolute; left: 110px; right: 110px; top: 560px; }
+  .lrow { display: flex; justify-content: space-between; align-items: baseline; padding: 40px 6px; }
+  .lname { font-size: 37px; font-weight: 500; color: #C7D2E4; }
+  .lsub { font-size: 24px; font-weight: 400; color: #7488A6; margin-top: 8px; }
+  .lval { font-family: 'Playfair Display', serif; font-size: 56px; font-weight: 600; color: #F2EFE8; white-space: nowrap; }
+  .hair { height: 1px; background: rgba(199,210,228,0.22); transform-origin: left center; }
+  .hair.gold { height: 2px; background: rgba(212,175,106,0.85); }
+  .totrow { display: flex; justify-content: space-between; align-items: baseline; padding: 48px 6px 0; }
+  .totname { font-size: 30px; font-weight: 600; letter-spacing: 5px; color: #D4AF6A; text-transform: uppercase; }
+  .totval { font-family: 'Playfair Display', serif; font-size: 104px; font-weight: 700; color: #D4AF6A; white-space: nowrap;
+            text-shadow: 0 0 60px rgba(212,175,106,0.35); }
+
+  .lawcard { border: 1px solid rgba(212,175,106,0.4); border-radius: 26px; padding: 44px 54px; background: rgba(212,175,106,0.05); }
+  .lawline { font-size: 33px; font-weight: 500; color: #C7D2E4; line-height: 1.7; }
+  .lawline b { color: #F2EFE8; font-weight: 600; }
+
+  .urlbar { display: inline-block; font-size: 30px; font-weight: 600; color: #0A1526;
+            background: linear-gradient(180deg, #E3C687, #D4AF6A); border-radius: 999px; padding: 28px 54px;
+            box-shadow: 0 20px 60px rgba(212,175,106,0.25); }
+  .minor { font-size: 27px; font-weight: 500; color: #7488A6; letter-spacing: 1px; }
+  .brand { font-family: 'Playfair Display', serif; font-size: 58px; font-weight: 600; letter-spacing: 6px; }
+  #fade { position: absolute; inset: 0; background: #070F1D; opacity: 0; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="haze" id="haze"></div>
+
+  <!-- S1 0–4000 cold open -->
+  <div class="scene" id="s1">
+    <div class="centercol" style="top:840px; gap:36px;">
+      <div class="mask"><div id="s1eb" class="eyebrow">For every UAE professional</div></div>
+      <div class="mask"><div id="s1l1" class="serif h1">Leaving a job</div></div>
+      <div class="mask"><div id="s1l2" class="serif h1">in the <span class="ital">UAE?</span></div></div>
+      <div id="s1rule" class="rule" style="width:220px; margin-top:28px;"></div>
+    </div>
+  </div>
+
+  <!-- S2 4000–8500 premise -->
+  <div class="scene" id="s2">
+    <div class="centercol" style="top:820px; gap:40px;">
+      <div class="mask"><div id="s2l1" class="serif h2">Your final settlement</div></div>
+      <div class="mask"><div id="s2l2" class="serif h2">is <span class="ital">more</span> than gratuity.</div></div>
+      <div class="mask"><div id="s2sub" class="body" style="max-width:780px; margin-top:26px;">Unused leave. Basic-salary rules. The two-year cap. It all changes your number.</div></div>
+    </div>
+  </div>
+
+  <!-- S3 8500–12500 reveal -->
+  <div class="scene" id="s3">
+    <div class="centercol" style="top:790px; gap:38px;">
+      <div class="mask"><div id="s3eb" class="eyebrow">New · Updated for 2026</div></div>
+      <div class="mask"><div id="s3l1" class="serif h1" style="font-size:92px;">The UAE End of Service</div></div>
+      <div class="mask"><div id="s3l2" class="serif h1" style="font-size:92px;"><span class="ital">Calculator</span></div></div>
+      <div id="s3rule" class="rule" style="width:320px; margin-top:26px;"></div>
+      <div class="mask"><div id="s3sub" class="body" style="margin-top:14px;">Your complete settlement — not just an estimate of one part.</div></div>
+    </div>
+  </div>
+
+  <!-- S4 12500–21000 ledger -->
+  <div class="scene" id="s4">
+    <div class="centercol" style="top:330px;">
+      <div class="mask"><div id="s4eb" class="eyebrow">One clear number</div></div>
+      <div class="mask"><div id="s4h" class="serif h2" style="font-size:64px; margin-top:26px;">Example · 5 years of service</div></div>
+    </div>
+    <div class="ledger">
+      <div id="lhair0" class="hair"></div>
+      <div class="lrow" id="lrow1">
+        <div><div class="lname">Gratuity</div><div class="lsub">21 days basic pay × 5 years</div></div>
+        <div class="lval" id="lval1">AED 0</div>
+      </div>
+      <div id="lhair1" class="hair"></div>
+      <div class="lrow" id="lrow2">
+        <div><div class="lname">Unused leave payout</div><div class="lsub">12 accrued days</div></div>
+        <div class="lval" id="lval2">AED 0</div>
+      </div>
+      <div id="lhair2" class="hair gold"></div>
+      <div class="totrow" id="lrow3">
+        <div class="totname">Final<br>settlement</div>
+        <div class="totval" id="lval3">AED 0</div>
+      </div>
+    </div>
+    <div class="centercol" style="top:1560px;">
+      <div class="mask"><div id="s4cap" class="body" style="font-size:33px;">Yours will be different. That's the point.</div></div>
+    </div>
+  </div>
+
+  <!-- S5 21000–26000 law -->
+  <div class="scene" id="s5">
+    <div class="centercol" style="top:700px; gap:44px;">
+      <div class="mask"><div id="s5l1" class="serif h2" style="font-size:72px;">Grounded in the <span class="ital">law.</span></div></div>
+      <div id="s5card" class="lawcard" style="max-width:860px;">
+        <div class="lawline">Built on <b>Federal Decree-Law No. 33 of 2021</b><br>Articles <b>51 &amp; 53</b> · UAE Labour Law</div>
+      </div>
+      <div class="mask"><div id="s5sub" class="body" style="font-size:31px;">Basic-salary based · two-year cap applied · updated March 2026</div></div>
+    </div>
+  </div>
+
+  <!-- S6 26000–34000 CTA -->
+  <div class="scene" id="s6">
+    <div class="centercol" style="top:600px; gap:38px;">
+      <div class="mask"><div id="s6l1" class="serif h2">Know your number.</div></div>
+      <div class="mask"><div id="s6l2" class="serif h2"><span class="ital">Then</span> sign.</div></div>
+      <div id="s6rule" class="rule" style="width:240px; margin-top:14px;"></div>
+      <div class="mask" style="margin-top:44px;"><div id="s6eb" class="eyebrow" style="font-size:24px;">UAE Hospitality Careers</div></div>
+      <div class="mask"><div id="s6brand" class="brand">INSPIRE AMBITIONS</div></div>
+      <div class="mask" style="margin-top:20px;"><div id="s6url"><span class="urlbar">inspireambitions.com/uae-end-of-service-calculator</span></div></div>
+      <div class="mask"><div id="s6min" class="minor">Free · No signup · Link in bio</div></div>
+    </div>
+  </div>
+
+  <div id="grain"></div>
+  <div id="fade"></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const clamp = (x,a,b) => Math.min(b, Math.max(a,x));
+const P = (t,s,d) => clamp((t-s)/d, 0, 1);
+const outExpo = p => p >= 1 ? 1 : 1 - Math.pow(2, -10*p);
+const outCubic = p => 1 - Math.pow(1-p, 3);
+
+function rise(el, t, s, d = 900) {
+  const p = outExpo(P(t, s, d));
+  el.style.transform = `translateY(${(1-p)*112}%)`;
+  el.style.opacity = p > 0 ? 1 : 0;
+}
+function fadeUp(el, t, s, d = 750, dist = 46) {
+  const p = outExpo(P(t, s, d));
+  el.style.opacity = p;
+  el.style.transform = `translateY(${(1-p)*dist}px)`;
+}
+function drawRule(el, t, s, d = 850) { el.style.transform = `scaleX(${outExpo(P(t, s, d))})`; }
+function show(el, on) { el.style.visibility = on ? 'visible' : 'hidden'; }
+const fmt = n => 'AED ' + Math.round(n).toLocaleString('en-US');
+
+const S1=0, S2=4000, S3=8500, S4=12500, S5=21000, S6=26000, END=34000;
+
+function render(t) {
+  $('haze').style.transform = `translate(-50%,-50%) translateY(${Math.sin(t/2600)*34}px)`;
+  $('grain').style.transform = `translate(${(t*0.01)%60}px, ${(t*0.007)%60}px)`;
+
+  const scenes = { s1:[S1,S2], s2:[S2,S3], s3:[S3,S4], s4:[S4,S5], s5:[S5,S6], s6:[S6,END+1] };
+  for (const [id,[a,b]] of Object.entries(scenes)) show($(id), t >= a && t < b);
+
+  if (t < S2) {
+    const lt = t - S1;
+    rise($('s1eb'), lt, 100);
+    rise($('s1l1'), lt, 380); rise($('s1l2'), lt, 560);
+    drawRule($('s1rule'), lt, 1100);
+    $('s1').style.transform = `scale(${1 + 0.035*(lt/(S2-S1))})`;
+    $('s1').style.opacity = 1 - P(lt, S2-S1-400, 400);
+  } else if (t < S3) {
+    const lt = t - S2;
+    rise($('s2l1'), lt, 150); rise($('s2l2'), lt, 340);
+    rise($('s2sub'), lt, 1200);
+    $('s2').style.transform = `scale(${1 + 0.035*(lt/(S3-S2))})`;
+    $('s2').style.opacity = 1 - P(lt, S3-S2-400, 400);
+  } else if (t < S4) {
+    const lt = t - S3;
+    rise($('s3eb'), lt, 100);
+    rise($('s3l1'), lt, 380); rise($('s3l2'), lt, 560);
+    drawRule($('s3rule'), lt, 1150);
+    rise($('s3sub'), lt, 1450);
+    $('s3').style.transform = `scale(${1 + 0.035*(lt/(S4-S3))})`;
+    $('s3').style.opacity = 1 - P(lt, S4-S3-400, 400);
+  } else if (t < S5) { // ---- LEDGER
+    const lt = t - S4;
+    rise($('s4eb'), lt, 100); rise($('s4h'), lt, 300);
+    drawRule($('lhair0'), lt, 800, 700);
+    fadeUp($('lrow1'), lt, 1000);
+    $('lval1').textContent = fmt(35000 * outCubic(P(lt, 1300, 1300)));
+    drawRule($('lhair1'), lt, 2500, 700);
+    fadeUp($('lrow2'), lt, 2700);
+    $('lval2').textContent = fmt(4000 * outCubic(P(lt, 3000, 1100)));
+    drawRule($('lhair2'), lt, 4300, 700);
+    fadeUp($('lrow3'), lt, 4500, 850, 54);
+    const tp = outCubic(P(lt, 4800, 1700));
+    $('lval3').textContent = fmt(39000 * tp);
+    const lp = P(lt, 6500, 380);
+    $('lval3').style.transform = `scale(${lp<=0||lp>=1 ? 1 : 1+0.05*Math.sin(lp*Math.PI)})`;
+    rise($('s4cap'), lt, 7000);
+    $('s4').style.opacity = 1 - P(lt, S5-S4-400, 400);
+  } else if (t < S6) { // law
+    const lt = t - S5;
+    rise($('s5l1'), lt, 150);
+    fadeUp($('s5card'), lt, 900, 850, 50);
+    rise($('s5sub'), lt, 1900);
+    $('s5').style.transform = `scale(${1 + 0.03*(lt/(S6-S5))})`;
+    $('s5').style.opacity = 1 - P(lt, S6-S5-400, 400);
+  } else { // CTA
+    const lt = t - S6;
+    rise($('s6l1'), lt, 150); rise($('s6l2'), lt, 340);
+    drawRule($('s6rule'), lt, 950);
+    rise($('s6eb'), lt, 1350); rise($('s6brand'), lt, 1550);
+    rise($('s6url'), lt, 1950); rise($('s6min'), lt, 2350);
+    $('s6').style.transform = `scale(${1 + 0.02*(lt/(END-S6))})`;
+  }
+
+  $('fade').style.opacity = P(t, END-600, 600);
+}
+
+window.seek = render;
+window.REEL = { fps: 30, durationMs: END };
+render(0);
+if (location.search.includes('play')) {
+  const t0 = performance.now();
+  (function loop(){ render((performance.now()-t0)%(END+800)); requestAnimationFrame(loop); })();
+}
+</script>
+</body>
+</html>
