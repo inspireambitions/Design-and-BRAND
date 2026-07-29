@@ -66,7 +66,9 @@ export function CoachDrawer({ report }: { report: RoadmapReport }) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="no-print fixed bottom-6 right-6 z-40 inline-flex items-center gap-2.5 rounded-full bg-ever-night px-6 py-4 font-medium text-paper-soft shadow-float transition-all hover:bg-ever-deep hover:shadow-glow"
+        // Icon-only on small screens: at full width this button sits on top of
+        // the email field and the report's own CTAs.
+        className="no-print fixed bottom-5 right-5 z-40 inline-flex items-center gap-2.5 rounded-full bg-ever-night p-4 font-medium text-paper-soft shadow-float transition-all hover:bg-ever-deep hover:shadow-glow sm:bottom-6 sm:right-6 sm:px-6 sm:py-4"
       >
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
           <path
@@ -77,7 +79,7 @@ export function CoachDrawer({ report }: { report: RoadmapReport }) {
             strokeLinejoin="round"
           />
         </svg>
-        Ask your coach
+        <span className="sr-only sm:not-sr-only">Ask your coach</span>
       </button>
 
       {open && (

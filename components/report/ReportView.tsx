@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BRAND } from "@/lib/brand";
 import { store } from "@/lib/storage";
 import { SECTION_META, type RoadmapReport } from "@/lib/types";
 import { CoachDrawer } from "./CoachDrawer";
@@ -22,11 +21,13 @@ import {
   TimelineSection,
 } from "./Sections";
 import { Feedback } from "./Feedback";
+import { EmailGate } from "./EmailGate";
 
 export function ReportView() {
   const router = useRouter();
   const [report, setReport] = useState<RoadmapReport | null>(null);
   const [unlocked, setUnlocked] = useState(false);
+  const [email, setEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -37,14 +38,15 @@ export function ReportView() {
     }
     setReport(r);
     setUnlocked(store.isUnlocked());
+    setEmail(store.loadEmail());
     setLoading(false);
   }, [router]);
 
-  function unlock() {
-    // Demo checkout. Wire a real Stripe Checkout session here and flip this
-    // flag only after the webhook confirms payment.
+  function unlock(address: string) {
     store.setUnlocked(true);
+    store.saveEmail(address);
     setUnlocked(true);
+    setEmail(address);
     requestAnimationFrame(() =>
       document.getElementById("courses")?.scrollIntoView({ behavior: "smooth", block: "start" })
     );
@@ -143,6 +145,16 @@ export function ReportView() {
 
           {unlocked ? (
             <>
+              {email && (
+                <div className="no-print flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-2xl bg-signal/20 px-6 py-3.5 text-center text-[15px] text-ever-night">
+                  <span aria-hidden>✓</span>
+                  <span>
+                    Unlocked. A link back to this roadmap is on its way to{" "}
+                    <strong className="font-semibold">{email}</strong>.
+                  </span>
+                </div>
+              )}
+
               <CoursesSection report={report} />
               <ProjectsSection report={report} />
               <ResumeSection report={report} />
@@ -173,7 +185,7 @@ export function ReportView() {
             </>
           ) : (
             <>
-              <Paywall report={report} onUnlock={unlock} />
+              <EmailGate report={report} onUnlock={unlock} />
               <Feedback />
             </>
           )}
@@ -201,101 +213,3 @@ function Fact({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Paywall({ report, onUnlock }: { report: RoadmapReport; onUnlock: () => void }) {
-  const locked = SECTION_META.filter((m) => !m.free);
-
-  return (
-    <div className="no-print">
-      {/* Teaser: real first course, blurred */}
-      <div className="relative">
-        <div className="locked-blur" aria-hidden>
-          <CoursesSection report={report} />
-        </div>
-        <div className="absolute inset-x-0 bottom-0 top-1/3 bg-gradient-to-b from-transparent via-paper/80 to-paper" />
-      </div>
-
-      <div className="relative -mt-16">
-        <div className="overflow-hidden rounded-[2rem] border border-ink/[0.08] bg-paper-soft shadow-float">
-          <div className="border-b border-ink/[0.07] px-8 py-10 text-center sm:px-12">
-            <span className="eyebrow">9 sections still locked</span>
-            <h2 className="mx-auto mt-4 max-w-xl font-display text-3xl font-semibold leading-tight tracking-tight text-ink text-balance sm:text-4xl">
-              You&rsquo;ve seen the diagnosis. The rest is the treatment.
-            </h2>
-            <p className="mx-auto mt-4 max-w-lg leading-relaxed text-ink-soft">
-              Courses filtered to your budget, portfolio projects built on your{" "}
-              {report.snapshot.from.toLowerCase()} background, salary stages, the interview
-              narrative, an honest risk read, and your first 90 days on the job.
-            </p>
-
-            {/* One real, personalized number from behind the paywall — it is
-                the most persuasive thing on this card. */}
-            <div className="mx-auto mt-8 grid max-w-lg gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl bg-paper-deep/60 px-5 py-4 text-left">
-                <p className="text-xs font-semibold uppercase tracking-wider text-ink-faint">
-                  Your difficulty rating
-                </p>
-                <p className="mt-1 font-display text-2xl font-semibold text-ink">
-                  {report.risk.difficulty}/10{" "}
-                  <span className="text-base font-medium text-clay">{report.risk.difficultyLabel}</span>
-                </p>
-                <p className="mt-1 text-sm text-ink-faint">
-                  Section 11 explains why, and what to do about it.
-                </p>
-              </div>
-              <div className="rounded-2xl bg-paper-deep/60 px-5 py-4 text-left">
-                <p className="text-xs font-semibold uppercase tracking-wider text-ink-faint">
-                  Your first-role salary band
-                </p>
-                <p className="mt-1 font-display text-2xl font-semibold text-ink">
-                  {report.salary[0]?.range ?? "—"}
-                </p>
-                <p className="mt-1 text-sm text-ink-faint">
-                  Three more stages in section 7.
-                </p>
-              </div>
-            </div>
-
-            <div className="mx-auto mt-4 max-w-lg rounded-2xl bg-paper-deep/60 px-6 py-4">
-              <p className="text-[15px] text-ink-soft">
-                A career coach charges{" "}
-                <strong className="font-semibold text-ink">${BRAND.priceAnchor}+ an hour</strong>{" "}
-                and would take two weeks to produce less than this.
-              </p>
-            </div>
-
-            <button onClick={onUnlock} className="btn-signal mt-8 text-base">
-              Unlock the full roadmap — ${BRAND.price}
-            </button>
-            <p className="mt-3 text-sm text-ink-faint">
-              One-time payment. No subscription. {BRAND.guaranteeDays}-day money-back guarantee.
-            </p>
-            <p className="mt-1 text-xs text-ink-faint/70">🔒 Secure checkout</p>
-          </div>
-
-          <ul className="grid gap-px bg-ink/[0.06] sm:grid-cols-2 lg:grid-cols-3">
-            {locked.map((m) => (
-              <li key={m.id} className="bg-paper-soft p-6">
-                <div className="flex items-start gap-3">
-                  <span className="text-lg" aria-hidden>{m.icon}</span>
-                  <div>
-                    <h3 className="font-display font-semibold leading-snug text-ink">{m.title}</h3>
-                    <p className="mt-1 text-sm leading-relaxed text-ink-faint">{m.blurb}</p>
-                  </div>
-                </div>
-                <div className="mt-4 space-y-2" aria-hidden>
-                  {[100, 82, 91, 64].map((w, i) => (
-                    <div
-                      key={i}
-                      className="h-2 rounded-full bg-ink/[0.07]"
-                      style={{ width: `${w}%` }}
-                    />
-                  ))}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-    </div>
-  );
-}

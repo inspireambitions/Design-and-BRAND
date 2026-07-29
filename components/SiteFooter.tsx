@@ -27,7 +27,7 @@ export function SiteFooter() {
           <ul className="mt-4 space-y-2.5 text-sm">
             <li><Link href="/#faq" className="transition-colors hover:text-signal">FAQ</Link></li>
             <li><a href={`mailto:${BRAND.supportEmail}`} className="transition-colors hover:text-signal">Contact</a></li>
-            <li><Link href="/#pricing" className="transition-colors hover:text-signal">{BRAND.guaranteeDays}-day guarantee</Link></li>
+            <li><Link href="/#pricing" className="transition-colors hover:text-signal">Free while in beta</Link></li>
           </ul>
         </div>
       </div>

@@ -27,7 +27,7 @@ const STEPS = [
 ];
 
 const COMPARISON = [
-  { label: "Cost", coach: `$${BRAND.priceAnchor}+ per hour`, generic: "Free", ours: `$${BRAND.price} once` },
+  { label: "Cost", coach: `$${BRAND.priceAnchor}+ per hour`, generic: "Free", ours: "Free in beta" },
   { label: "Turnaround", coach: "1–2 weeks to book", generic: "Instant", ours: "Under 4 minutes" },
   { label: "Personalized to your hours & budget", coach: "Yes", generic: "No", ours: "Yes" },
   { label: "Month-by-month schedule", coach: "Sometimes", generic: "No", ours: "Yes" },
@@ -94,7 +94,7 @@ export default function HomePage() {
               <Dot /> No account needed to start
             </span>
             <span className="inline-flex items-center gap-2">
-              <Dot /> {BRAND.guaranteeDays}-day money-back guarantee
+              <Dot /> Full roadmap free in beta
             </span>
           </div>
         </div>
@@ -104,7 +104,7 @@ export default function HomePage() {
       <section className="border-y border-ink/[0.07] bg-paper-deep/50">
         <div className="container-page grid gap-8 py-10 sm:grid-cols-3">
           <Stat value="12" label="sections in every roadmap" sub="From skill gaps to your first 90 days on the job" />
-          <Stat value={`$${BRAND.price}`} label="one-time, not a subscription" sub={`A career coach charges $${BRAND.priceAnchor}+ for one hour`} />
+          <Stat value="Free" label="while we're in beta" sub={`A career coach charges $${BRAND.priceAnchor}+ for one hour`} />
           <Stat value="~4 min" label="from first question to full plan" sub="Three minutes of answers, under one to generate" />
         </div>
       </section>
@@ -310,9 +310,13 @@ export default function HomePage() {
                 </span>
               </div>
               <p className="mt-2 text-paper-soft/70">All twelve sections, yours to keep and re-read.</p>
-              <p className="mt-7 flex items-baseline gap-2">
-                <span className="font-display text-5xl font-semibold">${BRAND.price}</span>
-                <span className="text-paper-soft/60">once</span>
+              <p className="mt-7 flex items-baseline gap-3">
+                <span className="font-display text-5xl font-semibold">Free</span>
+                <span className="text-paper-soft/60">while in beta</span>
+              </p>
+              <p className="mt-2 text-sm text-paper-soft/60">
+                One email address, no card. We&rsquo;re building this in the open and would
+                rather have your feedback than your money.
               </p>
               <ul className="mt-7 space-y-3 text-[15px] text-paper-soft/85">
                 <Check light>Everything in the free preview</Check>
@@ -325,10 +329,10 @@ export default function HomePage() {
                 <Check light>Follow-up questions answered by the coach</Check>
               </ul>
               <Link href="/start" className="btn-signal mt-8 w-full">
-                Build my roadmap — ${BRAND.price}
+                Build my roadmap — free
               </Link>
               <p className="mt-4 text-center text-sm text-paper-soft/60">
-                {BRAND.guaranteeDays}-day money-back guarantee. No questions.
+                No card, no subscription, no upsell at the end.
               </p>
             </div>
           </div>

@@ -63,34 +63,55 @@ error. A user never sees a broken page because of an upstream problem.
 app/
   page.tsx              Landing page
   start/                Eight-step intake wizard
-  report/               The report, preview + paywall + full
+  report/               The report: free preview, email gate, full
   careers/              Career library with salary and difficulty data
   api/roadmap/          Generation endpoint (Claude → engine fallback)
   api/coach/            Follow-up chat, grounded in the user's report
+  api/subscribe/        Email capture behind the gate
 components/
   HeroPreview.tsx       Miniature of the real report, used on the landing page
   Wizard.tsx            Intake flow + generation screen
-  report/               Report sections, paywall, coach drawer
+  report/               Report sections, email gate, coach drawer
 lib/
   engine.ts             Deterministic report generator (the no-key path)
   careers-data.ts       Curated role knowledge: courses, salary, communities
   prompt.ts             System + user prompts for the Claude path
   schema.ts             JSON schema for structured output
   types.ts              Shared types and section metadata
-  brand.ts              Name, price, guarantee — rebrand in one file
+  brand.ts              Name, pricing, copy constants — rebrand in one file
 ```
 
-## Payments
+## The email gate
 
-`ReportView.unlock()` is a demo stub that flips a session flag. To take real
-money, replace it with a Stripe Checkout redirect and set the unlock flag only
-after the webhook confirms payment — the flag should never be client-writable
-in production.
+The full roadmap is free during the beta and unlocks with an email address —
+there is no payment path. Sections 1–3 are open, the remaining nine sit behind
+`components/report/EmailGate.tsx`, and the step-by-step path shows every step
+title and duration while blurring the execution detail.
+
+Captured addresses `POST` to `/api/subscribe`, which validates and rate-limits
+them, then forwards to whatever list you configure:
+
+```bash
+SUBSCRIBE_WEBHOOK_URL=https://hooks.zapier.com/...   # or Loops, ConvertKit, Resend
+```
+
+**With nothing configured the address is logged to the server console and
+dropped.** The gate promises the reader a link back to their roadmap, so wire
+this up before pointing real traffic at it, or soften the copy in `EmailGate.tsx`.
+
+If the unlock ever becomes a purchase, replace the form's `onUnlock` with a
+Stripe Checkout redirect and flip the unlock flag only after the webhook
+confirms payment — it should never be client-writable once money is involved.
 
 ## Notes
 
-- Report state lives in `sessionStorage` (`lib/storage.ts`). No accounts, no
-  database, nothing to leak. Add persistence when you add auth.
+- Report state lives in `localStorage` (`lib/storage.ts`), so a roadmap
+  survives closing the tab — but only on that device and browser. Server-side
+  storage keyed to the captured email is what makes the "re-read it at month 7"
+  promise fully true; that needs a database and is not built yet.
+- `/api/coach` and `/api/subscribe` are unauthenticated with a per-process
+  in-memory rate limit. Move that to a shared store before running more than
+  one instance.
 - The full report prints cleanly to PDF via the browser (`@media print` rules
   in `globals.css`); the "Save as PDF" button calls `window.print()`.
 - Salary figures are market estimates. The report says so where they appear.

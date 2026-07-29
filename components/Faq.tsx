@@ -24,8 +24,12 @@ const ITEMS = [
     a: "Roughly three minutes to answer the questions, then under a minute to generate. You see the first three sections immediately.",
   },
   {
-    q: "What's the refund policy?",
-    a: "Thirty days, no questions. If the roadmap doesn't give you something you can act on, it hasn't earned the money.",
+    q: "What do you do with my email address?",
+    a: "Send you a link back to your roadmap so it survives closing the tab, and occasionally ask how the transition is going. That's it — no selling it on, no daily newsletter, and one-click unsubscribe. The email is the only thing the full roadmap costs during the beta.",
+  },
+  {
+    q: "Why is it free? What's the catch?",
+    a: "It's in beta and we'd rather have feedback than revenue right now — every roadmap that comes back marked unhelpful tells us more than a sale would. It will likely cost money later. Roadmaps generated during the beta stay yours either way.",
   },
 ];
 
