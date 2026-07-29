@@ -28,9 +28,62 @@ export function SkillGapSection({ report }: { report: RoadmapReport }) {
   );
 }
 
+export function StepsSection({
+  report,
+  unlocked,
+}: {
+  report: RoadmapReport;
+  unlocked: boolean;
+}) {
+  return (
+    <Section id="steps" n={2} icon="🪜" title="The Step-by-Step Path">
+      <p className="mb-6 max-w-2xl leading-relaxed text-ink-soft">
+        {report.steps.length} steps from where you are today to signing an offer.
+        {!unlocked && " The route is yours to see; the execution detail unlocks with the full report."}
+      </p>
+
+      <ol className="space-y-3">
+        {report.steps.map((step, i) => (
+          <li
+            key={step.title}
+            className="rounded-2xl border border-ink/[0.07] bg-paper-soft p-6"
+          >
+            <div className="flex items-start gap-4">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-ever-night font-mono text-sm font-semibold text-signal">
+                {i + 1}
+              </span>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-display text-lg font-semibold leading-snug text-ink">
+                  {step.title}
+                </h3>
+                <p className="mt-1 font-mono text-sm italic text-ever-bright">{step.duration}</p>
+
+                {unlocked ? (
+                  <p className="mt-3 leading-relaxed text-ink-soft">{step.detail}</p>
+                ) : (
+                  <div className="relative mt-4" aria-label="Locked — unlock the full report to read this step">
+                    <div className="space-y-2" aria-hidden>
+                      {[100, 94, 62].map((w, k) => (
+                        <div key={k} className="h-2.5 rounded-full bg-ink/[0.07]" style={{ width: `${w}%` }} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              {!unlocked && (
+                <span className="shrink-0 text-ink-faint/60" aria-hidden>🔒</span>
+              )}
+            </div>
+          </li>
+        ))}
+      </ol>
+    </Section>
+  );
+}
+
 export function TimelineSection({ report }: { report: RoadmapReport }) {
   return (
-    <Section id="timeline" n={2} icon="🗓️" title="Month-by-Month Timeline">
+    <Section id="timeline" n={3} icon="🗓️" title="Month-by-Month Timeline">
       <ol className="relative space-y-4 border-l-2 border-ink/[0.08] pl-8">
         {report.timeline.map((phase, i) => (
           <li key={phase.label} className="relative">
@@ -67,7 +120,7 @@ export function TimelineSection({ report }: { report: RoadmapReport }) {
 
 export function CoursesSection({ report }: { report: RoadmapReport }) {
   return (
-    <Section id="courses" n={3} icon="🎓" title="Courses & Certifications">
+    <Section id="courses" n={4} icon="🎓" title="Courses & Certifications">
       <div className="grid gap-4">
         {report.courses.map((c) => (
           <div key={c.name} className="rounded-2xl border border-ink/[0.07] bg-paper-soft p-6">
@@ -105,7 +158,7 @@ export function CoursesSection({ report }: { report: RoadmapReport }) {
 
 export function ProjectsSection({ report }: { report: RoadmapReport }) {
   return (
-    <Section id="projects" n={4} icon="🛠️" title="Portfolio Projects">
+    <Section id="projects" n={5} icon="🛠️" title="Portfolio Projects">
       <div className="grid gap-4 md:grid-cols-3">
         {report.projects.map((p) => (
           <div key={p.title} className="flex flex-col rounded-2xl border border-ink/[0.07] bg-paper-soft p-6">
@@ -126,7 +179,7 @@ export function ProjectsSection({ report }: { report: RoadmapReport }) {
 
 export function ResumeSection({ report }: { report: RoadmapReport }) {
   return (
-    <Section id="resume" n={5} icon="📝" title="Resume & LinkedIn Rewrite">
+    <Section id="resume" n={6} icon="📝" title="Resume & LinkedIn Rewrite">
       <div className="rounded-2xl border border-ink/[0.07] bg-paper-soft p-6">
         <p className="text-[15px] leading-relaxed text-ink-soft">{report.resume.summary}</p>
         <div className="mt-4 rounded-xl bg-ever-night px-5 py-4">
@@ -167,7 +220,7 @@ export function ResumeSection({ report }: { report: RoadmapReport }) {
 
 export function SalarySection({ report }: { report: RoadmapReport }) {
   return (
-    <Section id="salary" n={6} icon="💰" title="Salary Progression">
+    <Section id="salary" n={7} icon="💰" title="Salary Progression">
       <div className="rounded-3xl border border-ink/[0.07] bg-paper-soft p-6 sm:p-8">
         <div className="space-y-6">
           {report.salary.map((s) => (
@@ -194,7 +247,7 @@ export function SalarySection({ report }: { report: RoadmapReport }) {
 export function NetworkingSection({ report }: { report: RoadmapReport }) {
   const n = report.networking;
   return (
-    <Section id="networking" n={7} icon="🤝" title="Networking Strategy">
+    <Section id="networking" n={8} icon="🤝" title="Networking Strategy">
       <div className="grid gap-4 md:grid-cols-3">
         <ListCard title="Communities to join" items={n.communities} />
         <ListCard title="People worth following" items={n.peopleToFollow} />
@@ -230,7 +283,7 @@ export function NetworkingSection({ report }: { report: RoadmapReport }) {
 export function InterviewSection({ report }: { report: RoadmapReport }) {
   const iv = report.interview;
   return (
-    <Section id="interview" n={8} icon="⚡" title="Interview Preparation">
+    <Section id="interview" n={9} icon="⚡" title="Interview Preparation">
       <div className="rounded-2xl bg-ever-night p-6 text-paper-soft sm:p-8">
         <p className="text-xs font-semibold uppercase tracking-wider text-signal">Your career-switch narrative</p>
         <p className="mt-3 text-lg leading-relaxed">{iv.narrative}</p>
@@ -269,7 +322,7 @@ export function InterviewSection({ report }: { report: RoadmapReport }) {
 
 export function DayInLifeSection({ report }: { report: RoadmapReport }) {
   return (
-    <Section id="day-in-life" n={9} icon="☀️" title="A Day in Your New Life">
+    <Section id="day-in-life" n={10} icon="☀️" title="A Day in Your New Life">
       <div className="overflow-hidden rounded-3xl border border-ink/[0.07] bg-paper-soft">
         {report.dayInLife.map((d) => (
           <div key={d.time + d.activity} className="flex gap-5 border-b border-ink/[0.05] px-6 py-4 last:border-0">
@@ -289,7 +342,7 @@ export function DayInLifeSection({ report }: { report: RoadmapReport }) {
 export function RiskSection({ report }: { report: RoadmapReport }) {
   const r = report.risk;
   return (
-    <Section id="risk" n={10} icon="🎯" title="Risk Assessment & Plan B">
+    <Section id="risk" n={11} icon="🎯" title="Risk Assessment & Plan B">
       <div className="rounded-3xl border border-ink/[0.07] bg-paper-soft p-6 sm:p-8">
         <div className="flex flex-wrap items-center gap-6">
           <div>
@@ -342,7 +395,7 @@ export function RiskSection({ report }: { report: RoadmapReport }) {
 
 export function NinetySection({ report }: { report: RoadmapReport }) {
   return (
-    <Section id="ninety" n={11} icon="🚀" title="First 90 Days on the Job">
+    <Section id="ninety" n={12} icon="🚀" title="First 90 Days on the Job">
       <div className="grid gap-4 md:grid-cols-3">
         {report.firstNinetyDays.phases.map((ph) => (
           <div key={ph.window} className="rounded-2xl border border-ink/[0.07] bg-paper-soft p-6">

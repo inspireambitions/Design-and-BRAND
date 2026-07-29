@@ -19,6 +19,12 @@ export interface SkillGapItem {
   howToAcquire: string;
 }
 
+export interface RoadmapStep {
+  title: string;
+  duration: string; // "~2–3 months" | "~Ongoing"
+  detail: string; // gated behind the paywall
+}
+
 export interface TimelinePhase {
   label: string; // e.g. "Months 1–2"
   title: string;
@@ -99,6 +105,7 @@ export interface RoadmapReport {
     estimatedCost: string;
   };
   skillGap: SkillGapItem[];
+  steps: RoadmapStep[];
   timeline: TimelinePhase[];
   courses: CourseRec[];
   projects: ProjectRec[];
@@ -114,14 +121,15 @@ export interface RoadmapReport {
 export const SECTION_META = [
   { id: "snapshot", n: 0, icon: "◎", title: "Transition Snapshot", blurb: "Your match score and the shape of the journey ahead", free: true },
   { id: "skill-gap", n: 1, icon: "📊", title: "Skill Gap Analysis", blurb: "Skills you have vs. skills you need, with acquisition plans", free: true },
-  { id: "timeline", n: 2, icon: "🗓️", title: "Month-by-Month Timeline", blurb: "A concrete schedule with milestones, tuned to your hours", free: true },
-  { id: "courses", n: 3, icon: "🎓", title: "Courses & Certifications", blurb: "Specific programs filtered by your budget", free: false },
-  { id: "projects", n: 4, icon: "🛠️", title: "Portfolio Projects", blurb: "Projects that leverage your existing domain expertise", free: false },
-  { id: "resume", n: 5, icon: "📝", title: "Resume & LinkedIn Rewrite", blurb: "Before/after bullets that reframe your experience", free: false },
-  { id: "salary", n: 6, icon: "💰", title: "Salary Progression", blurb: "Expected earnings at each stage of the transition", free: false },
-  { id: "networking", n: 7, icon: "🤝", title: "Networking Strategy", blurb: "Communities, people, events, and an outreach script", free: false },
-  { id: "interview", n: 8, icon: "⚡", title: "Interview Preparation", blurb: "Your career-switch narrative and common questions", free: false },
-  { id: "day-in-life", n: 9, icon: "☀️", title: "A Day in Your New Life", blurb: "What a typical day actually looks like in the role", free: false },
-  { id: "risk", n: 10, icon: "🎯", title: "Risk Assessment & Plan B", blurb: "Honest difficulty rating, setbacks, and your backup route", free: false },
-  { id: "ninety", n: 11, icon: "🚀", title: "First 90 Days on the Job", blurb: "How to succeed once you've actually landed the role", free: false },
+  { id: "steps", n: 2, icon: "🪜", title: "The Step-by-Step Path", blurb: "Every step from here to hired, with a duration estimate each", free: true },
+  { id: "timeline", n: 3, icon: "🗓️", title: "Month-by-Month Timeline", blurb: "A concrete schedule with milestones, tuned to your hours", free: true },
+  { id: "courses", n: 4, icon: "🎓", title: "Courses & Certifications", blurb: "Specific programs filtered by your budget", free: false },
+  { id: "projects", n: 5, icon: "🛠️", title: "Portfolio Projects", blurb: "Projects that leverage your existing domain expertise", free: false },
+  { id: "resume", n: 6, icon: "📝", title: "Resume & LinkedIn Rewrite", blurb: "Before/after bullets that reframe your experience", free: false },
+  { id: "salary", n: 7, icon: "💰", title: "Salary Progression", blurb: "Expected earnings at each stage of the transition", free: false },
+  { id: "networking", n: 8, icon: "🤝", title: "Networking Strategy", blurb: "Communities, people, events, and an outreach script", free: false },
+  { id: "interview", n: 9, icon: "⚡", title: "Interview Preparation", blurb: "Your career-switch narrative and common questions", free: false },
+  { id: "day-in-life", n: 10, icon: "☀️", title: "A Day in Your New Life", blurb: "What a typical day actually looks like in the role", free: false },
+  { id: "risk", n: 11, icon: "🎯", title: "Risk Assessment & Plan B", blurb: "Honest difficulty rating, setbacks, and your backup route", free: false },
+  { id: "ninety", n: 12, icon: "🚀", title: "First 90 Days on the Job", blurb: "How to succeed once you've actually landed the role", free: false },
 ] as const;

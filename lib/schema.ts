@@ -34,6 +34,11 @@ export const REPORT_SCHEMA = obj({
     priority: { type: "string", enum: ["high", "medium", "low"] },
     howToAcquire: str,
   }),
+  steps: arrOf({
+    title: str,
+    duration: str,
+    detail: str,
+  }),
   timeline: arrOf({
     label: str,
     title: str,

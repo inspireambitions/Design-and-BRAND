@@ -2,6 +2,7 @@ import { BUDGET_CAPS, findRole, type RoleKnowledge } from "./careers-data";
 import type {
   Profile,
   RoadmapReport,
+  RoadmapStep,
   SkillGapItem,
   TimelinePhase,
 } from "./types";
@@ -121,6 +122,66 @@ function buildTimeline(profile: Profile, role: RoleKnowledge, gaps: SkillGapItem
   ];
 }
 
+// Eight sequential steps from where they are to hired. Durations are scaled to
+// the chosen timeline so the ladder always adds up to roughly the right total.
+function buildSteps(profile: Profile, role: RoleKnowledge, gaps: SkillGapItem[]): RoadmapStep[] {
+  const m = profile.timelineMonths;
+  const needs = gaps.filter((g) => g.status === "need");
+  const top = needs.map((g) => g.skill);
+  const unit = m / 12; // scale factor against the canonical 12-month plan
+  const d = (lo: number, hi: number) => {
+    const a = Math.max(1, Math.round(lo * unit));
+    const b = Math.max(a, Math.round(hi * unit));
+    return a === b ? `~${a} month${a > 1 ? "s" : ""}` : `~${a}–${b} months`;
+  };
+  const paid = profile.budget !== "free";
+
+  return [
+    {
+      title: `Commit to the switch and set up your ${profile.hoursPerWeek} hrs/week`,
+      duration: d(1, 1),
+      detail: `Block the hours in your calendar as recurring appointments before anything else — this is the step people skip, and it is the one that decides whether the other seven happen. Tell one person you are doing this. Set up a single folder or repo where every artifact from this plan will live.`,
+    },
+    {
+      title: `Reach working fluency in ${top[0] ?? "the field's core tool"}`,
+      duration: d(1, 2),
+      detail: `${gaps.find((g) => g.skill === top[0])?.howToAcquire ?? "Follow the primary course in the Courses section."} Stop when you can produce something usable without a tutorial open — not when you feel confident, which comes later.`,
+    },
+    {
+      title: paid
+        ? `Enroll in and start the primary certificate`
+        : `Start the free foundational curriculum`,
+      duration: d(1, 1),
+      detail: `See the Courses section for the specific program filtered to your budget. Enroll the same week you finish step 2 — momentum between steps matters more than the gap between your current skill and the syllabus.`,
+    },
+    {
+      title: `Build portfolio project #1 on your ${profile.currentRole.toLowerCase()} domain`,
+      duration: d(2, 3),
+      detail: `This is your differentiator and it belongs early, not at the end. Apply the new craft to a problem you already understand from your current career. Write the case study as you go — process, decisions, what failed — not afterwards from memory.`,
+    },
+    {
+      title: `Close the remaining high-priority gaps (${top.slice(1, 3).join(", ") || "secondary skills"})`,
+      duration: d(2, 3),
+      detail: `Work through the remaining "Need" rows in the Skill Gap table in priority order. Fold each one into project work rather than studying it in isolation — skills learned in a project stick and become interview stories; skills learned from a course alone do neither.`,
+    },
+    {
+      title: "Ship portfolio project #2 and rewrite your professional story",
+      duration: d(2, 3),
+      detail: `Second project should be end-to-end with a measurable outcome. In parallel, rewrite your resume and LinkedIn using the before/after patterns in the Resume section, so your materials read like a ${role.role} who used to be a ${profile.currentRole} rather than the reverse.`,
+    },
+    {
+      title: "Convert your network into referrals",
+      duration: d(2, 3),
+      detail: `Start this from month one, but it becomes the main activity here. Switchers are hired through people far more often than through cold applications. Use the outreach template in the Networking section; aim for one informational interview a week and follow up three weeks later.`,
+    },
+    {
+      title: `Apply, interview, and negotiate your first ${role.role} offer`,
+      duration: "~Ongoing until hired",
+      detail: `8–10 well-fitted applications a week, with the top three tailored. Run weekly mock interviews against the questions in the Interview Prep section. Expect the search itself to take 2–4 months — that is normal, and it is the part switchers most consistently underestimate.`,
+    },
+  ];
+}
+
 export function generateReport(profile: Profile): RoadmapReport {
   const role = findRole(profile.targetRole) ?? { ...GENERIC_ROLE, role: profile.targetRole || GENERIC_ROLE.role };
 
@@ -180,6 +241,7 @@ export function generateReport(profile: Profile): RoadmapReport {
         budgetCap === 0 ? "$0 (free-only path)" : budgetCap >= 100000 ? "$300–$3,000 depending on chosen intensives" : `Under $${budgetCap}`,
     },
     skillGap,
+    steps: buildSteps(profile, role, skillGap),
     timeline: buildTimeline(profile, role, skillGap),
     courses,
     projects: [

@@ -18,8 +18,10 @@ import {
   RiskSection,
   SalarySection,
   SkillGapSection,
+  StepsSection,
   TimelineSection,
 } from "./Sections";
+import { Feedback } from "./Feedback";
 
 export function ReportView() {
   const router = useRouter();
@@ -132,6 +134,7 @@ export function ReportView() {
 
         <div className="mt-14 space-y-16">
           <SkillGapSection report={report} />
+          <StepsSection report={report} unlocked={unlocked} />
           <TimelineSection report={report} />
 
           {unlocked ? (
@@ -161,9 +164,14 @@ export function ReportView() {
                   </Link>
                 </div>
               </div>
+
+              <Feedback />
             </>
           ) : (
-            <Paywall report={report} onUnlock={unlock} />
+            <>
+              <Paywall report={report} onUnlock={unlock} />
+              <Feedback />
+            </>
           )}
         </div>
       </main>
