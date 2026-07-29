@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Dubai Internship Eligibility Checker — Premium Launch Demo</title>
+<style>
+  @font-face { font-family: 'Playfair Display'; font-weight: 500; src: url('../../_assets/fonts/playfair-display-latin-500-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Playfair Display'; font-weight: 600; src: url('../../_assets/fonts/playfair-display-latin-600-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Playfair Display'; font-weight: 700; src: url('../../_assets/fonts/playfair-display-latin-700-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Playfair Display'; font-weight: 500; font-style: italic; src: url('../../_assets/fonts/playfair-display-latin-500-italic.woff2') format('woff2'); }
+  @font-face { font-family: 'Inter'; font-weight: 400; src: url('../../_assets/fonts/inter-latin-400-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Inter'; font-weight: 500; src: url('../../_assets/fonts/inter-latin-500-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Inter'; font-weight: 600; src: url('../../_assets/fonts/inter-latin-600-normal.woff2') format('woff2'); }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: #07211A; }
+  #stage {
+    position: relative; width: 1080px; height: 1920px; overflow: hidden;
+    font-family: 'Inter', sans-serif; color: #F0EFE6;
+    background: radial-gradient(130% 85% at 50% 25%, #10382C 0%, #0B2B22 50%, #051912 100%);
+  }
+  .serif { font-family: 'Playfair Display', serif; }
+
+  #grain { position: absolute; inset: -60px; opacity: 0.55; pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 0.97 0 0 0 0 0.88 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  .haze { position: absolute; left: 50%; top: 45%; width: 1600px; height: 1600px; transform: translate(-50%,-50%);
+    background: radial-gradient(circle, rgba(212,175,106,0.09) 0%, rgba(212,175,106,0) 58%); }
+
+  .scene { position: absolute; inset: 0; display: none; }
+  .centercol { position: absolute; left: 90px; right: 90px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+
+  .eyebrow { font-size: 27px; font-weight: 600; letter-spacing: 9px; color: #D4AF6A; text-transform: uppercase; }
+  .mask { overflow: hidden; }
+  .h1 { font-size: 100px; font-weight: 600; line-height: 1.16; letter-spacing: -0.5px; }
+  .h2 { font-size: 80px; font-weight: 600; line-height: 1.2; }
+  .ital { font-style: italic; font-weight: 500; color: #D4AF6A; }
+  .rule { height: 2px; background: rgba(212,175,106,0.75); transform-origin: center; }
+  .body { font-size: 35px; font-weight: 400; color: #9DBCAD; line-height: 1.55; }
+
+  /* demo card */
+  .card {
+    position: absolute; left: 80px; right: 80px; top: 470px;
+    background: #FDFCF7; border-radius: 34px; color: #14231C;
+    box-shadow: 0 50px 110px rgba(0,0,0,0.5);
+    padding: 56px 60px;
+  }
+  .cardhead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 38px; }
+  .brandrow { display: flex; align-items: center; gap: 18px; }
+  .branddot { width: 46px; height: 46px; border-radius: 50%; background: #0B2B22; color: #F0EFE6;
+              display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 600; font-family: 'Playfair Display', serif; }
+  .cardtitle { font-size: 26px; font-weight: 600; }
+  .cardsub { font-size: 20px; font-weight: 500; color: #98A092; margin-top: 3px; }
+  .qcount { font-size: 22px; font-weight: 600; color: #A8852F; letter-spacing: 2px; }
+  .progress { height: 5px; background: #ECE8DA; border-radius: 3px; margin-bottom: 44px; overflow: hidden; }
+  .progress > div { height: 100%; background: #A8852F; border-radius: 3px; transform-origin: left center; }
+  .qtext { font-family: 'Playfair Display', serif; font-size: 44px; font-weight: 600; line-height: 1.3; margin-bottom: 40px; }
+  .opt { border: 1.5px solid #E0DCCB; border-radius: 20px; padding: 27px 32px; font-size: 29px; font-weight: 500;
+         color: #3E4A40; margin-bottom: 20px; display: flex; align-items: center; gap: 22px; background: #FEFDFA; }
+  .opt .dot { width: 34px; height: 34px; border-radius: 50%; border: 2px solid #C6C0AA; flex: none; position: relative; }
+  .opt.sel { border-color: #A8852F; background: #FBF6E9; box-shadow: 0 8px 24px rgba(168,133,47,0.15); }
+  .opt.sel .dot { border-color: #A8852F; }
+  .opt.sel .dot::after { content: ''; position: absolute; inset: 6px; border-radius: 50%; background: #A8852F; }
+
+  /* verdict */
+  .bigcheck { width: 150px; height: 150px; margin: 6px auto 30px; }
+  .bigcheck svg { display: block; }
+  .verdict-t { font-family: 'Playfair Display', serif; font-size: 66px; font-weight: 700; text-align: center; color: #14231C; line-height: 1.15; }
+  .route { text-align: center; font-size: 28px; font-weight: 600; color: #A8852F; letter-spacing: 2px; text-transform: uppercase; margin: 26px 0 34px; }
+  .reqline { display: flex; align-items: center; gap: 20px; font-size: 28px; font-weight: 500; color: #3E4A40;
+             border-top: 1px solid #ECE8DA; padding: 24px 8px; }
+  .reqline .mini { width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid #A8852F; color: #A8852F;
+                   display: flex; align-items: center; justify-content: center; font-size: 21px; flex: none; }
+
+  .urlbar { display: inline-block; font-size: 30px; font-weight: 600; color: #0B2B22;
+            background: linear-gradient(180deg, #E3C687, #D4AF6A); border-radius: 999px; padding: 28px 50px;
+            box-shadow: 0 20px 60px rgba(212,175,106,0.25); }
+  .minor { font-size: 27px; font-weight: 500; color: #9DBCAD; letter-spacing: 1px; }
+  .brand { font-family: 'Playfair Display', serif; font-size: 56px; font-weight: 600; letter-spacing: 6px; }
+  #fade { position: absolute; inset: 0; background: #051912; opacity: 0; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="haze" id="haze"></div>
+
+  <!-- S1 0–4200 hook -->
+  <div class="scene" id="s1">
+    <div class="centercol" style="top:820px; gap:36px;">
+      <div class="mask"><div id="s1eb" class="eyebrow">Dubai Internships · 2026</div></div>
+      <div class="mask"><div id="s1l1" class="serif h1">Want a Dubai</div></div>
+      <div class="mask"><div id="s1l2" class="serif h1"><span class="ital">internship?</span></div></div>
+      <div id="s1rule" class="rule" style="width:220px; margin-top:26px;"></div>
+    </div>
+  </div>
+
+  <!-- S2 4200–8400 tension -->
+  <div class="scene" id="s2">
+    <div class="centercol" style="top:800px; gap:40px;">
+      <div class="mask"><div id="s2l1" class="serif h2">Most students apply</div></div>
+      <div class="mask"><div id="s2l2" class="serif h2"><span class="ital">blind</span> — and never</div></div>
+      <div class="mask"><div id="s2l3" class="serif h2">hear back.</div></div>
+      <div class="mask"><div id="s2sub" class="body" style="max-width:800px; margin-top:24px;">Visa status. Age rules. Permits. Eligibility comes first.</div></div>
+    </div>
+  </div>
+
+  <!-- S3 8400–12200 reveal -->
+  <div class="scene" id="s3">
+    <div class="centercol" style="top:790px; gap:38px;">
+      <div class="mask"><div id="s3eb" class="eyebrow">New · Free Tool</div></div>
+      <div class="mask"><div id="s3l1" class="serif h1" style="font-size:88px;">The Dubai Internship</div></div>
+      <div class="mask"><div id="s3l2" class="serif h1" style="font-size:88px;">Eligibility <span class="ital">Checker</span></div></div>
+      <div id="s3rule" class="rule" style="width:320px; margin-top:26px;"></div>
+      <div class="mask"><div id="s3sub" class="body" style="margin-top:12px;">Know your route before you send a single application.</div></div>
+    </div>
+  </div>
+
+  <!-- S4 12200–24500 demo -->
+  <div class="scene" id="s4">
+    <div class="centercol" style="top:230px;">
+      <div class="mask"><div id="s4eb" class="eyebrow">Three questions. One answer.</div></div>
+    </div>
+
+    <!-- Q1 -->
+    <div class="card" id="q1card">
+      <div class="cardhead">
+        <div class="brandrow">
+          <div class="branddot">IA</div>
+          <div><div class="cardtitle">Internship Eligibility Checker</div><div class="cardsub">Dubai · 2026 rules</div></div>
+        </div>
+        <div class="qcount">1 / 3</div>
+      </div>
+      <div class="progress"><div id="q1prog"></div></div>
+      <div class="qtext">How old are you?</div>
+      <div class="opt" id="q1o1"><span class="dot"></span>Under 18</div>
+      <div class="opt" id="q1o2"><span class="dot"></span>18 – 24</div>
+      <div class="opt" id="q1o3"><span class="dot"></span>25 or older</div>
+    </div>
+
+    <!-- Q2 -->
+    <div class="card" id="q2card">
+      <div class="cardhead">
+        <div class="brandrow">
+          <div class="branddot">IA</div>
+          <div><div class="cardtitle">Internship Eligibility Checker</div><div class="cardsub">Dubai · 2026 rules</div></div>
+        </div>
+        <div class="qcount">2 / 3</div>
+      </div>
+      <div class="progress"><div id="q2prog"></div></div>
+      <div class="qtext">What's your current status?</div>
+      <div class="opt" id="q2o1"><span class="dot"></span>University student</div>
+      <div class="opt" id="q2o2"><span class="dot"></span>Recent graduate</div>
+      <div class="opt" id="q2o3"><span class="dot"></span>High-school student</div>
+    </div>
+
+    <!-- Verdict -->
+    <div class="card" id="vcard">
+      <div class="bigcheck">
+        <svg width="150" height="150" viewBox="0 0 150 150">
+          <circle cx="75" cy="75" r="68" fill="none" stroke="#A8852F" stroke-width="7"
+                  stroke-dasharray="427.3" stroke-dashoffset="427.3" id="vcirc" transform="rotate(-90 75 75)"/>
+          <path d="M46 78 L67 99 L106 56" fill="none" stroke="#A8852F" stroke-width="10"
+                stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="86" stroke-dashoffset="86" id="vtick"/>
+        </svg>
+      </div>
+      <div class="verdict-t" id="vtitle">You're eligible.</div>
+      <div class="route" id="vroute">Your route · University training permit</div>
+      <div id="vr1" class="reqline"><span class="mini">1</span>University enrollment letter</div>
+      <div id="vr2" class="reqline"><span class="mini">2</span>MOHRE permit — arranged by your employer</div>
+      <div id="vr3" class="reqline"><span class="mini">3</span>Health insurance for your stay</div>
+    </div>
+  </div>
+
+  <!-- S5 24500–28500 value -->
+  <div class="scene" id="s5">
+    <div class="centercol" style="top:830px; gap:40px;">
+      <div class="mask"><div id="s5l1" class="serif h2">Stop guessing.</div></div>
+      <div class="mask"><div id="s5l2" class="serif h2">Check <span class="ital">first</span> — then apply.</div></div>
+      <div id="s5rule" class="rule" style="width:260px; margin-top:22px;"></div>
+    </div>
+  </div>
+
+  <!-- S6 28500–34000 CTA -->
+  <div class="scene" id="s6">
+    <div class="centercol" style="top:640px; gap:38px;">
+      <div class="mask"><div id="s6l1" class="serif h2">Your Dubai career</div></div>
+      <div class="mask"><div id="s6l2" class="serif h2">starts with <span class="ital">clarity.</span></div></div>
+      <div class="mask" style="margin-top:44px;"><div id="s6eb" class="eyebrow" style="font-size:24px;">UAE Hospitality Careers</div></div>
+      <div class="mask"><div id="s6brand" class="brand">INSPIRE AMBITIONS</div></div>
+      <div class="mask" style="margin-top:20px;"><div id="s6url"><span class="urlbar">inspireambitions.com/dubai-internship-eligibility-checker</span></div></div>
+      <div class="mask"><div id="s6min" class="minor">Free · 60 seconds · Link in bio</div></div>
+    </div>
+  </div>
+
+  <div id="grain"></div>
+  <div id="fade"></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const clamp = (x,a,b) => Math.min(b, Math.max(a,x));
+const P = (t,s,d) => clamp((t-s)/d, 0, 1);
+const outExpo = p => p >= 1 ? 1 : 1 - Math.pow(2, -10*p);
+const outCubic = p => 1 - Math.pow(1-p, 3);
+
+function rise(el, t, s, d = 900) {
+  const p = outExpo(P(t, s, d));
+  el.style.transform = `translateY(${(1-p)*112}%)`;
+  el.style.opacity = p > 0 ? 1 : 0;
+}
+function fadeUp(el, t, s, d = 750, dist = 46) {
+  const p = outExpo(P(t, s, d));
+  el.style.opacity = p;
+  el.style.transform = `translateY(${(1-p)*dist}px)`;
+}
+function drawRule(el, t, s, d = 850) { el.style.transform = `scaleX(${outExpo(P(t, s, d))})`; }
+function showD(el, on) { el.style.display = on ? 'block' : 'none'; }
+
+const S1=0, S2=4200, S3=8400, S4=12200, S5=24500, S6=28500, END=34000;
+// S4 local: Q1 0–4200, Q2 4200–7800, verdict 7800–12300
+const Q2T=4200, VT=7800;
+
+function selectPulse(el, lt, s) {
+  const on = P(lt, s, 300) > 0;
+  el.classList.toggle('sel', on);
+  const sp = P(lt, s, 300);
+  if (sp > 0 && sp < 1) el.style.transform += ` scale(${1 + 0.02*Math.sin(sp*Math.PI)})`;
+}
+
+function render(t) {
+  $('haze').style.transform = `translate(-50%,-50%) translateY(${Math.sin(t/2600)*34}px)`;
+  $('grain').style.transform = `translate(${(t*0.01)%60}px, ${(t*0.007)%60}px)`;
+
+  const scenes = { s1:[S1,S2], s2:[S2,S3], s3:[S3,S4], s4:[S4,S5], s5:[S5,S6], s6:[S6,END+1] };
+  for (const [id,[a,b]] of Object.entries(scenes)) $(id).style.display = (t >= a && t < b) ? 'block' : 'none';
+
+  if (t < S2) {
+    const lt = t - S1;
+    rise($('s1eb'), lt, 80);
+    rise($('s1l1'), lt, 300); rise($('s1l2'), lt, 470);
+    drawRule($('s1rule'), lt, 1000);
+    $('s1').style.transform = `scale(${1 + 0.035*(lt/(S2-S1))})`;
+    $('s1').style.opacity = 1 - P(lt, S2-S1-400, 400);
+  } else if (t < S3) {
+    const lt = t - S2;
+    rise($('s2l1'), lt, 150); rise($('s2l2'), lt, 330); rise($('s2l3'), lt, 510);
+    rise($('s2sub'), lt, 1300);
+    $('s2').style.transform = `scale(${1 + 0.035*(lt/(S3-S2))})`;
+    $('s2').style.opacity = 1 - P(lt, S3-S2-400, 400);
+  } else if (t < S4) {
+    const lt = t - S3;
+    rise($('s3eb'), lt, 100);
+    rise($('s3l1'), lt, 360); rise($('s3l2'), lt, 540);
+    drawRule($('s3rule'), lt, 1100);
+    rise($('s3sub'), lt, 1400);
+    $('s3').style.transform = `scale(${1 + 0.035*(lt/(S4-S3))})`;
+    $('s3').style.opacity = 1 - P(lt, S4-S3-400, 400);
+  } else if (t < S5) { // ---- DEMO
+    const lt = t - S4;
+    rise($('s4eb'), lt, 100);
+    showD($('q1card'), lt < Q2T);
+    showD($('q2card'), lt >= Q2T && lt < VT);
+    showD($('vcard'), lt >= VT);
+
+    if (lt < Q2T) {
+      const q = lt;
+      fadeUp($('q1card'), q, 150, 900, 70);
+      fadeUp($('q1o1'), q, 800); fadeUp($('q1o2'), q, 950); fadeUp($('q1o3'), q, 1100);
+      selectPulse($('q1o2'), q, 2100);
+      $('q1prog').style.transform = `scaleX(${1/3 + (1/3)*outExpo(P(q, 2900, 500))})`;
+      $('q1card').style.opacity = Math.min(outExpo(P(q,150,900)), 1 - P(q, Q2T-320, 320));
+    } else if (lt < VT) {
+      const q = lt - Q2T;
+      fadeUp($('q2card'), q, 80, 850, 70);
+      fadeUp($('q2o1'), q, 650); fadeUp($('q2o2'), q, 800); fadeUp($('q2o3'), q, 950);
+      selectPulse($('q2o1'), q, 1800);
+      $('q2prog').style.transform = `scaleX(${2/3 + (1/3)*outExpo(P(q, 2600, 500))})`;
+      $('q2card').style.opacity = Math.min(outExpo(P(q,80,850)), 1 - P(q, VT-Q2T-320, 320));
+    } else {
+      const q = lt - VT;
+      fadeUp($('vcard'), q, 80, 900, 70);
+      // circle draws, then tick
+      $('vcirc').style.strokeDashoffset = 427.3 * (1 - outCubic(P(q, 500, 900)));
+      $('vtick').style.strokeDashoffset = 86 * (1 - outCubic(P(q, 1300, 500)));
+      const lp = P(q, 1800, 350);
+      $('vtitle').style.transform = `scale(${lp<=0||lp>=1 ? 1 : 1+0.03*Math.sin(lp*Math.PI)})`;
+      fadeUp($('vtitle'), q, 900, 800, 24);
+      fadeUp($('vroute'), q, 1900, 700, 20);
+      fadeUp($('vr1'), q, 2400); fadeUp($('vr2'), q, 2700); fadeUp($('vr3'), q, 3000);
+      $('vcard').style.opacity = outExpo(P(q,80,900));
+    }
+    $('s4').style.opacity = 1 - P(lt, S5-S4-400, 400);
+  } else if (t < S6) {
+    const lt = t - S5;
+    rise($('s5l1'), lt, 150); rise($('s5l2'), lt, 340);
+    drawRule($('s5rule'), lt, 950);
+    $('s5').style.transform = `scale(${1 + 0.035*(lt/(S6-S5))})`;
+    $('s5').style.opacity = 1 - P(lt, S6-S5-400, 400);
+  } else {
+    const lt = t - S6;
+    rise($('s6l1'), lt, 150); rise($('s6l2'), lt, 340);
+    rise($('s6eb'), lt, 1100); rise($('s6brand'), lt, 1300);
+    rise($('s6url'), lt, 1700); rise($('s6min'), lt, 2100);
+    $('s6').style.transform = `scale(${1 + 0.02*(lt/(END-S6))})`;
+  }
+
+  $('fade').style.opacity = P(t, END-600, 600);
+}
+
+window.seek = render;
+window.REEL = { fps: 30, durationMs: END };
+render(0);
+if (location.search.includes('play')) {
+  const t0 = performance.now();
+  (function loop(){ render((performance.now()-t0)%(END+800)); requestAnimationFrame(loop); })();
+}
+</script>
+</body>
+</html>
