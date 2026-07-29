@@ -42,7 +42,37 @@ function reportDigest(report: RoadmapReport | null): string {
   );
 }
 
+// Minimal in-process rate limit so an unauthenticated endpoint backed by a
+// paid model can't be scripted against. Replace with a shared store (Redis,
+// Upstash) the moment this runs on more than one instance.
+const WINDOW_MS = 60_000;
+const MAX_PER_WINDOW = 8;
+const hits = new Map<string, number[]>();
+
+function rateLimited(req: Request): boolean {
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip") ||
+    "unknown";
+  const now = Date.now();
+  const recent = (hits.get(ip) ?? []).filter((t) => now - t < WINDOW_MS);
+  recent.push(now);
+  hits.set(ip, recent);
+
+  if (hits.size > 5000) {
+    for (const [k, v] of hits) if (v.every((t) => now - t >= WINDOW_MS)) hits.delete(k);
+  }
+  return recent.length > MAX_PER_WINDOW;
+}
+
 export async function POST(req: Request) {
+  if (rateLimited(req)) {
+    return NextResponse.json(
+      { reply: "You're asking faster than I can think. Give me a minute and try again." },
+      { status: 429 }
+    );
+  }
+
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json(
       {

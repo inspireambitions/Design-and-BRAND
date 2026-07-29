@@ -9,7 +9,6 @@ export interface Profile {
   workStyle: string; // "remote" | "hybrid" | "onsite" | "any"
   motivations: string[];
   location?: string;
-  email?: string;
 }
 
 export interface SkillGapItem {

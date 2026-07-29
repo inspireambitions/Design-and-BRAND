@@ -195,17 +195,18 @@ export function generateReport(profile: Profile): RoadmapReport {
   const transferableCount = skillGap.filter((g) => g.status !== "need").length;
   const needCount = skillGap.filter((g) => g.status === "need").length;
 
-  // Match score: base by role difficulty, adjusted by transferable skills,
-  // committed hours, and timeline realism.
+  // Match score. Calibrated to use its whole range: a hard target with few
+  // transferable skills and little time genuinely scores in the 30s. A score
+  // that always comes back flattering is worth nothing.
   const hoursFactor = Math.min(profile.hoursPerWeek / 12, 1.4);
   const timeFactor = Math.min(profile.timelineMonths / 12, 1.5);
   let score =
-    62 +
-    transferableCount * 5 -
-    role.difficultyBase * 2 +
-    hoursFactor * 12 +
+    48 +
+    transferableCount * 4 -
+    role.difficultyBase * 3 +
+    hoursFactor * 14 +
     timeFactor * 8;
-  score = Math.round(Math.max(35, Math.min(96, score)));
+  score = Math.round(Math.max(22, Math.min(94, score)));
 
   const budgetCap = BUDGET_CAPS[profile.budget] ?? 500;
   const courses = role.courses
@@ -226,9 +227,9 @@ export function generateReport(profile: Profile): RoadmapReport {
     generatedBy: "engine",
     matchScore: score,
     verdict:
-      score >= 80
+      score >= 78
         ? `Strong fit. Your ${profile.currentRole} background carries real transferable weight into ${role.role}, and your time commitment makes this timeline credible.`
-        : score >= 62
+        : score >= 55
         ? `Achievable with focus. The path from ${profile.currentRole} to ${role.role} is well-trodden — your plan below closes the ${needCount} key gaps deliberately.`
         : `Ambitious but possible. This is a demanding switch on your current timeline — the plan below front-loads the hardest gaps and includes a Plan B so no month is wasted.`,
     snapshot: {
