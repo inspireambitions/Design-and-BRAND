@@ -49,7 +49,7 @@ export function StepsSection({
             className="rounded-2xl border border-ink/[0.07] bg-paper-soft p-6"
           >
             <div className="flex items-start gap-4">
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-ever-night font-mono text-sm font-semibold text-signal">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-ever-night font-mono text-sm font-semibold text-signal-tint">
                 {i + 1}
               </span>
               <div className="min-w-0 flex-1">
@@ -88,7 +88,7 @@ export function TimelineSection({ report }: { report: RoadmapReport }) {
         {report.timeline.map((phase, i) => (
           <li key={phase.label} className="relative">
             <span
-              className="absolute -left-[41px] grid h-6 w-6 place-items-center rounded-full bg-ever-night font-mono text-[11px] font-semibold text-signal"
+              className="absolute -left-[41px] grid h-6 w-6 place-items-center rounded-full bg-ever-night font-mono text-[11px] font-semibold text-signal-tint"
               aria-hidden
             >
               {i + 1}
@@ -107,7 +107,7 @@ export function TimelineSection({ report }: { report: RoadmapReport }) {
                   </li>
                 ))}
               </ul>
-              <p className="mt-4 rounded-xl bg-signal/25 px-4 py-3 text-sm text-ever-night">
+              <p className="mt-4 rounded-xl bg-signal-wash px-4 py-3 text-sm text-ink">
                 <strong className="font-semibold">Milestone:</strong> {phase.milestone}
               </p>
             </div>
@@ -138,7 +138,7 @@ export function CoursesSection({ report }: { report: RoadmapReport }) {
                 <p className="mt-1 text-sm text-ever-bright">{c.provider}</p>
               </div>
               {c.badge && (
-                <span className="rounded-full bg-signal/30 px-3 py-1 text-xs font-semibold text-ever-night">
+                <span className="rounded-full bg-signal-wash px-3 py-1 text-xs font-semibold text-ever-bright">
                   {c.badge}
                 </span>
               )}
@@ -183,7 +183,7 @@ export function ResumeSection({ report }: { report: RoadmapReport }) {
       <div className="rounded-2xl border border-ink/[0.07] bg-paper-soft p-6">
         <p className="text-[15px] leading-relaxed text-ink-soft">{report.resume.summary}</p>
         <div className="mt-4 rounded-xl bg-ever-night px-5 py-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-signal">Suggested LinkedIn headline</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-signal-tint">Suggested LinkedIn headline</p>
           <p className="mt-1.5 font-medium text-paper-soft">{report.resume.headline}</p>
         </div>
       </div>
@@ -285,7 +285,7 @@ export function InterviewSection({ report }: { report: RoadmapReport }) {
   return (
     <Section id="interview" n={9} icon="⚡" title="Interview Preparation">
       <div className="rounded-2xl bg-ever-night p-6 text-paper-soft sm:p-8">
-        <p className="text-xs font-semibold uppercase tracking-wider text-signal">Your career-switch narrative</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-signal-tint">Your career-switch narrative</p>
         <p className="mt-3 text-lg leading-relaxed">{iv.narrative}</p>
         <p className="mt-4 text-sm text-paper-soft/60">
           Rehearse this until the 90-second version is effortless. It&rsquo;s the first
@@ -386,7 +386,7 @@ export function RiskSection({ report }: { report: RoadmapReport }) {
       </div>
 
       <div className="mt-4 rounded-2xl bg-ever-night p-6 text-paper-soft sm:p-8">
-        <p className="text-xs font-semibold uppercase tracking-wider text-signal">Plan B</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-signal-tint">Plan B</p>
         <p className="mt-3 text-lg leading-relaxed">{r.planB}</p>
       </div>
     </Section>

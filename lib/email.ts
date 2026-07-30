@@ -12,18 +12,18 @@ export interface RoadmapEmailData {
 
 // Inline styles only — every serious email client strips <style> blocks and
 // none of them support custom fonts, so this deliberately falls back to
-// Georgia/system rather than trying to load Fraunces.
+// the system stack the parent site uses rather than a webfont.
 export function roadmapEmailHtml(d: RoadmapEmailData): string {
   const steps = d.steps
     .map(
       (s, i) => `
       <tr>
         <td style="padding:0 0 14px 0;vertical-align:top;width:32px;">
-          <div style="width:26px;height:26px;border-radius:13px;background:#081F13;color:#D7F462;font:600 12px/26px 'Courier New',monospace;text-align:center;">${i + 1}</div>
+          <div style="width:26px;height:26px;border-radius:13px;background:#0B2239;color:#7CC0EE;font:600 12px/26px ui-monospace,SFMono-Regular,Menlo,monospace;text-align:center;">${i + 1}</div>
         </td>
         <td style="padding:0 0 14px 0;vertical-align:top;">
-          <div style="font:600 16px/1.35 Georgia,serif;color:#12211C;">${escapeHtml(s.title)}</div>
-          <div style="font:400 13px/1.5 'Courier New',monospace;color:#1F7A45;padding-top:2px;">${escapeHtml(s.duration)}</div>
+          <div style="font:600 16px/1.35 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#0B2239;">${escapeHtml(s.title)}</div>
+          <div style="font:400 13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:#1A7DC4;padding-top:2px;">${escapeHtml(s.duration)}</div>
         </td>
       </tr>`
     )
@@ -31,44 +31,44 @@ export function roadmapEmailHtml(d: RoadmapEmailData): string {
 
   return `<!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
-<body style="margin:0;padding:0;background:#F7F5EF;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7F5EF;padding:32px 16px;">
+<body style="margin:0;padding:0;background:#F8F9FA;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F8F9FA;padding:32px 16px;">
 <tr><td align="center">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FDFCF9;border-radius:20px;overflow:hidden;border:1px solid rgba(18,33,28,0.08);">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FFFFFF;border-radius:20px;overflow:hidden;border:1px solid rgba(11,34,57,0.10);">
 
-    <tr><td style="background:#081F13;padding:32px;">
-      <div style="font:600 13px/1 'Helvetica Neue',Arial,sans-serif;letter-spacing:1.6px;text-transform:uppercase;color:#D7F462;">Inspire Ambitions</div>
-      <div style="font:400 12px/1 'Helvetica Neue',Arial,sans-serif;color:rgba(253,252,249,0.55);padding-top:6px;">Career Change Roadmap</div>
-      <div style="font:600 26px/1.25 Georgia,serif;color:#FDFCF9;padding-top:14px;">
-        ${escapeHtml(d.from)} <span style="color:#D7F462;">&rarr;</span> ${escapeHtml(d.to)}
+    <tr><td style="background:#0B2239;padding:32px;">
+      <div style="font:600 13px/1 'Helvetica Neue',Arial,sans-serif;letter-spacing:1.6px;text-transform:uppercase;color:#7CC0EE;">Inspire Ambitions</div>
+      <div style="font:400 12px/1 'Helvetica Neue',Arial,sans-serif;color:rgba(255,255,255,0.55);padding-top:6px;">Career Change Roadmap</div>
+      <div style="font:600 26px/1.25 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#FFFFFF;padding-top:14px;">
+        ${escapeHtml(d.from)} <span style="color:#7CC0EE;">&rarr;</span> ${escapeHtml(d.to)}
       </div>
-      <div style="font:400 15px/1.5 'Helvetica Neue',Arial,sans-serif;color:rgba(253,252,249,0.7);padding-top:8px;">
+      <div style="font:400 15px/1.5 'Helvetica Neue',Arial,sans-serif;color:rgba(255,255,255,0.72);padding-top:8px;">
         ${d.months} months at ${d.hoursPerWeek} hrs/week &middot; ${escapeHtml(d.matchBand)} &middot; difficulty ${d.difficulty}/10 (${escapeHtml(d.difficultyLabel)})
       </div>
     </td></tr>
 
     <tr><td style="padding:32px;">
-      <div style="font:600 18px/1.3 Georgia,serif;color:#12211C;padding-bottom:6px;">Your path, in ${d.steps.length} steps</div>
-      <div style="font:400 15px/1.6 'Helvetica Neue',Arial,sans-serif;color:#3C4A44;padding-bottom:20px;">
+      <div style="font:600 18px/1.3 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#0B2239;padding-bottom:6px;">Your path, in ${d.steps.length} steps</div>
+      <div style="font:400 15px/1.6 'Helvetica Neue',Arial,sans-serif;color:#3D4A5C;padding-bottom:20px;">
         Keep this email. The full roadmap &mdash; courses, portfolio projects, salary stages,
         interview prep and the rest &mdash; is in your browser at the link below.
       </div>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${steps}</table>
 
       <table role="presentation" cellpadding="0" cellspacing="0" style="padding-top:14px;">
-        <tr><td style="background:#D7F462;border-radius:999px;">
-          <a href="${escapeAttr(d.siteUrl)}/report" style="display:inline-block;padding:14px 28px;font:600 15px/1 'Helvetica Neue',Arial,sans-serif;color:#081F13;text-decoration:none;">Open my full roadmap &rarr;</a>
+        <tr><td style="background:#1A7DC4;border-radius:999px;">
+          <a href="${escapeAttr(d.siteUrl)}/report" style="display:inline-block;padding:14px 28px;font:600 15px/1 'Helvetica Neue',Arial,sans-serif;color:#FFFFFF;text-decoration:none;">Open my full roadmap &rarr;</a>
         </td></tr>
       </table>
 
-      <div style="font:400 13px/1.6 'Helvetica Neue',Arial,sans-serif;color:#71807A;padding-top:22px;border-top:1px solid rgba(18,33,28,0.08);margin-top:26px;">
+      <div style="font:400 13px/1.6 'Helvetica Neue',Arial,sans-serif;color:#6B7A8F;padding-top:22px;border-top:1px solid rgba(11,34,57,0.10);margin-top:26px;">
         Your roadmap is stored in the browser you created it in, so open that link on the same
         device. Salary figures are market estimates, not offers.
       </div>
     </td></tr>
 
   </table>
-  <div style="font:400 12px/1.6 'Helvetica Neue',Arial,sans-serif;color:#71807A;padding-top:18px;max-width:560px;">
+  <div style="font:400 12px/1.6 'Helvetica Neue',Arial,sans-serif;color:#6B7A8F;padding-top:18px;max-width:560px;">
     You got this because you asked Inspire Ambitions for a career change roadmap. We don&rsquo;t send anything else unless you ask.
   </div>
 </td></tr>

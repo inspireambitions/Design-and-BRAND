@@ -13,14 +13,14 @@ export function HeroPreview() {
         <div className="relative overflow-hidden bg-ever-night px-6 py-6 text-paper-soft">
           <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-signal/20 blur-2xl" />
           <div className="relative">
-            <span className="rounded-full bg-signal/20 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-signal">
+            <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-signal-tint">
               Your roadmap
             </span>
             <p className="mt-3 font-display text-xl font-semibold leading-tight">
-              Teacher <span className="text-signal">→</span> UX Designer
+              Teacher <span className="text-signal-tint">→</span> UX Designer
             </p>
             <div className="mt-4 flex items-end gap-3">
-              <span className="font-display text-3xl font-semibold text-signal">82</span>
+              <span className="font-display text-3xl font-semibold text-signal-tint">82</span>
               <span className="pb-1 text-xs text-paper-soft/60">/ 100 match</span>
             </div>
             <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-paper-soft/15">
@@ -36,10 +36,10 @@ export function HeroPreview() {
           </p>
           <div className="mt-3 space-y-2.5">
             {[
-              { s: "User research", t: "Have", cls: "bg-ever-night text-signal" },
+              { s: "User research", t: "Have", cls: "bg-ever-night text-signal-tint" },
               { s: "Figma & prototyping", t: "Need", cls: "bg-clay text-white" },
               { s: "Information architecture", t: "Need", cls: "bg-clay text-white" },
-              { s: "Stakeholder comms", t: "Partial", cls: "bg-signal text-ever-night" },
+              { s: "Stakeholder comms", t: "Partial", cls: "bg-signal text-white" },
             ].map((r) => (
               <div key={r.s} className="flex items-center justify-between gap-3">
                 <span className="truncate text-sm text-ink-soft">{r.s}</span>

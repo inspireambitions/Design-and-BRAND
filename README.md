@@ -145,3 +145,20 @@ The tool is a section of the main site, not a separate property:
 - `WebApplication` + `FAQPage` JSON-LD is injected in the root layout. The FAQ
   entries there must stay consistent with the visible FAQ on the landing page —
   Google penalises structured data that doesn't match rendered content.
+
+## Brand
+
+The palette and type are taken from the live inspireambitions.com, not chosen —
+`tailwind.config.ts` documents the source of each value. Two things to know if
+you change them:
+
+- The Kadence global palette lists `#E21E51` as palette 1, but the live
+  `ia-design-fix-3` stylesheet overrides it with `--ia-primary: #0b2239` and
+  `--ia-accent: #1a7dc4`, and explicitly sweeps the red out of buttons, links
+  and borders. **The override is what renders, so the override is what this
+  matches.** `#E21E51` survives here only for error and alert states.
+- Type is the system stack the parent site force-applies via
+  `ia-batch96-critical-font-css` (`-apple-system, BlinkMacSystemFont, Segoe UI,
+  Roboto, Arial`). Lato is the theme's declared font underneath that override —
+  if the override is ever removed, swap Lato into `fontFamily` here to match.
+  Heading weights follow the parent's rules: h1 700, h2/h3 600, h4 500.

@@ -47,7 +47,7 @@ export default function HomePage() {
           className="pointer-events-none absolute inset-x-0 -top-40 h-[520px] opacity-70"
           style={{
             background:
-              "radial-gradient(60% 60% at 20% 30%, rgba(215,244,98,0.28) 0%, transparent 70%), radial-gradient(50% 50% at 85% 10%, rgba(20,83,45,0.12) 0%, transparent 70%)",
+              "radial-gradient(60% 60% at 20% 30%, rgba(26,125,196,0.16) 0%, transparent 70%), radial-gradient(50% 50% at 85% 10%, rgba(11,34,57,0.10) 0%, transparent 70%)",
           }}
           aria-hidden
         />
@@ -55,12 +55,12 @@ export default function HomePage() {
           <div className="grid gap-14 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-center lg:gap-16">
           <div className="animate-rise">
             <span className="eyebrow">Free career change roadmap</span>
-            <h1 className="mt-5 font-display text-[2.75rem] font-semibold leading-[1.05] tracking-tight text-ink text-balance sm:text-6xl lg:text-[4.25rem]">
+            <h1 className="mt-5 font-display text-[2.75rem] font-bold leading-[1.05] tracking-tight text-ink text-balance sm:text-6xl lg:text-[4.25rem]">
               Everyone says{" "}
               <span className="relative whitespace-nowrap">
                 <span className="relative z-10">&ldquo;just switch careers.&rdquo;</span>
                 <span
-                  className="absolute inset-x-0 bottom-1 z-0 h-3 -rotate-1 bg-signal/70 sm:bottom-2 sm:h-4"
+                  className="absolute inset-x-0 bottom-1 z-0 h-3 -rotate-1 bg-signal-mark sm:bottom-2 sm:h-4"
                   aria-hidden
                 />
               </span>{" "}
@@ -145,7 +145,7 @@ export default function HomePage() {
         <div className="container-page">
           <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-start">
             <div className="lg:sticky lg:top-28">
-              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-signal">
+              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-signal-tint">
                 What&rsquo;s inside
               </span>
               <h2 className="mt-4 font-display text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
@@ -162,7 +162,7 @@ export default function HomePage() {
                 </Link>
                 <Link
                   href="/careers"
-                  className="inline-flex items-center justify-center rounded-full border border-paper-soft/25 px-6 py-3 font-medium text-paper-soft transition-colors hover:border-signal hover:text-signal"
+                  className="inline-flex items-center justify-center rounded-full border border-paper-soft/25 px-6 py-3 font-medium text-paper-soft transition-colors hover:border-signal hover:text-signal-tint"
                 >
                   Browse transitions
                 </Link>
@@ -180,7 +180,7 @@ export default function HomePage() {
                       </h3>
                       <p className="mt-1.5 text-sm leading-relaxed text-paper-soft/60">{s.blurb}</p>
                       {s.free && (
-                        <span className="mt-2.5 inline-block rounded-full bg-signal/15 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-signal">
+                        <span className="mt-2.5 inline-block rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-signal-tint">
                           Free preview
                         </span>
                       )}
@@ -213,7 +213,7 @@ export default function HomePage() {
                 <th className="px-6 py-5 text-sm font-semibold text-ink-faint">&nbsp;</th>
                 <th className="px-6 py-5 text-sm font-semibold text-ink-soft">Career coach</th>
                 <th className="px-6 py-5 text-sm font-semibold text-ink-soft">Generic AI chat</th>
-                <th className="bg-ever-night px-6 py-5 text-sm font-semibold text-signal">{BRAND.name}</th>
+                <th className="bg-ever-night px-6 py-5 text-sm font-semibold text-signal-tint">{BRAND.name}</th>
               </tr>
             </thead>
             <tbody>
@@ -306,7 +306,7 @@ export default function HomePage() {
             <div className="relative">
               <div className="flex items-center justify-between">
                 <h3 className="font-display text-2xl font-semibold">Full roadmap</h3>
-                <span className="rounded-full bg-signal px-3 py-1 text-xs font-bold uppercase tracking-wider text-ever-night">
+                <span className="rounded-full bg-signal px-3 py-1 text-xs font-bold uppercase tracking-wider text-white">
                   Everything
                 </span>
               </div>
@@ -358,7 +358,7 @@ export default function HomePage() {
             className="pointer-events-none absolute inset-0"
             style={{
               background:
-                "radial-gradient(50% 80% at 50% 0%, rgba(215,244,98,0.35) 0%, transparent 65%)",
+                "radial-gradient(50% 80% at 50% 0%, rgba(124,192,238,0.30) 0%, transparent 65%)",
             }}
             aria-hidden
           />
@@ -404,7 +404,7 @@ function Check({ children, light = false }: { children: React.ReactNode; light?:
     <li className="flex items-start gap-3">
       <span
         className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full ${
-          light ? "bg-signal text-ever-night" : "bg-ever-night text-signal"
+          light ? "bg-signal text-white" : "bg-ever-night text-signal-tint"
         }`}
         aria-hidden
       >

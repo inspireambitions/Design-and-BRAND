@@ -17,7 +17,7 @@ export default function CareersPage() {
       <main className="container-page py-16">
         <div className="max-w-2xl">
           <span className="eyebrow">Career library</span>
-          <h1 className="mt-4 font-display text-4xl font-semibold leading-tight tracking-tight text-ink sm:text-5xl">
+          <h1 className="mt-4 font-display text-4xl font-bold leading-tight tracking-tight text-ink sm:text-5xl">
             Where people are switching to, and what it takes
           </h1>
           <p className="mt-5 text-lg leading-relaxed text-ink-soft">

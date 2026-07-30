@@ -75,7 +75,7 @@ export function ReportView() {
             />
             <div className="relative">
               <div className="flex flex-wrap items-center gap-3">
-                <span className="rounded-full bg-signal/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-signal">
+                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-signal-tint">
                   Your roadmap
                 </span>
                 <span className="text-sm text-paper-soft/60">
@@ -83,15 +83,15 @@ export function ReportView() {
                 </span>
               </div>
 
-              <h1 className="mt-5 font-display text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
-                {s.from} <span className="text-signal">→</span> {s.to}
+              <h1 className="mt-5 font-display text-4xl font-bold leading-tight tracking-tight sm:text-5xl">
+                {s.from} <span className="text-signal-tint">→</span> {s.to}
               </h1>
 
               <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-center">
                 <p className="text-lg leading-relaxed text-paper-soft/85">{report.verdict}</p>
 
                 <div className="rounded-2xl bg-paper-soft/[0.07] p-6">
-                  <p className="font-display text-3xl font-semibold text-signal">
+                  <p className="font-display text-3xl font-semibold text-signal-tint">
                     {matchBand(report.matchScore)}
                   </p>
                   <div className="mt-1 flex items-baseline gap-2">
@@ -147,7 +147,7 @@ export function ReportView() {
           {unlocked ? (
             <>
               {email && (
-                <div className="no-print flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-2xl bg-signal/20 px-6 py-3.5 text-center text-[15px] text-ever-night">
+                <div className="no-print flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-2xl bg-signal-wash px-6 py-3.5 text-center text-[15px] text-ink">
                   <span aria-hidden>✓</span>
                   <span>
                     Unlocked. Your {report.steps.length}-step path is on its way to{" "}

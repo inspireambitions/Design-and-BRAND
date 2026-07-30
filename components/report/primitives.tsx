@@ -16,7 +16,7 @@ export function Section({
   return (
     <section id={id} className="scroll-mt-28">
       <div className="mb-6 flex items-center gap-3">
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-ever-night font-mono text-sm font-semibold text-signal">
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-ever-night font-mono text-sm font-semibold text-signal-tint">
           {n}
         </span>
         <span className="text-xl" aria-hidden>{icon}</span>
@@ -31,8 +31,8 @@ export function Section({
 
 export function StatusPill({ status }: { status: "have" | "partial" | "need" }) {
   const map = {
-    have: { label: "Have", cls: "bg-ever-night text-signal" },
-    partial: { label: "Partial", cls: "bg-signal text-ever-night" },
+    have: { label: "Have", cls: "bg-ever-night text-signal-tint" },
+    partial: { label: "Partial", cls: "bg-signal text-white" },
     need: { label: "Need", cls: "bg-clay text-white" },
   } as const;
   const { label, cls } = map[status];

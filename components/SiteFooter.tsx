@@ -14,20 +14,20 @@ export function SiteFooter() {
           </p>
         </div>
         <div>
-          <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-signal">Product</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-signal-tint">Product</h3>
           <ul className="mt-4 space-y-2.5 text-sm">
-            <li><Link href="/start" className="transition-colors hover:text-signal">Build a roadmap</Link></li>
-            <li><Link href="/careers" className="transition-colors hover:text-signal">Explore careers</Link></li>
-            <li><Link href="/#sample" className="transition-colors hover:text-signal">See a sample report</Link></li>
-            <li><Link href="/#pricing" className="transition-colors hover:text-signal">Pricing</Link></li>
+            <li><Link href="/start" className="transition-colors hover:text-signal-tint">Build a roadmap</Link></li>
+            <li><Link href="/careers" className="transition-colors hover:text-signal-tint">Explore careers</Link></li>
+            <li><Link href="/#sample" className="transition-colors hover:text-signal-tint">See a sample report</Link></li>
+            <li><Link href="/#pricing" className="transition-colors hover:text-signal-tint">Pricing</Link></li>
           </ul>
         </div>
         <div>
-          <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-signal">Company</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-signal-tint">Company</h3>
           <ul className="mt-4 space-y-2.5 text-sm">
-            <li><Link href="/#faq" className="transition-colors hover:text-signal">FAQ</Link></li>
-            <li><a href={`mailto:${BRAND.supportEmail}`} className="transition-colors hover:text-signal">Contact</a></li>
-            <li><Link href="/#pricing" className="transition-colors hover:text-signal">Free while in beta</Link></li>
+            <li><Link href="/#faq" className="transition-colors hover:text-signal-tint">FAQ</Link></li>
+            <li><a href={`mailto:${BRAND.supportEmail}`} className="transition-colors hover:text-signal-tint">Contact</a></li>
+            <li><Link href="/#pricing" className="transition-colors hover:text-signal-tint">Free while in beta</Link></li>
           </ul>
         </div>
       </div>

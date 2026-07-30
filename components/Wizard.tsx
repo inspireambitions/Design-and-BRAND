@@ -364,7 +364,7 @@ export function Wizard() {
 function Step({ title, hint, children }: { title: string; hint: string; children: React.ReactNode }) {
   return (
     <div>
-      <h1 className="font-display text-3xl font-semibold leading-tight tracking-tight text-ink text-balance sm:text-4xl">
+      <h1 className="font-display text-3xl font-bold leading-tight tracking-tight text-ink text-balance sm:text-4xl">
         {title}
       </h1>
       <p className="mt-3 leading-relaxed text-ink-soft">{hint}</p>
@@ -412,7 +412,7 @@ function GeneratingScreen({ from, to }: { from: string; to: string }) {
     <div className="mx-auto flex min-h-[60vh] w-full max-w-xl flex-col items-center justify-center text-center">
       <div className="relative grid h-20 w-20 place-items-center">
         <span className="absolute inset-0 animate-pulseSoft rounded-full bg-signal/40 blur-xl" aria-hidden />
-        <span className="relative grid h-14 w-14 place-items-center rounded-2xl bg-ever-night text-signal">
+        <span className="relative grid h-14 w-14 place-items-center rounded-2xl bg-ever-night text-signal-tint">
           <svg width="24" height="24" viewBox="0 0 18 18" fill="none" className="animate-pulseSoft">
             <path d="M2 15.5L6.2 8.4L9.4 11.2L15.8 2.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
             <path d="M11.8 2.5H15.8V6.4" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
@@ -420,7 +420,7 @@ function GeneratingScreen({ from, to }: { from: string; to: string }) {
         </span>
       </div>
 
-      <h1 className="mt-8 font-display text-3xl font-semibold tracking-tight text-ink">
+      <h1 className="mt-8 font-display text-3xl font-bold tracking-tight text-ink">
         Building your roadmap
       </h1>
       <p className="mt-2 text-ink-soft">
@@ -440,7 +440,7 @@ function GeneratingScreen({ from, to }: { from: string; to: string }) {
             >
               <span
                 className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-[10px] ${
-                  done ? "bg-ever-night text-signal" : active ? "bg-signal text-ever-night" : "bg-ink/[0.08]"
+                  done ? "bg-ever-night text-signal-tint" : active ? "bg-signal text-white" : "bg-ink/[0.08]"
                 }`}
                 aria-hidden
               >

@@ -50,7 +50,7 @@ export function Faq() {
               <span className="font-display text-lg font-semibold text-ink">{item.q}</span>
               <span
                 className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border border-ink/15 text-ink-soft transition-transform duration-300 ${
-                  isOpen ? "rotate-45 border-ever bg-ever-night text-signal" : ""
+                  isOpen ? "rotate-45 border-ever bg-ever-night text-signal-tint" : ""
                 }`}
                 aria-hidden
               >
