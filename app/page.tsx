@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Faq } from "@/components/Faq";
 import { HeroPreview } from "@/components/HeroPreview";
 import { HeroSearch } from "@/components/HeroSearch";
+import { RelatedTools } from "@/components/RelatedTools";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { BRAND } from "@/lib/brand";
@@ -379,6 +380,8 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      <RelatedTools />
 
       <SiteFooter />
     </>

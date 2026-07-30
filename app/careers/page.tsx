@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { RelatedTools } from "@/components/RelatedTools";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { POPULAR_TARGETS } from "@/lib/careers-data";
@@ -122,6 +123,8 @@ export default function CareersPage() {
           </Link>
         </div>
       </main>
+
+      <RelatedTools />
 
       <SiteFooter />
     </>
