@@ -1,9 +1,9 @@
 import type { Profile, RoadmapReport } from "./types";
 
-const PROFILE_KEY = "ascent.profile.v1";
-const REPORT_KEY = "ascent.report.v1";
-const UNLOCK_KEY = "ascent.unlocked.v1";
-const EMAIL_KEY = "ascent.email.v1";
+const PROFILE_KEY = "icr.profile.v1";
+const REPORT_KEY = "icr.report.v1";
+const UNLOCK_KEY = "icr.unlocked.v1";
+const EMAIL_KEY = "icr.email.v1";
 
 // localStorage, not sessionStorage: the landing page promises a roadmap you can
 // re-read at month 7, and a report that dies with the tab makes that a lie.

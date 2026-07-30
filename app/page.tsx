@@ -54,7 +54,7 @@ export default function HomePage() {
         <div className="container-page relative pb-20 pt-16 sm:pt-24">
           <div className="grid gap-14 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-center lg:gap-16">
           <div className="animate-rise">
-            <span className="eyebrow">Career transition planning</span>
+            <span className="eyebrow">Free career change roadmap</span>
             <h1 className="mt-5 font-display text-[2.75rem] font-semibold leading-[1.05] tracking-tight text-ink text-balance sm:text-6xl lg:text-[4.25rem]">
               Everyone says{" "}
               <span className="relative whitespace-nowrap">
@@ -67,10 +67,11 @@ export default function HomePage() {
               Nobody hands you the plan.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink-soft sm:text-xl">
-              {BRAND.name} builds the plan. Answer eight questions about your situation and
-              get a month-by-month roadmap out the other side — skill gaps, real courses
-              inside your budget, portfolio projects built around the career you already
-              have, and an honest read on how hard this is going to be.
+              {BRAND.parent} builds the plan. Answer eight questions about your situation
+              and get a personalized career change roadmap out the other side — your skill
+              gaps, a month-by-month timeline, real courses inside your budget, portfolio
+              projects built around the career you already have, and an honest read on how
+              hard this is going to be.
             </p>
           </div>
 

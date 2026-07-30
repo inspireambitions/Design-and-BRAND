@@ -1,8 +1,8 @@
 {
-  "name": "ascent-career-os",
+  "name": "career-change-roadmap",
   "version": "1.0.0",
   "private": true,
-  "description": "Ascent — AI-powered career transition planning. Personalized roadmaps, skill gap analysis, and coaching.",
+  "description": "Career Change Roadmap by Inspire Ambitions \u2014 personalized career transition plans, skill gap analysis, and coaching.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

@@ -228,10 +228,10 @@ export function generateReport(profile: Profile): RoadmapReport {
     matchScore: score,
     verdict:
       score >= 78
-        ? `Strong fit. Your ${profile.currentRole} background carries real transferable weight into ${role.role}, and your time commitment makes this timeline credible.`
+        ? `Your ${profile.currentRole} background carries real transferable weight into ${role.role}, and the hours you can commit make this timeline credible rather than aspirational.`
         : score >= 55
-        ? `Achievable with focus. The path from ${profile.currentRole} to ${role.role} is well-trodden — your plan below closes the ${needCount} key gaps deliberately.`
-        : `Ambitious but possible. This is a demanding switch on your current timeline — the plan below front-loads the hardest gaps and includes a Plan B so no month is wasted.`,
+        ? `The path from ${profile.currentRole} to ${role.role} is well-trodden, and the plan below closes your ${needCount} real gaps in priority order. The work is in the consistency, not the difficulty.`
+        : `This is a demanding switch on your current timeline. The plan front-loads the hardest gaps and includes a Plan B, so even a slower run leaves you further ahead than when you started.`,
     snapshot: {
       from: profile.currentRole,
       to: role.role,

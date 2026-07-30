@@ -1,4 +1,4 @@
-# Ascent — career transition planning
+# Career Change Roadmap — by Inspire Ambitions
 
 A premium career-change tool. Answer eight questions, get a twelve-section
 month-by-month roadmap: skill gaps, budget-filtered courses, portfolio projects
@@ -89,15 +89,20 @@ there is no payment path. Sections 1–3 are open, the remaining nine sit behind
 title and duration while blurring the execution detail.
 
 Captured addresses `POST` to `/api/subscribe`, which validates and rate-limits
-them, then forwards to whatever list you configure:
+them, then sends the roadmap summary through Resend:
 
 ```bash
-SUBSCRIBE_WEBHOOK_URL=https://hooks.zapier.com/...   # or Loops, ConvertKit, Resend
+RESEND_API_KEY=re_...                                     # required to actually send
+EMAIL_FROM="Inspire Ambitions <roadmap@inspireambitions.com>"   # optional override
 ```
 
-**With nothing configured the address is logged to the server console and
-dropped.** The gate promises the reader a link back to their roadmap, so wire
-this up before pointing real traffic at it, or soften the copy in `EmailGate.tsx`.
+The sending domain must be verified in Resend before delivery works. **With no
+key configured the address is logged to the server console and dropped** — the
+gate promises an email, so set the key before pointing real traffic at it.
+
+The email is not a magic link: it contains the reader's transition, match band,
+difficulty, and all eight step titles with durations, so it is useful on its own.
+The link inside it opens the full roadmap from `localStorage` on the same device.
 
 If the unlock ever becomes a purchase, replace the form's `onUnlock` with a
 Stripe Checkout redirect and flip the unlock flag only after the webhook
@@ -115,3 +120,28 @@ confirms payment — it should never be client-writable once money is involved.
 - The full report prints cleanly to PDF via the browser (`@media print` rules
   in `globals.css`); the "Save as PDF" button calls `window.print()`.
 - Salary figures are market estimates. The report says so where they appear.
+
+## Hosting and URLs
+
+The tool is a section of the main site, not a separate property:
+
+- **`basePath` is `/career-change-roadmap`** (`next.config.mjs`). It must stay
+  identical to `BRAND.basePath` in `lib/brand.ts`, which the canonical URLs,
+  sitemap, robots rules, and emailed link all derive from.
+- **Client fetches must go through `apiUrl()`** (`lib/api.ts`). Next.js adds
+  `basePath` to `<Link>`, `router.push`, and static assets but *not* to
+  `fetch()` — a bare `fetch("/api/roadmap")` 404s under a basePath. This
+  already caused one bug; route every internal call through the helper.
+- **`middleware.ts` 308-redirects any non-canonical host** to
+  `inspireambitions.com`, so preview domains and aliases can't get indexed or
+  split ranking signals. Localhost and Vercel preview deployments are exempt.
+
+## SEO
+
+- Title, description, canonical, OpenGraph and Twitter tags come from
+  `BRAND.seoTitle` / `seoDescription` via `app/layout.tsx`.
+- `app/sitemap.ts` lists only the two indexable pages; `/report` and `/start`
+  depend on client state and are disallowed in `app/robots.ts`.
+- `WebApplication` + `FAQPage` JSON-LD is injected in the root layout. The FAQ
+  entries there must stay consistent with the visible FAQ on the landing page —
+  Google penalises structured data that doesn't match rendered content.

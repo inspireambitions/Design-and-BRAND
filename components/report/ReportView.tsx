@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { matchBand } from "@/lib/match";
 import { store } from "@/lib/storage";
 import { SECTION_META, type RoadmapReport } from "@/lib/types";
 import { CoachDrawer } from "./CoachDrawer";
@@ -149,7 +150,7 @@ export function ReportView() {
                 <div className="no-print flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-2xl bg-signal/20 px-6 py-3.5 text-center text-[15px] text-ever-night">
                   <span aria-hidden>✓</span>
                   <span>
-                    Unlocked. A link back to this roadmap is on its way to{" "}
+                    Unlocked. Your {report.steps.length}-step path is on its way to{" "}
                     <strong className="font-semibold">{email}</strong>.
                   </span>
                 </div>
@@ -195,13 +196,6 @@ export function ReportView() {
       <CoachDrawer report={report} />
     </>
   );
-}
-
-function matchBand(score: number): string {
-  if (score >= 78) return "Strong fit";
-  if (score >= 55) return "Achievable with focus";
-  if (score >= 38) return "Ambitious";
-  return "Steep — read the risk section first";
 }
 
 function Fact({ label, value }: { label: string; value: string }) {

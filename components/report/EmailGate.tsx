@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { SECTION_META, type RoadmapReport } from "@/lib/types";
+import { matchBand } from "@/lib/match";
 import { CoursesSection } from "./Sections";
+import { apiUrl } from "@/lib/api";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -32,13 +34,19 @@ export function EmailGate({
     setError(null);
 
     try {
-      const res = await fetch("/api/subscribe", {
+      const res = await fetch(apiUrl("/api/subscribe"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: value,
           from: report.snapshot.from,
           to: report.snapshot.to,
+          months: report.snapshot.months,
+          hoursPerWeek: report.snapshot.hoursPerWeek,
+          matchBand: matchBand(report.matchScore),
+          difficulty: report.risk.difficulty,
+          difficultyLabel: report.risk.difficultyLabel,
+          steps: report.steps.map((s) => ({ title: s.title, duration: s.duration })),
         }),
       });
       if (!res.ok) throw new Error("subscribe failed");
@@ -143,8 +151,8 @@ export function EmailGate({
                 </p>
               ) : (
                 <p id="gate-note" className="mt-3 text-sm leading-relaxed text-ink-faint">
-                  Free, no card. We send one email with a link back to this roadmap — so it
-                  survives closing the tab — and nothing else unless you ask for it.
+                  Free, no card. We email you your {report.steps.length}-step path and a link
+                  back to the full roadmap. Nothing else, and one-click unsubscribe.
                 </p>
               )}
             </form>

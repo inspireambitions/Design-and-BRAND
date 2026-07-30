@@ -4,7 +4,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { POPULAR_TARGETS } from "@/lib/careers-data";
 
 export const metadata = {
-  title: "Explore career transitions — Ascent",
+  title: "Career Change Paths & Salary Data | Inspire Ambitions",
   description:
     "Salary bands, demand, difficulty, and required skills for the most-requested career changes.",
 };

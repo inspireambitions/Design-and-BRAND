@@ -3,7 +3,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { Wizard } from "@/components/Wizard";
 
 export const metadata = {
-  title: "Build your roadmap — Ascent",
+  title: "Build Your Career Change Roadmap — Free | Inspire Ambitions",
   description: "Eight questions. A month-by-month career transition plan.",
 };
 

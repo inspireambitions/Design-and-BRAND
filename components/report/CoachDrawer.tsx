@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { RoadmapReport } from "@/lib/types";
+import { apiUrl } from "@/lib/api";
 
 interface Turn {
   role: "user" | "assistant";
@@ -42,7 +43,7 @@ export function CoachDrawer({ report }: { report: RoadmapReport }) {
     setInput("");
     setBusy(true);
     try {
-      const res = await fetch("/api/coach", {
+      const res = await fetch(apiUrl("/api/coach"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: next, report }),

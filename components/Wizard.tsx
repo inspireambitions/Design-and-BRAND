@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { POPULAR_TARGETS } from "@/lib/careers-data";
 import { store } from "@/lib/storage";
 import type { Profile } from "@/lib/types";
+import { apiUrl } from "@/lib/api";
 
 const SKILL_BANK = [
   "Communication", "Project management", "Data analysis", "Writing", "Public speaking",
@@ -81,7 +82,7 @@ export function Wizard() {
     setError(null);
     store.saveProfile(p);
     try {
-      const res = await fetch("/api/roadmap", {
+      const res = await fetch(apiUrl("/api/roadmap"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(p),

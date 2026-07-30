@@ -33,7 +33,7 @@ export function SiteFooter() {
       </div>
       <div className="border-t border-paper-soft/10">
         <div className="container-page flex flex-col gap-2 py-6 text-xs sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} {BRAND.name}. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} {BRAND.parent}. All rights reserved.</p>
           <p className="text-paper-soft/50">
             Roadmaps are guidance, not guarantees. Salary ranges are market estimates.
           </p>
