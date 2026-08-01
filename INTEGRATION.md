@@ -20,11 +20,15 @@ keyword-led root slugs (`/uae-salary-calculator`, `/dubai-living-cost-calculator
 > the canonical/sitemap/robots values follow automatically.
 
 **Reserve the slug.** WordPress must not own `/career-change-roadmap`, or it will
-answer before the app does. Check nothing is published there:
+answer before the app does. Checked against the live database — nothing claims it
+today. The nearest neighbours are all posts and none collide:
 
+```sql
+SELECT ID, post_title, post_type, post_status FROM wpof_posts
+WHERE post_name LIKE '%career-change%';
 ```
-wp post list --post_type=page --name=career-change-roadmap
-```
+
+Re-run before launch in case something is published in the meantime.
 
 ## 2. List it on the tools hub
 
@@ -39,13 +43,20 @@ dash, then one line of description:
 Put it directly after the Hospitality Career Path Simulator row — that tool is
 the closest neighbour, and the two read naturally as a pair.
 
-Do the same on the other hubs where it fits:
+**The other two hubs need different treatment.** They list tools as prose, not as
+a link list, so the `<li>` above has nothing to sit in:
 
-| Page | ID | Slug |
-|---|---|---|
-| Free UAE Career Tools | 45594 | `/career-tools/` |
-| Job & Career Tools | 22768 | `/job-career-tools/` |
-| UAE Hospitality Career Toolkit | 46652 | `/career-toolkit/` |
+| Page | ID | Slug | How it lists tools |
+|---|---|---|---|
+| Free UAE Career Tools | 45594 | `/career-tools/` | Gutenberg `<ul>`, one `link - description` row per tool. Use the markup above. |
+| Job & Career Tools | 22768 | `/job-career-tools/` | Hand-written HTML prose. Tools are named inside paragraphs under **What Each Tool Does**, then an FAQ in `<details>` blocks. |
+| UAE Hospitality Career Toolkit | 46652 | `/career-toolkit/` | Gutenberg prose under **What You Will Find in This Toolkit**, tools grouped into four named categories. |
+
+For 22768 and 46652, add a sentence naming the tool in the paragraph where it
+belongs and link it there — a bare list item would read as pasted-in. On 46652
+that means picking which of the four categories it falls under first; it is a
+planning tool rather than a calculator, so it does not obviously belong to any
+of them, and that choice is yours to make.
 
 ## 3. Add the footer link
 
