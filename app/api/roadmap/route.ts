@@ -5,6 +5,8 @@ import { buildCoreUserPrompt, SYSTEM_PROMPT } from "@/lib/prompt";
 import { CORE_REPORT_SCHEMA } from "@/lib/schema";
 import { parseAiRoadmap } from "@/lib/ai-response";
 import { applyCareerSafetyGuards, needsClinicalPrerequisiteGuard, rolesAreIdentical } from "@/lib/career-safety";
+import { applyCareerLadder } from "@/lib/career-ladders";
+import { applyPlanningConstraints, targetRoleError } from "@/lib/planning-constraints";
 import type { Profile, RoadmapReport } from "@/lib/types";
 import { INDUSTRY_OPTIONS } from "@/lib/industry-data";
 
@@ -110,8 +112,16 @@ export async function POST(req: Request) {
     );
   }
 
+  const invalidTarget = targetRoleError(profile.targetRole);
+  if (invalidTarget) {
+    return NextResponse.json({ error: invalidTarget }, { status: 422 });
+  }
+
   // The deterministic engine is both the no-API-key path and the safety net.
-  const fallback = applyCareerSafetyGuards(generateReport(profile), profile);
+  const fallback = applyPlanningConstraints(
+    applyCareerLadder(applyCareerSafetyGuards(generateReport(profile), profile), profile),
+    profile
+  );
 
   if (needsClinicalPrerequisiteGuard(profile)) {
     console.info("[roadmap] regulated clinical prerequisites missing; serving guarded report", {
@@ -175,12 +185,15 @@ export async function POST(req: Request) {
     }
 
     // Merge over the engine output so a partially-shaped response still renders.
-    const report: RoadmapReport = applyCareerSafetyGuards({
-      ...fallback,
-      ...parsed,
-      snapshot: { ...fallback.snapshot, ...(parsed.snapshot ?? {}) },
-      generatedBy: "ai",
-    }, profile);
+    const report: RoadmapReport = applyPlanningConstraints(
+      applyCareerLadder(applyCareerSafetyGuards({
+        ...fallback,
+        ...parsed,
+        snapshot: { ...fallback.snapshot, ...(parsed.snapshot ?? {}) },
+        generatedBy: "ai",
+      }, profile), profile),
+      profile
+    );
 
     console.info("[roadmap] Claude report generated", {
       responseId: message.id,

@@ -111,26 +111,34 @@ export function Wizard() {
   const [customSkill, setCustomSkill] = useState("");
   const [customCountry, setCustomCountry] = useState("");
   const [customLanguage, setCustomLanguage] = useState("");
+  const [savedProfile, setSavedProfile] = useState<Profile | null>(null);
 
   useEffect(() => {
     const from = params.get("from") ?? "";
     const to = params.get("to") ?? "";
     const industry = params.get("industry") ?? "";
+    const startFresh = params.get("fresh") === "1";
     const saved = store.loadProfile();
+    const hasDeepLink = Boolean(from || to || industry);
     const isHospitality = industry.toLowerCase() === "hospitality";
+
+    if (startFresh) store.clear();
+    if (saved && !startFresh && !hasDeepLink) {
+      setSavedProfile(saved);
+      setHydrated(true);
+      return;
+    }
+
     setP((prev) => ({
       ...prev,
-      ...(saved ?? {}),
-      existingSkills: saved?.existingSkills?.slice(0, 5) ?? prev.existingSkills,
-      motivations: saved?.motivations?.slice(0, 3) ?? prev.motivations,
-      careerBarriers: (saved?.careerBarriers?.length
-        ? saved.careerBarriers
-        : saved?.careerBarrier ? [saved.careerBarrier] : prev.careerBarriers)?.slice(0, 3),
-      languages: saved?.languages?.slice(0, 4) ?? prev.languages,
+      existingSkills: prev.existingSkills,
+      motivations: prev.motivations,
+      careerBarriers: prev.careerBarriers,
+      languages: prev.languages,
       ...(industry ? {
         industry,
-        currentIndustry: saved?.currentIndustry || industry,
-        targetIndustry: saved?.targetIndustry || industry,
+        currentIndustry: industry,
+        targetIndustry: industry,
         mode: isHospitality ? "hospitality" as const : "general" as const,
       } : {}),
       ...(from ? { currentRole: from } : {}),
@@ -138,6 +146,28 @@ export function Wizard() {
     }));
     setHydrated(true);
   }, [params]);
+
+  function usePreviousAnswers() {
+    if (!savedProfile) return;
+    setP({
+      ...empty,
+      ...savedProfile,
+      existingSkills: savedProfile.existingSkills?.slice(0, 5) ?? [],
+      motivations: savedProfile.motivations?.slice(0, 3) ?? [],
+      careerBarriers: (savedProfile.careerBarriers?.length
+        ? savedProfile.careerBarriers
+        : savedProfile.careerBarrier ? [savedProfile.careerBarrier] : []).slice(0, 3),
+      languages: savedProfile.languages?.slice(0, 4) ?? [],
+    });
+    setSavedProfile(null);
+  }
+
+  function startWithBlankAnswers() {
+    store.clear();
+    setP(empty);
+    setStep(0);
+    setSavedProfile(null);
+  }
 
   const set = <K extends keyof Profile>(key: K, value: Profile[K]) =>
     setP((prev) => ({ ...prev, [key]: value }));
@@ -283,6 +313,28 @@ export function Wizard() {
         <div className="h-2 w-full animate-pulseSoft rounded-full bg-paper-deep" />
         <div className="mt-8 h-80 animate-pulseSoft rounded-[1.75rem] bg-paper-deep/60" />
       </div>
+    );
+  }
+
+  if (savedProfile) {
+    return (
+      <section className="mx-auto w-full max-w-2xl rounded-[1.75rem] border border-ink/[0.08] bg-paper-soft p-7 shadow-lift sm:p-10" aria-labelledby="saved-plan-title">
+        <p className="eyebrow">Saved answers found</p>
+        <h1 id="saved-plan-title" className="mt-3 font-display text-3xl font-bold tracking-tight text-ink sm:text-4xl">How would you like to begin?</h1>
+        <p className="mt-4 max-w-xl leading-relaxed text-ink-soft">
+          This device has answers from {savedProfile.currentRole || "an earlier role"} to {savedProfile.targetRole || "an earlier target"}. Choose whether to reuse them or clear them.
+        </p>
+        <div className="mt-8 grid gap-3 sm:grid-cols-2">
+          <button type="button" onClick={startWithBlankAnswers} className="rounded-2xl border border-ever/25 bg-signal-wash px-5 py-5 text-left transition-colors hover:bg-signal/15">
+            <span className="block font-display text-xl font-semibold text-ink">Start fresh</span>
+            <span className="mt-2 block text-sm leading-relaxed text-ink-soft">Clear the saved profile, report, email and unlock status on this device.</span>
+          </button>
+          <button type="button" onClick={usePreviousAnswers} className="rounded-2xl border border-ink/[0.1] bg-paper px-5 py-5 text-left transition-colors hover:bg-paper-deep">
+            <span className="block font-display text-xl font-semibold text-ink">Use previous answers</span>
+            <span className="mt-2 block text-sm leading-relaxed text-ink-soft">Review and change the saved answers before building another report.</span>
+          </button>
+        </div>
+      </section>
     );
   }
 

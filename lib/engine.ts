@@ -89,10 +89,10 @@ function buildTimeline(profile: Profile, role: RoleKnowledge, gaps: SkillGapItem
         `Ask one working person or approved trainer what a beginner should do first`,
       ] : [
         `Start the primary course and protect ${profile.hoursPerWeek} weekly hours`,
-        `Reach working fluency in ${topNeeds[0] ?? "the field's core tool"}`,
+        `Practise ${topNeeds[0] ?? `the main work required for ${role.role}`}`,
         `Join one relevant community and ask a specific beginner question`,
       ],
-      milestone: `You can explain the ${role.role} craft credibly and produce basic work in the core tool`,
+      milestone: `You can explain the main duties of ${role.role} and show basic, relevant evidence`,
     },
     {
       label: seg(firstEnd + 1, secondEnd),
@@ -101,11 +101,11 @@ function buildTimeline(profile: Profile, role: RoleKnowledge, gaps: SkillGapItem
       actions: practical ? [
         `Complete evidence task #1 safely, using your ${profile.currentRole} experience`,
         "Continue approved learning or supervised practice",
-        `Speak to two working ${role.role}s about the real day-to-day work`,
+        `Speak to two people currently doing ${role.role} work about the real day-to-day duties`,
       ] : [
         `Complete evidence task #1 (see Evidence Projects section) — deliberately use your ${profile.currentRole} background`,
         `Continue coursework; finish the main certificate's midpoint`,
-        `Start 2 informational interviews per month with working ${role.role}s`,
+        `Arrange two informed conversations per month with people doing ${role.role} work`,
       ],
       milestone: practical ? "One safe, relevant piece of work evidence that a supervisor or employer can review" : "One complete, public portfolio piece with a written case study",
     },
@@ -122,7 +122,7 @@ function buildTimeline(profile: Profile, role: RoleKnowledge, gaps: SkillGapItem
         "Rewrite resume and LinkedIn using the Resume section's before/after patterns",
         "Ask a working professional for feedback on your evidence — then act on it",
       ],
-      milestone: `Your materials read like a ${role.role} who used to be a ${profile.currentRole} — not the reverse`,
+      milestone: `Your materials show relevant evidence for ${role.role} while using the strengths from your ${profile.currentRole} work`,
     },
     {
       label: seg(thirdEnd + 1, m),
@@ -355,7 +355,7 @@ export function generateReport(profile: Profile): RoadmapReport {
       : [
           {
             title: `Redesign / rebuild something from your ${profile.currentRole} world`,
-            description: `Apply ${role.role} craft to a domain you already know deeply — this is the single highest-leverage move for switchers, because your domain insight is something juniors can't fake.`,
+            description: `Apply the skills required for ${role.role} to a field you already know. Show the decisions you made, the result and what you learned.`,
             skills: skillGap.filter((g) => g.priority === "high").map((g) => g.skill).slice(0, 3),
             effort: "3–4 weeks part-time",
           },
@@ -418,8 +418,8 @@ export function generateReport(profile: Profile): RoadmapReport {
       peopleToFollow: role.people,
       events: role.events,
       outreachTemplate: practical
-        ? `Hello [Name]. I currently work as a ${profile.currentRole} and I am exploring ${role.role} work in ${profile.targetCountry || "this area"}. Could I ask you two short questions: what requirement should I verify first, and what beginner evidence do employers trust? I am not asking you to promise me a job.`
-        : `Hello [Name]. I work as a ${profile.currentRole} and I am preparing for ${role.role} work. Your experience with [specific topic] is relevant to one question I have: [focused question]. Would you be open to a short conversation or written reply?`,
+        ? `Hello [Name]. My current role is ${profile.currentRole}, and I am exploring ${role.role} work in ${profile.targetCountry || "this area"}. Could I ask you two short questions: what requirement should I verify first, and what beginner evidence do employers trust? I am not asking you to promise me a job.`
+        : `Hello [Name]. My current role is ${profile.currentRole}, and I am preparing for ${role.role} work. Your experience with [specific topic] is relevant to one question I have: [focused question]. Would you be open to a short conversation or written reply?`,
       weeklyRoutine: practical ? [
         "Read two current local adverts and note repeated requirements",
         "Ask one working person, supervisor, trainer or recruiter a focused question",
@@ -433,7 +433,7 @@ export function generateReport(profile: Profile): RoadmapReport {
       ],
     },
     interview: {
-      narrative: `“I spent [N] years as a ${profile.currentRole}, where I got genuinely good at [transferable strengths]. I kept gravitating toward [the target-role part of the job] — so ${profile.timelineMonths} months ago I committed: [course], [project 1], [project 2]. I'm not leaving ${profile.currentRole} work behind; I'm bringing its ${profile.motivations.includes("meaning") ? "purpose and " : ""}judgment into ${role.role}, where I can [what you'll do for them].”`,
+      narrative: `“I spent [N] years in ${profile.currentRole} work, where I became good at [transferable strengths]. I kept moving towards [the target-role part of the job]. ${profile.timelineMonths} months ago, I committed to [course], [project 1] and [project 2]. I now bring that ${profile.motivations.includes("meaning") ? "purpose and " : ""}judgement into ${role.role}, where I can [what you will do for them].”`,
       commonQuestions: [
         { question: "Why are you changing careers?", approach: "Run toward, never away. One sentence on what pulled you in, then immediately pivot to the evidence: what you've built and learned." },
         { question: `Why should we consider you for ${role.role}?`, approach: `Use one strength from ${profile.currentRole}, one piece of relevant evidence and one honest sentence about the training or supervision you still need.` },

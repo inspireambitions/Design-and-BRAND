@@ -118,6 +118,9 @@ export function ReportView() {
                 <span className="text-sm text-paper-soft/60">
                   Built for {s.from.toLowerCase()} → {s.to.toLowerCase()}
                 </span>
+                <span className="rounded-full border border-paper-soft/15 px-3 py-1 text-xs text-paper-soft/70">
+                  {report.generatedBy === "ai" ? "AI-assisted, with planning-rule checks" : "Built with planning rules"}
+                </span>
               </div>
 
               <p className="print-only mt-4 text-sm font-semibold uppercase tracking-[0.14em] text-paper-soft/60">
@@ -164,8 +167,23 @@ export function ReportView() {
         )}
 
         {/* ── Section nav ───────────────────────────────────── */}
-        <nav className="no-print sticky top-[68px] z-30 -mx-5 mt-8 overflow-x-auto border-y border-ink/[0.07] bg-paper/90 px-5 py-3 backdrop-blur-md sm:-mx-8 sm:px-8">
-          <ul className="flex gap-1 whitespace-nowrap">
+        <nav className="no-print sticky top-[68px] z-30 -mx-5 mt-8 border-y border-ink/[0.07] bg-paper/90 px-5 py-3 backdrop-blur-md sm:-mx-8 sm:px-8" aria-label="Report sections">
+          <label className="block sm:hidden">
+            <span className="sr-only">Jump to a report section</span>
+            <select
+              defaultValue=""
+              onChange={(event) => {
+                if (event.target.value) document.getElementById(event.target.value)?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+              className="field-control min-h-11 bg-paper-soft py-2.5"
+            >
+              <option value="" disabled>Jump to a report section</option>
+              {SECTION_META.map((item) => (
+                <option key={item.id} value={item.id}>{item.title}{!item.free && !unlocked ? " (locked)" : ""}</option>
+              ))}
+            </select>
+          </label>
+          <ul className="hidden gap-1 overflow-x-auto whitespace-nowrap sm:flex">
             {SECTION_META.map((m) => (
               <li key={m.id}>
                 <a
@@ -244,8 +262,8 @@ export function ReportView() {
                   <button onClick={() => window.print()} className="btn-primary">
                     Save as PDF
                   </button>
-                  <Link href="/start" className="btn-ghost">
-                    Plan a different transition
+                  <Link href="/start?fresh=1" className="btn-ghost">
+                    Start a fresh plan
                   </Link>
                 </div>
                 {actionStatus && <p className="mt-4 text-sm text-ink-soft" role="status">{actionStatus}</p>}
