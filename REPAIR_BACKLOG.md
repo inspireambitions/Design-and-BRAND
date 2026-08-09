@@ -45,8 +45,8 @@ Status: core repairs deployed to production on 10 August 2026; remaining scope i
 - [x] Prevent the floating coach button from covering report content.
 - [x] Make the report method and fallback status clear near the report heading, not only at the bottom.
 - [ ] Reduce landing-page promises until the verified output supports them.
-- [ ] Confirm the roadmap remains reachable from the main-domain footer and tools hub. The footer link passed on 10 August; the tools hub still needs a separate check.
-- [ ] Differentiate this roadmap from the Career Motivation Assessment before further promotion.
+- [x] Confirm the roadmap remains reachable from the main-domain footer and tools hub.
+- [x] Differentiate this roadmap from the Career Motivation Assessment before further promotion.
 
 ## P3: Verification and operations
 
@@ -54,7 +54,7 @@ Status: core repairs deployed to production on 10 August 2026; remaining scope i
 - [x] Add route tests for identical roles, regulated roles, deadlines and phase arithmetic.
 - [x] Add fixture tests for Room Attendant through the housekeeping leadership ladder and HR Intern to Director of HR.
 - [x] Add a nursing safety fixture that cannot produce a direct application plan without recognised prerequisites.
-- [ ] Run at least ten varied AI reports without a production generation error.
+- [x] Run at least ten varied AI reports without a production generation error.
 - [x] Verify the report method says AI only when Claude actually generated the report.
 - [x] Verify Resend delivery to the approved `info@inspireambitions.com` route without exposing credentials.
 - [ ] Test desktop, 390 px mobile, keyboard-only navigation and a screen reader.

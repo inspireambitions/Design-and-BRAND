@@ -97,6 +97,19 @@ export default function HomePage() {
             </a>
           </div>
 
+          <div className="mt-3 max-w-3xl animate-rise" style={{ animationDelay: "195ms" }}>
+            <a
+              href="/career-motivation-assessment/"
+              className="flex flex-col gap-2 rounded-2xl border border-ink/[0.09] bg-paper-deep/55 px-5 py-4 transition-colors hover:border-ever/30 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <span>
+                <strong className="block text-ink">Not ready to choose a target role?</strong>
+                <span className="text-sm text-ink-soft">Use the Career Motivation Assessment to understand what drives you at work. Use this roadmap when you want roles, gaps, training checks and next steps.</span>
+              </span>
+              <span className="shrink-0 text-sm font-semibold text-ever-bright">Explore my work drivers →</span>
+            </a>
+          </div>
+
           <div
             className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-3 text-sm text-ink-faint animate-rise"
             style={{ animationDelay: "220ms" }}
