@@ -9,3 +9,5 @@ next-env.d.ts
 node_modules/
 npm-debug.log*
 out/
+.vercel
+.env*
