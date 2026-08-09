@@ -228,7 +228,7 @@ export function applyCareerLadder(report: RoadmapReport, profile: Profile): Road
     verdict: `Your ${profile.timelineMonths}-month plan should target ${credibleRole}, not promise ${finalRole}. The full route is ${route}. Each promotion depends on real scope, results and a vacancy. Recheck the final target after you have proved the next level.`,
     snapshot: {
       ...report.snapshot,
-      to: `${finalRole} via ${ladder.roles.slice(currentIndex + 1, targetIndex).join(", then ")}`,
+      to: finalRole,
       transferableCount,
       estimatedCost: profile.budget === "free" ? "Start with employer-funded development" : "Check recognition and price before paying",
     },

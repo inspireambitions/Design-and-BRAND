@@ -166,6 +166,8 @@ export function ReportView() {
           </div>
         )}
 
+        <CoachDrawer report={report} />
+
         {/* ── Section nav ───────────────────────────────────── */}
         <nav className="no-print sticky top-[68px] z-30 -mx-5 mt-8 border-y border-ink/[0.07] bg-paper/90 px-5 py-3 backdrop-blur-md sm:-mx-8 sm:px-8" aria-label="Report sections">
           <label className="block sm:hidden">
@@ -280,7 +282,6 @@ export function ReportView() {
         </div>
       </main>
 
-      <CoachDrawer report={report} />
       <p className="no-print container-page pb-10 text-center text-xs leading-relaxed text-ink-faint">
         Report method: {report.generatedBy === "ai" ? "AI-assisted analysis checked against the built-in planning rules" : "built-in planning rules"}. This is career guidance, not a validated psychometric assessment.
       </p>

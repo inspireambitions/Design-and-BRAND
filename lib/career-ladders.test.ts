@@ -38,7 +38,7 @@ describe("career progression ladders", () => {
     const input = profile("HR Intern", "Director of HR", "500");
     const report = applyCareerLadder(generateReport(input), input);
     expect(report.verdict).toContain("HR Officer or HR Generalist");
-    expect(report.snapshot.to).toContain("HR Coordinator");
+    expect(report.snapshot.to).toBe("Director of HR");
     expect(report.projects.map((project) => project.description).join(" ")).toContain("Never copy real identity");
     expect(report.courses.some((course) => course.name.includes("CIPD Level 3"))).toBe(true);
     expect(report.networking.outreachTemplate).toContain("HR Coordinator");
