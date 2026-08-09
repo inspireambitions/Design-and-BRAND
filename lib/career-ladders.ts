@@ -175,6 +175,37 @@ function hrCourses(profile: Profile): CourseRec[] {
   ];
 }
 
+function evidencedSkills(ladder: Ladder, profile: Profile): SkillGapItem[] {
+  const selected = profile.existingSkills;
+  const evidenceByIndex = ladder.id === "housekeeping"
+    ? [
+        ["Checking details", "Cleaning standards", "Quality checks"],
+        ["Working with a team", "Training another person", "Leading or guiding others"],
+        ["Planning work", "Keeping records"],
+        ["Stock control", "Chemical safety", "Working safely"],
+        ["Helping customers", "Solving problems", "Explaining information"],
+        ["Working with data or spreadsheets", "Planning work"],
+      ]
+    : [
+        ["Keeping records", "Checking details", "Data entry"],
+        ["Explaining information", "Scheduling", "Working with a team"],
+        ["Keeping records", "Solving problems"],
+        ["Using phones or computers", "Working with data or spreadsheets", "Data entry"],
+        ["Helping customers", "Explaining information", "Solving problems"],
+        ["Planning work", "Leading or guiding others", "Working with data or spreadsheets"],
+      ];
+
+  return ladder.skills.map((item, index) => {
+    const evidence = selected.find((skill) => evidenceByIndex[index]?.includes(skill));
+    if (!evidence) return item;
+    return {
+      ...item,
+      status: "partial" as const,
+      howToAcquire: `You selected “${evidence}” as evidence you already use. Test how well it transfers through the supervised task below. ${item.howToAcquire}`,
+    };
+  });
+}
+
 export function applyCareerLadder(report: RoadmapReport, profile: Profile): RoadmapReport {
   const match = findLadder(profile);
   if (!match) return report;
@@ -188,6 +219,9 @@ export function applyCareerLadder(report: RoadmapReport, profile: Profile): Road
   const housekeeping = ladder.id === "housekeeping";
   const courses = housekeeping ? housekeepingCourses(profile) : hrCourses(profile);
   const evidenceNoun = housekeeping ? "guest, staff or property" : "candidate, employee or employer";
+  const skillGap = evidencedSkills(ladder, profile);
+  const transferableCount = skillGap.filter((item) => item.status !== "need").length;
+  const nextRole = ladder.roles[Math.min(currentIndex + 1, targetIndex)];
 
   return {
     ...report,
@@ -195,9 +229,11 @@ export function applyCareerLadder(report: RoadmapReport, profile: Profile): Road
     snapshot: {
       ...report.snapshot,
       to: `${finalRole} via ${ladder.roles.slice(currentIndex + 1, targetIndex).join(", then ")}`,
+      transferableCount,
       estimatedCost: profile.budget === "free" ? "Start with employer-funded development" : "Check recognition and price before paying",
     },
-    skillGap: ladder.skills,
+    guidanceNote: `This is a staged promotion plan. It does not confirm a promotion, vacancy, salary, qualification or completion date. Treat ${credibleRole} as the current planning target and ${finalRole} as the longer-term direction.`,
+    skillGap,
     steps: [
       { title: `Confirm the promotion route with your manager`, duration: "First 2 weeks", detail: `Compare ${route} with your property's or employer's real structure. Ask which role is the next available step and which results decide promotion.` },
       { title: `Prove the core work at your current level`, duration: "Months 1–3", detail: `Collect two verified quality, service, accuracy or productivity results. Remove all ${evidenceNoun} information.` },
@@ -224,6 +260,74 @@ export function applyCareerLadder(report: RoadmapReport, profile: Profile): Road
       { title: "Recruitment process measure", description: "With approval, measure one process such as completion time or interview attendance. Report totals only and remove candidate details.", skills: ["Recruitment", "Reporting", "Process improvement"], effort: "2 to 4 weeks" },
       { title: "Fictional manager guidance note", description: "Write a short response to a fictional attendance, performance or conduct case using current law and company procedure.", skills: ["Employee relations", "Writing", "Fair process"], effort: "One week" },
     ],
+    resume: {
+      summary: `Position your ${profile.currentRole} experience for ${nextRole}. Show evidence from the next level without claiming readiness for ${finalRole}.`,
+      headline: `${profile.currentRole} preparing for ${nextRole} | ${skillGap.slice(0, 2).map((item) => item.skill).join(" | ")}`,
+      bullets: housekeeping ? [
+        { before: "Cleaned assigned rooms", after: "Completed [number] assigned rooms to the required standard, recorded defects and closed rechecks with the supervisor" },
+        { before: "Helped the housekeeping team", after: "Supported [approved task] during [busy period], helping the team achieve [verified service or quality result]" },
+        { before: "Want to become a Director of Housekeeping", after: `Preparing for ${nextRole} through supervised inspection, briefing and planning evidence` },
+      ] : [
+        { before: "Helped with HR administration", after: "Completed [approved onboarding or records task] accurately and on time, with employee information kept confidential" },
+        { before: "Supported recruitment", after: "Tracked [approved process measure] across [number] vacancies and helped improve [verified result]" },
+        { before: "Want to become a Director of HR", after: `Preparing for ${nextRole} through HR operations, reporting and supervised case-support evidence` },
+      ],
+      linkedinTips: [
+        `Use ${nextRole} as the near-term target in your summary`,
+        "Describe approved results, not confidential cases or internal documents",
+        "Name completed qualifications accurately and link only to the awarding body",
+        `Keep ${finalRole} in the career direction, not as a title you already claim`,
+      ],
+    },
+    salary: ladder.roles.slice(currentIndex, Math.min(targetIndex + 1, currentIndex + 4)).map((role, index, roles) => ({
+      stage: role,
+      range: "Check current local adverts",
+      note: index === 0
+        ? "Record the full current package as the comparison point."
+        : `Compare at least five recent ${role} adverts with similar property or employer scope.`,
+      pct: Math.round(35 + (index * 65) / Math.max(1, roles.length - 1)),
+    })),
+    networking: {
+      ...report.networking,
+      peopleToFollow: housekeeping
+        ? ["A Housekeeping Supervisor", "An Assistant Executive Housekeeper", "An Executive Housekeeper"]
+        : ["An HR Coordinator or Officer", "An HR Manager", "A recruiter who hires HR operations roles"],
+      outreachTemplate: `Hello [Name]. My current role is ${profile.currentRole}, and my next target is ${nextRole}. Could I ask which two results or duties you would need to see before considering someone ready for that step?`,
+      weeklyRoutine: [
+        `Compare one current ${nextRole} job description with your evidence`,
+        "Complete or request one approved task from the next level",
+        "Record one result and one piece of manager feedback",
+        "Keep all guest, candidate, employee and employer information private",
+      ],
+    },
+    interview: {
+      narrative: `“My current role is ${profile.currentRole}. I am preparing for ${nextRole}, which is the next gate towards ${finalRole}. I have built evidence in [task 1] and [task 2], with [verified result]. My next development need is [honest gap].”`,
+      commonQuestions: [
+        { question: `Why are you ready for ${nextRole}?`, approach: "Give one current-level result, one supervised next-level task and one piece of manager feedback." },
+        { question: "Which part of the next role still needs development?", approach: "Name the real gap and the approved work or training already arranged to close it." },
+        { question: "How do you protect confidential information?", approach: `Explain how you keep ${evidenceNoun} information out of notes, samples and public profiles.` },
+        { question: `Where do you want to progress after ${nextRole}?`, approach: `Name the next ladder stage. Keep ${finalRole} as the longer-term direction and show that you understand the gates between them.` },
+      ],
+      frameworks: ["Situation, authorised action, verified result", "Current scope, next-level evidence, remaining gap"],
+      redFlags: [
+        `Claiming readiness for ${finalRole} without prior management scope`,
+        "Sharing confidential operating or people information as evidence",
+        "Listing a course without showing how the learning changed your work",
+      ],
+    },
+    dayInLife: housekeeping ? [
+      { time: "Shift start", activity: `Review room status, staffing and quality priorities with the ${nextRole}` },
+      { time: "Morning", activity: "Complete assigned work and join an authorised inspection or briefing task" },
+      { time: "Mid-shift", activity: "Coordinate an approved guest, laundry, stock or maintenance follow-up" },
+      { time: "Afternoon", activity: "Record results, rechecks and one learning point without private details" },
+      { time: "Shift end", activity: "Complete the handover and ask for feedback on the next-level task" },
+    ] : [
+      { time: "Start", activity: `Review approved priorities with the ${nextRole} or manager` },
+      { time: "Morning", activity: "Complete employee records, onboarding or recruitment support within your access level" },
+      { time: "Midday", activity: "Update the authorised HR system and check data accuracy" },
+      { time: "Afternoon", activity: "Support an approved report, training or employee-service task" },
+      { time: "End", activity: "Secure confidential records, complete the handover and record one learning point" },
+    ],
     risk: {
       ...report.risk,
       difficultyLabel: "Multi-stage promotion route",
@@ -235,6 +339,13 @@ export function applyCareerLadder(report: RoadmapReport, profile: Profile): Road
       planB: housekeeping
         ? "Use housekeeping coordination, quality, laundry or training as a bridge if a supervisor vacancy is not available."
         : "Use HR coordination, recruitment, learning, payroll support or employee-experience work to build broader operational evidence.",
+    },
+    firstNinetyDays: {
+      phases: [
+        { window: "Days 1–30", goals: [`Get the real ${nextRole} job description`, "Agree one supervised next-level task", "Start a private evidence log"] },
+        { window: "Days 31–60", goals: ["Complete the approved task", "Record the standard and verified result", "Ask for direct manager feedback"] },
+        { window: "Days 61–90", goals: [`Compare your evidence with the ${nextRole} requirements`, "Choose the next gap to close", "Agree whether an acting assignment, course or vacancy is the right next step"] },
+      ],
     },
   };
 }

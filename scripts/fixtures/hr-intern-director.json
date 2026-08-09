@@ -1,0 +1,18 @@
+{
+  "mode": "hospitality",
+  "industry": "hospitality",
+  "currentIndustry": "hospitality",
+  "targetIndustry": "hospitality",
+  "currentRole": "HR Intern",
+  "targetRole": "Director of HR",
+  "yearsExperience": "0-2",
+  "existingSkills": ["Keeping records", "Working with a team", "Using phones or computers"],
+  "hoursPerWeek": 8,
+  "timelineMonths": 24,
+  "budget": "500",
+  "workStyle": "onsite",
+  "motivations": ["growth", "stability"],
+  "educationLevel": "degree",
+  "location": "Dubai, UAE",
+  "targetCountry": "United Arab Emirates"
+}

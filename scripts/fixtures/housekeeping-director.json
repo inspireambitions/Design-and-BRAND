@@ -1,0 +1,18 @@
+{
+  "mode": "hospitality",
+  "industry": "hospitality",
+  "currentIndustry": "hospitality",
+  "targetIndustry": "hospitality",
+  "currentRole": "Room Attendant",
+  "targetRole": "Director of Housekeeping",
+  "yearsExperience": "3-5",
+  "existingSkills": ["Checking details", "Working with a team", "Keeping records"],
+  "hoursPerWeek": 8,
+  "timelineMonths": 24,
+  "budget": "free",
+  "workStyle": "onsite",
+  "motivations": ["growth", "money"],
+  "educationLevel": "secondary",
+  "location": "Dubai, UAE",
+  "targetCountry": "United Arab Emirates"
+}

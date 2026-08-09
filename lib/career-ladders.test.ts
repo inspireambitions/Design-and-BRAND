@@ -29,6 +29,9 @@ describe("career progression ladders", () => {
     expect(report.verdict).toContain("not promise Director of Housekeeping");
     expect(report.steps).toHaveLength(8);
     expect(report.courses.every((course) => /employer-funded/i.test(course.cost))).toBe(true);
+    expect(report.resume.summary).toContain("Housekeeping Coordinator or Senior Room Attendant");
+    expect(report.resume.summary).not.toContain("Director of Housekeeping candidate");
+    expect(report.interview.narrative).toContain("next gate");
   });
 
   it("maps HR Intern towards Director and protects private employee data", () => {
@@ -38,6 +41,7 @@ describe("career progression ladders", () => {
     expect(report.snapshot.to).toContain("HR Coordinator");
     expect(report.projects.map((project) => project.description).join(" ")).toContain("Never copy real identity");
     expect(report.courses.some((course) => course.name.includes("CIPD Level 3"))).toBe(true);
+    expect(report.networking.outreachTemplate).toContain("HR Coordinator");
   });
 
   it("does not change an unrelated report", () => {
