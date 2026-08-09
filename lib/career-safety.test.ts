@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyCareerSafetyGuards, rolesAreIdentical } from "./career-safety";
+import { applyCareerSafetyGuards, needsClinicalPrerequisiteGuard, rolesAreIdentical } from "./career-safety";
 import { generateReport } from "./engine";
 import type { Profile } from "./types";
 
@@ -24,6 +24,7 @@ describe("career safety guards", () => {
   });
 
   it("does not create a direct clinical application plan without prerequisites", () => {
+    expect(needsClinicalPrerequisiteGuard(profile)).toBe(true);
     const guarded = applyCareerSafetyGuards(generateReport(profile), profile);
     expect(guarded.verdict).toContain("cannot move straight");
     expect(guarded.steps[0].title).toContain("licensed title");

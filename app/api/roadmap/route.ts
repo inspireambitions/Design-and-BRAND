@@ -4,7 +4,7 @@ import { generateReport } from "@/lib/engine";
 import { buildCoreUserPrompt, SYSTEM_PROMPT } from "@/lib/prompt";
 import { CORE_REPORT_SCHEMA } from "@/lib/schema";
 import { parseAiRoadmap } from "@/lib/ai-response";
-import { applyCareerSafetyGuards, rolesAreIdentical } from "@/lib/career-safety";
+import { applyCareerSafetyGuards, needsClinicalPrerequisiteGuard, rolesAreIdentical } from "@/lib/career-safety";
 import type { Profile, RoadmapReport } from "@/lib/types";
 import { INDUSTRY_OPTIONS } from "@/lib/industry-data";
 
@@ -112,6 +112,14 @@ export async function POST(req: Request) {
 
   // The deterministic engine is both the no-API-key path and the safety net.
   const fallback = applyCareerSafetyGuards(generateReport(profile), profile);
+
+  if (needsClinicalPrerequisiteGuard(profile)) {
+    console.info("[roadmap] regulated clinical prerequisites missing; serving guarded report", {
+      from: profile.currentRole,
+      to: profile.targetRole,
+    });
+    return NextResponse.json(fallback);
+  }
 
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json(fallback);

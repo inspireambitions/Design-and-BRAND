@@ -23,11 +23,15 @@ function hasPlausibleClinicalPrerequisite(profile: Profile): boolean {
   return (profile.certificationsHeld || []).some((item) => HEALTH_QUALIFICATION.test(item));
 }
 
+export function needsClinicalPrerequisiteGuard(profile: Profile): boolean {
+  return HEALTH_PROFESSIONAL.test(profile.targetRole) && !hasPlausibleClinicalPrerequisite(profile);
+}
+
 export function applyCareerSafetyGuards(report: RoadmapReport, profile: Profile): RoadmapReport {
   if (!HEALTH_PROFESSIONAL.test(profile.targetRole)) return report;
 
   const uae = isUae(profile);
-  const missingPrerequisite = !hasPlausibleClinicalPrerequisite(profile);
+  const missingPrerequisite = needsClinicalPrerequisiteGuard(profile);
   const regulatorNote = uae
     ? "For UAE healthcare work, check the Unified Healthcare Professional Qualification Requirements and the authority for the emirate where you will work: DHA for Dubai, DoH for Abu Dhabi, or MOHAP where its service applies. Do not enrol, practise or apply as a licensed professional until the relevant authority confirms the route."
     : "Healthcare titles are regulated. Check the official health regulator for the place where you want to work before choosing training, practising clinical tasks or applying for a licensed role.";
