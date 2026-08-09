@@ -115,24 +115,31 @@ export async function POST(req: Request) {
       timeout: 105_000,
     });
 
-    const stream = client.beta.messages.stream({
-      model: process.env.ANTHROPIC_MODEL || "claude-opus-5",
-      max_tokens: 16000,
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
-      output_config: {
-        effort: "low",
-      },
-      system: [
-        { type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
-      ],
-      messages: [{
-        role: "user",
-        content: `${buildUserPrompt(profile)}\n\nReturn one JSON object only. It must match this JSON Schema exactly:\n${JSON.stringify(REPORT_SCHEMA)}`,
-      }],
-    } as never);
+    const controller = new AbortController();
+    const deadline = setTimeout(() => controller.abort(), 90_000);
+    let message;
+    try {
+      const stream = client.beta.messages.stream({
+        model: process.env.ANTHROPIC_MODEL || "claude-opus-5",
+        max_tokens: 16000,
+        betas: ["server-side-fallback-2026-07-01"],
+        fallbacks: "default",
+        output_config: {
+          effort: "low",
+        },
+        system: [
+          { type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
+        ],
+        messages: [{
+          role: "user",
+          content: `${buildUserPrompt(profile)}\n\nReturn one JSON object only. It must match this JSON Schema exactly:\n${JSON.stringify(REPORT_SCHEMA)}`,
+        }],
+      } as never, { signal: controller.signal });
 
-    const message = await stream.finalMessage();
+      message = await stream.finalMessage();
+    } finally {
+      clearTimeout(deadline);
+    }
 
     if (message.stop_reason === "refusal") {
       console.warn("[roadmap] Claude refused; serving engine report");
