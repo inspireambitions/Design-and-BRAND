@@ -8,6 +8,9 @@ const valid = {
   skillGap: [{ skill: "Test", status: "need", priority: "high", howToAcquire: "Test" }],
   steps: Array.from({ length: 8 }, (_, index) => ({ title: `Step ${index + 1}`, duration: "One month", detail: "Test" })),
   timeline: [{ label: "Months 1–3", title: "Start", focus: "Test", actions: ["Test"], milestone: "Test" }],
+  courses: [{ name: "Test", provider: "Test", cost: "Free", duration: "One month", rating: "Check", why: "Test", badge: "Verify" }],
+  projects: [{ title: "Test", description: "Test", skills: ["Test"], effort: "One hour" }],
+  risk: { difficulty: 5, difficultyLabel: "Test", successFactors: ["Test"], setbacks: [], planB: "Test" },
 };
 
 describe("parseAiRoadmap", () => {

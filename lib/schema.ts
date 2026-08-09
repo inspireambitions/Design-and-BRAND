@@ -98,3 +98,17 @@ export const REPORT_SCHEMA = obj({
     phases: arrOf({ window: str, goals: strArr }),
   }),
 });
+
+// The public WordPress bridge closes requests after 120 seconds. Ask Claude
+// only for the sections that need role-specific judgement, then merge them
+// over the deterministic report for the remaining sections.
+export const CORE_REPORT_SCHEMA = obj({
+  verdict: REPORT_SCHEMA.properties["verdict"],
+  snapshot: REPORT_SCHEMA.properties["snapshot"],
+  skillGap: REPORT_SCHEMA.properties["skillGap"],
+  steps: REPORT_SCHEMA.properties["steps"],
+  timeline: REPORT_SCHEMA.properties["timeline"],
+  courses: REPORT_SCHEMA.properties["courses"],
+  projects: REPORT_SCHEMA.properties["projects"],
+  risk: REPORT_SCHEMA.properties["risk"],
+});
