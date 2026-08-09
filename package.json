@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "tsc --noEmit",
-    "test": "vitest run lib/ai-response.test.ts",
+    "test": "vitest run lib",
     "stress:api": "node scripts/stress-api.mjs",
     "verify:integrations": "node scripts/verify-integrations.mjs"
   },

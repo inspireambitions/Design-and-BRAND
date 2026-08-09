@@ -2,19 +2,19 @@
 
 Source audit: `../outputs/career-roadmap-audit-2026-08-09/AUDIT.md`  
 Live route: https://inspireambitions.com/career-change-roadmap  
-Status: production promotion blocked
+Status: repairs in progress on production branch
 
 ## P0: Production and user-safety blockers
 
-- [ ] Recover and commit the current Mac production source. Do not deploy the older Windows or GitHub UI.
-- [ ] Remove the oversized Anthropic structured-output grammar that returns HTTP 400.
-- [ ] Validate Claude output and retain an explicit, monitored fallback.
-- [ ] Add production logs that distinguish AI success, AI refusal, invalid output and fallback use.
-- [ ] Block direct regulated-career plans when mandatory education, clinical training, registration or licensing is missing.
-- [ ] Add official UAE regulator routing for regulated roles, including DHA, DoH and MOHAP where relevant.
+- [x] Recover and commit the current Mac production source. Do not deploy the older Windows or GitHub UI.
+- [x] Remove the oversized Anthropic structured-output grammar that returns HTTP 400.
+- [x] Validate Claude output and retain an explicit, monitored fallback.
+- [x] Add production logs that distinguish AI success, AI refusal, invalid output and fallback use.
+- [x] Block direct regulated healthcare plans when mandatory education, clinical training, registration or licensing is missing.
+- [x] Add official UAE healthcare regulator routing for DHA, DoH and MOHAP. Other regulated occupation families still need taxonomy coverage.
 - [ ] Treat deadlines as constraints. Never compress an impossible route into the user's chosen date.
-- [ ] Prevent invalid phase ranges such as `Months 7–6`.
-- [ ] Reject identical current and target roles or ask what kind of progression the user wants.
+- [x] Prevent invalid phase ranges such as `Months 7–6`.
+- [x] Reject identical current and target roles and ask the user to choose the intended next level.
 - [ ] Reject or clarify nonsense, unsafe or unrecognised target roles.
 - [ ] Fix `/hospitality-career-path/` so it opens the intended hospitality route, not the internships article.
 
@@ -50,7 +50,7 @@ Status: production promotion blocked
 
 ## P3: Verification and operations
 
-- [ ] Add unit tests for AI response parsing, malformed JSON, refusals and fallbacks.
+- [x] Add unit tests for AI response parsing and malformed JSON. Refusal and route fallback tests remain under the route-test item below.
 - [ ] Add route tests for identical roles, regulated roles, deadlines and phase arithmetic.
 - [ ] Add fixture tests for Room Attendant to Executive Housekeeper and HR Intern to Director of HR.
 - [ ] Add a nursing safety fixture that cannot produce a direct application plan without recognised prerequisites.

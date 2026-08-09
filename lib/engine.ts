@@ -72,13 +72,15 @@ function buildTimeline(profile: Profile, role: RoleKnowledge, gaps: SkillGapItem
   const pace = profile.hoursPerWeek >= 15 ? "an aggressive" : profile.hoursPerWeek >= 8 ? "a steady" : "a sustainable";
 
   const seg = (a: number, b: number) => (a === b ? `Month ${a}` : `Months ${a}–${b}`);
-  const q = Math.max(1, Math.round(m / 4));
+  const firstEnd = Math.max(1, Math.floor(m / 4));
+  const secondEnd = Math.max(firstEnd + 1, Math.floor(m / 2));
+  const thirdEnd = Math.max(secondEnd + 1, Math.floor((m * 3) / 4));
   const practical = Boolean(role.industry);
   const evidenceLabel = practical ? "work-evidence task" : "portfolio piece";
 
   return [
     {
-      label: seg(1, q),
+      label: seg(1, firstEnd),
       title: "Foundations",
       focus: `Close the highest-priority gap first: ${topNeeds[0] ?? "core fundamentals"}. Set ${pace} rhythm of ${profile.hoursPerWeek} hrs/week.`,
       actions: practical ? [
@@ -93,7 +95,7 @@ function buildTimeline(profile: Profile, role: RoleKnowledge, gaps: SkillGapItem
       milestone: `You can explain the ${role.role} craft credibly and produce basic work in the core tool`,
     },
     {
-      label: seg(q + 1, q * 2),
+      label: seg(firstEnd + 1, secondEnd),
       title: `Skill Building & First ${practical ? "Work Evidence" : "Portfolio Piece"}`,
       focus: `Layer in ${topNeeds[1] ?? "secondary skills"} while completing your first real ${evidenceLabel}.`,
       actions: practical ? [
@@ -108,7 +110,7 @@ function buildTimeline(profile: Profile, role: RoleKnowledge, gaps: SkillGapItem
       milestone: practical ? "One safe, relevant piece of work evidence that a supervisor or employer can review" : "One complete, public portfolio piece with a written case study",
     },
     {
-      label: seg(q * 2 + 1, q * 3),
+      label: seg(secondEnd + 1, thirdEnd),
       title: "Proof & Positioning",
       focus: `Second evidence task, ${topNeeds[2] ?? "advanced topics"}, and rewriting your professional story.`,
       actions: practical ? [
@@ -123,7 +125,7 @@ function buildTimeline(profile: Profile, role: RoleKnowledge, gaps: SkillGapItem
       milestone: `Your materials read like a ${role.role} who used to be a ${profile.currentRole} — not the reverse`,
     },
     {
-      label: seg(q * 3 + 1, m),
+      label: seg(thirdEnd + 1, m),
       title: "The Job Hunt",
       focus: practical ? "Verify requirements, apply to realistic roles and practise the interview." : "Applications, interviews and informed introductions.",
       actions: practical ? [

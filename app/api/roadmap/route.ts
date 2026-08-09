@@ -4,6 +4,7 @@ import { generateReport } from "@/lib/engine";
 import { buildCoreUserPrompt, SYSTEM_PROMPT } from "@/lib/prompt";
 import { CORE_REPORT_SCHEMA } from "@/lib/schema";
 import { parseAiRoadmap } from "@/lib/ai-response";
+import { applyCareerSafetyGuards, rolesAreIdentical } from "@/lib/career-safety";
 import type { Profile, RoadmapReport } from "@/lib/types";
 import { INDUSTRY_OPTIONS } from "@/lib/industry-data";
 
@@ -102,8 +103,15 @@ export async function POST(req: Request) {
     customerFacingExperience: clean(body.customerFacingExperience, 40),
   };
 
+  if (rolesAreIdentical(profile.currentRole, profile.targetRole)) {
+    return NextResponse.json(
+      { error: "Your current and target roles are the same. Choose the next role you want, such as supervisor, manager or specialist." },
+      { status: 422 }
+    );
+  }
+
   // The deterministic engine is both the no-API-key path and the safety net.
-  const fallback = generateReport(profile);
+  const fallback = applyCareerSafetyGuards(generateReport(profile), profile);
 
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json(fallback);
@@ -159,12 +167,12 @@ export async function POST(req: Request) {
     }
 
     // Merge over the engine output so a partially-shaped response still renders.
-    const report: RoadmapReport = {
+    const report: RoadmapReport = applyCareerSafetyGuards({
       ...fallback,
       ...parsed,
       snapshot: { ...fallback.snapshot, ...(parsed.snapshot ?? {}) },
       generatedBy: "ai",
-    };
+    }, profile);
 
     console.info("[roadmap] Claude report generated", {
       responseId: message.id,
