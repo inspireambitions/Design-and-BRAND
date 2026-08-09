@@ -3,8 +3,9 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { Wizard } from "@/components/Wizard";
 
 export const metadata = {
-  title: "Build Your Career Change Roadmap — Free | Inspire Ambitions",
-  description: "Eight questions. A month-by-month career transition plan.",
+  title: "Start the AI Career Coach | Inspire Ambitions",
+  description: "Answer eight plain-language questions and build a practical career change or hospitality career roadmap.",
+  robots: { index: false, follow: true },
 };
 
 export default function StartPage() {

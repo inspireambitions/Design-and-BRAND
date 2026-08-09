@@ -1,4 +1,10 @@
 export interface Profile {
+  mode?: "general" | "hospitality";
+  directionMode?: "known" | "explore" | "grow";
+  industry?: string;
+  currentIndustry?: string;
+  targetIndustry?: string;
+  otherIndustry?: string;
   currentRole: string;
   targetRole: string;
   yearsExperience: string; // "0-2" | "3-5" | "6-10" | "10+"
@@ -9,6 +15,23 @@ export interface Profile {
   workStyle: string; // "remote" | "hybrid" | "onsite" | "any"
   motivations: string[];
   location?: string;
+  targetCountry?: string;
+  careerGoal?: string;
+  careerBarrier?: string;
+  careerBarriers?: string[];
+  otherBarrier?: string;
+  marketSegment?: string;
+  currentSalary?: number;
+  educationLevel?: string;
+  languages?: string[];
+  certificationsHeld?: string[];
+  supportAvailable?: string;
+  relocationStatus?: string;
+  gccExperience?: string;
+  workAuthorizationStatus?: string;
+  industryContact?: string;
+  jobSearchStage?: string;
+  customerFacingExperience?: string;
 }
 
 export interface SkillGapItem {
@@ -93,6 +116,8 @@ export interface FirstNinetyDays {
 
 export interface RoadmapReport {
   generatedBy: "ai" | "engine";
+  mode?: "general" | "hospitality";
+  guidanceNote?: string;
   matchScore: number; // 0-100
   verdict: string;
   snapshot: {
@@ -102,6 +127,16 @@ export interface RoadmapReport {
     hoursPerWeek: number;
     transferableCount: number;
     estimatedCost: string;
+    location?: string;
+    targetIndustry?: string;
+    careerBarriers?: string[];
+    relocationStatus?: string;
+    gccExperience?: string;
+    workAuthorizationStatus?: string;
+    industryContact?: string;
+    jobSearchStage?: string;
+    languages?: string[];
+    customerFacingExperience?: string;
   };
   skillGap: SkillGapItem[];
   steps: RoadmapStep[];
@@ -118,17 +153,17 @@ export interface RoadmapReport {
 }
 
 export const SECTION_META = [
-  { id: "snapshot", n: 0, icon: "◎", title: "Transition Snapshot", blurb: "Your match score and the shape of the journey ahead", free: true },
-  { id: "skill-gap", n: 1, icon: "📊", title: "Skill Gap Analysis", blurb: "Skills you have vs. skills you need, with acquisition plans", free: true },
-  { id: "steps", n: 2, icon: "🪜", title: "The Step-by-Step Path", blurb: "Every step from here to hired, with a duration estimate each", free: true },
-  { id: "timeline", n: 3, icon: "🗓️", title: "Month-by-Month Timeline", blurb: "A concrete schedule with milestones, tuned to your hours", free: true },
-  { id: "courses", n: 4, icon: "🎓", title: "Courses & Certifications", blurb: "Specific programs filtered by your budget", free: false },
-  { id: "projects", n: 5, icon: "🛠️", title: "Portfolio Projects", blurb: "Projects that leverage your existing domain expertise", free: false },
-  { id: "resume", n: 6, icon: "📝", title: "Resume & LinkedIn Rewrite", blurb: "Before/after bullets that reframe your experience", free: false },
-  { id: "salary", n: 7, icon: "💰", title: "Salary Progression", blurb: "Expected earnings at each stage of the transition", free: false },
-  { id: "networking", n: 8, icon: "🤝", title: "Networking Strategy", blurb: "Communities, people, events, and an outreach script", free: false },
-  { id: "interview", n: 9, icon: "⚡", title: "Interview Preparation", blurb: "Your career-switch narrative and common questions", free: false },
-  { id: "day-in-life", n: 10, icon: "☀️", title: "A Day in Your New Life", blurb: "What a typical day actually looks like in the role", free: false },
-  { id: "risk", n: 11, icon: "🎯", title: "Risk Assessment & Plan B", blurb: "Honest difficulty rating, setbacks, and your backup route", free: false },
-  { id: "ninety", n: 12, icon: "🚀", title: "First 90 Days on the Job", blurb: "How to succeed once you've actually landed the role", free: false },
+  { id: "snapshot", n: 0, icon: "00", title: "Your starting point", blurb: "The route, conditions and important limits", free: true },
+  { id: "skill-gap", n: 1, icon: "01", title: "Skills check", blurb: "What you can already use and what to learn next", free: true },
+  { id: "steps", n: 2, icon: "02", title: "Your next steps", blurb: "A practical order of work from today onwards", free: true },
+  { id: "timeline", n: 3, icon: "03", title: "Month-by-month plan", blurb: "A schedule shaped around the time you actually have", free: true },
+  { id: "courses", n: 4, icon: "04", title: "Training to check", blurb: "Options within your budget, with recognition checks", free: false },
+  { id: "projects", n: 5, icon: "05", title: "Proof of your skills", blurb: "Safe work samples, supervised practice or evidence tasks", free: false },
+  { id: "resume", n: 6, icon: "06", title: "CV and profile", blurb: "Clear ways to explain the experience you already have", free: false },
+  { id: "salary", n: 7, icon: "07", title: "Pay research", blurb: "How to compare real local adverts without false promises", free: false },
+  { id: "networking", n: 8, icon: "08", title: "People who can help", blurb: "Who to ask, where to learn and what to say", free: false },
+  { id: "interview", n: 9, icon: "09", title: "Interview practice", blurb: "Your career-change story and likely questions", free: false },
+  { id: "day-in-life", n: 10, icon: "10", title: "What the work may involve", blurb: "A realistic example day to verify with a worker", free: false },
+  { id: "risk", n: 11, icon: "11", title: "Risks and Plan B", blurb: "What may slow the move and a safer backup route", free: false },
+  { id: "ninety", n: 12, icon: "12", title: "First 90 days", blurb: "How to settle in and build trust after you are hired", free: false },
 ] as const;

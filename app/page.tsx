@@ -7,32 +7,33 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { BRAND } from "@/lib/brand";
 import { POPULAR_TARGETS } from "@/lib/careers-data";
+import { INDUSTRY_OPTIONS, TYPICAL_TARGETS } from "@/lib/industry-data";
 import { SECTION_META } from "@/lib/types";
 
 const STEPS = [
   {
     n: "01",
-    title: "Tell us your constraints",
-    body: "Eight questions: where you are, where you're going, how many hours a week you actually have, what you can spend, and why you're doing this. Three minutes.",
+    title: "Tell us what is realistic",
+    body: "Answer eight short questions about your work, time, money and goals. Most people finish in four to seven minutes.",
   },
   {
     n: "02",
     title: "We find your leverage",
-    body: "The generator looks for what your current career gives you that a fresh graduate doesn't have — and builds the portfolio strategy around exactly that.",
+    body: "The planner finds skills you can reuse, then separates them from the training or supervised practice you still need.",
   },
   {
     n: "03",
     title: "You get a plan, not advice",
-    body: "Twelve sections: skill gaps, a month-by-month schedule, named courses within your budget, salary stages, an interview narrative, and an honest risk assessment.",
+    body: "Twelve sections: skills, monthly actions, training checks, local pay research, interview practice, risks and Plan B.",
   },
 ];
 
 const COMPARISON = [
-  { label: "Cost", coach: `$${BRAND.priceAnchor}+ per hour`, generic: "Free", ours: "Free in beta" },
-  { label: "Turnaround", coach: "1–2 weeks to book", generic: "Instant", ours: "Under 4 minutes" },
+  { label: "Cost", coach: "Usually paid", generic: "Usually free", ours: "Free in beta" },
+  { label: "Turnaround", coach: "Depends on availability", generic: "Instant", ours: "About 4 to 7 minutes" },
   { label: "Personalized to your hours & budget", coach: "Yes", generic: "No", ours: "Yes" },
   { label: "Month-by-month schedule", coach: "Sometimes", generic: "No", ours: "Yes" },
-  { label: "Named courses with real prices", coach: "Sometimes", generic: "Often outdated", ours: "Yes, budget-filtered" },
+  { label: "Training checks before you pay", coach: "Sometimes", generic: "Often missing", ours: "Built in" },
   { label: "Honest risk assessment & Plan B", coach: "Depends on the coach", generic: "Rarely", ours: "Always" },
   { label: "Something you can re-read at month 7", coach: "Your notes", generic: "Lost in scrollback", ours: "Yes" },
 ];
@@ -41,6 +42,7 @@ export default function HomePage() {
   return (
     <>
       <SiteHeader />
+      <main>
 
       {/* ── Hero ─────────────────────────────────────────────── */}
       <section className="relative overflow-hidden">
@@ -55,10 +57,10 @@ export default function HomePage() {
         <div className="container-page relative pb-20 pt-16 sm:pt-24">
           <div className="grid gap-14 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-center lg:gap-16">
           <div className="animate-rise">
-            <span className="eyebrow">Free career change roadmap</span>
+            <span className="eyebrow">Free AI career coach and career change roadmap</span>
             <h1 className="mt-5 font-display text-[2.75rem] font-bold leading-[1.05] tracking-tight text-ink text-balance sm:text-6xl lg:text-[4.25rem]">
               Everyone says{" "}
-              <span className="relative whitespace-nowrap">
+              <span className="relative sm:whitespace-nowrap">
                 <span className="relative z-10">&ldquo;just switch careers.&rdquo;</span>
                 <span
                   className="absolute inset-x-0 bottom-1 z-0 h-3 -rotate-1 bg-signal-mark sm:bottom-2 sm:h-4"
@@ -67,12 +69,9 @@ export default function HomePage() {
               </span>{" "}
               Nobody hands you the plan.
             </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink-soft sm:text-xl">
-              {BRAND.parent} builds the plan. Answer eight questions about your situation
-              and get a personalized career change roadmap out the other side — your skill
-              gaps, a month-by-month timeline, real courses inside your budget, portfolio
-              projects built around the career you already have, and an honest read on how
-              hard this is going to be.
+            <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-soft sm:text-xl">
+              Answer eight simple questions. Get a personal roadmap showing skills you can reuse,
+              training to check, safe first steps and a Plan B that fits your time and budget.
             </p>
           </div>
 
@@ -85,15 +84,28 @@ export default function HomePage() {
             <HeroSearch />
           </div>
 
+          <div className="mt-5 max-w-3xl animate-rise" style={{ animationDelay: "170ms" }}>
+            <a
+              href="/hospitality-career-path/"
+              className="flex flex-col gap-2 rounded-2xl border border-ever/25 bg-paper-soft px-5 py-4 transition-all hover:-translate-y-0.5 hover:border-ever-bright hover:shadow-lift sm:flex-row sm:items-center sm:justify-between"
+            >
+              <span>
+                <strong className="block text-ink">Already work in a hotel or hospitality?</strong>
+                <span className="text-sm text-ink-soft">Use the Hospitality Career Path Simulator inside this AI Career Coach.</span>
+              </span>
+              <span className="shrink-0 text-sm font-semibold text-ever-bright">Plan my hospitality path →</span>
+            </a>
+          </div>
+
           <div
             className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-3 text-sm text-ink-faint animate-rise"
             style={{ animationDelay: "220ms" }}
           >
             <span className="inline-flex items-center gap-2">
-              <Dot /> First 3 sections free
+              <Dot /> Start without an account
             </span>
             <span className="inline-flex items-center gap-2">
-              <Dot /> No account needed to start
+              <Dot /> Easy to use on your phone
             </span>
             <span className="inline-flex items-center gap-2">
               <Dot /> Full roadmap free in beta
@@ -106,8 +118,8 @@ export default function HomePage() {
       <section className="border-y border-ink/[0.07] bg-paper-deep/50">
         <div className="container-page grid gap-8 py-10 sm:grid-cols-3">
           <Stat value="12" label="sections in every roadmap" sub="From skill gaps to your first 90 days on the job" />
-          <Stat value="Free" label="while we're in beta" sub={`A career coach charges $${BRAND.priceAnchor}+ for one hour`} />
-          <Stat value="~4 min" label="from first question to full plan" sub="Three minutes of answers, under one to generate" />
+          <Stat value="Free" label="while we're in beta" sub="No card and no subscription" />
+          <Stat value="4–7 min" label="for the eight questions" sub="Then a few seconds to build your report" />
         </div>
       </section>
 
@@ -116,7 +128,7 @@ export default function HomePage() {
         <div className="max-w-2xl">
           <span className="eyebrow">How it works</span>
           <h2 className="mt-4 font-display text-4xl font-semibold leading-tight tracking-tight text-ink sm:text-5xl">
-            Three minutes in. A plan you could start Monday out.
+            A few minutes in. A plan you can start this week.
           </h2>
         </div>
 
@@ -130,12 +142,6 @@ export default function HomePage() {
               <span className="font-mono text-sm font-semibold text-ever-bright">{s.n}</span>
               <h3 className="mt-4 font-display text-2xl font-semibold text-ink">{s.title}</h3>
               <p className="mt-3 leading-relaxed text-ink-soft">{s.body}</p>
-              <span
-                className="absolute -bottom-6 -right-4 font-display text-[7rem] font-semibold leading-none text-ink/[0.04] transition-transform duration-500 group-hover:scale-110"
-                aria-hidden
-              >
-                {s.n}
-              </span>
             </div>
           ))}
         </div>
@@ -153,9 +159,9 @@ export default function HomePage() {
                 Twelve sections. All of them specific to you.
               </h2>
               <p className="mt-5 max-w-md leading-relaxed text-paper-soft/70">
-                Not a checklist of things to think about. A document with course
-                prices, community names, salary bands, before-and-after resume
-                bullets, and a schedule that fits the hours you actually have.
+                A working document with skills to check, training to verify, safe
+                evidence tasks, CV examples, local pay research and a schedule that
+                fits the hours you actually have.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link href="/start" className="btn-signal">
@@ -202,25 +208,26 @@ export default function HomePage() {
             Hire a coach? Ask a chatbot?
           </h2>
           <p className="mt-5 leading-relaxed text-ink-soft">
-            Both are reasonable. Here&rsquo;s the honest comparison — including where
+            Both are reasonable. Here is the honest comparison, including where
             a human coach still wins.
           </p>
         </div>
 
         <div className="mt-12 overflow-x-auto">
           <table className="w-full min-w-[640px] border-separate border-spacing-0 overflow-hidden rounded-3xl border border-ink/[0.08]">
+            <caption className="sr-only">Comparison of a career coach, generic AI chat and the Inspire Ambitions roadmap</caption>
             <thead>
               <tr className="bg-paper-deep/60 text-left">
-                <th className="px-6 py-5 text-sm font-semibold text-ink-faint">&nbsp;</th>
-                <th className="px-6 py-5 text-sm font-semibold text-ink-soft">Career coach</th>
-                <th className="px-6 py-5 text-sm font-semibold text-ink-soft">Generic AI chat</th>
-                <th className="bg-ever-night px-6 py-5 text-sm font-semibold text-signal-tint">{BRAND.name}</th>
+                <th scope="col" className="px-6 py-5 text-sm font-semibold text-ink-faint">Feature</th>
+                <th scope="col" className="px-6 py-5 text-sm font-semibold text-ink-soft">Career coach</th>
+                <th scope="col" className="px-6 py-5 text-sm font-semibold text-ink-soft">Generic AI chat</th>
+                <th scope="col" className="bg-ever-night px-6 py-5 text-sm font-semibold text-signal-tint">{BRAND.name}</th>
               </tr>
             </thead>
             <tbody>
               {COMPARISON.map((row, i) => (
                 <tr key={row.label} className={i % 2 ? "bg-paper-soft" : "bg-paper-soft/40"}>
-                  <td className="border-t border-ink/[0.06] px-6 py-4 text-sm font-medium text-ink">{row.label}</td>
+                  <th scope="row" className="border-t border-ink/[0.06] px-6 py-4 text-left text-sm font-medium text-ink">{row.label}</th>
                   <td className="border-t border-ink/[0.06] px-6 py-4 text-sm text-ink-soft">{row.coach}</td>
                   <td className="border-t border-ink/[0.06] px-6 py-4 text-sm text-ink-soft">{row.generic}</td>
                   <td className="border-t border-paper-soft/10 bg-ever-night px-6 py-4 text-sm font-medium text-paper-soft">
@@ -239,37 +246,42 @@ export default function HomePage() {
         </p>
       </section>
 
-      {/* ── Popular transitions ──────────────────────────────── */}
+      {/* ── Industry coverage ────────────────────────────────── */}
       <section className="border-y border-ink/[0.07] bg-paper-deep/40 py-20">
         <div className="container-page">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <span className="eyebrow">Where people are going</span>
+              <span className="eyebrow">Everyday work included</span>
               <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
-                The most-requested target roles
+                Career paths across common industries
               </h2>
+              <p className="mt-3 max-w-2xl text-ink-soft">
+                From warehouse and care work to trades, office jobs, retail and technology. Choose the closest area, then type any job if yours is not shown.
+              </p>
             </div>
             <Link href="/careers" className="text-sm font-medium text-ever-deep underline-offset-4 hover:underline">
-              See all with salary data →
+              See all career paths →
             </Link>
           </div>
 
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {POPULAR_TARGETS.map((r) => (
+            {INDUSTRY_OPTIONS.filter((item) => !["hospitality", "other"].includes(item.value)).slice(0, 12).map((item) => {
+              const target = TYPICAL_TARGETS.find((role) => role.industry === item.value) ?? POPULAR_TARGETS[0];
+              return (
               <Link
-                key={r.role}
-                href={`/start?to=${encodeURIComponent(r.role)}`}
+                key={item.value}
+                href={`/start?industry=${encodeURIComponent(item.value)}&to=${encodeURIComponent(target.role)}`}
                 className="group rounded-2xl border border-ink/[0.07] bg-paper-soft p-6 transition-all duration-200 hover:-translate-y-1 hover:border-ever/40 hover:shadow-lift"
               >
-                <h3 className="font-display text-xl font-semibold text-ink">{r.role}</h3>
-                <p className="mt-2 font-mono text-sm text-ever-bright">{r.salary[0].range}</p>
-                <p className="mt-1 text-xs text-ink-faint">starting range</p>
+                <h3 className="font-display text-xl font-semibold text-ink">{item.label}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-ink-soft">Example path: {target.role}</p>
                 <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-ink-soft transition-colors group-hover:text-ever-deep">
-                  Plan this switch
+                  Explore this area
                   <span className="transition-transform group-hover:translate-x-1" aria-hidden>→</span>
                 </span>
               </Link>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
@@ -286,10 +298,10 @@ export default function HomePage() {
         <div className="mx-auto mt-14 grid max-w-4xl gap-6 lg:grid-cols-2">
           <div className="card p-9">
             <h3 className="font-display text-2xl font-semibold text-ink">Preview</h3>
-            <p className="mt-2 text-ink-soft">See if the plan is any good before you pay for it.</p>
+            <p className="mt-2 text-ink-soft">See your starting route before you share an email.</p>
             <p className="mt-7 font-display text-5xl font-semibold text-ink">Free</p>
             <ul className="mt-7 space-y-3 text-[15px] text-ink-soft">
-              <Check>Your match score and verdict</Check>
+              <Check>Your planning outlook and important limits</Check>
               <Check>Full skill gap analysis</Check>
               <Check>Month-by-month timeline</Check>
               <Check>No account, no card</Check>
@@ -322,16 +334,16 @@ export default function HomePage() {
               </p>
               <ul className="mt-7 space-y-3 text-[15px] text-paper-soft/85">
                 <Check light>Everything in the free preview</Check>
-                <Check light>Courses filtered to your budget, with real prices</Check>
-                <Check light>Portfolio projects built on your background</Check>
-                <Check light>Resume and LinkedIn rewrites, before and after</Check>
-                <Check light>Salary progression across four stages</Check>
-                <Check light>Networking scripts and interview narrative</Check>
-                <Check light>Risk assessment, Plan B, and first 90 days</Check>
+                <Check light>Training options to verify before you pay</Check>
+                <Check light>Safe proof-of-skill tasks built on your background</Check>
+                <Check light>CV and online-profile examples</Check>
+                <Check light>Local pay-research steps</Check>
+                <Check light>Message templates and interview practice</Check>
+                <Check light>Risks, Plan B and first 90 days</Check>
                 <Check light>Follow-up questions answered by the coach</Check>
               </ul>
               <Link href="/start" className="btn-signal mt-8 w-full">
-                Build my roadmap — free
+                Build my roadmap free
               </Link>
               <p className="mt-4 text-center text-sm text-paper-soft/60">
                 No card, no subscription, no upsell at the end.
@@ -382,6 +394,8 @@ export default function HomePage() {
       </section>
 
       <RelatedTools />
+
+      </main>
 
       <SiteFooter />
     </>

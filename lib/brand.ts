@@ -7,9 +7,9 @@
 // name carries the query.
 export const BRAND = {
   /** Short name used in nav, buttons, and body copy. */
-  name: "Career Change Roadmap",
+  name: "AI Career Coach",
   /** Compact form for tight spaces (mobile nav, footer). */
-  nameShort: "Roadmap",
+  nameShort: "AI Coach",
   /** The parent brand this tool belongs to. */
   parent: "Inspire Ambitions",
   /** Canonical host. The tool is reachable only here — see middleware.ts. */
@@ -17,12 +17,12 @@ export const BRAND = {
   /** Path prefix the tool is mounted at. Must match basePath in next.config.mjs. */
   basePath: "/career-change-roadmap",
 
-  tagline: "Your career change, mapped step by step.",
+  tagline: "Your next career move, mapped step by step.",
 
   /** SEO. Front-load the query, keep the title under ~60 characters. */
-  seoTitle: "Career Change Roadmap — Free Personalized Plan",
+  seoTitle: "AI Career Coach & Career Change Roadmap",
   seoDescription:
-    "Answer eight questions and get a personalized career change roadmap: your skill gaps, a month-by-month timeline, courses within your budget, salary stages, and an honest difficulty rating. Free.",
+    "Build a personalised career change roadmap with realistic job options, skill gaps, training checks and practical next steps for the UAE, Gulf or beyond.",
 
   // Free during beta; the full roadmap unlocks with an email address. When this
   // starts charging, set `price` and restore the paid copy in

@@ -8,7 +8,7 @@ import { BRAND } from "@/lib/brand";
  */
 export function Logo({ light = false }: { light?: boolean }) {
   return (
-    <Link href="/" className="group inline-flex items-center gap-2.5" aria-label={`${BRAND.parent} — ${BRAND.name}`}>
+    <Link href="/" className="group inline-flex min-h-11 items-center gap-2.5" aria-label={`${BRAND.parent} — ${BRAND.name}`}>
       <span
         className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl transition-transform duration-300 group-hover:-rotate-6 ${
           light ? "bg-signal text-white" : "bg-ever-night text-signal-tint"

@@ -40,8 +40,8 @@ export const TOOLS_HUB: SiteLink = {
 export const SIBLING_TOOLS: SiteLink[] = [
   {
     label: "Hospitality Career Path Simulator",
-    href: "/gcc-recruitment-guide/internships/hospitality/",
-    blurb: "Map your next UAE hotel role, promotion route and salary movement",
+    href: "/hospitality-career-path/",
+    blurb: "Use the hospitality route inside the AI Career Coach to plan a promotion, department move or leadership path",
   },
   {
     label: "Dubai CV Builder",

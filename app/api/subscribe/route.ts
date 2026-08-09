@@ -27,6 +27,7 @@ function rateLimited(req: Request): boolean {
 
 interface Body {
   email?: string;
+  mode?: string;
   from?: string;
   to?: string;
   months?: number;
@@ -72,16 +73,14 @@ export async function POST(req: Request) {
 
   const key = process.env.RESEND_API_KEY;
   if (!key) {
-    // No key configured: the address is logged and dropped. The gate copy
-    // promises an email, so this path must not survive into production.
-    console.warn("[subscribe] RESEND_API_KEY not set — logging only", {
-      email,
-      from: data.from,
-      to: data.to,
-      at: new Date().toISOString(),
-    });
+    // Never put a user's email address into unstructured server logs. The UI
+    // unlocks the on-device report but states that delivery was not confirmed.
+    console.warn("[subscribe] RESEND_API_KEY not set — email not sent");
     return NextResponse.json({ ok: true, delivered: false });
   }
+
+  let delivered = false;
+  let ownerNotified = false;
 
   try {
     const res = await fetch("https://api.resend.com/emails", {
@@ -103,16 +102,53 @@ export async function POST(req: Request) {
     if (!res.ok) {
       const detail = await res.text().catch(() => "");
       console.error("[subscribe] resend rejected", res.status, detail.slice(0, 400));
-      // The roadmap is already in the user's browser. A mail failure is our
-      // problem, not theirs — report success and unlock.
-      return NextResponse.json({ ok: true, delivered: false });
+    } else {
+      delivered = true;
     }
-
-    return NextResponse.json({ ok: true, delivered: true });
   } catch (err) {
-    console.error("[subscribe] resend threw", err);
-    return NextResponse.json({ ok: true, delivered: false });
+    console.error("[subscribe] user email threw", err);
   }
+
+  const ownerEmail = process.env.OWNER_NOTIFICATION_EMAIL?.trim();
+  if (ownerEmail && EMAIL_RE.test(ownerEmail)) {
+    const mode = str(body.mode, 40) === "hospitality" ? "Hospitality career path" : "Career change roadmap";
+    const ownerText = [
+      "A user completed the Inspire Ambitions AI Career Coach.",
+      `Email: ${email}`,
+      `Route: ${mode}`,
+      `From: ${data.from}`,
+      `To: ${data.to}`,
+      `Timeline: ${data.months} months at ${data.hoursPerWeek} hours per week`,
+      `Completed: ${new Date().toISOString()}`,
+    ].join("\n");
+
+    try {
+      const ownerRes = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: process.env.EMAIL_FROM || BRAND.emailFrom,
+          to: [ownerEmail],
+          subject: `AI Career Coach completed: ${data.from} → ${data.to}`,
+          text: ownerText,
+        }),
+      });
+      if (!ownerRes.ok) {
+        console.error("[subscribe] owner notification rejected", ownerRes.status);
+      } else {
+        ownerNotified = true;
+      }
+    } catch (err) {
+      console.error("[subscribe] owner notification threw", err);
+    }
+  }
+
+  // The roadmap is already in the user's browser. Email failure is our
+  // problem, not theirs, so the report still unlocks with honest UI copy.
+  return NextResponse.json({ ok: true, delivered, ownerNotified });
 }
 
 export const runtime = "nodejs";

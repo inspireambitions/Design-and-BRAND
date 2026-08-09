@@ -3,11 +3,12 @@ import { RelatedTools } from "@/components/RelatedTools";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { POPULAR_TARGETS } from "@/lib/careers-data";
+import { INDUSTRY_OPTIONS, TYPICAL_TARGETS } from "@/lib/industry-data";
 
 export const metadata = {
-  title: "Career Change Paths & Salary Data | Inspire Ambitions",
+  title: "Career Paths Across Common Industries | Inspire Ambitions",
   description:
-    "Salary bands, demand, difficulty, and required skills for the most-requested career changes.",
+    "Explore practical career-change paths across warehouse, trades, care, education, retail, office work, transport, technology and more.",
 };
 
 export default function CareersPage() {
@@ -22,14 +23,14 @@ export default function CareersPage() {
             Where people are switching to, and what it takes
           </h1>
           <p className="mt-5 text-lg leading-relaxed text-ink-soft">
-            Starting salary bands, honest difficulty ratings, and the skills that
-            actually get screened for. Pick one to generate a plan built around your
-            own background.
+            Explore common job families, the skills employers screen for and a safe
+            first way to build evidence. Pay and licence requirements must be checked
+            in the country where you intend to work.
           </p>
         </div>
 
         <div className="mt-14 grid gap-5 lg:grid-cols-2">
-          {POPULAR_TARGETS.map((r) => {
+          {[...TYPICAL_TARGETS, ...POPULAR_TARGETS].map((r) => {
             const highPriority = r.coreSkills.filter((s) => s.priority === "high");
             return (
               <article
@@ -46,18 +47,18 @@ export default function CareersPage() {
                 <div className="mt-5 grid gap-4 sm:grid-cols-2">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wider text-ink-faint">
-                      Starting range
+                    Industry
                     </p>
                     <p className="mt-1 font-mono text-lg font-semibold text-ever-deep">
-                      {r.salary[0].range}
+                      {INDUSTRY_OPTIONS.find((item) => item.value === r.industry)?.label ?? "Professional and digital"}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wider text-ink-faint">
-                      Senior range
+                    Pay guidance
                     </p>
                     <p className="mt-1 font-mono text-lg font-semibold text-ever-deep">
-                      {r.salary[r.salary.length - 1].range}
+                      {r.industry ? "Check current local adverts" : r.salary[0].range}
                     </p>
                   </div>
                 </div>
@@ -98,7 +99,7 @@ export default function CareersPage() {
 
                 <div className="mt-6 flex flex-1 items-end">
                   <Link
-                    href={`/start?to=${encodeURIComponent(r.role)}`}
+                    href={`/start?industry=${encodeURIComponent(r.industry ?? "technology")}&to=${encodeURIComponent(r.role)}`}
                     className="btn-primary w-full"
                   >
                     Plan my switch to {r.role}

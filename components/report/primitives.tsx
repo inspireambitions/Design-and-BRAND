@@ -19,7 +19,6 @@ export function Section({
         <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-ever-night font-mono text-sm font-semibold text-signal-tint">
           {n}
         </span>
-        <span className="text-xl" aria-hidden>{icon}</span>
         <h2 className="font-display text-2xl font-semibold tracking-tight text-ink sm:text-[1.75rem]">
           {title}
         </h2>

@@ -78,7 +78,7 @@ export function SiteFooter() {
         <div className="container-page flex flex-col gap-2 py-6 text-xs sm:flex-row sm:items-center sm:justify-between">
           <p>© {new Date().getFullYear()} {BRAND.parent}. All rights reserved.</p>
           <p className="text-paper-soft/50">
-            Roadmaps are guidance, not guarantees. Salary ranges are market estimates.
+            Career guidance only. Verify local training, licence, visa and pay requirements.
           </p>
         </div>
       </div>

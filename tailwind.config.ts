@@ -36,21 +36,21 @@ const config: Config = {
         ink: {
           DEFAULT: "#0B2239", // --ia-primary; headings
           soft: "#3D4A5C",
-          faint: "#6B7A8F",
+          faint: "#536579",
         },
         // Dark panels and primary buttons ("ever" kept as the token name)
         ever: {
           DEFAULT: "#1A7DC4", // --ia-accent, used for borders/hover accents
           deep: "#14639C", // accent hover
           night: "#0B2239", // --ia-primary, dark panels
-          bright: "#1A7DC4", // accent text on light
+          bright: "#14639C", // accessible accent text on light
         },
         // The bright accent. On light surfaces it is a button background and
         // pairs with white text; the tint and wash are for dark panels and
         // light fills respectively, where full-strength azure has no contrast.
         signal: {
-          DEFAULT: "#1A7DC4",
-          deep: "#14639C",
+          DEFAULT: "#14639C",
+          deep: "#0F4E7C",
           tint: "#7CC0EE", // accent text ON navy
           wash: "#E8F2FB", // light azure fill
           mark: "#BEDCF5", // highlighter behind dark text — needs more weight than a fill

@@ -1,9 +1,9 @@
 import type { RoadmapReport } from "@/lib/types";
-import { Bar, PriorityPill, Section, StatusPill } from "./primitives";
+import { PriorityPill, Section, StatusPill } from "./primitives";
 
 export function SkillGapSection({ report }: { report: RoadmapReport }) {
   return (
-    <Section id="skill-gap" n={1} icon="📊" title="Skill Gap Analysis">
+    <Section id="skill-gap" n={1} icon="01" title="Skills check">
       <div className="overflow-hidden rounded-3xl border border-ink/[0.08] bg-paper-soft">
         <div className="hidden grid-cols-[minmax(0,1.2fr)_5rem_5.5rem_minmax(0,2fr)] gap-4 border-b border-ink/[0.07] bg-paper-deep/50 px-6 py-4 text-xs font-semibold uppercase tracking-wider text-ink-faint sm:grid">
           <span>Skill</span><span>Status</span><span>Priority</span><span>How to acquire it</span>
@@ -36,9 +36,9 @@ export function StepsSection({
   unlocked: boolean;
 }) {
   return (
-    <Section id="steps" n={2} icon="🪜" title="The Step-by-Step Path">
+    <Section id="steps" n={2} icon="02" title="Your next steps">
       <p className="mb-6 max-w-2xl leading-relaxed text-ink-soft">
-        {report.steps.length} steps from where you are today to signing an offer.
+        {report.steps.length} steps from where you are today to being ready for realistic applications.
         {!unlocked && " The route is yours to see; the execution detail unlocks with the full report."}
       </p>
 
@@ -71,7 +71,7 @@ export function StepsSection({
                 )}
               </div>
               {!unlocked && (
-                <span className="shrink-0 text-ink-faint/60" aria-hidden>🔒</span>
+                <span className="shrink-0 rounded-full bg-paper-deep px-2 py-1 text-[11px] font-semibold text-ink-faint">Locked</span>
               )}
             </div>
           </li>
@@ -83,7 +83,7 @@ export function StepsSection({
 
 export function TimelineSection({ report }: { report: RoadmapReport }) {
   return (
-    <Section id="timeline" n={3} icon="🗓️" title="Month-by-Month Timeline">
+    <Section id="timeline" n={3} icon="03" title="Month-by-month plan">
       <ol className="relative space-y-4 border-l-2 border-ink/[0.08] pl-8">
         {report.timeline.map((phase, i) => (
           <li key={phase.label} className="relative">
@@ -120,7 +120,7 @@ export function TimelineSection({ report }: { report: RoadmapReport }) {
 
 export function CoursesSection({ report }: { report: RoadmapReport }) {
   return (
-    <Section id="courses" n={4} icon="🎓" title="Courses & Certifications">
+    <Section id="courses" n={4} icon="04" title="Training to check">
       <div className="grid gap-4">
         {report.courses.map((c) => (
           <div key={c.name} className="rounded-2xl border border-ink/[0.07] bg-paper-soft p-6">
@@ -145,9 +145,9 @@ export function CoursesSection({ report }: { report: RoadmapReport }) {
             </div>
             <p className="mt-3 leading-relaxed text-ink-soft">{c.why}</p>
             <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 font-mono text-sm text-ink-faint">
-              <span>💰 {c.cost}</span>
-              <span>⏱ {c.duration}</span>
-              {c.rating && c.rating !== "—" && <span>⭐ {c.rating}</span>}
+              <span>Cost: {c.cost}</span>
+              <span>Time: {c.duration}</span>
+              {c.rating && c.rating !== "—" && <span>Check: {c.rating}</span>}
             </div>
           </div>
         ))}
@@ -158,7 +158,7 @@ export function CoursesSection({ report }: { report: RoadmapReport }) {
 
 export function ProjectsSection({ report }: { report: RoadmapReport }) {
   return (
-    <Section id="projects" n={5} icon="🛠️" title="Portfolio Projects">
+    <Section id="projects" n={5} icon="05" title="Proof of your skills">
       <div className="grid gap-4 md:grid-cols-3">
         {report.projects.map((p) => (
           <div key={p.title} className="flex flex-col rounded-2xl border border-ink/[0.07] bg-paper-soft p-6">
@@ -169,7 +169,7 @@ export function ProjectsSection({ report }: { report: RoadmapReport }) {
                 <span key={s} className="rounded-full bg-paper-deep px-2.5 py-1 text-xs text-ink-soft">{s}</span>
               ))}
             </div>
-            <p className="mt-4 font-mono text-xs text-ink-faint">⏱ {p.effort}</p>
+            <p className="mt-4 font-mono text-xs text-ink-faint">Time: {p.effort}</p>
           </div>
         ))}
       </div>
@@ -179,11 +179,11 @@ export function ProjectsSection({ report }: { report: RoadmapReport }) {
 
 export function ResumeSection({ report }: { report: RoadmapReport }) {
   return (
-    <Section id="resume" n={6} icon="📝" title="Resume & LinkedIn Rewrite">
+    <Section id="resume" n={6} icon="06" title="CV and profile">
       <div className="rounded-2xl border border-ink/[0.07] bg-paper-soft p-6">
         <p className="text-[15px] leading-relaxed text-ink-soft">{report.resume.summary}</p>
         <div className="mt-4 rounded-xl bg-ever-night px-5 py-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-signal-tint">Suggested LinkedIn headline</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-signal-tint">Suggested CV or profile headline</p>
           <p className="mt-1.5 font-medium text-paper-soft">{report.resume.headline}</p>
         </div>
       </div>
@@ -204,7 +204,7 @@ export function ResumeSection({ report }: { report: RoadmapReport }) {
       </div>
 
       <div className="mt-4 rounded-2xl border border-ink/[0.07] bg-paper-soft p-6">
-        <h3 className="font-display text-lg font-semibold text-ink">LinkedIn checklist</h3>
+        <h3 className="font-display text-lg font-semibold text-ink">CV and online-profile checklist</h3>
         <ul className="mt-3 space-y-2">
           {report.resume.linkedinTips.map((t) => (
             <li key={t} className="flex items-start gap-2.5 text-[15px] text-ink-soft">
@@ -220,7 +220,7 @@ export function ResumeSection({ report }: { report: RoadmapReport }) {
 
 export function SalarySection({ report }: { report: RoadmapReport }) {
   return (
-    <Section id="salary" n={7} icon="💰" title="Salary Progression">
+    <Section id="salary" n={7} icon="07" title="Pay research">
       <div className="rounded-3xl border border-ink/[0.07] bg-paper-soft p-6 sm:p-8">
         <div className="space-y-6">
           {report.salary.map((s) => (
@@ -229,15 +229,14 @@ export function SalarySection({ report }: { report: RoadmapReport }) {
                 <span className="font-medium text-ink">{s.stage}</span>
                 <span className="font-mono font-semibold text-ever-deep">{s.range}</span>
               </div>
-              <div className="mt-2"><Bar pct={s.pct} label={`${s.stage}: ${s.range}`} /></div>
               <p className="mt-1.5 text-sm text-ink-faint">{s.note}</p>
             </div>
           ))}
         </div>
         <p className="mt-8 border-t border-ink/[0.07] pt-5 text-sm text-ink-faint">
-          Ranges are market estimates and vary significantly by city, company size, and
-          industry. Verify against Levels.fyi, Glassdoor, and actual postings in your area
-          before you use these in a negotiation.
+          Pay changes by country, city, employer, shift, licence and experience. Compare at
+          least 10 recent local adverts and official labour-market information. Treat any
+          online salary figure as a clue, not a promise.
         </p>
       </div>
     </Section>
@@ -246,23 +245,55 @@ export function SalarySection({ report }: { report: RoadmapReport }) {
 
 export function NetworkingSection({ report }: { report: RoadmapReport }) {
   const n = report.networking;
+  const people = [
+    n.peopleToFollow[0] || `A working ${report.snapshot.to}`,
+    n.peopleToFollow[1] || "A supervisor in the target team",
+    n.peopleToFollow[2] || "A recruiter who hires this role",
+    `A former colleague who knows your ${report.snapshot.from} work`,
+    "A trainer or association member who understands local requirements",
+  ].slice(0, 5);
+  const places = [
+    "Employer staff list, professional profile or a friend’s introduction",
+    "Your workplace, a target employer or an industry event",
+    "A trusted recruitment firm or employer careers event",
+    "Your phone contacts, former workplace or community group",
+    n.communities[0] || "A recognised training centre or professional association",
+  ];
   return (
-    <Section id="networking" n={8} icon="🤝" title="Networking Strategy">
+    <Section id="networking" n={8} icon="08" title="People who can help">
       <div className="grid gap-4 md:grid-cols-3">
-        <ListCard title="Communities to join" items={n.communities} />
-        <ListCard title="People worth following" items={n.peopleToFollow} />
-        <ListCard title="Events & recurring things" items={n.events} />
+        <ListCard title="Places to ask" items={n.communities} />
+        <ListCard title="People to speak with" items={n.peopleToFollow} />
+        <ListCard title="Useful events" items={n.events} />
       </div>
 
       <div className="mt-4 rounded-2xl border border-ink/[0.07] bg-paper-soft p-6">
-        <h3 className="font-display text-lg font-semibold text-ink">Cold outreach template</h3>
+        <h3 className="font-display text-lg font-semibold text-ink">Message template</h3>
         <p className="mt-1 text-sm text-ink-faint">
-          Personalize the bracketed parts. Generic outreach gets ignored; this one asks for
-          a specific opinion, not a favor.
+          Change the bracketed parts and ask a specific question. Do not ask a stranger to promise you a job.
         </p>
         <pre className="mt-4 whitespace-pre-wrap rounded-xl bg-ever-night px-5 py-4 font-mono text-sm leading-relaxed text-paper-soft">
 {n.outreachTemplate}
         </pre>
+      </div>
+
+      <div className="mt-4 overflow-hidden rounded-3xl border border-ever/20 bg-paper-soft">
+        <div className="bg-signal-wash px-6 py-6 sm:px-8">
+          <h3 className="font-display text-2xl font-semibold text-ink">Your seven-day referral plan</h3>
+          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-ink-soft">The goal is five useful conversations, not five requests for a job. Ask one clear question and follow up once after three days.</p>
+        </div>
+        <ol className="divide-y divide-ink/[0.07]">
+          {people.map((person, index) => (
+            <li key={`${person}-${index}`} className="grid gap-3 px-6 py-5 sm:grid-cols-[2rem_minmax(0,1fr)_minmax(0,1.2fr)] sm:px-8">
+              <span className="grid h-8 w-8 place-items-center rounded-full bg-ever-night font-mono text-xs font-semibold text-signal-tint">{index + 1}</span>
+              <div><p className="font-semibold text-ink">{person}</p><p className="mt-1 text-sm text-ink-faint">Where: {places[index]}</p></div>
+              <p className="text-sm leading-relaxed text-ink-soft">Ask: “What one requirement should I prove before I apply for {report.snapshot.to} work?”</p>
+            </li>
+          ))}
+        </ol>
+        <div className="grid gap-px bg-ink/[0.07] sm:grid-cols-4">
+          {["Day 1: choose the five people", "Days 2–3: send two messages each day", "Day 4: improve one proof example", "Day 7: follow up once and record answers"].map((action) => <p key={action} className="bg-paper-soft px-5 py-4 text-sm font-medium text-ink">{action}</p>)}
+        </div>
       </div>
 
       <div className="mt-4 rounded-2xl border border-ink/[0.07] bg-paper-soft p-6">
@@ -283,13 +314,12 @@ export function NetworkingSection({ report }: { report: RoadmapReport }) {
 export function InterviewSection({ report }: { report: RoadmapReport }) {
   const iv = report.interview;
   return (
-    <Section id="interview" n={9} icon="⚡" title="Interview Preparation">
+    <Section id="interview" n={9} icon="09" title="Interview practice">
       <div className="rounded-2xl bg-ever-night p-6 text-paper-soft sm:p-8">
         <p className="text-xs font-semibold uppercase tracking-wider text-signal-tint">Your career-switch narrative</p>
         <p className="mt-3 text-lg leading-relaxed">{iv.narrative}</p>
         <p className="mt-4 text-sm text-paper-soft/60">
-          Rehearse this until the 90-second version is effortless. It&rsquo;s the first
-          question in every interview you will have this year.
+          Practise this aloud until you can explain it clearly in about 90 seconds.
         </p>
       </div>
 
@@ -309,7 +339,7 @@ export function InterviewSection({ report }: { report: RoadmapReport }) {
           <ul className="mt-3 space-y-2">
             {iv.redFlags.map((f) => (
               <li key={f} className="flex items-start gap-2.5 text-[15px] text-ink-soft">
-                <span className="mt-1.5 text-clay" aria-hidden>✕</span>
+                <span className="mt-1 text-xs font-bold uppercase text-clay" aria-hidden>No</span>
                 {f}
               </li>
             ))}
@@ -322,7 +352,7 @@ export function InterviewSection({ report }: { report: RoadmapReport }) {
 
 export function DayInLifeSection({ report }: { report: RoadmapReport }) {
   return (
-    <Section id="day-in-life" n={10} icon="☀️" title="A Day in Your New Life">
+    <Section id="day-in-life" n={10} icon="10" title="What the work may involve">
       <div className="overflow-hidden rounded-3xl border border-ink/[0.07] bg-paper-soft">
         {report.dayInLife.map((d) => (
           <div key={d.time + d.activity} className="flex gap-5 border-b border-ink/[0.05] px-6 py-4 last:border-0">
@@ -342,29 +372,12 @@ export function DayInLifeSection({ report }: { report: RoadmapReport }) {
 export function RiskSection({ report }: { report: RoadmapReport }) {
   const r = report.risk;
   return (
-    <Section id="risk" n={11} icon="🎯" title="Risk Assessment & Plan B">
+    <Section id="risk" n={11} icon="11" title="Risks and Plan B">
       <div className="rounded-3xl border border-ink/[0.07] bg-paper-soft p-6 sm:p-8">
-        <div className="flex flex-wrap items-center gap-6">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Difficulty</p>
-            <p className="mt-1 font-display text-4xl font-semibold text-ink">
-              {r.difficulty}<span className="text-2xl text-ink-faint">/10</span>
-            </p>
-            <p className="text-sm font-medium text-clay">{r.difficultyLabel}</p>
-          </div>
-          <div className="flex-1 min-w-[200px]">
-            <div className="flex gap-1" role="img" aria-label={`Difficulty ${r.difficulty} out of 10`}>
-              {Array.from({ length: 10 }, (_, i) => (
-                <span
-                  key={i}
-                  className={`h-8 flex-1 rounded ${i < r.difficulty ? "bg-ever-night" : "bg-ink/[0.08]"}`}
-                />
-              ))}
-            </div>
-            <div className="mt-2 flex justify-between text-xs text-ink-faint">
-              <span>Straightforward</span><span>Very demanding</span>
-            </div>
-          </div>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Planning difficulty</p>
+          <p className="mt-2 font-display text-3xl font-semibold text-ink">{r.difficultyLabel}</p>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-soft">This broad label helps set the pace. It is not a test score or a prediction that you will be hired.</p>
         </div>
       </div>
 
@@ -395,7 +408,7 @@ export function RiskSection({ report }: { report: RoadmapReport }) {
 
 export function NinetySection({ report }: { report: RoadmapReport }) {
   return (
-    <Section id="ninety" n={12} icon="🚀" title="First 90 Days on the Job">
+    <Section id="ninety" n={12} icon="12" title="First 90 days on the job">
       <div className="grid gap-4 md:grid-cols-3">
         {report.firstNinetyDays.phases.map((ph) => (
           <div key={ph.window} className="rounded-2xl border border-ink/[0.07] bg-paper-soft p-6">

@@ -17,14 +17,11 @@ export function HeroPreview() {
               Your roadmap
             </span>
             <p className="mt-3 font-display text-xl font-semibold leading-tight">
-              Teacher <span className="text-signal-tint">→</span> UX Designer
+              Warehouse Assistant <span className="text-signal-tint">→</span> Logistics Coordinator
             </p>
-            <div className="mt-4 flex items-end gap-3">
-              <span className="font-display text-3xl font-semibold text-signal-tint">82</span>
-              <span className="pb-1 text-xs text-paper-soft/60">/ 100 match</span>
-            </div>
-            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-paper-soft/15">
-              <div className="h-full w-[82%] rounded-full bg-signal" />
+            <div className="mt-4">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-paper-soft/50">Planning outlook</span>
+              <p className="mt-1 font-display text-2xl font-semibold text-signal-tint">A realistic route to test</p>
             </div>
           </div>
         </div>
@@ -36,10 +33,10 @@ export function HeroPreview() {
           </p>
           <div className="mt-3 space-y-2.5">
             {[
-              { s: "User research", t: "Have", cls: "bg-ever-night text-signal-tint" },
-              { s: "Figma & prototyping", t: "Need", cls: "bg-clay text-white" },
-              { s: "Information architecture", t: "Need", cls: "bg-clay text-white" },
-              { s: "Stakeholder comms", t: "Partial", cls: "bg-signal text-white" },
+              { s: "Stock control", t: "Have", cls: "bg-ever-night text-signal-tint" },
+              { s: "Dispatch planning", t: "Learn", cls: "bg-clay text-white" },
+              { s: "System accuracy", t: "Practise", cls: "bg-clay text-white" },
+              { s: "Safety checks", t: "Partial", cls: "bg-signal text-white" },
             ].map((r) => (
               <div key={r.s} className="flex items-center justify-between gap-3">
                 <span className="truncate text-sm text-ink-soft">{r.s}</span>
@@ -59,7 +56,7 @@ export function HeroPreview() {
           <div className="mt-3 space-y-2.5 border-l-2 border-ink/[0.08] pl-4">
             {[
               ["Months 1–3", "Foundations"],
-              ["Months 4–6", "First portfolio piece"],
+              ["Months 4–6", "First work-evidence task"],
               ["Months 7–9", "Proof & positioning"],
             ].map(([m, t]) => (
               <div key={m} className="relative">
@@ -80,7 +77,7 @@ export function HeroPreview() {
           </div>
           <div className="absolute inset-x-0 bottom-0 top-0 grid place-items-center bg-gradient-to-b from-transparent to-paper-soft">
             <span className="mt-6 rounded-full bg-ever-night px-3.5 py-1.5 text-xs font-medium text-paper-soft">
-              🔒 9 more sections
+              9 more sections
             </span>
           </div>
         </div>

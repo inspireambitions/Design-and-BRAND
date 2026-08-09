@@ -164,6 +164,9 @@ export function CoachDrawer({ report }: { report: RoadmapReport }) {
               }}
               className="border-t border-ink/[0.08] p-4"
             >
+              <p className="mb-3 text-xs leading-relaxed text-ink-faint">
+                Your question and roadmap are sent to the AI service to create this reply. They are not emailed to Inspire Ambitions.
+              </p>
               <div className="flex gap-2">
                 <input
                   value={input}

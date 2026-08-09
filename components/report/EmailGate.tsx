@@ -13,7 +13,7 @@ export function EmailGate({
   onUnlock,
 }: {
   report: RoadmapReport;
-  onUnlock: (email: string) => void;
+  onUnlock: (email: string, delivered: boolean) => void;
 }) {
   const locked = SECTION_META.filter((m) => !m.free);
   const [email, setEmail] = useState("");
@@ -39,6 +39,7 @@ export function EmailGate({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: value,
+          mode: report.mode,
           from: report.snapshot.from,
           to: report.snapshot.to,
           months: report.snapshot.months,
@@ -50,11 +51,12 @@ export function EmailGate({
         }),
       });
       if (!res.ok) throw new Error("subscribe failed");
-      onUnlock(value);
+      const data = (await res.json().catch(() => null)) as { delivered?: boolean } | null;
+      onUnlock(value, data?.delivered === true);
     } catch {
       // The roadmap is already computed and sitting in the browser — refusing
       // to show it because a mailing-list call failed would be user-hostile.
-      onUnlock(value);
+      onUnlock(value, false);
     }
   }
 
@@ -73,34 +75,35 @@ export function EmailGate({
           <div className="border-b border-ink/[0.07] px-8 py-10 text-center sm:px-12 sm:py-14">
             <span className="eyebrow">Free while in beta</span>
             <h2 className="mx-auto mt-4 max-w-xl font-display text-3xl font-semibold leading-tight tracking-tight text-ink text-balance sm:text-[2.6rem]">
-              You&rsquo;ve seen the diagnosis. The rest is the treatment.
+              Your starting plan is ready. Unlock the full report.
             </h2>
             <p className="mx-auto mt-4 max-w-xl leading-relaxed text-ink-soft">
-              {locked.length} more sections: courses filtered to your budget, portfolio projects
-              built on your {report.snapshot.from.toLowerCase()} background, salary stages, the
-              interview narrative, an honest risk read, and your first 90 days on the job.
+              {locked.length} more sections: training checks, safe proof-of-skill tasks built on
+              your {report.snapshot.from.toLowerCase()} background, local pay research, interview
+              practice, risks, Plan B and your first 90 days.
             </p>
 
             {/* Two real numbers from behind the gate. A figure the reader
                 recognizes as their own outperforms another feature list. */}
             <div className="mx-auto mt-9 grid max-w-xl gap-3 sm:grid-cols-2">
               <Stat
-                label="Difficulty rating"
-                value={`${report.risk.difficulty}/10`}
-                accent={report.risk.difficultyLabel}
-                note="Section 11 explains why, and what to do about it."
+                label="Planning difficulty"
+                value={report.risk.difficultyLabel}
+                note="Section 11 explains the conditions, risks and Plan B."
               />
               <Stat
-                label="First-role salary"
-                value={report.salary[0]?.range ?? "—"}
-                note="Three more stages in section 7."
+                label="First pay check"
+                value={report.salary[0]?.range ?? "Check local adverts"}
+                note={report.mode === "hospitality"
+                  ? "Section 7 shows what to verify before you compare offers."
+                  : "Section 7 shows how to compare current local adverts."}
               />
             </div>
 
             {/* ── The gate ─────────────────────────────────── */}
             <form onSubmit={submit} className="mx-auto mt-9 max-w-xl text-left" noValidate>
-              <label htmlFor="gate-email" className="sr-only">
-                Email address
+              <label htmlFor="gate-email" className="mb-2 block text-sm font-semibold text-ink">
+                Where should we send your starting steps?
               </label>
               <div className="flex flex-col gap-2.5 sm:flex-row">
                 <input
@@ -151,8 +154,9 @@ export function EmailGate({
                 </p>
               ) : (
                 <p id="gate-note" className="mt-3 text-sm leading-relaxed text-ink-faint">
-                  Free, no card. We email you your {report.steps.length}-step path and a link
-                  back to the full roadmap. Nothing else, and one-click unsubscribe.
+                  Free, no card. By continuing, you agree that Inspire Ambitions will receive your
+                  email address and career route so we know you completed the tool. We will try to
+                  email your {report.steps.length}-step starting path. You will not be added to a newsletter.
                 </p>
               )}
             </form>

@@ -14,6 +14,10 @@ body {
   @apply bg-paper text-ink font-sans antialiased;
 }
 
+.print-only {
+  display: none;
+}
+
 ::selection {
   @apply bg-signal text-white;
 }
@@ -24,15 +28,15 @@ body {
   }
 
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-full bg-ever-night px-7 py-3.5 font-medium text-paper-soft transition-all duration-200 hover:bg-ever-deep hover:shadow-float active:scale-[0.98];
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-ever-night px-7 py-3.5 font-medium text-paper-soft transition-all duration-200 hover:bg-ever-deep hover:shadow-float active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2;
   }
 
   .btn-signal {
-    @apply inline-flex items-center justify-center gap-2 rounded-full bg-signal px-7 py-3.5 font-semibold text-white transition-all duration-200 hover:bg-signal-deep hover:shadow-glow active:scale-[0.98];
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-signal px-7 py-3.5 font-semibold text-white transition-all duration-200 hover:bg-signal-deep hover:shadow-glow active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ever-night focus-visible:ring-offset-2;
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-full border border-ink/15 bg-transparent px-6 py-3 font-medium text-ink transition-all duration-200 hover:border-ink/35 hover:bg-paper-deep active:scale-[0.98];
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-ink/15 bg-transparent px-6 py-3 font-medium text-ink transition-all duration-200 hover:border-ink/35 hover:bg-paper-deep active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2;
   }
 
   .card {
@@ -40,7 +44,7 @@ body {
   }
 
   .chip {
-    @apply inline-flex cursor-pointer select-none items-center gap-1.5 rounded-full border border-ink/15 bg-paper-soft px-4 py-2 text-sm font-medium text-ink-soft transition-all duration-150 hover:border-ever hover:text-ever-deep;
+    @apply inline-flex min-h-11 cursor-pointer select-none items-center gap-1.5 rounded-full border border-ink/15 bg-paper-soft px-4 py-2 text-sm font-medium text-ink-soft transition-all duration-150 hover:border-ever hover:text-ever-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2;
   }
 
   .chip-active {
@@ -53,6 +57,26 @@ body {
 
   .input-lg {
     @apply w-full rounded-2xl border border-ink/12 bg-paper-soft px-5 py-4 text-lg text-ink placeholder:text-ink-faint focus:border-ever-bright focus:outline-none focus:ring-2 focus:ring-signal/60;
+  }
+
+  .field-label {
+    @apply mb-2 block text-sm font-semibold text-ink;
+  }
+
+  .field-control {
+    @apply min-h-12 w-full rounded-xl border border-ink/12 bg-paper px-4 py-3.5 text-base text-ink focus:border-ever-bright focus:outline-none focus:ring-2 focus:ring-signal/60;
+  }
+
+  .help-text {
+    @apply mt-3 text-sm leading-relaxed text-ink-faint;
+  }
+
+  .choice-row {
+    @apply flex min-h-12 w-full items-center justify-between gap-3 rounded-xl border border-ink/12 bg-paper px-4 py-3 text-left text-[15px] font-medium text-ink transition-colors hover:border-ever/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2;
+  }
+
+  .choice-row-active {
+    @apply border-ever-deep bg-ever-night text-paper-soft;
   }
 }
 
@@ -77,10 +101,44 @@ body {
   }
   body {
     background: white;
+    color: #0B2239;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .print-only {
+    display: block !important;
+  }
+  .report-cover {
+    min-height: 220mm;
+    display: flex;
+    align-items: center;
+    break-after: page;
   }
   .card {
     box-shadow: none;
     border-color: #ddd;
     break-inside: avoid;
+  }
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+  main {
+    padding: 0 !important;
+  }
+  section, article, aside {
+    break-inside: avoid;
+  }
+  h1, h2, h3 {
+    break-after: avoid;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

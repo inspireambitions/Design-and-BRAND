@@ -43,15 +43,15 @@ export function roadmapEmailHtml(d: RoadmapEmailData): string {
         ${escapeHtml(d.from)} <span style="color:#7CC0EE;">&rarr;</span> ${escapeHtml(d.to)}
       </div>
       <div style="font:400 15px/1.5 'Helvetica Neue',Arial,sans-serif;color:rgba(255,255,255,0.72);padding-top:8px;">
-        ${d.months} months at ${d.hoursPerWeek} hrs/week &middot; ${escapeHtml(d.matchBand)} &middot; difficulty ${d.difficulty}/10 (${escapeHtml(d.difficultyLabel)})
+        ${d.months} months at ${d.hoursPerWeek} hrs/week &middot; ${escapeHtml(d.difficultyLabel)} planning route
       </div>
     </td></tr>
 
     <tr><td style="padding:32px;">
       <div style="font:600 18px/1.3 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#0B2239;padding-bottom:6px;">Your path, in ${d.steps.length} steps</div>
       <div style="font:400 15px/1.6 'Helvetica Neue',Arial,sans-serif;color:#3D4A5C;padding-bottom:20px;">
-        Keep this email. The full roadmap &mdash; courses, portfolio projects, salary stages,
-        interview prep and the rest &mdash; is in your browser at the link below.
+        Keep this email. The full roadmap &mdash; training checks, proof-of-skill tasks, local
+        pay research, interview practice and the rest &mdash; is in your browser at the link below.
       </div>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${steps}</table>
 
@@ -63,7 +63,7 @@ export function roadmapEmailHtml(d: RoadmapEmailData): string {
 
       <div style="font:400 13px/1.6 'Helvetica Neue',Arial,sans-serif;color:#6B7A8F;padding-top:22px;border-top:1px solid rgba(11,34,57,0.10);margin-top:26px;">
         Your roadmap is stored in the browser you created it in, so open that link on the same
-        device. Salary figures are market estimates, not offers.
+        device. This is career guidance, not a test, licence, visa assessment, salary promise or job guarantee.
       </div>
     </td></tr>
 
@@ -82,7 +82,7 @@ export function roadmapEmailText(d: RoadmapEmailData): string {
 ${d.from} -> ${d.to}
 
 ${d.months} months at ${d.hoursPerWeek} hrs/week
-${d.matchBand} · difficulty ${d.difficulty}/10 (${d.difficultyLabel})
+Planning difficulty: ${d.difficultyLabel}
 
 YOUR PATH, IN ${d.steps.length} STEPS
 ${steps}
@@ -90,7 +90,8 @@ ${steps}
 Open your full roadmap: ${d.siteUrl}/report
 
 Your roadmap is stored in the browser you created it in, so open that link on
-the same device. Salary figures are market estimates, not offers.
+the same device. This is career guidance, not a test, licence, visa assessment,
+salary promise or job guarantee.
 
 You got this because you asked Inspire Ambitions for a career change roadmap.
 We don't send anything else unless you ask.`;

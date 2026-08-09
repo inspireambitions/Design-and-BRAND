@@ -5,31 +5,31 @@ import { useState } from "react";
 const ITEMS = [
   {
     q: "How is this different from asking a chatbot?",
-    a: "A chatbot gives you an answer. This gives you a plan with a structure behind it: twelve sections that cover the whole transition, sequenced against the hours you actually have, with a portfolio strategy built around your specific background. It also holds itself to your budget — if you said free-only, every course it names is free.",
+    a: "A chatbot gives you a conversation. This gives you a structured report: twelve sections sequenced around the time and budget you actually have, with training checks, safe evidence tasks, risks and Plan B.",
   },
   {
-    q: "Is the plan actually personalized, or a template with my job title dropped in?",
-    a: "Personalized. Your hours per week determine how much fits in each phase, your budget filters the course recommendations, your existing skills change which gaps get flagged as high-priority, and your current field drives the portfolio projects — the whole point is finding the leverage your background gives you.",
+    q: "Is the plan actually personalised, or a template with my job title dropped in?",
+    a: "It uses your current and target industries, country, role, experience, education, existing skills, time, budget, support and biggest barrier. It is still career guidance, not a validated test of your personality or ability.",
   },
   {
     q: "What if my target career isn't a common one?",
-    a: "The generator handles any role. For the most common transitions it draws on curated data — real course prices, salary bands, named communities. For less common targets it still produces the full twelve-section plan, and tells you where to verify the specifics yourself rather than inventing them.",
+    a: "You can type any role. Common routes use a curated planning base. Less common routes still receive the full structure, but the report tells you which current local facts must be checked rather than inventing them.",
   },
   {
     q: "Will it tell me if my plan is unrealistic?",
-    a: "Yes, and that's deliberate. The risk section gives an honest difficulty rating, names the setbacks that actually derail people at your specific transition, and includes a Plan B that reuses most of the same preparation. If your timeline doesn't fit your available hours, it says so in the verdict rather than producing a fantasy schedule.",
+    a: "Yes. The report uses a broad planning-difficulty label, names likely setbacks and includes a Plan B that reuses much of the same preparation. It does not pretend to predict whether you will be hired.",
   },
   {
     q: "How long does it take?",
-    a: "Roughly three minutes to answer the questions, then under a minute to generate. You see the first three sections immediately.",
+    a: "Most people need four to seven minutes for the eight questions. The report usually takes a few seconds to build, but an AI-assisted route can take longer.",
   },
   {
     q: "What do you do with my email address?",
-    a: "Send you a link back to your roadmap so it survives closing the tab, and occasionally ask how the transition is going. That's it — no selling it on, no daily newsletter, and one-click unsubscribe. The email is the only thing the full roadmap costs during the beta.",
+    a: "Your email unlocks copying and PDF saving. We try to send your starting steps. Inspire Ambitions also receives your email address and career route so we know the tool was completed. You are not added to a newsletter. The full report stays privately in this browser unless you copy, print or share it.",
   },
   {
     q: "Why is it free? What's the catch?",
-    a: "It's in beta and we'd rather have feedback than revenue right now — every roadmap that comes back marked unhelpful tells us more than a sale would. It will likely cost money later. Roadmaps generated during the beta stay yours either way.",
+    a: "It is in beta and we would rather have feedback than revenue right now. Every roadmap marked unhelpful teaches us something. It may cost money later. Roadmaps generated during the beta stay yours either way.",
   },
 ];
 

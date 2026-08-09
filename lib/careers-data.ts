@@ -1,7 +1,10 @@
-import type { CourseRec, SalaryStage } from "./types";
+import type { CourseRec, ProjectRec, SalaryStage } from "./types";
+import { HOSPITALITY_TARGETS } from "./hospitality-data";
+import { TYPICAL_TARGETS } from "./industry-data";
 
 export interface RoleKnowledge {
   role: string;
+  industry?: string;
   aliases: string[];
   coreSkills: { skill: string; priority: "high" | "medium" | "low"; how: string }[];
   courses: (CourseRec & { minBudget: number })[];
@@ -14,6 +17,9 @@ export interface RoleKnowledge {
   difficultyBase: number;
   planB: string;
   frameworks: string[];
+  evidenceProjects?: ProjectRec[];
+  safetyCritical?: boolean;
+  regulatedNotice?: string;
 }
 
 export const POPULAR_TARGETS: RoleKnowledge[] = [
@@ -328,13 +334,20 @@ export const POPULAR_TARGETS: RoleKnowledge[] = [
 
 export function findRole(target: string): RoleKnowledge | undefined {
   const t = target.trim().toLowerCase();
-  return POPULAR_TARGETS.find(
-    (r) => r.role.toLowerCase() === t || r.aliases.some((a) => t.includes(a) || a.includes(t))
+  const roles = [...TYPICAL_TARGETS, ...POPULAR_TARGETS, ...HOSPITALITY_TARGETS];
+  return roles.find((r) => r.role.toLowerCase() === t) ?? roles.find(
+    (r) => r.aliases.some((a) => {
+      const alias = a.toLowerCase();
+      return alias === t || (alias.length >= 5 && (t.includes(alias) || alias.includes(t)));
+    })
   );
 }
 
+export const ALL_TARGETS: RoleKnowledge[] = [...POPULAR_TARGETS, ...TYPICAL_TARGETS, ...HOSPITALITY_TARGETS];
+
 export const BUDGET_CAPS: Record<string, number> = {
   free: 0,
+  low: 200,
   "500": 500,
   "2000": 2000,
   flexible: 100000,

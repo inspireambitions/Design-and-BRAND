@@ -20,15 +20,13 @@ keyword-led root slugs (`/uae-salary-calculator`, `/dubai-living-cost-calculator
 > the canonical/sitemap/robots values follow automatically.
 
 **Reserve the slug.** WordPress must not own `/career-change-roadmap`, or it will
-answer before the app does. Checked against the live database — nothing claims it
-today. The nearest neighbours are all posts and none collide:
+answer before the app does. It was unclaimed when checked; re-run this before
+launch:
 
 ```sql
 SELECT ID, post_title, post_type, post_status FROM wpof_posts
 WHERE post_name LIKE '%career-change%';
 ```
-
-Re-run before launch in case something is published in the meantime.
 
 ## 2. List it on the tools hub
 
@@ -37,26 +35,19 @@ Add to `/career-tools/` (page ID **45594**), in the existing **Jobs and Career**
 dash, then one line of description:
 
 ```html
-<li><a href="/career-change-roadmap/">Career Change Roadmap</a> - Get a month-by-month plan to change careers: skill gaps, courses in your budget, salary stages and an honest difficulty rating</li>
+<li><a href="/career-change-roadmap/">AI Career Coach and Career Change Roadmap</a> - Build a personalised step-by-step plan for changing careers, including skill gaps, realistic actions, training options and an honest difficulty rating</li>
 ```
 
 Put it directly after the Hospitality Career Path Simulator row — that tool is
 the closest neighbour, and the two read naturally as a pair.
 
-**The other two hubs need different treatment.** They list tools as prose, not as
-a link list, so the `<li>` above has nothing to sit in:
+The other two hubs use prose, not the same list format:
 
 | Page | ID | Slug | How it lists tools |
 |---|---|---|---|
-| Free UAE Career Tools | 45594 | `/career-tools/` | Gutenberg `<ul>`, one `link - description` row per tool. Use the markup above. |
-| Job & Career Tools | 22768 | `/job-career-tools/` | Hand-written HTML prose. Tools are named inside paragraphs under **What Each Tool Does**, then an FAQ in `<details>` blocks. |
-| UAE Hospitality Career Toolkit | 46652 | `/career-toolkit/` | Gutenberg prose under **What You Will Find in This Toolkit**, tools grouped into four named categories. |
-
-For 22768 and 46652, add a sentence naming the tool in the paragraph where it
-belongs and link it there — a bare list item would read as pasted-in. On 46652
-that means picking which of the four categories it falls under first; it is a
-planning tool rather than a calculator, so it does not obviously belong to any
-of them, and that choice is yours to make.
+| Free UAE Career Tools | 45594 | `/career-tools/` | Gutenberg list. Use the row above. |
+| Job & Career Tools | 22768 | `/job-career-tools/` | Hand-written prose under **What Each Tool Does**. Add a linked sentence. |
+| UAE Hospitality Career Toolkit | 46652 | `/career-toolkit/` | Gutenberg prose in named categories. Link the hospitality entry route in the planning section. |
 
 ## 3. Add the footer link
 
@@ -69,23 +60,17 @@ wp menu item list <footer-menu-slug>
 wp menu item add-custom <footer-menu-slug> "Career Change Roadmap" /career-change-roadmap/
 ```
 
-## 4. Overlap worth deciding on
+## 4. Hospitality merge decision
 
-Your existing **Hospitality Career Path Simulator**
-(`/gcc-recruitment-guide/internships/hospitality/`) is described as mapping
-"your next UAE/GCC hotel role, promotion route, salary movement, blockers and
-skill gaps." That is substantially what this roadmap does, for hospitality
-specifically.
+The decision is made: hospitality uses the same coach, report, email gate and
+follow-up chat. Keep `/hospitality-career-path/` as the specialist search and
+entry page. It starts the shared coach at
+`/career-change-roadmap/start?industry=hospitality`.
 
-Two tools competing for the same queries will split their own rankings. Options:
-
-- **Position them as different scopes** — the Simulator for the next step inside
-  hospitality, the Roadmap for changing field entirely. Say so in both
-  descriptions, and cross-link them.
-- **Fold the Simulator's hospitality data into the Roadmap** and retire it,
-  redirecting the old URL.
-
-Worth settling before both are indexed, not after.
+Do not redirect the hospitality URL to the internship guide or publish a second
+independent scoring engine. Replace the page with
+`wordpress/hospitality-career-path.html` only after the shared coach is live and
+tested. The complete URL and claims contract is in `MERGE-AND-SEO-CONTRACT.md`.
 
 ## 5. Analytics
 

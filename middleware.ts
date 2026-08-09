@@ -17,6 +17,10 @@ function isExempt(host: string): boolean {
     host.startsWith("127.0.0.1") ||
     host.startsWith("0.0.0.0") ||
     host.endsWith(".local") ||
+    // The Vercel deployment is the runtime behind the WordPress entry page.
+    // It must serve deep links and API calls, but is marked noindex below so
+    // the branded WordPress URL remains the only search result.
+    host.split(":")[0].toLowerCase().endsWith(".vercel.app") ||
     // Vercel preview deployments — reviewing a branch shouldn't bounce to prod.
     process.env.VERCEL_ENV === "preview" ||
     process.env.NODE_ENV !== "production"
@@ -25,7 +29,13 @@ function isExempt(host: string): boolean {
 
 export function middleware(req: NextRequest) {
   const host = req.headers.get("host") ?? "";
-  if (isExempt(host)) return NextResponse.next();
+  if (isExempt(host)) {
+    const response = NextResponse.next();
+    if (host.split(":")[0].toLowerCase().endsWith(".vercel.app")) {
+      response.headers.set("X-Robots-Tag", "noindex, nofollow");
+    }
+    return response;
+  }
 
   const bare = host.split(":")[0].toLowerCase();
   if (bare === CANONICAL_HOST) return NextResponse.next();

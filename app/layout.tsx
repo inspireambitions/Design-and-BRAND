@@ -15,12 +15,22 @@ export const metadata: Metadata = {
   applicationName: BRAND.name,
   keywords: [
     "career change roadmap",
+    "AI career coach",
+    "online career coach",
     "career transition plan",
     "how to change careers",
     "career change at 30",
     "career switch plan",
     "skill gap analysis",
     "career change timeline",
+    "hospitality career path simulator",
+    "hotel career path",
+    "warehouse career change",
+    "skilled trades career path",
+    "care worker career progression",
+    "retail career change",
+    "administration career path",
+    "career coach for low paid workers",
   ],
   alternates: { canonical: canonicalUrl() },
   openGraph: {
@@ -48,6 +58,7 @@ const JSON_LD = {
     {
       "@type": "WebApplication",
       name: BRAND.name,
+      alternateName: ["Career Change Roadmap", "Hospitality Career Path Simulator"],
       url: canonicalUrl(),
       applicationCategory: "BusinessApplication",
       operatingSystem: "Any (web)",
@@ -71,7 +82,7 @@ const JSON_LD = {
           name: "Is a career change roadmap actually useful?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "It is useful when it is specific. A roadmap that names the courses within your budget, the portfolio projects that reuse your existing domain expertise, and the honest difficulty of the switch gives you something to act on this week. Generic advice does not.",
+            text: "It is useful when it is specific. A roadmap that names suitable training within your budget, safe work-evidence tasks that reuse your experience, and the honest difficulty of the switch gives you something to act on this week. Generic advice does not.",
           },
         },
         {
