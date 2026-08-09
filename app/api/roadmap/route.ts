@@ -110,15 +110,18 @@ export async function POST(req: Request) {
   }
 
   try {
-    const client = new Anthropic();
+    const client = new Anthropic({
+      maxRetries: 0,
+      timeout: 105_000,
+    });
 
     const stream = client.beta.messages.stream({
       model: process.env.ANTHROPIC_MODEL || "claude-opus-5",
-      max_tokens: 32000,
+      max_tokens: 16000,
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
       output_config: {
-        effort: "high",
+        effort: "low",
       },
       system: [
         { type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
