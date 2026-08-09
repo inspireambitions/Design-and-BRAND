@@ -1,7 +1,7 @@
 import type { RoadmapReport } from "./types";
 
 export type AiRoadmapPatch = Partial<Omit<RoadmapReport, "generatedBy">> &
-  Pick<RoadmapReport, "verdict" | "snapshot" | "skillGap" | "steps" | "timeline">;
+  Pick<RoadmapReport, "verdict" | "snapshot" | "skillGap" | "steps" | "courses">;
 
 function extractJsonObject(text: string): string | null {
   const source = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
@@ -45,12 +45,10 @@ export function parseAiRoadmap(text: string): AiRoadmapPatch | null {
     const value: unknown = JSON.parse(json);
     if (!isObject(value)) return null;
     if (!isObject(value.snapshot)) return null;
+    if (typeof value.verdict !== "string" || value.verdict.trim().length === 0) return null;
     if (!Array.isArray(value.skillGap) || value.skillGap.length === 0) return null;
     if (!Array.isArray(value.steps) || value.steps.length !== 8) return null;
-    if (!Array.isArray(value.timeline) || value.timeline.length === 0) return null;
     if (!Array.isArray(value.courses) || value.courses.length === 0) return null;
-    if (!Array.isArray(value.projects) || value.projects.length === 0) return null;
-    if (!isObject(value.risk)) return null;
     return value as AiRoadmapPatch;
   } catch {
     return null;

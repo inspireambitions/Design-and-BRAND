@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import { generateReport } from "@/lib/engine";
-import { buildUserPrompt, SYSTEM_PROMPT } from "@/lib/prompt";
+import { buildCoreUserPrompt, SYSTEM_PROMPT } from "@/lib/prompt";
 import { CORE_REPORT_SCHEMA } from "@/lib/schema";
 import { parseAiRoadmap } from "@/lib/ai-response";
 import type { Profile, RoadmapReport } from "@/lib/types";
@@ -121,7 +121,7 @@ export async function POST(req: Request) {
     try {
       const stream = client.beta.messages.stream({
         model: process.env.ANTHROPIC_MODEL || "claude-opus-5",
-        max_tokens: 16000,
+        max_tokens: 7000,
         betas: ["server-side-fallback-2026-07-01"],
         fallbacks: "default",
         output_config: {
@@ -132,7 +132,7 @@ export async function POST(req: Request) {
         ],
         messages: [{
           role: "user",
-          content: `${buildUserPrompt(profile)}\n\nReturn only the core planning sections in one JSON object. The application will supply the remaining report sections. Match this JSON Schema exactly:\n${JSON.stringify(CORE_REPORT_SCHEMA)}`,
+          content: `${buildCoreUserPrompt(profile)}\n\nReturn one JSON object matching this schema exactly:\n${JSON.stringify(CORE_REPORT_SCHEMA)}`,
         }],
       } as never, { signal: controller.signal });
 

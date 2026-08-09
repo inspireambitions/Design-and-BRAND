@@ -67,3 +67,34 @@ On the step-by-step path specifically: give exactly 8 sequential steps from wher
 
 Aim for 4–7 skill entries, 8 steps, 4 timeline phases covering the full ${p.timelineMonths} months, 2–4 training options to verify, 3 safe evidence tasks, and 4 pay-research stages. Never invent exact local pay.`;
 }
+
+export function buildCoreUserPrompt(p: Profile): string {
+  const budget = p.budget === "free"
+    ? "free resources only"
+    : p.budget === "low"
+      ? "a small monthly amount"
+      : p.budget === "flexible"
+        ? "flexible when the value is clear"
+        : "one useful short course after checks";
+
+  return `Build only the role-specific core of this career roadmap.
+
+Current role: ${p.currentRole}
+Target role: ${p.targetRole}
+Mode: ${p.mode === "hospitality" ? "hospitality progression" : "general career change"}
+Current industry: ${p.currentIndustry || p.industry || "not stated"}
+Target industry: ${p.targetIndustry || p.industry || "not stated"}
+Experience: ${p.yearsExperience} years
+Existing skills: ${p.existingSkills.length ? p.existingSkills.join(", ") : "infer only credible transferable skills from the current role"}
+Education: ${p.educationLevel || "not stated"}
+Location: ${p.location || "not stated"}
+Target country: ${p.targetCountry || "not stated"}
+Time: ${p.hoursPerWeek} hours a week for ${p.timelineMonths} months
+Training budget: ${budget}
+Motivations: ${p.motivations.length ? p.motivations.join(", ") : "not stated"}
+Barriers: ${p.careerBarriers?.length ? p.careerBarriers.join(", ") : p.careerBarrier || "not stated"}
+Languages: ${p.languages?.length ? p.languages.join(", ") : "not stated"}
+Support: ${p.supportAvailable || "not stated"}
+
+Return a concise verdict, a realistic role ladder in snapshot.to, 4 to 6 skill gaps, exactly 8 short sequential steps, and 2 to 4 courses to verify. For an internal promotion, include the intermediate roles and evidence needed. Do not invent course prices, recognition, salaries, vacancies or legal rules. Keep the full JSON under 4,500 words.`;
+}

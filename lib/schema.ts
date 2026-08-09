@@ -99,16 +99,14 @@ export const REPORT_SCHEMA = obj({
   }),
 });
 
-// The public WordPress bridge closes requests after 120 seconds. Ask Claude
-// only for the sections that need role-specific judgement, then merge them
-// over the deterministic report for the remaining sections.
+// The public WordPress bridge closes requests after 120 seconds. Keep Claude's
+// task to the sections where role-specific judgement changes the answer. The
+// deterministic engine supplies scheduling, evidence tasks and standard safety
+// sections so the visitor receives a complete report within the bridge limit.
 export const CORE_REPORT_SCHEMA = obj({
   verdict: REPORT_SCHEMA.properties["verdict"],
   snapshot: REPORT_SCHEMA.properties["snapshot"],
   skillGap: REPORT_SCHEMA.properties["skillGap"],
   steps: REPORT_SCHEMA.properties["steps"],
-  timeline: REPORT_SCHEMA.properties["timeline"],
   courses: REPORT_SCHEMA.properties["courses"],
-  projects: REPORT_SCHEMA.properties["projects"],
-  risk: REPORT_SCHEMA.properties["risk"],
 });
