@@ -184,12 +184,20 @@ export async function POST(req: Request) {
       return NextResponse.json(fallback);
     }
 
-    // Merge over the engine output so a partially-shaped response still renders.
+    // Keep every usable AI core field, but retain the complete engine section
+    // when the model omits it or returns the wrong number of steps. A visitor
+    // should not lose all role-specific analysis because one array is short.
+    const aiSkillGap = parsed.skillGap?.length ? parsed.skillGap : fallback.skillGap;
+    const aiSteps = parsed.steps?.length === 8 ? parsed.steps : fallback.steps;
+    const aiCourses = parsed.courses?.length ? parsed.courses : fallback.courses;
     const report: RoadmapReport = applyPlanningConstraints(
       applyCareerLadder(applyCareerSafetyGuards({
         ...fallback,
         ...parsed,
         snapshot: { ...fallback.snapshot, ...(parsed.snapshot ?? {}) },
+        skillGap: aiSkillGap,
+        steps: aiSteps,
+        courses: aiCourses,
         generatedBy: "ai",
       }, profile), profile),
       profile
@@ -199,6 +207,9 @@ export async function POST(req: Request) {
       responseId: message.id,
       from: profile.currentRole,
       to: profile.targetRole,
+      usedEngineSteps: parsed.steps?.length !== 8,
+      usedEngineSkillGap: !parsed.skillGap?.length,
+      usedEngineCourses: !parsed.courses?.length,
     });
 
     return NextResponse.json(report);

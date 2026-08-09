@@ -29,4 +29,10 @@ describe("parseAiRoadmap", () => {
   it("rejects a partial report that would break the UI", () => {
     expect(parseAiRoadmap(JSON.stringify({ snapshot: {}, steps: [] }))).toBeNull();
   });
+
+  it("keeps usable AI fields when one core array is incomplete", () => {
+    const patch = parseAiRoadmap(JSON.stringify({ verdict: "Useful analysis", steps: valid.steps.slice(0, 7) }));
+    expect(patch?.verdict).toBe("Useful analysis");
+    expect(patch?.steps).toHaveLength(7);
+  });
 });
