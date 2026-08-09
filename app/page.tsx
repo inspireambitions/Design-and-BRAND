@@ -132,7 +132,7 @@ export default function HomePage() {
         <div className="container-page grid gap-8 py-10 sm:grid-cols-3">
           <Stat value="12" label="sections in every roadmap" sub="From skill gaps to your first 90 days on the job" />
           <Stat value="Free" label="while we're in beta" sub="No card and no subscription" />
-          <Stat value="4–7 min" label="for the eight questions" sub="Then a few seconds to build your report" />
+          <Stat value="4–7 min" label="for the eight questions" sub="Then allow about a minute to build your report" />
         </div>
       </section>
 
@@ -169,12 +169,12 @@ export default function HomePage() {
                 What&rsquo;s inside
               </span>
               <h2 className="mt-4 font-display text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
-                Twelve sections. All of them specific to you.
+                Twelve sections. Built around your route.
               </h2>
               <p className="mt-5 max-w-md leading-relaxed text-paper-soft/70">
-                A working document with skills to check, training to verify, safe
-                evidence tasks, CV examples, local pay research and a schedule that
-                fits the hours you actually have.
+                A working guide that combines role-specific advice with planning and
+                safety checks. It covers skills, training, safe evidence tasks, CV
+                examples, pay research and a schedule for the hours you have.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link href="/start" className="btn-signal">

@@ -44,7 +44,7 @@ Status: core repairs deployed to production on 10 August 2026; remaining scope i
 - [x] Replace the long report navigation strip with a usable compact pattern at narrow widths.
 - [x] Prevent the floating coach button from covering report content.
 - [x] Make the report method and fallback status clear near the report heading, not only at the bottom.
-- [ ] Reduce landing-page promises until the verified output supports them.
+- [x] Reduce landing-page promises until the verified output supports them.
 - [x] Confirm the roadmap remains reachable from the main-domain footer and tools hub.
 - [x] Differentiate this roadmap from the Career Motivation Assessment before further promotion.
 
