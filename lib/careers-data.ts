@@ -5,6 +5,8 @@ import { TYPICAL_TARGETS } from "./industry-data";
 export interface RoleKnowledge {
   role: string;
   industry?: string;
+  seniorityBand?: "entry" | "experienced" | "supervisor" | "manager" | "specialist";
+  prerequisites?: string[];
   aliases: string[];
   coreSkills: { skill: string; priority: "high" | "medium" | "low"; how: string }[];
   courses: (CourseRec & { minBudget: number })[];

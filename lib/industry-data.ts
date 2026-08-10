@@ -61,6 +61,7 @@ export const INDUSTRY_SKILLS: Record<string, string[]> = {
   security: ["Access control", "CCTV monitoring", "Incident reports", "Patrolling", "Emergency response", "Conflict management"],
   facilities: ["Cleaning standards", "Chemical safety", "Basic maintenance", "Inspection", "Stock control", "Team supervision"],
   beauty: ["Client care", "Hygiene", "Treatments", "Consultations", "Selling products", "Appointment booking"],
+  hospitality: ["Guest service", "Operating standards", "Shift handovers", "Safety and hygiene", "Team coordination", "Service recovery"],
   business: ["Finding customers", "Pricing", "Cash flow", "Buying stock", "Selling online", "Record keeping"],
   agriculture: ["Crop care", "Food hygiene", "Using farm tools", "Quality checks", "Packing", "Following safety rules"],
 };
@@ -78,6 +79,14 @@ type RoleInput = {
   regulatedNotice?: string;
 };
 
+export function inferSeniorityBand(title: string): NonNullable<RoleKnowledge["seniorityBand"]> {
+  if (/director|head of|manager/i.test(title)) return "manager";
+  if (/supervisor|team leader|coordinator/i.test(title)) return "supervisor";
+  if (/technician|therapist|specialist|electrician|teacher/i.test(title)) return "specialist";
+  if (/assistant|intern|trainee|attendant|helper|clerk/i.test(title)) return "entry";
+  return "experienced";
+}
+
 function role(input: RoleInput): RoleKnowledge {
   const verify = input.safetyCritical
     ? "Use the official regulator, licensing body or an employer-approved provider. Do not rely on an online certificate alone."
@@ -85,6 +94,10 @@ function role(input: RoleInput): RoleKnowledge {
   return {
     role: input.role,
     industry: input.industry,
+    seniorityBand: inferSeniorityBand(input.role),
+    prerequisites: input.safetyCritical
+      ? ["Verify local legal or licensing requirements", "Complete employer-approved supervised practice", "Confirm the permitted scope before doing the work"]
+      : ["Check repeated requirements in current local adverts", "Build safe evidence through real or supervised work"],
     aliases: input.aliases,
     coreSkills: input.skills.map((skill, index) => ({
       skill,

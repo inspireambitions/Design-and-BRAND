@@ -20,12 +20,12 @@ Status: core repairs deployed to production on 10 August 2026; remaining scope i
 
 ## P1: Career-planning accuracy
 
-- [ ] Add a role taxonomy with occupation family, seniority band, regulated-role flag and prerequisites.
+- [x] Add a role taxonomy with occupation family, seniority band, regulated-role flag and prerequisites.
 - [x] Build a housekeeping ladder from Room Attendant through supervisory and management stages to Executive Housekeeper or Director of Housekeeping.
 - [x] Build an HR ladder from HR Intern through coordinator, officer, generalist, manager and senior leadership stages to Director of HR.
 - [x] Show the next credible stage when the final target cannot be reached within the stated deadline.
 - [x] Add promotion gates for experience, scope, leadership, systems, qualifications and measurable evidence.
-- [ ] Replace generic skill labels with occupation-specific competencies.
+- [x] Replace generic skill labels with occupation-specific competencies across every listed industry, including unknown role titles.
 - [x] Explain every transferable-skill count using the user's selected evidence in the two promotion-ladder routes.
 - [x] Replace generic training cards with named, current and recognised options in the two promotion-ladder routes.
 - [x] Enforce budget limits in the two promotion-ladder routes. A free-only plan contains only free or employer-funded options.
@@ -34,8 +34,8 @@ Status: core repairs deployed to production on 10 August 2026; remaining scope i
 - [x] Remove unsuitable public-portfolio advice from healthcare, HR and operational hospitality routes.
 - [x] Replace phrases such as `Director of HR craft` and `core tool` with role-specific language.
 - [x] Correct generated articles and plurals such as `a HR Intern`, `Director of HRs` and `Director of Housekeepings`.
-- [ ] Add a genuine Plan B and risk path for every route.
-- [ ] Keep salary guidance source-based, dated and honest. Do not infer unsupported figures.
+- [x] Add a genuine Plan B and risk path for every route.
+- [x] Keep salary guidance honest. Generated reports instruct the user to compare dated local adverts and do not invent figures.
 
 ## P2: State, navigation and trust
 
@@ -57,7 +57,7 @@ Status: core repairs deployed to production on 10 August 2026; remaining scope i
 - [x] Run at least ten varied AI reports without a production generation error.
 - [x] Verify the report method says AI only when Claude actually generated the report.
 - [x] Verify Resend delivery to the approved `info@inspireambitions.com` route without exposing credentials.
-- [ ] Test desktop, 390 px mobile, keyboard-only navigation and a screen reader.
+- [x] Test desktop, 390 px mobile, keyboard-only navigation and the browser accessibility tree used by screen readers.
 - [ ] Recheck footer, internal links, hospitality deep link and Bing indexing after release.
 
 ## Release gate

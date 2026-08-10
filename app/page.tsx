@@ -284,6 +284,7 @@ export default function HomePage() {
               <Link
                 key={item.value}
                 href={`/start?industry=${encodeURIComponent(item.value)}&to=${encodeURIComponent(target.role)}`}
+                aria-label={`Explore ${item.label}. Example path: ${target.role}`}
                 className="group rounded-2xl border border-ink/[0.07] bg-paper-soft p-6 transition-all duration-200 hover:-translate-y-1 hover:border-ever/40 hover:shadow-lift"
               >
                 <h3 className="font-display text-xl font-semibold text-ink">{item.label}</h3>

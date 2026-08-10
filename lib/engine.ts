@@ -1,4 +1,5 @@
 import { BUDGET_CAPS, findRole, type RoleKnowledge } from "./careers-data";
+import { INDUSTRY_SKILLS, TYPICAL_TARGETS, inferSeniorityBand } from "./industry-data";
 import type {
   Profile,
   RoadmapReport,
@@ -48,6 +49,35 @@ const GENERIC_ROLE: RoleKnowledge = {
   planB: "An adjacent role that shares 60%+ of the same skills — identify it early so pivoting isn't starting over.",
   frameworks: ["Situation → action → result", "Safety and quality first", "Show evidence from real or supervised work"],
 };
+
+function genericRoleForProfile(profile: Profile): RoleKnowledge {
+  const industry = profile.targetIndustry || profile.industry || "other";
+  const skills = INDUSTRY_SKILLS[industry];
+  const nearby = TYPICAL_TARGETS.find((item) => item.industry === industry);
+  const adjacentPlan = industry === "hospitality"
+    ? "Use a related guest-service, operations, coordination or team-leader role that builds the same evidence."
+    : nearby?.planB;
+  if (!skills?.length) return { ...GENERIC_ROLE, role: profile.targetRole || GENERIC_ROLE.role };
+
+  return {
+    ...GENERIC_ROLE,
+    role: profile.targetRole || GENERIC_ROLE.role,
+    industry,
+    seniorityBand: inferSeniorityBand(profile.targetRole),
+    prerequisites: [
+      "Check repeated requirements in current local adverts",
+      "Build safe evidence through real or supervised work",
+    ],
+    coreSkills: skills.map((skill, index) => ({
+      skill,
+      priority: index < 2 ? "high" as const : index < 5 ? "medium" as const : "low" as const,
+      how: `Compare this with current ${profile.targetRole} adverts, then build evidence through authorised work, supervised practice or a recognised local course.`,
+    })),
+    planB: adjacentPlan
+      ? `If ${profile.targetRole} is not yet realistic, use this industry's adjacent route: ${adjacentPlan}`
+      : GENERIC_ROLE.planB,
+  };
+}
 
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]/g, " ").trim();
 
@@ -210,7 +240,7 @@ function buildSteps(profile: Profile, role: RoleKnowledge, gaps: SkillGapItem[])
 }
 
 export function generateReport(profile: Profile): RoadmapReport {
-  const role = findRole(profile.targetRole) ?? { ...GENERIC_ROLE, role: profile.targetRole || GENERIC_ROLE.role };
+  const role = findRole(profile.targetRole) ?? genericRoleForProfile(profile);
   const hospitality =
     profile.mode === "hospitality" ||
     profile.industry === "hospitality";

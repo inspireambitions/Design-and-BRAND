@@ -136,7 +136,7 @@ export function ReportView() {
 
                 <div className="rounded-2xl border border-paper-soft/10 bg-paper-soft/[0.07] p-6">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-paper-soft/55">Planning outlook</p>
-                  <p className="mt-2 font-display text-3xl font-semibold text-signal-tint">{report.risk.difficultyLabel} route</p>
+                  <p className="mt-2 font-display text-3xl font-semibold text-signal-tint">{planningOutlook(report.risk.difficultyLabel)}</p>
                   <p className="mt-3 text-sm leading-relaxed text-paper-soft/70">
                     This is a practical planning judgement, not a test score. Your real fit depends on the work itself, local requirements and evidence you build.
                   </p>
@@ -363,7 +363,11 @@ function reportAsText(report: RoadmapReport): string {
 
 function shareText(report: RoadmapReport): string {
   const firstSteps = report.steps.slice(0, 3).map((step, index) => `${index + 1}. ${step.title}`).join("\n");
-  return `My career roadmap: ${report.snapshot.from} to ${report.snapshot.to}\n\n${report.risk.difficultyLabel} route. My first steps:\n${firstSteps}\n\nBuild your own free roadmap: ${CANONICAL_TOOL_URL}`;
+  return `My career roadmap: ${report.snapshot.from} to ${report.snapshot.to}\n\n${planningOutlook(report.risk.difficultyLabel)}. My first steps:\n${firstSteps}\n\nBuild your own free roadmap: ${CANONICAL_TOOL_URL}`;
+}
+
+function planningOutlook(label: string): string {
+  return /\broute$/i.test(label.trim()) ? label.trim() : `${label.trim()} route`;
 }
 
 function Fact({ label, value }: { label: string; value: string }) {

@@ -30,7 +30,7 @@ export const BRAND = {
   price: 0,
   priceAnchor: 200, // what an hour with a human coach costs
 
-  supportEmail: "hello@inspireambitions.com",
+  supportEmail: "info@inspireambitions.com",
   /** Resend sender. The domain must be verified in Resend before this works. */
   emailFrom: "Inspire Ambitions <roadmap@inspireambitions.com>",
 } as const;
