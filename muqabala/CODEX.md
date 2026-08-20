@@ -220,13 +220,13 @@ bounded `Retry-After` handling and `require_parameters: true`. The fixed-corpus 
 below 10 RPM by default. Provider failures log only technical tags to Sentry; candidate text
 is scrubbed before an event leaves the server.
 
-**Direct OpenAI acceptance gate, 20 August 2026:** `gpt-5.6-sol`, medium reasoning,
-five runs per frozen answer, all served by the AI path. Strong English mean 99.6
-(spread 2), medium 76.8 (spread 3), weak 13.0 (spread 0), accented strong 93.0
-(spread 0), strong Arabic 96.8 (spread 3). Result: PASS. This was verified locally
-through the built production app using the new project key. Re-run against the Vercel
-deployment after `OPENAI_API_KEY` is added there; local evidence does not prove the
-production environment is configured.
+**Direct OpenAI production acceptance gate, 20 August 2026:** `gpt-5.6-sol`, medium
+reasoning, five runs per frozen answer against `https://design-and-brand-orpin.vercel.app`,
+all served by the AI path. Strong English mean 100.0 (spread 0), medium 78.0 (spread 0),
+weak 13.2 (spread 5), accented strong 93.0 (spread 0), strong Arabic 94.8 (spread 7).
+Result: PASS. `OPENAI_API_KEY` is configured as a sensitive Vercel variable for Production
+and Preview; local development uses the ignored `.env.local` copy. The generated deployment
+URL is Vercel-protected, so run future public gates against the stable production alias above.
 
 ---
 
