@@ -12,6 +12,7 @@ export const maxDuration = 60;
  * candidate practising — it is someone using a public endpoint as a free model.
  */
 const MAX_TRANSCRIPT_CHARS = 6000;
+const MAX_HEADLINE_CHARS = 120;
 
 /** Per-IP budget. Deliberately generous for a real candidate, useless for a scraper. */
 const RATE_LIMIT = 30;
@@ -40,7 +41,7 @@ function rateLimited(request: Request): boolean {
 }
 
 const FeedbackSchema = z.object({
-  headline: z.string().max(120),
+  headline: z.string().max(MAX_HEADLINE_CHARS),
   competencies: z.array(
     z.object({
       id: z.string(),
@@ -56,6 +57,19 @@ const FeedbackSchema = z.object({
 });
 
 type ParsedFeedback = z.infer<typeof FeedbackSchema>;
+
+function limitHeadline(value: unknown): unknown {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+
+  const headline = (value as Record<string, unknown>).headline;
+  if (typeof headline !== 'string' || headline.length <= MAX_HEADLINE_CHARS) return value;
+
+  const clipped = headline.slice(0, MAX_HEADLINE_CHARS);
+  const lastWordBreak = clipped.lastIndexOf(' ');
+  const limited = (lastWordBreak >= 80 ? clipped.slice(0, lastWordBreak) : clipped).trimEnd();
+
+  return { ...value, headline: limited };
+}
 
 /**
  * Hand-written JSON Schema mirror of FeedbackSchema, for providers that take
@@ -97,6 +111,8 @@ The transcript you receive comes from automatic speech recognition and may conta
 Candidates may answer in English or Arabic. Score an Arabic answer against exactly the same rubric, to exactly the same standard, as an English one — and write all of your feedback in the same language the candidate answered in.
 
 Your job is to make the candidate feel capable and clear about what to do next. Be warm, direct and concrete. Never be harsh, never be flattering. Every improvement you name must be actionable in their next attempt.
+
+Keep the headline at 120 characters or fewer.
 
 Score each listed competency 0-10 against its rubric anchor, using the exact competency ids given to you and no others. Quote the candidate's actual words as evidence for each one. If no part of the answer demonstrates a competency, set its evidence to an empty string rather than quoting an unrelated line.
 
@@ -180,7 +196,7 @@ async function scoreViaOpenRouter(userPrompt: string): Promise<ParsedFeedback | 
   const content = data.choices?.[0]?.message?.content;
   if (!content) return null;
 
-  const parsed = FeedbackSchema.safeParse(JSON.parse(content));
+  const parsed = FeedbackSchema.safeParse(limitHeadline(JSON.parse(content)));
   if (!parsed.success) {
     console.error('OpenRouter output failed validation:', parsed.error.message);
     return null;
