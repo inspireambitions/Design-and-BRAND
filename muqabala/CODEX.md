@@ -79,12 +79,22 @@ the code works.
 1. **Score the content of the answer only.** Never facial expression, emotion, eye contact,
    attractiveness, accent, pronunciation, or grammar fluency. A candidate with imperfect
    English who tells a specific, structured story must score *higher* than a fluent but vague
-   speaker. This is stated in the system prompt at `app/api/score/route.ts` and must stay there.
+   speaker. This lives in the system prompt at `app/api/score/route.ts` **and** must stay
+   visible to candidates as `scoringPolicy` in `lib/i18n.ts` — a policy users cannot read is
+   not a policy.
+1b. **Never score a language you cannot score fairly.** If a scoring path cannot judge a
+   language properly, decline with an explanation in that language (see `arabicUnavailable`
+   in `lib/scoring.ts`). An unfair score is worse than no score.
+1c. **Never fabricate evidence.** `CompetencyScore.evidence` is nullable. If nothing in the
+   answer demonstrates a competency, return null — never quote an unrelated sentence.
 2. **Never penalise a candidate for a bad transcript.** Speech recognition is worse on some
    accents. If a transcript is too short or too garbled to judge, say so honestly and score 0
    with an explanation — never assign a low score to a garbled answer.
-3. **Nothing leaves the device without saying so.** Video never uploads; only the text
-   transcript is sent for scoring. The UI promises this — keep it true.
+3. **Nothing leaves the device without saying so.** Video and audio never leave the device;
+   only the text transcript is sent for scoring, and onward to Anthropic when a key is set.
+   The UI says exactly this. If you ever send more, change the copy in the same commit —
+   an earlier version of this app claimed "nothing leaves your phone" while POSTing the
+   transcript, and the board caught it.
 4. **AI recommends, humans decide.** Never build automated rejection.
 5. **Feedback must be actionable and specific.** Every improvement must quote or reference
    what the candidate actually said and be doable on the next attempt. No generic advice.
@@ -160,9 +170,13 @@ unlimited retries, evidence-based feedback, progress tracking, works with or wit
 
 **Deliberately not built yet** (in rough priority order):
 
-1. **Arabic scoring parity.** The heuristic scorer's regexes are English-only, so an Arabic
-   answer scores poorly on the demo path. The AI path handles Arabic properly. Either gate
-   Arabic answers to the AI path or add Arabic heuristics before promoting Arabic to users.
+1. **Arabic heuristic scoring.** The heuristic scorer is English-only. Arabic answers are
+   currently *gated*, not scored: `route.ts` detects Arabic (via the `lang` field or Arabic
+   script in the transcript) and returns `arabicUnavailable()` — an honest Arabic explanation —
+   rather than a near-floor score. With a key set, Arabic reaches Claude properly. **Next step:**
+   add Arabic-aware heuristics (first-person markers, Arabic-Indic digits ٠-٩, outcome
+   connectives) so demo mode works in Arabic too, then remove the gate. Do not remove the gate
+   before the heuristics exist — an unfair score is worse than an honest refusal.
 2. **Payments.** No Stripe/Paddle yet — everything is free. Pricing plan: free first mock,
    AED 29 role pack, AED 79 unlimited 30 days.
 3. **Accent benchmark.** Priya's non-negotiable: measure transcription word-error rate per
@@ -191,6 +205,20 @@ are met, missing, or not yet applicable:
 
 The full strategy document these came from is the "Beating Spark Hire" board artifact; ask the
 project owner for the link if the reasoning behind a decision is unclear.
+
+**Run this review at every stage, not once.** Before shipping any significant change, walk the
+six advisors and state for each: what is met, what is missing, what is legitimately deferred to
+the B2B product. The first such review caught a fairness defect (Arabic answers scoring ~50
+points below identical English ones) and a false privacy claim that had already shipped — both
+fixed in commit `8416612`. Be adversarial: verify claims against the code, not against this
+document. If a rule here is weaker than an advisor's non-negotiable, the advisor wins and this
+document should be corrected.
+
+**Known open items from the last review** (none block English-language testing):
+candidates cannot rate the experience; ASR confidence is captured by the Web Speech API but
+discarded rather than used to flag shaky transcripts; declined scores render as a `0` ring even
+when the headline says "too short to score"; there is no analytics, so completion rate is
+currently uncapturable because abandoned interviews write nothing.
 
 ---
 
