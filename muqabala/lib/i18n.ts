@@ -21,7 +21,7 @@ export const STRINGS = {
     // device check
     beforeStart: 'Before we start',
     beforeStartBody:
-      'This is practice. Nothing here is shown to an employer. Your video is never uploaded or saved anywhere — only the text of your answer is sent to be scored, and it is not stored afterwards.',
+      'This is practice. Nothing here is shown to an employer. Your video is never uploaded or saved anywhere — only the text of your answer is sent to be scored, and it is not stored afterwards. We collect anonymous usage statistics (which interviews are started and finished, scores and ratings) — never your video, your audio, or the words of your answers.',
     checkCamera: 'Camera',
     checkMic: 'Microphone',
     checkTranscript: 'Live transcript',
@@ -148,7 +148,7 @@ export const STRINGS = {
 
     beforeStart: 'قبل أن نبدأ',
     beforeStartBody:
-      'هذا تدريب. لا شيء هنا يُعرض على صاحب عمل. الفيديو لا يُرفع ولا يُحفظ في أي مكان — يُرسل نص إجابتك فقط ليتم تقييمه، ولا يُحفظ بعد ذلك.',
+      'هذا تدريب. لا شيء هنا يُعرض على صاحب عمل. الفيديو لا يُرفع ولا يُحفظ في أي مكان — يُرسل نص إجابتك فقط ليتم تقييمه، ولا يُحفظ بعد ذلك. نجمع إحصاءات استخدام مجهولة الهوية (أي المقابلات بدأت واكتملت، والدرجات والتقييمات) — وليس أبداً الفيديو أو الصوت أو كلمات إجاباتك.',
     checkCamera: 'الكاميرا',
     checkMic: 'الميكروفون',
     checkTranscript: 'النص المباشر',

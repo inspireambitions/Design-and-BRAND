@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { Attempt, AttemptRating } from '@/lib/scoring';
 import { rateAttempt } from '@/lib/storage';
+import { track } from '@/lib/analytics';
 import { useLang } from './LanguageProvider';
 
 /**
@@ -20,6 +21,12 @@ export function RatingCard({ attempt }: { attempt: Attempt }) {
   const submit = (nextStars: number, nextConfidence: AttemptRating['confidence']) => {
     const rating: AttemptRating = { stars: nextStars, confidence: nextConfidence };
     rateAttempt(attempt.id, rating);
+    track('rating_submitted', {
+      role_id: attempt.roleId,
+      stars: rating.stars,
+      confidence: rating.confidence,
+      overall_score: attempt.overallScore,
+    });
     setSaved(true);
   };
 

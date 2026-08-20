@@ -33,8 +33,11 @@ as its entry point.
 | Variable | Required? | Effect |
 |---|---|---|
 | `OPENROUTER_API_KEY` | No | **Primary provider (approved architecture).** Present → answers scored via OpenRouter using `SCORING_MODEL`. Takes precedence over the Anthropic key. |
-| `SCORING_MODEL` | No | OpenRouter model slug for scoring. Defaults to `openai/gpt-5.6` — verify the exact slug at openrouter.ai/models. Changing the model requires re-running `scripts/measure-consistency.mjs` before trusting its scores. |
+| `SCORING_MODEL` | No | OpenRouter model slug for scoring. Defaults to `openai/gpt-5.6-sol` (verified slug). Changing the model requires re-running `scripts/measure-consistency.mjs` before trusting its scores. |
 | `ANTHROPIC_API_KEY` | No | Alternative provider: direct Anthropic API (`claude-opus-5`). Used only when no OpenRouter key is set. |
+| `SCORING_REASONING` | No | Reasoning effort for the OpenRouter path: `low`/`medium`/`high`. Defaults to `medium`; benchmark against `high` with the consistency gate before changing. |
+| `NEXT_PUBLIC_POSTHOG_KEY` | No | Enables anonymous usage analytics (PostHog EU). Events are only the explicit calls in `lib/analytics.ts` — role ids, language, scores, ratings. Never transcripts, typed job titles, video, audio, or personal data. Autocapture, pageviews and session recording are disabled. The pre-interview disclosure covers this collection. |
+| `NEXT_PUBLIC_POSTHOG_HOST` | No | PostHog host; defaults to `https://eu.i.posthog.com`. |
 
 With no key at all, the offline **structure checker** runs (English only, labelled as such in
 the UI) and Arabic answers are declined with an explanation. The interview flow works end to

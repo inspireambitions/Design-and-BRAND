@@ -12,6 +12,9 @@
  *   BASE_URL=https://your-app.vercel.app node scripts/measure-consistency.mjs
  *   RUNS=10 node scripts/measure-consistency.mjs            # more repeats per answer
  *
+ * The LIVE gate — the one that must pass before testers see scores:
+ *   EXPECT_AI=1 BASE_URL=https://your-app.vercel.app node scripts/measure-consistency.mjs
+ *
  * Against the structure checker (no API key) spread must be 0 — it is
  * deterministic, so any variance there is a bug. Against the AI path this
  * produces the real consistency figure. Exit code 1 if any scored answer's
@@ -22,6 +25,14 @@ const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3000';
 const RUNS = Number(process.env.RUNS ?? 5);
 /** Maximum acceptable max-min spread on the 0-100 scale, per answer. */
 const MAX_SPREAD = Number(process.env.MAX_SPREAD ?? 10);
+/**
+ * EXPECT_AI=1 turns this into the LIVE gate: every result must come from the
+ * AI path (source === "ai") and Arabic must actually be scored. Without it, a
+ * provider outage would quietly route every request to the offline structure
+ * checker — deterministic, spread 0 — and a broken deployment would "pass".
+ * The offline fallback must never be able to green-light an AI benchmark.
+ */
+const EXPECT_AI = process.env.EXPECT_AI === '1';
 
 /**
  * Fixed corpus. Do not "improve" these answers — their value is that they
@@ -126,10 +137,22 @@ for (const item of CORPUS) {
     Object.assign(row, stats(scores), { runs: scores.length });
     if (row.spread > MAX_SPREAD) failed = true;
   }
+
+  if (EXPECT_AI) {
+    // Item-level live-gate checks: no fallback results, and no declined Arabic.
+    if (!row.sources.every((src) => src === 'ai') || row.sources.length === 0) {
+      console.error(`  FAIL: ${item.id} was served by [${row.sources.join(',') || 'nothing'}], expected the AI path only.`);
+      failed = true;
+    }
+    if (row.statuses.includes('unscored')) {
+      console.error(`  FAIL: ${item.id} came back unscored on the AI path — the corpus contains only scoreable answers.`);
+      failed = true;
+    }
+  }
   results.push(row);
 }
 
-console.log(`\nScoring consistency — ${BASE_URL} — ${RUNS} runs per answer\n`);
+console.log(`\nScoring consistency — ${BASE_URL} — ${RUNS} runs per answer — mode: ${EXPECT_AI ? 'LIVE AI GATE' : 'offline structure check'}\n`);
 console.log(
   'answer'.padEnd(22),
   'expect'.padEnd(8),
@@ -171,7 +194,7 @@ if (byId['en-accented-strong'] !== undefined && byId['en-weak'] !== undefined &&
 
 console.log(
   failed
-    ? `\nRESULT: FAIL (spread > ${MAX_SPREAD}, ranking violation, or request errors)`
-    : `\nRESULT: PASS (all spreads ≤ ${MAX_SPREAD}, ranking sane)`,
+    ? `\nRESULT: FAIL (spread > ${MAX_SPREAD}, ranking violation, wrong source, unscored answer, or request errors)`
+    : `\nRESULT: PASS (all spreads ≤ ${MAX_SPREAD}, ranking sane${EXPECT_AI ? ', all answers served by the AI path, Arabic scored' : ''})`,
 );
 process.exit(failed ? 1 : 0);

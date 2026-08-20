@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { Lang, StringKey } from '@/lib/i18n';
 import { t as translate } from '@/lib/i18n';
 import { loadLang, saveLang } from '@/lib/storage';
+import { initAnalytics } from '@/lib/analytics';
 
 type LanguageContextValue = {
   lang: Lang;
@@ -24,6 +25,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setLangState(loadLang());
+    initAnalytics();
   }, []);
 
   useEffect(() => {

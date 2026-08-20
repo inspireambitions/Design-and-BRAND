@@ -6,6 +6,7 @@ import type { Role } from '@/lib/roles';
 import type { AnswerFeedback, Attempt } from '@/lib/scoring';
 import { overallFromAnswers } from '@/lib/scoring';
 import { saveAttempt } from '@/lib/storage';
+import { track } from '@/lib/analytics';
 import {
   isSpeechSupported,
   isOnDeviceRecognitionAvailable,
@@ -263,6 +264,13 @@ export function InterviewFlow({
     };
     saveAttempt(attempt);
     setSavedAttempt(attempt);
+    track('interview_completed', {
+      role_id: role.id,
+      lang,
+      overall_score: attempt.overallScore,
+      questions_answered: attempt.answers.length,
+      scoring_source: attempt.answers[0]?.feedback.source ?? 'unknown',
+    });
   }, [answers, role.id, role.title, stage]);
 
   const wordCount = `${transcript} ${interim}`.trim().split(/\s+/).filter(Boolean).length;
@@ -402,7 +410,14 @@ export function InterviewFlow({
           </div>
 
           <div className="row">
-            <button type="button" className="btn btn-primary" onClick={startPrep}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => {
+                track('interview_started', { role_id: role.id, lang });
+                startPrep();
+              }}
+            >
               {t('imReady')}
             </button>
             <Link href="/" className="btn btn-ghost" style={{ textDecoration: 'none' }}>

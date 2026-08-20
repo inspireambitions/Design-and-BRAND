@@ -141,7 +141,11 @@ Score this answer. Return one entry per competency id listed above, using those 
  * the caller falls back rather than trusting a malformed result.
  */
 async function scoreViaOpenRouter(userPrompt: string): Promise<ParsedFeedback | null> {
-  const model = process.env.SCORING_MODEL || 'openai/gpt-5.6';
+  const model = process.env.SCORING_MODEL || 'openai/gpt-5.6-sol';
+  // Reasoning effort is benchmarked, not guessed: default medium, switchable
+  // via env so medium vs high can be compared with the consistency gate.
+  const rawEffort = process.env.SCORING_REASONING || 'medium';
+  const effort = ['low', 'medium', 'high'].includes(rawEffort) ? rawEffort : 'medium';
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -153,6 +157,7 @@ async function scoreViaOpenRouter(userPrompt: string): Promise<ParsedFeedback | 
     body: JSON.stringify({
       model,
       max_tokens: 4000,
+      reasoning: { effort },
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: userPrompt },
