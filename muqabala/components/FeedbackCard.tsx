@@ -16,7 +16,7 @@ export function FeedbackCard({
   return (
     <div className="card stack">
       <div className="score-head">
-        <ScoreRing value={feedback.score} />
+        {feedback.status === 'scored' && <ScoreRing value={feedback.score} />}
         <div>
           <h3 style={{ fontSize: '1.2rem' }}>{feedback.headline}</h3>
           <div className="row" style={{ marginTop: '0.45rem', gap: '0.4rem' }}>
@@ -26,15 +26,15 @@ export function FeedbackCard({
               </span>
             )}
             <span className="chip">
-              {t('scoredBy')} {feedback.source === 'ai' ? t('scoredByAi') : t('scoredByDemo')}
+              {t('scoredBy')} {feedback.source === 'ai' ? t('scoredByAi') : t('scoredByStructure')}
             </span>
           </div>
         </div>
       </div>
 
-      {feedback.source === 'demo' && feedback.competencies.length > 0 && (
+      {feedback.source === 'structure' && feedback.competencies.length > 0 && (
         <p className="notice notice-warn tiny" style={{ margin: 0 }}>
-          {t('demoNotice')}
+          {t('structureNotice')}
         </p>
       )}
 

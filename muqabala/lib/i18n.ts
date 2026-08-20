@@ -5,12 +5,12 @@ export const STRINGS = {
     tagline: 'Practice until the interview feels less scary.',
     heroTitle: 'Rehearse your Gulf job interview. As many times as you need.',
     heroBody:
-      'Answer real interview questions on camera, get honest feedback on what you actually said, and watch your score climb. Nobody sees your practice but you.',
+      'Answer real interview questions on camera, get honest feedback on what you actually said, and watch your score climb. Your practice is never shown to an employer.',
     startPractice: 'Start practising',
     seeProgress: 'My progress',
     point1: 'Free, unlimited practice',
     point2: 'No sign-up',
-    point3: 'Your video never leaves your phone',
+    point3: 'Your video is never uploaded',
     pickRole: 'Choose your role',
     pickRoleBody: 'Pick the job you are interviewing for. Each one has its own questions and scoring.',
     allIndustries: 'All industries',
@@ -21,7 +21,7 @@ export const STRINGS = {
     // device check
     beforeStart: 'Before we start',
     beforeStartBody:
-      'This is practice. Nothing here is sent to an employer. Your video and audio never leave this device — only the text of your answer is sent to be scored, and it is not stored afterwards.',
+      'This is practice. Nothing here is shown to an employer. Your video is never uploaded or saved anywhere — only the text of your answer is sent to be scored, and it is not stored afterwards.',
     checkCamera: 'Camera',
     checkMic: 'Microphone',
     checkTranscript: 'Live transcript',
@@ -62,6 +62,11 @@ export const STRINGS = {
     rateSendHint: 'Opens WhatsApp with your result so we can see how the test went. Nothing is sent automatically.',
     rateCopied: 'Copied — paste it to us on WhatsApp.',
     rateSkip: 'Skip',
+    speechOnDevice: 'Voice-to-text runs on your device — your speech is not sent anywhere.',
+    speechCloud:
+      'Voice-to-text: to turn your speech into text, your browser sends the audio to its own speech service (for example Google on Chrome). If you would rather nothing left your device, type your answer instead.',
+    speechTypeInstead: 'I will type instead',
+    speechUseVoice: 'Use voice-to-text',
     imReady: "I'm ready",
     skipCheck: 'Skip and type my answers',
 
@@ -93,9 +98,9 @@ export const STRINGS = {
     attemptNumber: 'Attempt',
     scoredBy: 'Scored by',
     scoredByAi: 'AI coach',
-    scoredByDemo: 'practice scorer',
-    demoNotice:
-      'Running in demo mode — answers are scored by the built-in practice scorer. Add an API key to switch on the full AI coach.',
+    scoredByStructure: 'structure check',
+    structureNotice:
+      'This is a structure check, not a skills assessment. It looks at how your answer is built — whether you name a real situation, say what you personally did, give detail and finish the story. It cannot judge how good you are at the job. The full AI coach does that.',
 
     // results
     interviewComplete: 'Interview complete',
@@ -120,7 +125,7 @@ export const STRINGS = {
 
     // misc
     back: 'Back',
-    privacy: 'Your practice stays on your device.',
+    privacy: 'Your video is never uploaded. Your practice history stays in this browser.',
     minutesShort: 'min',
     secondsShort: 's',
   },
@@ -128,12 +133,12 @@ export const STRINGS = {
     tagline: 'تدرّب حتى تصبح المقابلة أقل رهبة.',
     heroTitle: 'تدرّب على مقابلة عملك في الخليج. بقدر ما تحتاج.',
     heroBody:
-      'أجب على أسئلة مقابلات حقيقية أمام الكاميرا، واحصل على ملاحظات صادقة حول ما قلته فعلاً، وشاهد درجتك ترتفع. لا أحد يرى تدريبك سواك.',
+      'أجب على أسئلة مقابلات حقيقية أمام الكاميرا، واحصل على ملاحظات صادقة حول ما قلته فعلاً، وشاهد درجتك ترتفع. تدريبك لا يُعرض على أي صاحب عمل.',
     startPractice: 'ابدأ التدريب',
     seeProgress: 'تقدمي',
     point1: 'تدريب مجاني بلا حدود',
     point2: 'بدون تسجيل',
-    point3: 'الفيديو لا يغادر هاتفك أبداً',
+    point3: 'الفيديو لا يُرفع أبداً',
     pickRole: 'اختر وظيفتك',
     pickRoleBody: 'اختر الوظيفة التي تجري مقابلة لها. لكل وظيفة أسئلتها ومعايير تقييمها.',
     allIndustries: 'جميع القطاعات',
@@ -143,7 +148,7 @@ export const STRINGS = {
 
     beforeStart: 'قبل أن نبدأ',
     beforeStartBody:
-      'هذا تدريب. لا شيء هنا يُرسل إلى صاحب عمل. الفيديو والصوت لا يغادران هذا الجهاز أبداً — يُرسل نص إجابتك فقط ليتم تقييمه، ولا يُحفظ بعد ذلك.',
+      'هذا تدريب. لا شيء هنا يُعرض على صاحب عمل. الفيديو لا يُرفع ولا يُحفظ في أي مكان — يُرسل نص إجابتك فقط ليتم تقييمه، ولا يُحفظ بعد ذلك.',
     checkCamera: 'الكاميرا',
     checkMic: 'الميكروفون',
     checkTranscript: 'النص المباشر',
@@ -184,6 +189,11 @@ export const STRINGS = {
     rateSendHint: 'يفتح واتساب بنتيجتك حتى نرى كيف سارت التجربة. لا يُرسل شيء تلقائياً.',
     rateCopied: 'تم النسخ — أرسله لنا على واتساب.',
     rateSkip: 'تخطَّ',
+    speechOnDevice: 'تحويل الصوت إلى نص يعمل على جهازك — صوتك لا يُرسل إلى أي مكان.',
+    speechCloud:
+      'تحويل الصوت إلى نص: لتحويل كلامك إلى نص، يرسل متصفحك الصوت إلى خدمة التعرف على الكلام الخاصة به (مثل جوجل في كروم). إذا كنت تفضّل ألا يغادر شيء جهازك، اكتب إجابتك بدلاً من ذلك.',
+    speechTypeInstead: 'سأكتب بدلاً من ذلك',
+    speechUseVoice: 'استخدم تحويل الصوت إلى نص',
     imReady: 'أنا جاهز',
     skipCheck: 'تخطَّ واكتب إجاباتي',
 
@@ -213,9 +223,9 @@ export const STRINGS = {
     attemptNumber: 'المحاولة',
     scoredBy: 'تم التقييم بواسطة',
     scoredByAi: 'المدرب الذكي',
-    scoredByDemo: 'مقيّم التدريب',
-    demoNotice:
-      'يعمل في وضع العرض التجريبي — تُقيَّم الإجابات بواسطة المقيّم المدمج. أضف مفتاح API لتفعيل المدرب الذكي الكامل.',
+    scoredByStructure: 'فحص البنية',
+    structureNotice:
+      'هذا فحص لبنية الإجابة وليس تقييماً لمهاراتك. ينظر في كيفية بناء إجابتك — هل ذكرت موقفاً حقيقياً، وما فعلته أنت، والتفاصيل، ونهاية القصة. لا يمكنه الحكم على مدى كفاءتك في الوظيفة. المدرب الذكي الكامل هو من يفعل ذلك.',
 
     interviewComplete: 'اكتملت المقابلة',
     overallScore: 'الدرجة الإجمالية',
@@ -237,7 +247,7 @@ export const STRINGS = {
     clearConfirm: 'حذف كل سجل التدريب من هذا الجهاز؟',
 
     back: 'رجوع',
-    privacy: 'يبقى تدريبك على جهازك.',
+    privacy: 'الفيديو لا يُرفع أبداً. سجل تدريبك يبقى في هذا المتصفح.',
     minutesShort: 'د',
     secondsShort: 'ث',
   },

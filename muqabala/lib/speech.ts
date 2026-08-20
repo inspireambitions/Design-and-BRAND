@@ -20,6 +20,11 @@ export type SpeechRecognitionLike = {
   lang: string;
   continuous: boolean;
   interimResults: boolean;
+  /**
+   * Chrome 139+. When true, recognition runs on the device instead of being
+   * sent to the browser vendor's speech service. Undefined elsewhere.
+   */
+  processLocally?: boolean;
   start: () => void;
   stop: () => void;
   abort: () => void;
@@ -28,7 +33,13 @@ export type SpeechRecognitionLike = {
   onend: (() => void) | null;
 };
 
-type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
+type SpeechRecognitionCtor = (new () => SpeechRecognitionLike) & {
+  /** Chrome 139+ availability probe for on-device recognition. */
+  available?: (options: {
+    langs: string[];
+    processLocally: boolean;
+  }) => Promise<'available' | 'downloadable' | 'downloading' | 'unavailable'>;
+};
 
 function getConstructor(): SpeechRecognitionCtor | null {
   if (typeof window === 'undefined') return null;
@@ -41,6 +52,26 @@ function getConstructor(): SpeechRecognitionCtor | null {
 
 export function isSpeechSupported(): boolean {
   return getConstructor() !== null;
+}
+
+/**
+ * Whether speech can be recognised entirely on the device.
+ *
+ * This matters for what we are allowed to tell candidates. Browser speech
+ * recognition sends audio to the browser vendor's speech service unless
+ * on-device processing is explicitly requested and confirmed available.
+ * We only return true when the browser positively confirms it — an
+ * unknown answer is treated as "audio leaves the device", never the reverse.
+ */
+export async function isOnDeviceRecognitionAvailable(langCode: string): Promise<boolean> {
+  const Ctor = getConstructor();
+  if (!Ctor?.available) return false;
+  try {
+    const status = await Ctor.available({ langs: [langCode], processLocally: true });
+    return status === 'available';
+  } catch {
+    return false;
+  }
 }
 
 export type SpeechSession = {
@@ -63,6 +94,14 @@ export function startDictation(
   recognition.lang = langCode;
   recognition.continuous = true;
   recognition.interimResults = true;
+  // Ask for on-device recognition wherever the browser supports it, so audio
+  // stays on the phone. Ignored by browsers that do not implement it — which
+  // is why the UI must disclose cloud recognition unless it is confirmed.
+  try {
+    recognition.processLocally = true;
+  } catch {
+    /* property not supported — disclosure covers this case */
+  }
 
   let finalText = '';
   let stopped = false;

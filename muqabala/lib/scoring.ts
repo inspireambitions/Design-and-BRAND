@@ -10,14 +10,25 @@ export type CompetencyScore = {
 
 export type AnswerFeedback = {
   questionId: string;
-  score: number; // 0-100
+  /**
+   * 0-100, meaningful only when status is 'scored'. When the system declines
+   * to judge an answer, callers must render no score at all — a zero ring
+   * tells a candidate they failed when nothing was actually assessed.
+   */
+  score: number;
+  status: 'scored' | 'unscored';
   headline: string;
   competencies: CompetencyScore[];
   strengths: string[];
   improvements: string[];
   /** The single highest-leverage rewrite suggestion. */
   coachTip: string;
-  source: 'ai' | 'demo';
+  /**
+   * 'ai' judges the role's competency rubric. 'structure' is the offline
+   * checker, which measures how an answer is built — not role competence.
+   * The two must never be presented to a candidate as the same thing.
+   */
+  source: 'ai' | 'structure';
 };
 
 /** How the candidate felt afterwards. The product's whole promise is measured here. */
@@ -75,6 +86,56 @@ function bestSentence(text: string, re: RegExp): string | null {
   return pick.length > 180 ? `${pick.slice(0, 177)}…` : pick;
 }
 
+/** Distinct matches, so repeating one trigger word cannot inflate a dimension. */
+function uniqueMatches(text: string, re: RegExp): number {
+  const m = text.match(re);
+  if (!m) return 0;
+  return new Set(m.map((x) => x.toLowerCase().trim())).size;
+}
+
+/**
+ * Whether a signal appears within a slice of the answer. Real stories put the
+ * situation near the start and the outcome near the end; keyword soup sprays
+ * markers evenly, so position is one of the few honest signals available offline.
+ */
+function hasSignalInRange(text: string, re: RegExp, startFrac: number, endFrac: number): boolean {
+  const slice = text.slice(
+    Math.floor(text.length * startFrac),
+    Math.ceil(text.length * endFrac),
+  );
+  return countMatches(slice, re) > 0;
+}
+
+/** Sentences with enough words to carry meaning. */
+function wellFormedSentences(text: string): number {
+  return text
+    .split(/(?<=[.!?])\s+|\n+/)
+    .filter((s) => s.trim().split(/\s+/).filter(Boolean).length >= 6).length;
+}
+
+/**
+ * Detects answers that are lists of trigger words rather than stories.
+ * A checker that ranks keyword soup above a real answer destroys the
+ * candidate's trust the first time they notice, so refuse to score it.
+ */
+function looksLikeKeywordSoup(text: string, wordCount: number): boolean {
+  if (wordCount < 25) return false;
+  const words = text.toLowerCase().match(/[a-z']+/g) ?? [];
+  const uniqueRatio = new Set(words).size / Math.max(words.length, 1);
+  const triggers =
+    countMatches(text, SITUATION) +
+    countMatches(text, ACTION) +
+    countMatches(text, OUTCOME) +
+    countMatches(text, NUMBERS);
+  const triggerDensity = triggers / Math.max(wordCount, 1);
+  const sentences = wellFormedSentences(text);
+  // Densely packed markers, heavy repetition, or a long answer that never
+  // forms real sentences. Any of the three means this is not a spoken story.
+  return (
+    triggerDensity > 0.28 || uniqueRatio < 0.4 || (wordCount > 60 && sentences < 2)
+  );
+}
+
 /** True when the text is predominantly Arabic script. */
 export function isArabicText(text: string): boolean {
   const arabic = (text.match(/[؀-ۿ]/g) ?? []).length;
@@ -83,14 +144,15 @@ export function isArabicText(text: string): boolean {
 }
 
 /**
- * Honest refusal for Arabic answers on the heuristic path.
- * Every pattern in this scorer is English-literal, so an Arabic answer would score
- * near the floor no matter how good it is. Declining to score beats scoring unfairly.
+ * Honest refusal for Arabic answers on the structure checker.
+ * Every pattern in this checker is English-literal, so an Arabic answer would
+ * land near the floor no matter how good it is. Declining beats judging unfairly.
  */
 export function arabicUnavailable(questionId: string): AnswerFeedback {
   return {
     questionId,
     score: 0,
+    status: 'unscored',
     headline: 'التقييم التلقائي بالعربية غير متاح بعد',
     competencies: [],
     strengths: [],
@@ -100,27 +162,33 @@ export function arabicUnavailable(questionId: string): AnswerFeedback {
     ],
     coachTip:
       'درجة خاطئة أسوأ من عدم وجود درجة. نفضّل أن نخبرك بصراحة بدلاً من تقييم إجابتك بشكل غير عادل.',
-    source: 'demo',
+    source: 'structure',
   };
 }
 
 /**
- * Deterministic scorer used when no ANTHROPIC_API_KEY is configured.
- * Judges answer *content* only — never appearance, accent, or delivery speed.
- * English only: callers must route Arabic answers to the AI path or to
- * `arabicUnavailable` (see the Arabic gate in app/api/score/route.ts).
+ * Offline structure checker, used when no ANTHROPIC_API_KEY is configured.
+ *
+ * IMPORTANT: this does NOT measure role competence. It measures how an answer
+ * is built — whether it names a real situation, says what the candidate
+ * personally did, gives concrete detail, and finishes the story. Those are the
+ * things simple text patterns can honestly detect. Presenting its output as a
+ * competency score would be a false claim, so it reports structure dimensions
+ * under its own labels and the UI states what it is.
+ *
+ * English only: callers must route Arabic answers to `arabicUnavailable`.
  */
-export function demoScore(question: Question, role: Role, transcript: string): AnswerFeedback {
+export function structureCheck(question: Question, transcript: string): AnswerFeedback {
   const text = transcript.trim();
-  const words = text.split(/\s+/).filter(Boolean);
-  const wordCount = words.length;
+  const wordCount = text.split(/\s+/).filter(Boolean).length;
 
-  // Too short to judge fairly — say so instead of inventing a low score.
+  // Too short to judge fairly — decline rather than invent a low score.
   if (wordCount < 12) {
     return {
       questionId: question.id,
       score: 0,
-      headline: 'Too short to score',
+      status: 'unscored',
+      headline: 'Too short to check',
       competencies: [],
       strengths: [],
       improvements: [
@@ -129,130 +197,143 @@ export function demoScore(question: Question, role: Role, transcript: string): A
       ],
       coachTip:
         'Try again and tell one complete story. Even a short real example beats a general statement.',
-      source: 'demo',
+      source: 'structure',
     };
   }
 
-  const fillerRate = countMatches(text, FILLERS) / Math.max(wordCount, 1);
-  const hedgeRate = countMatches(text, HEDGES) / Math.max(wordCount, 1);
+  if (looksLikeKeywordSoup(text, wordCount)) {
+    return {
+      questionId: question.id,
+      score: 0,
+      status: 'unscored',
+      headline: 'We could not read this as an answer',
+      competencies: [],
+      strengths: [],
+      improvements: [
+        'This did not come through as a spoken answer — it reads as disconnected words rather than a story.',
+        'If you were speaking normally, the transcription may have failed. Try again, or type your answer instead.',
+      ],
+      coachTip:
+        'Tell one real story in full sentences: where you were, what you did, and how it ended.',
+      source: 'structure',
+    };
+  }
+
   const firstPerson = countMatches(text, FIRST_PERSON);
   const teamOnly = countMatches(text, TEAM_ONLY);
-  const numbers = countMatches(text, NUMBERS);
-  const outcomes = countMatches(text, OUTCOME);
-  const situations = countMatches(text, SITUATION);
-  const actions = countMatches(text, ACTION);
+  // Distinct signals only — repeating a trigger word must not raise a score.
+  const numbers = uniqueMatches(text, NUMBERS);
+  const actions = uniqueMatches(text, ACTION);
+  // Position matters: a story opens with the situation and closes with the outcome.
+  const hasSituation = hasSignalInRange(text, SITUATION, 0, 0.6);
+  const hasOutcome = hasSignalInRange(text, OUTCOME, 0.55, 1);
+  const situations = hasSituation ? uniqueMatches(text, SITUATION) : 0;
+  const outcomes = hasOutcome ? uniqueMatches(text, OUTCOME) : 0;
+  const sentences = wellFormedSentences(text);
 
-  // Length: rewards a real answer, penalises rambling past ~320 words.
+  // A dimension can only score well inside an answer that forms real sentences.
+  const prose = clamp(sentences / 3, 0.4, 1);
+
+  const situationScore = clamp((hasSituation ? 6 + Math.min(situations, 2) : 2) * prose, 2, 10);
+  const ownActionsScore = clamp(
+    (2 + (firstPerson / Math.max(firstPerson + teamOnly, 1)) * 6 + Math.min(actions, 2)) * prose,
+    2,
+    10,
+  );
+  const detailScore = clamp((2 + Math.min(numbers, 4) * 1.6 + (wordCount > 90 ? 1 : 0)) * prose, 2, 10);
+  const outcomeScore = clamp((hasOutcome ? 6 + Math.min(outcomes, 2) : 2) * prose, 2, 10);
   const lengthScore =
-    wordCount < 45 ? 3 + (wordCount / 45) * 3 : wordCount <= 320 ? 9 : clamp(9 - (wordCount - 320) / 60, 5, 9);
+    wordCount < 45
+      ? clamp(3 + (wordCount / 45) * 4, 2, 10)
+      : wordCount <= 320
+        ? 9
+        : clamp(9 - (wordCount - 320) / 60, 4, 9);
 
-  const communication = clamp(
-    lengthScore * 0.55 + 4.5 - fillerRate * 90 - hedgeRate * 40 + (situations > 0 ? 1 : 0),
-    2,
-    10,
-  );
-  const ownership = clamp(
-    3 + (firstPerson / Math.max(firstPerson + teamOnly, 1)) * 6 + (actions > 0 ? 1.5 : 0),
-    2,
-    10,
-  );
-  const problemSolving = clamp(3.5 + actions * 0.9 + (outcomes > 0 ? 2 : 0), 2, 10);
-  const evidence = clamp(3 + numbers * 0.8 + (situations > 0 ? 1.5 : 0) + (wordCount > 90 ? 1 : 0), 2, 10);
-  const contextual = clamp(
-    3.5 + (situations > 0 ? 2 : 0) + (outcomes > 0 ? 1.5 : 0) + (numbers > 0 ? 1 : 0),
-    2,
-    10,
-  );
+  const dimensions: { id: string; label: string; score: number; re: RegExp }[] = [
+    { id: 'situation', label: 'Names a real situation', score: situationScore, re: SITUATION },
+    { id: 'own_actions', label: 'Says what you personally did', score: ownActionsScore, re: ACTION },
+    { id: 'detail', label: 'Gives concrete detail', score: detailScore, re: NUMBERS },
+    { id: 'outcome', label: 'Finishes the story', score: outcomeScore, re: OUTCOME },
+    { id: 'length', label: 'Answer length', score: lengthScore, re: SITUATION },
+  ];
 
-  const byId: Record<string, number> = {
-    communication,
-    ownership,
-    problem_solving: problemSolving,
-    evidence,
-    customer_focus: contextual,
-    compliance: contextual,
-  };
-
-  const competencies: CompetencyScore[] = question.competencies.map((cid) => {
-    const def = role.competencies.find((c) => c.id === cid);
-    const score = Math.round(byId[cid] ?? contextual);
-    let evidenceRe = SITUATION;
-    if (cid === 'ownership') evidenceRe = ACTION;
-    else if (cid === 'problem_solving') evidenceRe = ACTION;
-    else if (cid === 'evidence') evidenceRe = NUMBERS;
-    else if (cid === 'communication') evidenceRe = OUTCOME;
-    const quote = bestSentence(text, evidenceRe);
+  const competencies: CompetencyScore[] = dimensions.map((d) => {
+    const quote = d.id === 'length' ? null : bestSentence(text, d.re);
     return {
-      id: cid,
-      label: def?.label ?? cid,
-      score,
-      evidence: quote ? `“${quote}”` : null,
+      id: d.id,
+      label: d.label,
+      score: Math.round(d.score),
+      evidence: quote ? `\u201c${quote}\u201d` : null,
     };
   });
 
   const overall = Math.round(
-    (competencies.reduce((sum, c) => sum + c.score, 0) / Math.max(competencies.length, 1)) * 10,
+    (competencies.reduce((sum, c) => sum + c.score, 0) / competencies.length) * 10,
   );
 
   const strengths: string[] = [];
   const improvements: string[] = [];
 
-  if (situations > 0) strengths.push('You grounded your answer in a real situation rather than speaking in general terms.');
-  if (actions >= 2) strengths.push('You described a clear sequence of actions you personally took.');
+  if (hasSituation)
+    strengths.push('You grounded your answer in a real situation rather than speaking in general terms.');
+  if (actions >= 2)
+    strengths.push('You described a clear sequence of actions you personally took.');
   if (numbers >= 2) strengths.push('You backed your answer with specific numbers and details.');
-  if (outcomes > 0) strengths.push('You closed the loop by saying how it ended.');
-  if (fillerRate < 0.015 && wordCount > 60) strengths.push('Your delivery was clear with very few filler words.');
+  if (hasOutcome) strengths.push('You closed the loop by saying how it ended.');
   if (strengths.length === 0) strengths.push('You answered the question directly and stayed on topic.');
 
-  if (situations === 0)
-    improvements.push('Open with a specific moment — “Last year at the hotel, a guest…” — instead of describing what you usually do.');
+  if (!hasSituation)
+    improvements.push(
+      'Open with a specific moment — \u201cLast year at the hotel, a guest\u2026\u201d — instead of describing what you usually do.',
+    );
   if (teamOnly > firstPerson)
-    improvements.push('You said “we” more than “I”. Interviewers need to know what *you* decided and did.');
+    improvements.push(
+      'You said \u201cwe\u201d more than \u201cI\u201d. Interviewers need to know what you decided and did.',
+    );
   if (numbers === 0)
     improvements.push('Add concrete detail: how many, how long, which system, what the result was.');
-  if (outcomes === 0)
-    improvements.push('Finish the story. Say what the outcome was and what changed because of you.');
-  if (fillerRate > 0.03)
-    improvements.push('Slow down slightly — filler words crept in. A short pause reads as confidence, not hesitation.');
+  if (!hasOutcome)
+    improvements.push('Finish the story. End with what the outcome was and what changed because of you.');
   if (wordCount > 320)
-    improvements.push('Tighten it. Strong answers land in 60–120 seconds; long answers lose the interviewer.');
+    improvements.push('Tighten it. Strong answers land in 60\u2013120 seconds; long answers lose the interviewer.');
   if (wordCount < 45)
     improvements.push('Give more. This answer was short — add the situation and the outcome.');
   if (improvements.length === 0)
-    improvements.push('This was a solid answer. Try it once more and make the outcome even more specific.');
+    improvements.push('The structure is solid. Try it once more and make the outcome even more specific.');
 
   const coachTip =
     teamOnly > firstPerson
-      ? 'Rewrite your story replacing every “we” with what you personally did. That single change usually moves an answer up a grade.'
+      ? 'Rewrite your story replacing every \u201cwe\u201d with what you personally did. That single change usually moves an answer up a grade.'
       : numbers === 0
         ? 'Pick one number to add — how many guests, how many minutes, how much the sale was worth. Specifics make you memorable.'
-        : outcomes === 0
-          ? 'Add one closing sentence: “In the end…”. Interviewers remember how stories finish.'
+        : !hasOutcome
+          ? 'Add one closing sentence: \u201cIn the end\u2026\u201d. Interviewers remember how stories finish.'
           : 'Strong structure. Now shorten your opening so you reach the action faster.';
 
   const headline =
     overall >= 80
-      ? 'Strong answer'
+      ? 'Well-structured answer'
       : overall >= 65
-        ? 'Good, with room to sharpen'
+        ? 'Good structure, room to sharpen'
         : overall >= 50
-          ? 'A workable answer that needs more detail'
+          ? 'The shape is there, the detail is not'
           : 'Needs a real example';
 
   return {
     questionId: question.id,
     score: overall,
+    status: 'scored',
     headline,
     competencies,
     strengths: strengths.slice(0, 3),
     improvements: improvements.slice(0, 3),
     coachTip,
-    source: 'demo',
+    source: 'structure',
   };
 }
 
 export function overallFromAnswers(answers: { feedback: AnswerFeedback }[]): number {
-  const scored = answers.filter((a) => a.feedback.score > 0);
+  const scored = answers.filter((a) => a.feedback.status === 'scored');
   if (scored.length === 0) return 0;
   return Math.round(scored.reduce((s, a) => s + a.feedback.score, 0) / scored.length);
 }

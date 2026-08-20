@@ -6,7 +6,12 @@ import type { Role } from '@/lib/roles';
 import type { AnswerFeedback, Attempt } from '@/lib/scoring';
 import { overallFromAnswers } from '@/lib/scoring';
 import { saveAttempt } from '@/lib/storage';
-import { isSpeechSupported, startDictation, type SpeechSession } from '@/lib/speech';
+import {
+  isSpeechSupported,
+  isOnDeviceRecognitionAvailable,
+  startDictation,
+  type SpeechSession,
+} from '@/lib/speech';
 import { useLang } from './LanguageProvider';
 import { TopBar } from './TopBar';
 import { FeedbackCard } from './FeedbackCard';
@@ -50,6 +55,8 @@ export function InterviewFlow({
   const [cameraOn, setCameraOn] = useState(false);
   const [cameraError, setCameraError] = useState(false);
   const [speechOk, setSpeechOk] = useState(true);
+  const [onDeviceSpeech, setOnDeviceSpeech] = useState(false);
+  const [voiceDeclined, setVoiceDeclined] = useState(false);
 
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [transcript, setTranscript] = useState('');
@@ -65,14 +72,24 @@ export function InterviewFlow({
   const savedRef = useRef(false);
   const [savedAttempt, setSavedAttempt] = useState<Attempt | null>(null);
 
+  const useVoice = speechOk && !voiceDeclined;
   const question = role.questions[index];
   const isLast = index === role.questions.length - 1;
   const questionText = lang === 'ar' ? question.textAr : question.text;
   const hintText = lang === 'ar' ? question.hintAr : question.hint;
 
   useEffect(() => {
-    setSpeechOk(isSpeechSupported());
-  }, []);
+    const supported = isSpeechSupported();
+    setSpeechOk(supported);
+    if (!supported) return;
+    let cancelled = false;
+    isOnDeviceRecognitionAvailable(lang === 'ar' ? 'ar-AE' : 'en-US').then((local) => {
+      if (!cancelled) setOnDeviceSpeech(local);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [lang]);
 
   const stopDictation = useCallback(() => {
     dictationRef.current?.stop();
@@ -120,7 +137,7 @@ export function InterviewFlow({
     setInterim('');
     setSecondsLeft(question.answerSeconds);
     setStage('record');
-    if (speechOk) {
+    if (useVoice) {
       dictationRef.current = startDictation(
         lang === 'ar' ? 'ar-AE' : 'en-US',
         (finalText, interimText) => {
@@ -130,7 +147,7 @@ export function InterviewFlow({
         () => setSpeechOk(false),
       );
     }
-  }, [lang, question.answerSeconds, speechOk]);
+  }, [lang, question.answerSeconds, useVoice]);
 
   const finishAnswer = useCallback(() => {
     stopDictation();
@@ -177,6 +194,7 @@ export function InterviewFlow({
       setFeedback({
         questionId: question.id,
         score: 0,
+        status: 'unscored',
         headline: lang === 'ar' ? 'تعذّر التقييم' : 'Could not score this answer',
         competencies: [],
         strengths: [],
@@ -189,7 +207,7 @@ export function InterviewFlow({
           lang === 'ar'
             ? 'إجابتك لم تُفقد. اضغط "أرسل إجابتي مرة أخرى" لإعادة إرسالها كما هي.'
             : 'Your answer is not lost. Press “Send my answer again” to resubmit exactly what you said.',
-        source: 'demo',
+        source: 'structure',
       });
       setStage('feedback');
       setScoringFailed(true);
@@ -299,16 +317,51 @@ export function InterviewFlow({
                 </span>
               </li>
               <li>
-                <span className={`check-icon ${speechOk ? '' : 'fail'}`}>{speechOk ? '✓' : '!'}</span>
+                <span className={`check-icon ${useVoice ? '' : 'fail'}`}>
+                  {useVoice ? '✓' : '!'}
+                </span>
                 <span>
                   {t('checkTranscript')}
                   <br />
                   <span className="tiny">
-                    {speechOk ? t('transcriptReady') : t('transcriptUnsupported')}
+                    {!speechOk
+                      ? t('transcriptUnsupported')
+                      : voiceDeclined
+                        ? t('transcriptUnsupported')
+                        : t('transcriptReady')}
                   </span>
                 </span>
               </li>
             </ul>
+
+            {useVoice && (
+              <div className={`notice ${onDeviceSpeech ? '' : 'notice-warn'} tiny`}>
+                {onDeviceSpeech ? t('speechOnDevice') : t('speechCloud')}
+                {!onDeviceSpeech && (
+                  <div className="row" style={{ marginTop: '0.6rem' }}>
+                    <button
+                      type="button"
+                      className="btn btn-quiet"
+                      onClick={() => setVoiceDeclined(true)}
+                    >
+                      {t('speechTypeInstead')}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {speechOk && voiceDeclined && (
+              <div className="row">
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => setVoiceDeclined(false)}
+                >
+                  {t('speechUseVoice')}
+                </button>
+              </div>
+            )}
 
             {!cameraOn && (
               <button type="button" className="btn btn-quiet" onClick={enableCamera}>
@@ -421,7 +474,7 @@ export function InterviewFlow({
               <p className="eyebrow" style={{ marginBottom: '0.4rem' }}>
                 {t('yourAnswer')}
               </p>
-              {speechOk ? (
+              {useVoice ? (
                 <div className="transcript" aria-live="polite">
                   {transcript}
                   {interim && <span className="transcript-interim"> {interim}</span>}
