@@ -96,6 +96,16 @@ export function HomeView({ roles }: { roles: Role[] }) {
               </p>
             </Link>
           ))}
+
+          <Link href="/practice/custom" className="role-card role-card-custom">
+            <div className="role-meta">
+              <span className="chip chip-gold">{t('customEyebrow')}</span>
+            </div>
+            <h3>{t('customCta')}</h3>
+            <p className="muted" style={{ fontSize: '0.88rem' }}>
+              {t('customCtaBody')}
+            </p>
+          </Link>
         </div>
       </section>
 

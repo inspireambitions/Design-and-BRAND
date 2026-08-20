@@ -32,7 +32,14 @@ function formatClock(seconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-export function InterviewFlow({ role }: { role: Role }) {
+export function InterviewFlow({
+  role,
+  customTitle,
+}: {
+  role: Role;
+  /** Job title typed by the candidate when practising a role not in the catalogue. */
+  customTitle?: string;
+}) {
   const { lang, t } = useLang();
 
   const [stage, setStage] = useState<Stage>('check');
@@ -157,6 +164,7 @@ export function InterviewFlow({ role }: { role: Role }) {
           questionId: question.id,
           transcript,
           lang,
+          roleTitle: customTitle,
         }),
       });
       if (!response.ok) throw new Error(`Scoring failed: ${response.status}`);
@@ -186,7 +194,7 @@ export function InterviewFlow({ role }: { role: Role }) {
     } finally {
       setIsScoring(false);
     }
-  }, [lang, question.id, role.id, transcript]);
+  }, [customTitle, lang, question.id, role.id, transcript]);
 
   const retryQuestion = useCallback(() => {
     setAttemptCount((c) => c + 1);

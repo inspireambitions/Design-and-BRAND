@@ -41,6 +41,8 @@ export async function POST(request: Request) {
     questionId?: string;
     transcript?: string;
     lang?: 'en' | 'ar';
+    /** Job title the candidate typed when practising a role not in the catalogue. */
+    roleTitle?: string;
   };
 
   try {
@@ -49,7 +51,7 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Invalid request body.' }, { status: 400 });
   }
 
-  const { roleId, questionId, transcript, lang } = body;
+  const { roleId, questionId, transcript, lang, roleTitle } = body;
   if (!roleId || !questionId || typeof transcript !== 'string') {
     return Response.json({ error: 'roleId, questionId and transcript are required.' }, { status: 400 });
   }
@@ -72,6 +74,7 @@ export async function POST(request: Request) {
 
   try {
     const client = new Anthropic();
+    const jobTitle = roleTitle?.trim() || role.title;
     const rubric = question.competencies
       .map((cid) => {
         const c = role.competencies.find((x) => x.id === cid);
@@ -87,7 +90,7 @@ export async function POST(request: Request) {
       messages: [
         {
           role: 'user',
-          content: `Role: ${role.title} (${role.industry}, ${role.level} level, Gulf market)
+          content: `Role: ${jobTitle} (${role.industry}, ${role.level} level, Gulf market)
 Language the candidate is using: ${answeredInArabic ? 'Arabic — write all feedback in Arabic' : 'English'}
 
 Interview question asked:

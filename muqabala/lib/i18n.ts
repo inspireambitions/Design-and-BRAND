@@ -40,6 +40,16 @@ export const STRINGS = {
       'We score what you say — never how you look or sound. No face scoring, no emotion detection, and no marks lost for accent, pronunciation or grammar.',
     noEvidence: 'We could not find a specific line in your answer that showed this.',
     resubmit: 'Send my answer again',
+    customCta: 'Cannot find your job?',
+    customCtaBody: 'Type your own job title and practise a general interview that works for any role.',
+    customEyebrow: 'Any job, any industry',
+    customTitle: 'Practise for your own job',
+    customBody:
+      'We do not have every job in the list yet. Type your job title and we will run a general interview — the same questions employers ask in almost every first-round interview.',
+    customLabel: 'Your job title',
+    customPlaceholder: 'e.g. Kitchen Steward, Tyre Technician, Lab Assistant',
+    customHint: 'Write it the way it appears on a job advert. This helps us give you feedback that fits your job.',
+    customStart: 'Start my interview',
     imReady: "I'm ready",
     skipCheck: 'Skip and type my answers',
 
@@ -140,6 +150,16 @@ export const STRINGS = {
       'نقيّم ما تقوله — لا شكلك ولا نبرة صوتك. لا تحليل للوجه، ولا لتعابير المشاعر، ولا خصم بسبب اللكنة أو النطق أو قواعد اللغة.',
     noEvidence: 'لم نجد جملة محددة في إجابتك تُظهر هذا الجانب.',
     resubmit: 'أرسل إجابتي مرة أخرى',
+    customCta: 'لا تجد وظيفتك؟',
+    customCtaBody: 'اكتب المسمى الوظيفي الخاص بك وتدرّب على مقابلة عامة تصلح لأي وظيفة.',
+    customEyebrow: 'أي وظيفة، أي قطاع',
+    customTitle: 'تدرّب على وظيفتك أنت',
+    customBody:
+      'لم نُضِف كل الوظائف إلى القائمة بعد. اكتب المسمى الوظيفي وسنجري مقابلة عامة — نفس الأسئلة التي يطرحها أصحاب العمل في أغلب المقابلات الأولى.',
+    customLabel: 'المسمى الوظيفي',
+    customPlaceholder: 'مثال: عامل مطبخ، فني إطارات، مساعد مختبر',
+    customHint: 'اكتبه كما يظهر في إعلان الوظيفة. هذا يساعدنا على إعطائك ملاحظات تناسب وظيفتك.',
+    customStart: 'ابدأ مقابلتي',
     imReady: 'أنا جاهز',
     skipCheck: 'تخطَّ واكتب إجاباتي',
 

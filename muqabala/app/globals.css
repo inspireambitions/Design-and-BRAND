@@ -892,3 +892,36 @@ body[dir='rtl'] .coach-tip strong {
   .card { padding: 1.1rem; }
   .history-row { grid-template-columns: 1fr auto; }
 }
+
+/* Catch-all role card — visually distinct from the catalogue entries it follows. */
+.role-card-custom {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--gold) 45%, var(--line));
+  background: color-mix(in srgb, var(--gold-soft) 45%, var(--surface));
+}
+
+.role-card-custom:hover {
+  border-color: var(--gold);
+  border-style: solid;
+}
+
+.text-input {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.text-input:focus {
+  border-color: var(--jade);
+  outline: 2px solid var(--jade);
+  outline-offset: 1px;
+}
+
+.text-input::placeholder {
+  color: var(--ink-faint);
+}
