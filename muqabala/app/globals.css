@@ -956,3 +956,59 @@ body[dir='rtl'] .coach-tip strong {
 .star.on {
   color: var(--gold);
 }
+
+/* ---------- microphone level + playback ---------- */
+
+.mic-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.mic-label {
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+body[dir='rtl'] .mic-label {
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.mic-bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 1.1rem;
+}
+
+.mic-bar {
+  width: 5px;
+  height: 35%;
+  border-radius: 2px;
+  background: var(--surface-sunk);
+  transition: background-color 0.08s linear, height 0.08s linear;
+}
+
+.mic-bar:nth-child(2) { height: 55%; }
+.mic-bar:nth-child(3) { height: 75%; }
+.mic-bar:nth-child(4) { height: 90%; }
+.mic-bar:nth-child(5) { height: 100%; }
+
+.mic-bar.on {
+  background: var(--good);
+}
+
+.playback {
+  width: 100%;
+  max-width: 100%;
+  border-radius: var(--radius);
+  background: #0B1210;
+  border: 1px solid var(--line);
+  display: block;
+}

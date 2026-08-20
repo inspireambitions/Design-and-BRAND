@@ -7,6 +7,7 @@ import type { AnswerFeedback, Attempt } from '@/lib/scoring';
 import { overallFromAnswers } from '@/lib/scoring';
 import { saveAttempt } from '@/lib/storage';
 import { track } from '@/lib/analytics';
+import { startRecording, startLevelMeter, type AnswerRecorder, type LevelMeter } from '@/lib/media';
 import {
   isSpeechSupported,
   isOnDeviceRecognitionAvailable,
@@ -75,6 +76,8 @@ export function InterviewFlow({
    */
   const [cameraState, setCameraState] = useState<'idle' | 'granted' | 'denied'>('idle');
   const [requestingCamera, setRequestingCamera] = useState(false);
+  const [micLevel, setMicLevel] = useState(0);
+  const [playbackUrl, setPlaybackUrl] = useState<string | null>(null);
   const [speechOk, setSpeechOk] = useState(true);
   const [onDeviceSpeech, setOnDeviceSpeech] = useState(false);
   const [voiceDeclined, setVoiceDeclined] = useState(false);
@@ -91,6 +94,9 @@ export function InterviewFlow({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const dictationRef = useRef<SpeechSession | null>(null);
+  const recorderRef = useRef<AnswerRecorder | null>(null);
+  const meterRef = useRef<LevelMeter | null>(null);
+  const playbackRef = useRef<HTMLVideoElement | null>(null);
   const savedRef = useRef(false);
   const scoringInFlightRef = useRef(false);
   const scoringSessionRef = useRef<string | null>(null);
@@ -126,9 +132,17 @@ export function InterviewFlow({
   useEffect(() => {
     return () => {
       dictationRef.current?.stop();
+      meterRef.current?.stop();
       streamRef.current?.getTracks().forEach((track) => track.stop());
     };
   }, []);
+
+  // Object URLs are session-only; free the previous one whenever it is replaced.
+  useEffect(() => {
+    return () => {
+      if (playbackUrl) URL.revokeObjectURL(playbackUrl);
+    };
+  }, [playbackUrl]);
 
   const enableCamera = useCallback(async (): Promise<boolean> => {
     if (streamRef.current) return true;
@@ -166,8 +180,17 @@ export function InterviewFlow({
   const beginRecording = useCallback(() => {
     setTranscript('');
     setInterim('');
+    if (playbackUrl) {
+      URL.revokeObjectURL(playbackUrl);
+      setPlaybackUrl(null);
+    }
     setSecondsLeft(question.answerSeconds);
     setStage('record');
+
+    if (streamRef.current) {
+      recorderRef.current = startRecording(streamRef.current);
+      meterRef.current = startLevelMeter(streamRef.current, setMicLevel);
+    }
     if (useVoice) {
       dictationRef.current = startDictation(
         lang === 'ar' ? 'ar-AE' : 'en-US',
@@ -178,11 +201,21 @@ export function InterviewFlow({
         () => setSpeechOk(false),
       );
     }
-  }, [lang, question.answerSeconds, useVoice]);
+  }, [lang, playbackUrl, question.answerSeconds, useVoice]);
 
-  const finishAnswer = useCallback(() => {
+  const finishAnswer = useCallback(async () => {
     stopDictation();
+    meterRef.current?.stop();
+    meterRef.current = null;
+    setMicLevel(0);
     setStage('review');
+
+    const recorder = recorderRef.current;
+    recorderRef.current = null;
+    if (recorder) {
+      const url = await recorder.stop();
+      if (url) setPlaybackUrl(url);
+    }
   }, [stopDictation]);
 
   const startPrep = useCallback(() => {
@@ -352,6 +385,12 @@ export function InterviewFlow({
   }, [answers, role.id, role.title, stage]);
 
   const wordCount = `${transcript} ${interim}`.trim().split(/\s+/).filter(Boolean).length;
+  // Speech recognition is unreliable inside iOS in-app browsers: it reports as
+  // supported, starts without error, and simply never returns words. If a
+  // candidate has been speaking for a while with nothing transcribed, stop
+  // letting them wonder and offer typing.
+  const elapsed = question.answerSeconds - secondsLeft;
+  const silentTranscript = stage === 'record' && elapsed > 12 && wordCount === 0;
 
   return (
     <div className="shell shell-narrow">
@@ -581,6 +620,35 @@ export function InterviewFlow({
               />
             </div>
 
+            {/* Proof the microphone is live. Reassurance only — never recorded or scored. */}
+            <div className="mic-row">
+              <span className="mic-label">{t('micLive')}</span>
+              <span className="mic-bars" aria-hidden="true">
+                {[0.08, 0.2, 0.34, 0.5, 0.68].map((threshold) => (
+                  <span key={threshold} className={`mic-bar ${micLevel > threshold ? 'on' : ''}`} />
+                ))}
+              </span>
+              <span className="tiny">{micLevel > 0.08 ? t('micHearing') : t('micQuiet')}</span>
+            </div>
+
+            {useVoice && silentTranscript && (
+              <div className="notice notice-warn tiny">
+                {t('speechNotWorking')}
+                <div className="row" style={{ marginTop: '0.6rem' }}>
+                  <button
+                    type="button"
+                    className="btn btn-quiet"
+                    onClick={() => {
+                      stopDictation();
+                      setVoiceDeclined(true);
+                    }}
+                  >
+                    {t('speechTypeInstead')}
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div>
               <p className="eyebrow" style={{ marginBottom: '0.4rem' }}>
                 {t('yourAnswer')}
@@ -619,6 +687,22 @@ export function InterviewFlow({
           <div className="card stack">
             <p className="eyebrow">{t('yourAnswer')}</p>
             <h2 style={{ fontSize: '1.2rem' }}>{questionText}</h2>
+
+            {playbackUrl && (
+              <div className="stack-sm">
+                <span className="rate-label">{t('watchBack')}</span>
+                <video
+                  ref={playbackRef}
+                  className="playback"
+                  src={playbackUrl}
+                  controls
+                  playsInline
+                  preload="metadata"
+                />
+                <p className="tiny">{t('watchBackHint')}</p>
+              </div>
+            )}
+
             <textarea
               className="answer-box"
               placeholder={t('typeAnswer')}

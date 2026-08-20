@@ -31,6 +31,14 @@ export const STRINGS = {
     cameraDeniedHelp:
       'Camera is off. Tap the lock or camera icon in your browser address bar, allow camera and microphone, then reload. You can also just type your answers — the feedback is exactly the same.',
     cameraRetry: 'Try camera again',
+    micLive: 'Microphone',
+    micHearing: 'We can hear you',
+    micQuiet: 'Speak up — we cannot hear you yet',
+    speechNotWorking:
+      'Your words are not being turned into text. Some phone browsers do not support this. Keep speaking and type your answer instead — you will get exactly the same feedback.',
+    watchBack: 'Watch your answer back',
+    watchBackHint:
+      'Only you can see this. It stays on your phone and is deleted when you move to the next question.',
     transcriptUnsupported:
       'Live transcript is not supported in this browser. You can type your answer instead — scoring works the same way.',
     transcriptReady: 'Ready — your words appear as you speak',
@@ -172,6 +180,14 @@ export const STRINGS = {
     cameraDeniedHelp:
       'الكاميرا مغلقة. اضغط على أيقونة القفل أو الكاميرا في شريط عنوان المتصفح، واسمح بالكاميرا والميكروفون، ثم أعد تحميل الصفحة. يمكنك أيضاً كتابة إجاباتك — الملاحظات هي نفسها تماماً.',
     cameraRetry: 'جرّب الكاميرا مرة أخرى',
+    micLive: 'الميكروفون',
+    micHearing: 'نسمعك بوضوح',
+    micQuiet: 'ارفع صوتك — لا نسمعك بعد',
+    speechNotWorking:
+      'كلماتك لا تتحول إلى نص. بعض متصفحات الهواتف لا تدعم هذه الميزة. تابع الحديث واكتب إجابتك بدلاً من ذلك — ستحصل على نفس الملاحظات تماماً.',
+    watchBack: 'شاهد إجابتك',
+    watchBackHint:
+      'أنت وحدك من يرى هذا. يبقى على هاتفك ويُحذف عند انتقالك للسؤال التالي.',
     transcriptUnsupported:
       'النص المباشر غير مدعوم في هذا المتصفح. يمكنك كتابة إجابتك بدلاً من ذلك — التقييم يعمل بنفس الطريقة.',
     transcriptReady: 'جاهز — تظهر كلماتك أثناء حديثك',
