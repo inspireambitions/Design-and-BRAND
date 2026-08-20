@@ -1,0 +1,206 @@
+# Muqabala — handover for Codex (or any AI collaborator)
+
+Read this file first. It is the single briefing that lets another agent build on this
+project or supervise work without re-deriving the strategy.
+
+---
+
+## 1. Getting access
+
+The project lives inside the `inspireambitions/Design-and-BRAND` repository, in the
+`muqabala/` directory, on branch `claude/gulf-hospitality-video-interview-m9skfu`.
+
+```bash
+git clone https://github.com/inspireambitions/Design-and-BRAND.git
+cd Design-and-BRAND
+git checkout claude/gulf-hospitality-video-interview-m9skfu
+cd muqabala
+npm install
+npm run dev          # http://localhost:3000
+```
+
+To give Codex access, grant it the repository (GitHub → repo → Settings → Collaborators,
+or connect the repo in the Codex/ChatGPT GitHub connector). Point it at `muqabala/CODEX.md`
+as its entry point.
+
+> **Planned move:** this app is staged inside `Design-and-BRAND` only because the
+> automation that created it could not create a new repository. The intended long-term
+> home is a dedicated `inspireambitions/muqabala` repo. When that repo exists, move the
+> `muqabala/` directory to its root — nothing in the code depends on the current path.
+
+**Environment variables** — copy `.env.example` to `.env.local`:
+
+| Variable | Required? | Effect |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | No | Present → answers scored by Claude (`claude-opus-5`). Absent → the built-in heuristic scorer runs and the UI says so. The app is fully functional either way. |
+
+**Commands**
+
+```bash
+npm run dev        # local dev server
+npm run build      # production build — must pass before any push
+npm run typecheck  # tsc --noEmit — must pass before any push
+npm run start      # serve the production build
+```
+
+---
+
+## 2. What this product is
+
+**Muqabala Coach** — AI interview practice for people applying to jobs in the Gulf
+(UAE, Saudi, Qatar, Oman, Bahrain, Kuwait). Candidates are typically in the Philippines,
+India, Pakistan, Nepal, Kenya, Nigeria and Egypt, on low-end Android phones and prepaid
+data, and English is often their second or third language.
+
+The user records answers to real interview questions, gets specific feedback on the
+**content** of what they said, and retries until the score climbs.
+
+**This is product one of two.** The same scoring engine later powers **Muqabala Screening**,
+a B2B employer product built to displace Spark Hire in the Gulf. Coach ships first because
+it has no sales cycle, earns revenue immediately, and calibrates the scoring rubrics on real
+accents and answers before the first employer demo. Do not build employer features into the
+coach unless explicitly asked.
+
+### The two emotional requirements (these are the product spec, not decoration)
+
+1. **Candidates must feel *less* scared, not more.** Every screen is judged on that.
+   Unlimited retries, visible progress, plain-language rules, warm and specific feedback.
+2. **HR managers must eventually say "I love this tool."** That is the phase-two goal;
+   protect it by never shipping anything in the coach that would embarrass the B2B product
+   (bias, creepy surveillance, unexplainable scores).
+
+---
+
+## 3. Hard rules — do not violate these
+
+These come from the advisory board that shaped the product. Breaking one is a bug even if
+the code works.
+
+1. **Score the content of the answer only.** Never facial expression, emotion, eye contact,
+   attractiveness, accent, pronunciation, or grammar fluency. A candidate with imperfect
+   English who tells a specific, structured story must score *higher* than a fluent but vague
+   speaker. This is stated in the system prompt at `app/api/score/route.ts` and must stay there.
+2. **Never penalise a candidate for a bad transcript.** Speech recognition is worse on some
+   accents. If a transcript is too short or too garbled to judge, say so honestly and score 0
+   with an explanation — never assign a low score to a garbled answer.
+3. **Nothing leaves the device without saying so.** Video never uploads; only the text
+   transcript is sent for scoring. The UI promises this — keep it true.
+4. **AI recommends, humans decide.** Never build automated rejection.
+5. **Feedback must be actionable and specific.** Every improvement must quote or reference
+   what the candidate actually said and be doable on the next attempt. No generic advice.
+6. **No dark patterns.** No fake urgency, no hidden retake limits, no score inflation to
+   drive upgrades.
+
+---
+
+## 4. Architecture
+
+Deliberately minimal so it could ship in a day. **No database, no auth, no file storage.**
+
+```
+muqabala/
+├── app/
+│   ├── layout.tsx              # fonts, LanguageProvider, metadata
+│   ├── page.tsx                # landing → HomeView
+│   ├── globals.css             # ALL styling — design tokens + components, light & dark
+│   ├── icon.svg                # favicon
+│   ├── practice/[roleId]/      # the interview itself (prerendered per role)
+│   ├── progress/               # attempt history from localStorage
+│   └── api/score/route.ts      # the only server code: scoring
+├── components/
+│   ├── LanguageProvider.tsx    # EN/AR context, sets <html dir> for RTL
+│   ├── TopBar.tsx, HomeView.tsx, ProgressView.tsx
+│   ├── InterviewFlow.tsx       # the state machine — the heart of the app
+│   ├── FeedbackCard.tsx, ScoreRing.tsx
+└── lib/
+    ├── roles.ts                # 12 roles × competencies × questions (EN + AR)
+    ├── scoring.ts              # types + the deterministic heuristic scorer
+    ├── speech.ts               # Web Speech API dictation wrapper
+    ├── i18n.ts                 # all UI strings, EN + AR
+    └── storage.ts              # localStorage read/write
+```
+
+**Stack:** Next.js (App Router) + TypeScript + hand-written CSS (no Tailwind — one less
+build dependency). `@anthropic-ai/sdk` + `zod` for structured scoring output.
+
+### The interview state machine (`components/InterviewFlow.tsx`)
+
+```
+check → prep → record → review → feedback → (next question | retry) → done
+```
+
+- `check` — camera/mic test plus the transparency screen (question count, timings, retake rules)
+- `prep` — countdown before answering; candidate can start early
+- `record` — live transcript via Web Speech API, countdown, video preview (never uploaded)
+- `review` — candidate can **edit the transcript** before submitting (this is the fallback for
+  every speech-recognition failure, and why the app works even in browsers with no Web Speech API)
+- `feedback` — score, per-competency evidence, strengths, improvements, one coach tip
+- `done` — whole-interview results, saved to localStorage
+
+### Scoring (`app/api/score/route.ts` + `lib/scoring.ts`)
+
+Two interchangeable paths behind one response shape (`AnswerFeedback`):
+
+- **AI path** — `claude-opus-5` via `client.messages.parse()` with a zod schema, so the JSON
+  always validates. Uses the role's competency rubric anchors from `lib/roles.ts`.
+- **Demo path** — `demoScore()`, a deterministic heuristic scorer. Rewards specific situations,
+  first-person ownership ("I" vs "we"), concrete numbers, and a stated outcome; penalises
+  vagueness, filler and rambling. Verified to separate a weak answer (35) from a strong
+  one (93) on the same question.
+
+Any AI error, refusal, or missing key silently falls back to the demo scorer. The UI always
+labels which one produced the score.
+
+---
+
+## 5. Known gaps / roadmap
+
+**Shipped:** 12 roles across 11 industries, bilingual EN/AR with RTL, camera + live transcript,
+unlimited retries, evidence-based feedback, progress tracking, works with or without an API key.
+
+**Deliberately not built yet** (in rough priority order):
+
+1. **Arabic scoring parity.** The heuristic scorer's regexes are English-only, so an Arabic
+   answer scores poorly on the demo path. The AI path handles Arabic properly. Either gate
+   Arabic answers to the AI path or add Arabic heuristics before promoting Arabic to users.
+2. **Payments.** No Stripe/Paddle yet — everything is free. Pricing plan: free first mock,
+   AED 29 role pack, AED 79 unlimited 30 days.
+3. **Accent benchmark.** Priya's non-negotiable: measure transcription word-error rate per
+   accent group and publish it. Not started.
+4. **Scoring consistency measurement.** Run the same answer N times, publish the variance.
+5. **Analytics** (PostHog), error tracking (Sentry), WhatsApp share links.
+6. **Server-side persistence.** localStorage means history is lost if the user clears their
+   browser. Supabase is the intended destination when accounts are added.
+
+---
+
+## 6. Working with the advisory board
+
+Product decisions on this project are reviewed against six standing advisors. When Codex is
+asked to **supervise** or review work, evaluate against their non-negotiables and say which
+are met, missing, or not yet applicable:
+
+| Advisor | Vantage point | Cares about |
+|---|---|---|
+| **Mariam Al-Suwaidi** | Group HR Director, Riyadh | Arabic parity, nationalization (Nitaqat/Emiratisation), data residency, no extra logins |
+| **Rohit Menon** | Dubai volume-recruitment agency | Bulk/agency workflows, WhatsApp journey, resumable low-bandwidth uploads |
+| **Layla Haddad** | Candidate-experience researcher | Practice-until-ready, transparency up front, feedback to everyone, candidate dignity |
+| **Priya Nair** | AI product lead | Accent robustness, scoring consistency, quoted evidence, anti-cheat as signals not rejections |
+| **Daniel Chen** | SaaS go-to-market | Free top-of-funnel hook, pilot playbook, publishable proof metrics, self-serve pricing |
+| **Fatima Al-Farsi** | Employment & data-protection counsel | Consent/retention/deletion as features, per-country question packs, no face or emotion scoring |
+
+The full strategy document these came from is the "Beating Spark Hire" board artifact; ask the
+project owner for the link if the reasoning behind a decision is unclear.
+
+---
+
+## 7. House rules for contributions
+
+- `npm run typecheck` and `npm run build` must both pass before any push.
+- Work on branch `claude/gulf-hospitality-video-interview-m9skfu` unless told otherwise.
+- Match the existing style: hand-written CSS using the tokens in `globals.css`, no new UI
+  framework, no new dependency without a stated reason.
+- Every user-facing string goes in `lib/i18n.ts` with both an English and an Arabic value —
+  never hardcode copy into a component.
+- Both light and dark themes must work; define colours as tokens, never inside a media query only.
+- Test on a 390px-wide viewport first. Most users are on phones.
