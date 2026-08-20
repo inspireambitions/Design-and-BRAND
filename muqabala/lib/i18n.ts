@@ -25,8 +25,12 @@ export const STRINGS = {
     checkCamera: 'Camera',
     checkMic: 'Microphone',
     checkTranscript: 'Live transcript',
-    enableCamera: 'Turn on camera & microphone',
-    cameraDenied: 'Camera blocked. You can still practise by typing your answers below.',
+    enableCamera: 'Test my camera first (optional)',
+    cameraIdle: 'Your camera preview will appear here.',
+    cameraStarting: 'Starting camera…',
+    cameraDeniedHelp:
+      'Camera is off. Tap the lock or camera icon in your browser address bar, allow camera and microphone, then reload. You can also just type your answers — the feedback is exactly the same.',
+    cameraRetry: 'Try camera again',
     transcriptUnsupported:
       'Live transcript is not supported in this browser. You can type your answer instead — scoring works the same way.',
     transcriptReady: 'Ready — your words appear as you speak',
@@ -162,8 +166,12 @@ export const STRINGS = {
     checkCamera: 'الكاميرا',
     checkMic: 'الميكروفون',
     checkTranscript: 'النص المباشر',
-    enableCamera: 'تشغيل الكاميرا والميكروفون',
-    cameraDenied: 'الكاميرا محظورة. يمكنك التدريب بكتابة إجاباتك أدناه.',
+    enableCamera: 'اختبر الكاميرا أولاً (اختياري)',
+    cameraIdle: 'ستظهر معاينة الكاميرا هنا.',
+    cameraStarting: 'جاري تشغيل الكاميرا…',
+    cameraDeniedHelp:
+      'الكاميرا مغلقة. اضغط على أيقونة القفل أو الكاميرا في شريط عنوان المتصفح، واسمح بالكاميرا والميكروفون، ثم أعد تحميل الصفحة. يمكنك أيضاً كتابة إجاباتك — الملاحظات هي نفسها تماماً.',
+    cameraRetry: 'جرّب الكاميرا مرة أخرى',
     transcriptUnsupported:
       'النص المباشر غير مدعوم في هذا المتصفح. يمكنك كتابة إجابتك بدلاً من ذلك — التقييم يعمل بنفس الطريقة.',
     transcriptReady: 'جاهز — تظهر كلماتك أثناء حديثك',

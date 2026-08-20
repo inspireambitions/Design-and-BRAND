@@ -69,8 +69,12 @@ export function InterviewFlow({
   const [index, setIndex] = useState(0);
   const [attemptCount, setAttemptCount] = useState(1);
 
-  const [cameraOn, setCameraOn] = useState(false);
-  const [cameraError, setCameraError] = useState(false);
+  /**
+   * 'idle' means we have not asked yet — which must never be reported to the
+   * candidate as "blocked". Only a real refusal is 'denied'.
+   */
+  const [cameraState, setCameraState] = useState<'idle' | 'granted' | 'denied'>('idle');
+  const [requestingCamera, setRequestingCamera] = useState(false);
   const [speechOk, setSpeechOk] = useState(true);
   const [onDeviceSpeech, setOnDeviceSpeech] = useState(false);
   const [voiceDeclined, setVoiceDeclined] = useState(false);
@@ -126,32 +130,38 @@ export function InterviewFlow({
     };
   }, []);
 
-  const enableCamera = useCallback(async () => {
+  const enableCamera = useCallback(async (): Promise<boolean> => {
+    if (streamRef.current) return true;
+    setRequestingCamera(true);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'user', width: { ideal: 640 } },
         audio: true,
       });
       streamRef.current = stream;
-      setCameraOn(true);
-      setCameraError(false);
+      setCameraState('granted');
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play().catch(() => {});
       }
+      return true;
     } catch {
-      setCameraError(true);
-      setCameraOn(false);
+      // Refused, dismissed, or no camera on the device. Practice continues by
+      // typing — the camera is a rehearsal aid, never a requirement.
+      setCameraState('denied');
+      return false;
+    } finally {
+      setRequestingCamera(false);
     }
   }, []);
 
   // Re-attach the stream whenever the video element remounts between stages.
   useEffect(() => {
-    if (cameraOn && videoRef.current && streamRef.current) {
+    if (cameraState === 'granted' && videoRef.current && streamRef.current) {
       videoRef.current.srcObject = streamRef.current;
       videoRef.current.play().catch(() => {});
     }
-  }, [cameraOn, stage]);
+  }, [cameraState, stage]);
 
   const beginRecording = useCallback(() => {
     setTranscript('');
@@ -376,17 +386,21 @@ export function InterviewFlow({
           <div className="card stack">
             <div className="video-frame">
               <video ref={videoRef} muted playsInline />
-              {!cameraOn && (
+              {cameraState !== 'granted' && (
                 <div className="video-placeholder">
-                  {cameraError ? t('cameraDenied') : t('enableCamera')}
+                  {cameraState === 'denied' ? t('cameraDeniedHelp') : t('cameraIdle')}
                 </div>
               )}
             </div>
 
             <ul className="checklist">
               <li>
-                <span className={`check-icon ${cameraOn ? '' : cameraError ? 'fail' : 'pending'}`}>
-                  {cameraOn ? '✓' : cameraError ? '!' : '·'}
+                <span
+                  className={`check-icon ${
+                    cameraState === 'granted' ? '' : cameraState === 'denied' ? 'fail' : 'pending'
+                  }`}
+                >
+                  {cameraState === 'granted' ? '✓' : cameraState === 'denied' ? '!' : '·'}
                 </span>
                 <span>
                   {t('checkCamera')} &amp; {t('checkMic')}
@@ -439,9 +453,14 @@ export function InterviewFlow({
               </div>
             )}
 
-            {!cameraOn && (
-              <button type="button" className="btn btn-quiet" onClick={enableCamera}>
-                {t('enableCamera')}
+            {cameraState !== 'granted' && (
+              <button
+                type="button"
+                className="btn btn-quiet"
+                disabled={requestingCamera}
+                onClick={() => void enableCamera()}
+              >
+                {cameraState === 'denied' ? t('cameraRetry') : t('enableCamera')}
               </button>
             )}
           </div>
@@ -481,12 +500,17 @@ export function InterviewFlow({
             <button
               type="button"
               className="btn btn-primary"
-              onClick={() => {
+              disabled={requestingCamera}
+              onClick={async () => {
                 track('interview_started', { role_id: role.id, lang });
+                // Ask here rather than in a separate step: this tap is the user
+                // gesture browsers want, and it comes after the disclosure the
+                // candidate has just read.
+                await enableCamera();
                 startPrep();
               }}
             >
-              {t('imReady')}
+              {requestingCamera ? t('cameraStarting') : t('imReady')}
             </button>
             <Link href="/" className="btn btn-ghost" style={{ textDecoration: 'none' }}>
               {t('back')}
@@ -539,7 +563,11 @@ export function InterviewFlow({
           <div className="card stack">
             <div className="video-frame">
               <video ref={videoRef} muted playsInline />
-              {!cameraOn && <div className="video-placeholder">{t('cameraDenied')}</div>}
+              {cameraState !== 'granted' && (
+                <div className="video-placeholder">
+                  {cameraState === 'denied' ? t('cameraDeniedHelp') : t('cameraIdle')}
+                </div>
+              )}
               <span className="video-badge">
                 <span className="rec-dot" aria-hidden="true" />
                 {t('recording')} · {formatClock(secondsLeft)}
