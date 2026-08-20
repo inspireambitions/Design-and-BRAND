@@ -1,27 +1,59 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
-import { buildCustomRole } from '@/lib/roles';
+import { useState } from 'react';
+import { buildCustomRole, type Role } from '@/lib/roles';
 import { useLang } from './LanguageProvider';
 import { TopBar } from './TopBar';
 import { InterviewFlow } from './InterviewFlow';
 
+/** Someone pasted a link instead of the advert text. */
+function looksLikeUrl(value: string): boolean {
+  const trimmed = value.trim();
+  return /^https?:\/\/\S+$/i.test(trimmed) || (/^www\.\S+$/i.test(trimmed) && !trimmed.includes(' '));
+}
+
 export function CustomRoleStart() {
   const { t } = useLang();
-  const [draft, setDraft] = useState('');
-  const [confirmed, setConfirmed] = useState<string | null>(null);
-
-  const role = useMemo(
-    () => (confirmed === null ? null : buildCustomRole(confirmed)),
-    [confirmed],
-  );
+  const [title, setTitle] = useState('');
+  const [jobText, setJobText] = useState('');
+  const [role, setRole] = useState<Role | null>(null);
+  const [tailored, setTailored] = useState(false);
+  const [building, setBuilding] = useState(false);
 
   if (role) {
-    return <InterviewFlow role={role} customTitle={confirmed ?? undefined} />;
+    return <InterviewFlow role={role} customTitle={role.title} tailored={tailored} />;
   }
 
-  const trimmed = draft.trim();
+  const trimmedTitle = title.trim();
+  const trimmedJob = jobText.trim();
+  const pastedLink = looksLikeUrl(trimmedJob);
+  const usableJob = !pastedLink && trimmedJob.length >= 120;
+  const canStart = trimmedTitle.length >= 2 || usableJob;
+
+  const start = async () => {
+    setBuilding(true);
+    try {
+      const response = await fetch('/api/interview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jobTitle: trimmedTitle,
+          jobText: usableJob ? trimmedJob : '',
+        }),
+      });
+      if (!response.ok) throw new Error(String(response.status));
+      const data = (await response.json()) as { role: Role; tailored: boolean };
+      setTailored(Boolean(data.tailored));
+      setRole(data.role);
+    } catch {
+      // Never strand the candidate: fall back to the generic interview.
+      setTailored(false);
+      setRole(buildCustomRole(trimmedTitle));
+    } finally {
+      setBuilding(false);
+    }
+  };
 
   return (
     <div className="shell shell-narrow">
@@ -45,29 +77,55 @@ export function CustomRoleStart() {
               id="job-title"
               className="text-input"
               type="text"
-              value={draft}
+              value={title}
               placeholder={t('customPlaceholder')}
               autoComplete="organization-title"
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && trimmed.length > 1) setConfirmed(trimmed);
-              }}
+              onChange={(e) => setTitle(e.target.value)}
             />
           </label>
-          <p className="tiny">{t('customHint')}</p>
+
+          <label className="stack-sm" htmlFor="job-ad">
+            <span className="eyebrow" style={{ marginBottom: 0, color: 'var(--gold)' }}>
+              {t('jdLabel')}
+            </span>
+            <textarea
+              id="job-ad"
+              className="answer-box"
+              value={jobText}
+              placeholder={t('jdPlaceholder')}
+              onChange={(e) => setJobText(e.target.value)}
+            />
+          </label>
+
+          {pastedLink ? (
+            <p className="notice notice-warn tiny" style={{ margin: 0 }}>
+              {t('jdLinkNotSupported')}
+            </p>
+          ) : trimmedJob.length > 0 && !usableJob ? (
+            <p className="tiny">{t('jdTooShort')}</p>
+          ) : usableJob ? (
+            <p className="notice tiny" style={{ margin: 0 }}>
+              {t('jdReady')}
+            </p>
+          ) : (
+            <p className="tiny">{t('jdHint')}</p>
+          )}
+
           <div className="row">
             <button
               type="button"
               className="btn btn-primary"
-              disabled={trimmed.length < 2}
-              onClick={() => setConfirmed(trimmed)}
+              disabled={!canStart || building}
+              onClick={start}
             >
-              {t('customStart')}
+              {building ? t('jdBuilding') : usableJob ? t('jdStartTailored') : t('customStart')}
             </button>
             <Link href="/" className="btn btn-quiet" style={{ textDecoration: 'none' }}>
               {t('back')}
             </Link>
           </div>
+
+          {building && <p className="tiny">{t('jdBuildingHint')}</p>}
         </div>
 
         <p className="notice tiny" style={{ margin: 0 }}>

@@ -59,10 +59,13 @@ function formatClock(seconds: number): string {
 export function InterviewFlow({
   role,
   customTitle,
+  tailored = false,
 }: {
   role: Role;
   /** Job title typed by the candidate when practising a role not in the catalogue. */
   customTitle?: string;
+  /** True when the questions were generated from a pasted job advert. */
+  tailored?: boolean;
 }) {
   const { lang, t } = useLang();
 
@@ -417,6 +420,11 @@ export function InterviewFlow({
             <h1 style={{ fontSize: '1.75rem' }}>
               {lang === 'ar' ? role.titleAr : role.title}
             </h1>
+            {role.id === 'custom' && (
+              <span className={`chip ${tailored ? 'chip-gold' : ''}`} style={{ marginTop: '0.5rem' }}>
+                {tailored ? t('tailoredBadge') : t('genericBadge')}
+              </span>
+            )}
             <p className="lede" style={{ marginTop: '0.6rem' }}>
               {t('beforeStartBody')}
             </p>
