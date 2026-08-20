@@ -130,6 +130,8 @@ muqabala/
     │   ├── operations.ts       # logistics, retail, facilities, beauty
     │   ├── care.ts             # healthcare and domestic care
     │   ├── office.ts           # corporate, finance, sales, education, tech
+    │   ├── industrial.ts       # oil, gas & energy, automotive
+    │   ├── creative.ts         # marketing, design, photography
     │   ├── custom.ts           # the catch-all interview for any job
     │   └── index.ts            # assembles ROLES, getRole, INDUSTRIES
     ├── scoring.ts              # types + the deterministic heuristic scorer
@@ -184,7 +186,7 @@ labels which one produced the score.
 
 ## 5. Known gaps / roadmap
 
-**Shipped:** 39 roles across 17 industries plus a catch-all interview for any job, bilingual EN/AR with RTL, camera + live transcript,
+**Shipped:** 69 roles across 20 industries plus a catch-all interview for any job, bilingual EN/AR with RTL, camera + live transcript,
 unlimited retries, evidence-based feedback, progress tracking, works with or without an API key.
 
 **Deliberately not built yet** (in rough priority order):
