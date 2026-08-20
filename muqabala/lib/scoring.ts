@@ -20,6 +20,14 @@ export type AnswerFeedback = {
   source: 'ai' | 'demo';
 };
 
+/** How the candidate felt afterwards. The product's whole promise is measured here. */
+export type AttemptRating = {
+  /** 1-5. How useful the practice was. */
+  stars: number;
+  /** Whether they feel more or less ready than before they started. */
+  confidence: 'more' | 'same' | 'less';
+};
+
 export type Attempt = {
   id: string;
   roleId: string;
@@ -27,6 +35,7 @@ export type Attempt = {
   startedAt: string;
   overallScore: number;
   answers: { questionId: string; questionText: string; transcript: string; feedback: AnswerFeedback }[];
+  rating?: AttemptRating;
 };
 
 const FILLERS = /\b(um+|uh+|erm+|like|you know|basically|actually|kind of|sort of)\b/gi;

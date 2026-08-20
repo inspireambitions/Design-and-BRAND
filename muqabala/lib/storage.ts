@@ -1,6 +1,6 @@
 'use client';
 
-import type { Attempt } from './scoring';
+import type { Attempt, AttemptRating } from './scoring';
 import type { Lang } from './i18n';
 
 const ATTEMPTS_KEY = 'muqabala.attempts.v1';
@@ -27,6 +27,18 @@ export function saveAttempt(attempt: Attempt): void {
     window.localStorage.setItem(ATTEMPTS_KEY, JSON.stringify(next));
   } catch {
     // Storage full or blocked (private mode) — practice still works, history just is not kept.
+  }
+}
+
+/** Attach the candidate's rating to an attempt already saved. */
+export function rateAttempt(id: string, rating: AttemptRating): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const all = loadAttempts();
+    const next = all.map((a) => (a.id === id ? { ...a, rating } : a));
+    window.localStorage.setItem(ATTEMPTS_KEY, JSON.stringify(next));
+  } catch {
+    /* storage blocked — the rating is still shown in the session */
   }
 }
 

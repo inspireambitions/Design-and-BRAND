@@ -925,3 +925,34 @@ body[dir='rtl'] .coach-tip strong {
 .text-input::placeholder {
   color: var(--ink-faint);
 }
+
+/* ---------- post-interview rating ---------- */
+
+.rate-label {
+  font-family: var(--font-display);
+  font-weight: 650;
+  font-size: 0.92rem;
+}
+
+.star-row {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.star {
+  background: none;
+  border: none;
+  padding: 0.1rem 0.15rem;
+  font-size: 1.9rem;
+  line-height: 1;
+  color: var(--line-strong);
+  transition: color 0.12s ease, transform 0.12s ease;
+}
+
+.star:hover {
+  transform: scale(1.08);
+}
+
+.star.on {
+  color: var(--gold);
+}

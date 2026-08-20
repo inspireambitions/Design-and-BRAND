@@ -11,6 +11,7 @@ import { useLang } from './LanguageProvider';
 import { TopBar } from './TopBar';
 import { FeedbackCard } from './FeedbackCard';
 import { ScoreRing } from './ScoreRing';
+import { RatingCard } from './RatingCard';
 
 type Stage = 'check' | 'prep' | 'record' | 'review' | 'feedback' | 'done';
 
@@ -62,6 +63,7 @@ export function InterviewFlow({
   const streamRef = useRef<MediaStream | null>(null);
   const dictationRef = useRef<SpeechSession | null>(null);
   const savedRef = useRef(false);
+  const [savedAttempt, setSavedAttempt] = useState<Attempt | null>(null);
 
   const question = role.questions[index];
   const isLast = index === role.questions.length - 1;
@@ -242,6 +244,7 @@ export function InterviewFlow({
       answers,
     };
     saveAttempt(attempt);
+    setSavedAttempt(attempt);
   }, [answers, role.id, role.title, stage]);
 
   const wordCount = `${transcript} ${interim}`.trim().split(/\s+/).filter(Boolean).length;
@@ -520,6 +523,8 @@ export function InterviewFlow({
             </div>
             <p className="tiny">{t('savedLocally')}</p>
           </div>
+
+          {savedAttempt && <RatingCard attempt={savedAttempt} />}
 
           {answers.map((answer, i) => (
             <div key={`${answer.questionId}-${i}`} className="stack-sm">
