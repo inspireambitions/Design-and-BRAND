@@ -28,6 +28,22 @@ type CompletedAnswer = {
   feedback: AnswerFeedback;
 };
 
+type ScoringError = {
+  creditsExhausted: boolean;
+  answerTooLong: boolean;
+};
+
+class ScoringRequestError extends Error {
+  constructor(
+    readonly retryable: boolean,
+    readonly retryAfterSeconds: number,
+    readonly creditsExhausted: boolean,
+    readonly answerTooLong: boolean,
+  ) {
+    super('Scoring request failed');
+  }
+}
+
 function estimateMinutes(role: Role): number {
   const seconds = role.questions.reduce((s, q) => s + q.prepSeconds + q.answerSeconds, 0);
   return Math.max(5, Math.round(seconds / 60));
@@ -64,13 +80,17 @@ export function InterviewFlow({
   const [interim, setInterim] = useState('');
   const [feedback, setFeedback] = useState<AnswerFeedback | null>(null);
   const [isScoring, setIsScoring] = useState(false);
-  const [scoringFailed, setScoringFailed] = useState(false);
+  const [scoringError, setScoringError] = useState<ScoringError | null>(null);
+  const [retrySeconds, setRetrySeconds] = useState<number | null>(null);
   const [answers, setAnswers] = useState<CompletedAnswer[]>([]);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const dictationRef = useRef<SpeechSession | null>(null);
   const savedRef = useRef(false);
+  const scoringInFlightRef = useRef(false);
+  const scoringSessionRef = useRef<string | null>(null);
+  const automaticRetriesRef = useRef(0);
   const [savedAttempt, setSavedAttempt] = useState<Attempt | null>(null);
 
   const useVoice = speechOk && !voiceDeclined;
@@ -173,12 +193,27 @@ export function InterviewFlow({
   }, [stage, secondsLeft, beginRecording, finishAnswer]);
 
   const submitForScoring = useCallback(async () => {
+    if (scoringInFlightRef.current) return;
+    scoringInFlightRef.current = true;
     setIsScoring(true);
-    setScoringFailed(false);
+    setScoringError(null);
+    setRetrySeconds(null);
+    if (!scoringSessionRef.current) {
+      scoringSessionRef.current =
+        typeof crypto.randomUUID === 'function'
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    }
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 45_000);
     try {
       const response = await fetch('/api/score', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Scoring-Session': scoringSessionRef.current,
+        },
         body: JSON.stringify({
           roleId: role.id,
           questionId: question.id,
@@ -187,39 +222,68 @@ export function InterviewFlow({
           roleTitle: customTitle,
         }),
       });
-      if (!response.ok) throw new Error(`Scoring failed: ${response.status}`);
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as {
+          error?: { code?: string; retryable?: boolean; retryAfterSeconds?: number };
+        } | null;
+        const headerDelay = Number(response.headers.get('Retry-After'));
+        const requestedDelay = body?.error?.retryAfterSeconds ?? headerDelay;
+        const delay = Number.isFinite(requestedDelay)
+          ? Math.max(2, Math.min(120, Math.ceil(requestedDelay)))
+          : 20;
+        throw new ScoringRequestError(
+          body?.error?.retryable ??
+            (response.status === 409 || response.status === 429 || response.status >= 500),
+          delay,
+          body?.error?.code === 'credits_exhausted' || response.status === 402,
+          body?.error?.code === 'answer_too_long' || response.status === 413,
+        );
+      }
       const data = (await response.json()) as { feedback: AnswerFeedback };
       setFeedback(data.feedback);
       setStage('feedback');
-    } catch {
-      setFeedback({
-        questionId: question.id,
-        score: 0,
-        status: 'unscored',
-        headline: lang === 'ar' ? 'تعذّر التقييم' : 'Could not score this answer',
-        competencies: [],
-        strengths: [],
-        improvements: [
-          lang === 'ar'
-            ? 'حدث خطأ في الاتصال. تحقق من الإنترنت وحاول مرة أخرى — إجابتك محفوظة أدناه.'
-            : 'Something went wrong connecting. Check your internet and try again — your answer is saved below.',
-        ],
-        coachTip:
-          lang === 'ar'
-            ? 'إجابتك لم تُفقد. اضغط "أرسل إجابتي مرة أخرى" لإعادة إرسالها كما هي.'
-            : 'Your answer is not lost. Press “Send my answer again” to resubmit exactly what you said.',
-        source: 'structure',
+      scoringSessionRef.current = null;
+      automaticRetriesRef.current = 0;
+    } catch (error) {
+      const requestError =
+        error instanceof ScoringRequestError
+          ? error
+          : new ScoringRequestError(true, 20, false, false);
+      setScoringError({
+        creditsExhausted: requestError.creditsExhausted,
+        answerTooLong: requestError.answerTooLong,
       });
-      setStage('feedback');
-      setScoringFailed(true);
+      if (requestError.retryable && automaticRetriesRef.current < 2) {
+        automaticRetriesRef.current += 1;
+        setRetrySeconds(requestError.retryAfterSeconds);
+      }
     } finally {
+      window.clearTimeout(timeoutId);
+      scoringInFlightRef.current = false;
       setIsScoring(false);
     }
   }, [customTitle, lang, question.id, role.id, transcript]);
 
+  useEffect(() => {
+    if (retrySeconds === null) return;
+    if (retrySeconds <= 0) {
+      setRetrySeconds(null);
+      void submitForScoring();
+      return;
+    }
+    const id = window.setTimeout(() => setRetrySeconds((seconds) =>
+      seconds === null ? null : seconds - 1,
+    ), 1000);
+    return () => window.clearTimeout(id);
+  }, [retrySeconds, submitForScoring]);
+
   const retryQuestion = useCallback(() => {
     setAttemptCount((c) => c + 1);
     setFeedback(null);
+    setScoringError(null);
+    setRetrySeconds(null);
+    scoringSessionRef.current = null;
+    automaticRetriesRef.current = 0;
     setTranscript('');
     setInterim('');
     startPrep();
@@ -236,6 +300,10 @@ export function InterviewFlow({
     const nextAnswers = [...answers, completed];
     setAnswers(nextAnswers);
     setFeedback(null);
+    setScoringError(null);
+    setRetrySeconds(null);
+    scoringSessionRef.current = null;
+    automaticRetriesRef.current = 0;
     setTranscript('');
     setInterim('');
     setAttemptCount(1);
@@ -527,9 +595,36 @@ export function InterviewFlow({
               className="answer-box"
               placeholder={t('typeAnswer')}
               value={transcript}
-              onChange={(e) => setTranscript(e.target.value)}
+              onChange={(e) => {
+                setTranscript(e.target.value);
+                setScoringError(null);
+                setRetrySeconds(null);
+                scoringSessionRef.current = null;
+                automaticRetriesRef.current = 0;
+              }}
             />
             <p className="tiny">{t('typeHint')}</p>
+            {scoringError && (
+              <div className="notice notice-warn" role="status" aria-live="polite">
+                <strong>
+                  {scoringError.answerTooLong
+                    ? t('scoreAnswerTooLongTitle')
+                    : t('scoreUnavailableTitle')}
+                </strong>
+                <p className="tiny" style={{ marginTop: '0.35rem' }}>
+                  {scoringError.answerTooLong
+                    ? t('scoreAnswerTooLongBody')
+                    : scoringError.creditsExhausted
+                    ? t('scoreCreditsBody')
+                    : t('scoreUnavailableBody')}
+                </p>
+                {retrySeconds !== null && (
+                  <p className="tiny" style={{ marginTop: '0.35rem' }}>
+                    {t('scoreRetryingIn')} {retrySeconds} {t('secondsShort')}.
+                  </p>
+                )}
+              </div>
+            )}
             <div className="row">
               <button
                 type="button"
@@ -537,7 +632,11 @@ export function InterviewFlow({
                 onClick={submitForScoring}
                 disabled={isScoring || transcript.trim().length === 0}
               >
-                {isScoring ? t('scoring') : t('getFeedback')}
+                {isScoring
+                  ? t('scoring')
+                  : scoringError
+                    ? t('retryNow')
+                    : t('getFeedback')}
               </button>
               <button type="button" className="btn btn-quiet" onClick={retryQuestion}>
                 {t('tryAgain')}
@@ -552,20 +651,9 @@ export function InterviewFlow({
         <div className="stack">
           <FeedbackCard feedback={feedback} attempt={attemptCount} />
           <div className="row">
-            {scoringFailed ? (
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={submitForScoring}
-                disabled={isScoring}
-              >
-                {isScoring ? t('scoring') : t('resubmit')}
-              </button>
-            ) : (
-              <button type="button" className="btn btn-primary" onClick={advance}>
-                {isLast ? t('finishInterview') : t('nextQuestion')}
-              </button>
-            )}
+            <button type="button" className="btn btn-primary" onClick={advance}>
+              {isLast ? t('finishInterview') : t('nextQuestion')}
+            </button>
             <button type="button" className="btn btn-quiet" onClick={retryQuestion}>
               {t('tryAgain')}
             </button>

@@ -33,6 +33,12 @@ const MAX_SPREAD = Number(process.env.MAX_SPREAD ?? 10);
  * The offline fallback must never be able to green-light an AI benchmark.
  */
 const EXPECT_AI = process.env.EXPECT_AI === '1';
+/** Pace live calls below a new OpenRouter account's 10 RPM cap by default. */
+const REQUEST_INTERVAL_MS = Number(process.env.REQUEST_INTERVAL_MS ?? (EXPECT_AI ? 7000 : 0));
+
+function wait(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
 
 /**
  * Fixed corpus. Do not "improve" these answers — their value is that they
@@ -129,6 +135,9 @@ for (const item of CORPUS) {
     } catch (error) {
       console.error(`  ${item.id} run ${i + 1}: ${error.message}`);
       failed = true;
+    }
+    if (REQUEST_INTERVAL_MS > 0 && (i < RUNS - 1 || item !== CORPUS[CORPUS.length - 1])) {
+      await wait(REQUEST_INTERVAL_MS);
     }
   }
 

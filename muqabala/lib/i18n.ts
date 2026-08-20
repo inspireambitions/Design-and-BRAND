@@ -21,7 +21,7 @@ export const STRINGS = {
     // device check
     beforeStart: 'Before we start',
     beforeStartBody:
-      'This is practice. Nothing here is shown to an employer. Your video is never uploaded or saved anywhere — only the text of your answer is sent to be scored, and it is not stored afterwards. We collect anonymous usage statistics (which interviews are started and finished, scores and ratings) — never your video, your audio, or the words of your answers.',
+      'This is practice. Nothing here is shown to an employer. Your video is never uploaded or saved anywhere — only the text of your answer is sent to be scored, and it is not stored afterwards. We collect anonymous usage statistics and technical error reports, such as the route and error type — never your video, your audio, or the words of your answers.',
     checkCamera: 'Camera',
     checkMic: 'Microphone',
     checkTranscript: 'Live transcript',
@@ -40,6 +40,16 @@ export const STRINGS = {
       'We score what you say — never how you look or sound. No face scoring, no emotion detection, and no marks lost for accent, pronunciation or grammar.',
     noEvidence: 'We could not find a specific line in your answer that showed this.',
     resubmit: 'Send my answer again',
+    scoreUnavailableTitle: 'We could not score this answer right now.',
+    scoreUnavailableBody:
+      'Your answer is still here on this device. We will retry automatically, or you can retry now.',
+    scoreCreditsBody:
+      'Scoring is temporarily unavailable. Your answer is still here on this device. Please retry later.',
+    scoreAnswerTooLongTitle: 'This answer is too long to score.',
+    scoreAnswerTooLongBody:
+      'Shorten the answer, then retry. Your original answer is still here on this device.',
+    scoreRetryingIn: 'Retrying in',
+    retryNow: 'Retry now',
     customCta: 'Cannot find your job?',
     customCtaBody: 'Type your own job title and practise a general interview that works for any role.',
     customEyebrow: 'Any job, any industry',
@@ -148,7 +158,7 @@ export const STRINGS = {
 
     beforeStart: 'قبل أن نبدأ',
     beforeStartBody:
-      'هذا تدريب. لا شيء هنا يُعرض على صاحب عمل. الفيديو لا يُرفع ولا يُحفظ في أي مكان — يُرسل نص إجابتك فقط ليتم تقييمه، ولا يُحفظ بعد ذلك. نجمع إحصاءات استخدام مجهولة الهوية (أي المقابلات بدأت واكتملت، والدرجات والتقييمات) — وليس أبداً الفيديو أو الصوت أو كلمات إجاباتك.',
+      'هذا تدريب. لا شيء هنا يُعرض على صاحب عمل. الفيديو لا يُرفع ولا يُحفظ في أي مكان — يُرسل نص إجابتك فقط ليتم تقييمه، ولا يُحفظ بعد ذلك. نجمع إحصاءات استخدام وتقارير أخطاء تقنية مجهولة الهوية، مثل مسار الصفحة ونوع الخطأ — وليس أبداً الفيديو أو الصوت أو كلمات إجاباتك.',
     checkCamera: 'الكاميرا',
     checkMic: 'الميكروفون',
     checkTranscript: 'النص المباشر',
@@ -167,6 +177,16 @@ export const STRINGS = {
       'نقيّم ما تقوله — لا شكلك ولا نبرة صوتك. لا تحليل للوجه، ولا لتعابير المشاعر، ولا خصم بسبب اللكنة أو النطق أو قواعد اللغة.',
     noEvidence: 'لم نجد جملة محددة في إجابتك تُظهر هذا الجانب.',
     resubmit: 'أرسل إجابتي مرة أخرى',
+    scoreUnavailableTitle: 'تعذّر تقييم هذه الإجابة الآن.',
+    scoreUnavailableBody:
+      'إجابتك ما زالت محفوظة على هذا الجهاز. سنحاول تلقائياً، أو يمكنك المحاولة الآن.',
+    scoreCreditsBody:
+      'التقييم غير متاح مؤقتاً. إجابتك ما زالت محفوظة على هذا الجهاز. حاول لاحقاً.',
+    scoreAnswerTooLongTitle: 'هذه الإجابة أطول من الحد المسموح للتقييم.',
+    scoreAnswerTooLongBody:
+      'اختصر الإجابة ثم حاول مجدداً. إجابتك الأصلية ما زالت محفوظة على هذا الجهاز.',
+    scoreRetryingIn: 'إعادة المحاولة خلال',
+    retryNow: 'حاول الآن',
     customCta: 'لا تجد وظيفتك؟',
     customCtaBody: 'اكتب المسمى الوظيفي الخاص بك وتدرّب على مقابلة عامة تصلح لأي وظيفة.',
     customEyebrow: 'أي وظيفة، أي قطاع',

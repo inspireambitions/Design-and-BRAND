@@ -32,16 +32,22 @@ as its entry point.
 
 | Variable | Required? | Effect |
 |---|---|---|
-| `OPENROUTER_API_KEY` | No | **Primary provider (approved architecture).** Present → answers scored via OpenRouter using `SCORING_MODEL`. Takes precedence over the Anthropic key. |
-| `SCORING_MODEL` | No | OpenRouter model slug for scoring. Defaults to `openai/gpt-5.6-sol` (verified slug). Changing the model requires re-running `scripts/measure-consistency.mjs` before trusting its scores. |
-| `ANTHROPIC_API_KEY` | No | Alternative provider: direct Anthropic API (`claude-opus-5`). Used only when no OpenRouter key is set. |
-| `SCORING_REASONING` | No | Reasoning effort for the OpenRouter path: `low`/`medium`/`high`. Defaults to `medium`; benchmark against `high` with the consistency gate before changing. |
+| `OPENAI_API_KEY` | No | **Production primary.** Direct OpenAI project key for scoring. Takes precedence over OpenRouter and Anthropic. Store only in `.env.local` and Vercel, never in Git or chat. |
+| `OPENAI_SCORING_MODEL` | No | Direct OpenAI model id. Defaults to `gpt-5.6-sol`. Changing it requires the live consistency gate. |
+| `OPENROUTER_API_KEY` | No | Optional fallback provider. Used only when no direct OpenAI key exists. |
+| `SCORING_MODEL` | No | OpenRouter model slug. Defaults to `openai/gpt-5.6-sol`. |
+| `ANTHROPIC_API_KEY` | No | Alternative provider: direct Anthropic API (`claude-opus-5`). Used only when neither OpenAI nor OpenRouter is configured. |
+| `SCORING_REASONING` | No | Reasoning effort for OpenAI and OpenRouter: `low`/`medium`/`high`. Defaults to `medium`; benchmark changes with the consistency gate. |
+| `OPENROUTER_RPM_LIMIT` | No | Local per-instance OpenRouter traffic ceiling. Defaults to 9, below the current new-account limit of 10 RPM. The live consistency gate is also paced by default. |
 | `NEXT_PUBLIC_POSTHOG_KEY` | No | Enables anonymous usage analytics (PostHog EU). Events are only the explicit calls in `lib/analytics.ts` — role ids, language, scores, ratings. Never transcripts, typed job titles, video, audio, or personal data. Autocapture, pageviews and session recording are disabled. The pre-interview disclosure covers this collection. |
 | `NEXT_PUBLIC_POSTHOG_HOST` | No | PostHog host; defaults to `https://eu.i.posthog.com`. |
+| `SENTRY_DSN` | No | Enables server-only technical error reporting. `lib/sentry-server.ts` strips requests, users, breadcrumbs, contexts and extras. Scoring events contain only route, provider, model, status and failure code. |
 
 With no key at all, the offline **structure checker** runs (English only, labelled as such in
 the UI) and Arabic answers are declined with an explanation. The interview flow works end to
 end without a key, but scoring is structural, not a competency assessment.
+
+Provider precedence is **direct OpenAI → OpenRouter → Anthropic → no-key structure check**.
 
 **Changing the scoring model or provider is gated, not free:** whatever serves scores to real
 users must first pass `scripts/measure-consistency.mjs` (spread and ranking checks, including
@@ -55,6 +61,7 @@ post-processing pipeline, so results stay comparable.
 npm run dev        # local dev server
 npm run build      # production build — must pass before any push
 npm run typecheck  # tsc --noEmit — must pass before any push
+npm run test:resilience # provider, schema, malformed input and privacy failure simulations
 npm run start      # serve the production build
 ```
 
@@ -114,7 +121,7 @@ the code works.
    accents. If a transcript is too short or too garbled to judge, say so honestly and score 0
    with an explanation — never assign a low score to a garbled answer.
 3. **Nothing leaves the device without saying so.** What actually leaves: the **transcript**
-   (to `/api/score`, and onward to Anthropic when a key is set), and the **audio** when
+   (to `/api/score`, and onward to the configured AI provider when a key is set), and the **audio** when
    voice-to-text runs without confirmed on-device recognition — browser speech recognition
    sends audio to the browser vendor's service by default. The video is never uploaded.
    The UI states exactly this and offers typing instead. Two earlier versions got this
@@ -195,17 +202,31 @@ check → prep → record → review → feedback → (next question | retry) �
 
 ### Scoring (`app/api/score/route.ts` + `lib/scoring.ts`)
 
-Two interchangeable paths behind one response shape (`AnswerFeedback`):
+Four paths behind one response shape (`AnswerFeedback`):
 
-- **AI path** — `claude-opus-5` via `client.messages.parse()` with a zod schema, so the JSON
-  always validates. Uses the role's competency rubric anchors from `lib/roles.ts`.
-- **Demo path** — `demoScore()`, a deterministic heuristic scorer. Rewards specific situations,
-  first-person ownership ("I" vs "we"), concrete numbers, and a stated outcome; penalises
-  vagueness, filler and rambling. Verified to separate a weak answer (35) from a strong
-  one (93) on the same question.
+- **Direct OpenAI AI path** — production primary, `gpt-5.6-sol` via the Responses API,
+  medium reasoning, strict Zod structured output, with SDK retries and `Retry-After` handling.
+- **OpenRouter AI path** — the configured `SCORING_MODEL`, currently GPT-5.6 Sol, with strict
+  JSON schema output and server-side Zod validation.
+- **Anthropic AI path** — `claude-opus-5` via `client.messages.parse()` with the same Zod schema.
+- **No-key path** — the deterministic English-only structure checker. It is clearly labelled
+  as writing structure guidance, never as role-competency scoring. Arabic is declined fairly.
 
-Any AI error, refusal, or missing key silently falls back to the demo scorer. The UI always
-labels which one produced the score.
+**A configured AI provider may never silently fall back to a numeric structure score.** On
+429, 503, timeout, credit exhaustion, invalid JSON or schema failure, the endpoint returns a
+non-scored error. The browser retains the answer, blocks duplicate submissions, retries
+temporary failures twice with a countdown, and offers a manual retry. OpenRouter calls use
+bounded `Retry-After` handling and `require_parameters: true`. The fixed-corpus gate is paced
+below 10 RPM by default. Provider failures log only technical tags to Sentry; candidate text
+is scrubbed before an event leaves the server.
+
+**Direct OpenAI acceptance gate, 20 August 2026:** `gpt-5.6-sol`, medium reasoning,
+five runs per frozen answer, all served by the AI path. Strong English mean 99.6
+(spread 2), medium 76.8 (spread 3), weak 13.0 (spread 0), accented strong 93.0
+(spread 0), strong Arabic 96.8 (spread 3). Result: PASS. This was verified locally
+through the built production app using the new project key. Re-run against the Vercel
+deployment after `OPENAI_API_KEY` is added there; local evidence does not prove the
+production environment is configured.
 
 ---
 
