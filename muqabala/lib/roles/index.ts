@@ -3,6 +3,8 @@ import { tradesRoles } from './trades';
 import { logisticsRoles, retailRoles, facilitiesRoles } from './operations';
 import { careRoles } from './care';
 import { officeRoles } from './office';
+import { energyRoles, automotiveRoles } from './industrial';
+import { creativeRoles } from './creative';
 import { CUSTOM_ROLE_ID, buildCustomRole } from './custom';
 
 export type { Competency, Question, Role } from './shared';
@@ -17,6 +19,9 @@ export const ROLES = [
   ...facilitiesRoles,
   ...careRoles,
   ...officeRoles,
+  ...energyRoles,
+  ...automotiveRoles,
+  ...creativeRoles,
 ];
 
 export function getRole(id: string) {
