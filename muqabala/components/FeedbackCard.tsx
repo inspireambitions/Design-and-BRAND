@@ -52,7 +52,7 @@ export function FeedbackCard({
                   style={{ width: `${competency.score * 10}%` }}
                 />
               </div>
-              {competency.evidence && <p className="comp-evidence">{competency.evidence}</p>}
+              <p className="comp-evidence">{competency.evidence ?? t('noEvidence')}</p>
             </div>
           ))}
         </div>

@@ -21,6 +21,11 @@ type CompletedAnswer = {
   feedback: AnswerFeedback;
 };
 
+function estimateMinutes(role: Role): number {
+  const seconds = role.questions.reduce((s, q) => s + q.prepSeconds + q.answerSeconds, 0);
+  return Math.max(5, Math.round(seconds / 60));
+}
+
 function formatClock(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
@@ -43,6 +48,7 @@ export function InterviewFlow({ role }: { role: Role }) {
   const [interim, setInterim] = useState('');
   const [feedback, setFeedback] = useState<AnswerFeedback | null>(null);
   const [isScoring, setIsScoring] = useState(false);
+  const [scoringFailed, setScoringFailed] = useState(false);
   const [answers, setAnswers] = useState<CompletedAnswer[]>([]);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -141,6 +147,7 @@ export function InterviewFlow({ role }: { role: Role }) {
 
   const submitForScoring = useCallback(async () => {
     setIsScoring(true);
+    setScoringFailed(false);
     try {
       const response = await fetch('/api/score', {
         method: 'POST',
@@ -149,6 +156,7 @@ export function InterviewFlow({ role }: { role: Role }) {
           roleId: role.id,
           questionId: question.id,
           transcript,
+          lang,
         }),
       });
       if (!response.ok) throw new Error(`Scoring failed: ${response.status}`);
@@ -169,11 +177,12 @@ export function InterviewFlow({ role }: { role: Role }) {
         ],
         coachTip:
           lang === 'ar'
-            ? 'إجابتك لم تُفقد. اضغط "أعد هذا السؤال" للمحاولة مجدداً.'
-            : 'Your answer is not lost. Press try again to resubmit it.',
+            ? 'إجابتك لم تُفقد. اضغط "أرسل إجابتي مرة أخرى" لإعادة إرسالها كما هي.'
+            : 'Your answer is not lost. Press “Send my answer again” to resubmit exactly what you said.',
         source: 'demo',
       });
       setStage('feedback');
+      setScoringFailed(true);
     } finally {
       setIsScoring(false);
     }
@@ -318,7 +327,14 @@ export function InterviewFlow({ role }: { role: Role }) {
                 <span className="check-icon">✓</span>
                 <span>{t('expect4')}</span>
               </li>
+              <li>
+                <span className="check-icon">{estimateMinutes(role)}</span>
+                <span>{t('expectTime')}</span>
+              </li>
             </ul>
+            <p className="notice tiny" style={{ marginTop: '0.9rem' }}>
+              {t('scoringPolicy')}
+            </p>
           </div>
 
           <div className="row">
@@ -411,7 +427,7 @@ export function InterviewFlow({ role }: { role: Role }) {
                 />
               )}
               <p className="tiny" style={{ marginTop: '0.4rem' }}>
-                {wordCount} words
+                {wordCount} {t('words')}
               </p>
             </div>
 
@@ -457,9 +473,20 @@ export function InterviewFlow({ role }: { role: Role }) {
         <div className="stack">
           <FeedbackCard feedback={feedback} attempt={attemptCount} />
           <div className="row">
-            <button type="button" className="btn btn-primary" onClick={advance}>
-              {isLast ? t('finishInterview') : t('nextQuestion')}
-            </button>
+            {scoringFailed ? (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={submitForScoring}
+                disabled={isScoring}
+              >
+                {isScoring ? t('scoring') : t('resubmit')}
+              </button>
+            ) : (
+              <button type="button" className="btn btn-primary" onClick={advance}>
+                {isLast ? t('finishInterview') : t('nextQuestion')}
+              </button>
+            )}
             <button type="button" className="btn btn-quiet" onClick={retryQuestion}>
               {t('tryAgain')}
             </button>

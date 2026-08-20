@@ -4,7 +4,8 @@ export type CompetencyScore = {
   id: string;
   label: string;
   score: number; // 0-10
-  evidence: string;
+  /** Null when no line in the answer actually demonstrates this competency. */
+  evidence: string | null;
 };
 
 export type AnswerFeedback = {
@@ -46,23 +47,59 @@ function clamp(n: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, n));
 }
 
-/** Pull the most representative sentence for a competency, so feedback quotes real words. */
-function bestSentence(text: string, re: RegExp): string {
+/**
+ * Pull the sentence that actually demonstrates a competency.
+ * Returns null when nothing in the answer does — quoting an unrelated sentence as
+ * "evidence" for four different competencies looks like proof and is not.
+ */
+function bestSentence(text: string, re: RegExp): string | null {
   const sentences = text
-    .split(/(?<=[.!?])\s+|\n+/)
+    .split(/(?<=[.!?؟।])\s+|\n+/)
     .map((s) => s.trim())
     .filter((s) => s.length > 15);
-  if (sentences.length === 0) return text.slice(0, 140);
+  if (sentences.length === 0) return null;
   const scored = sentences
     .map((s) => ({ s, hits: countMatches(s, re) }))
     .sort((a, b) => b.hits - a.hits);
-  const pick = scored[0].hits > 0 ? scored[0].s : sentences[0];
+  if (scored[0].hits === 0) return null;
+  const pick = scored[0].s;
   return pick.length > 180 ? `${pick.slice(0, 177)}…` : pick;
+}
+
+/** True when the text is predominantly Arabic script. */
+export function isArabicText(text: string): boolean {
+  const arabic = (text.match(/[؀-ۿ]/g) ?? []).length;
+  const latin = (text.match(/[A-Za-z]/g) ?? []).length;
+  return arabic > 0 && arabic >= latin;
+}
+
+/**
+ * Honest refusal for Arabic answers on the heuristic path.
+ * Every pattern in this scorer is English-literal, so an Arabic answer would score
+ * near the floor no matter how good it is. Declining to score beats scoring unfairly.
+ */
+export function arabicUnavailable(questionId: string): AnswerFeedback {
+  return {
+    questionId,
+    score: 0,
+    headline: 'التقييم التلقائي بالعربية غير متاح بعد',
+    competencies: [],
+    strengths: [],
+    improvements: [
+      'إجابتك وصلت بالكامل، لكن المقيّم السريع يعمل بالإنجليزية فقط حالياً، ولا نريد أن نعطيك درجة غير عادلة.',
+      'يمكنك التدرب بالإنجليزية الآن، أو العودة قريباً عندما يصبح التقييم بالعربية جاهزاً.',
+    ],
+    coachTip:
+      'درجة خاطئة أسوأ من عدم وجود درجة. نفضّل أن نخبرك بصراحة بدلاً من تقييم إجابتك بشكل غير عادل.',
+    source: 'demo',
+  };
 }
 
 /**
  * Deterministic scorer used when no ANTHROPIC_API_KEY is configured.
  * Judges answer *content* only — never appearance, accent, or delivery speed.
+ * English only: callers must route Arabic answers to the AI path or to
+ * `arabicUnavailable` (see the Arabic gate in app/api/score/route.ts).
  */
 export function demoScore(question: Question, role: Role, transcript: string): AnswerFeedback {
   const text = transcript.trim();
@@ -135,11 +172,12 @@ export function demoScore(question: Question, role: Role, transcript: string): A
     else if (cid === 'problem_solving') evidenceRe = ACTION;
     else if (cid === 'evidence') evidenceRe = NUMBERS;
     else if (cid === 'communication') evidenceRe = OUTCOME;
+    const quote = bestSentence(text, evidenceRe);
     return {
       id: cid,
       label: def?.label ?? cid,
       score,
-      evidence: `“${bestSentence(text, evidenceRe)}”`,
+      evidence: quote ? `“${quote}”` : null,
     };
   });
 

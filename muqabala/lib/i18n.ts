@@ -8,9 +8,9 @@ export const STRINGS = {
       'Answer real interview questions on camera, get honest feedback on what you actually said, and watch your score climb. Nobody sees your practice but you.',
     startPractice: 'Start practising',
     seeProgress: 'My progress',
-    point1: 'Free first interview',
+    point1: 'Free, unlimited practice',
     point2: 'No sign-up',
-    point3: 'Nothing leaves your phone',
+    point3: 'Your video never leaves your phone',
     pickRole: 'Choose your role',
     pickRoleBody: 'Pick the job you are interviewing for. Each one has its own questions and scoring.',
     allIndustries: 'All industries',
@@ -21,7 +21,7 @@ export const STRINGS = {
     // device check
     beforeStart: 'Before we start',
     beforeStartBody:
-      'This is practice. Nothing here is sent to an employer, and nothing is recorded to a server — your video stays on this device.',
+      'This is practice. Nothing here is sent to an employer. Your video and audio never leave this device — only the text of your answer is sent to be scored, and it is not stored afterwards.',
     checkCamera: 'Camera',
     checkMic: 'Microphone',
     checkTranscript: 'Live transcript',
@@ -35,6 +35,11 @@ export const STRINGS = {
     expect2: 'Preparation time before each question',
     expect3: 'Retake any question as many times as you like',
     expect4: 'Feedback and a score after every answer',
+    expectTime: 'minutes in total, at your own pace',
+    scoringPolicy:
+      'We score what you say — never how you look or sound. No face scoring, no emotion detection, and no marks lost for accent, pronunciation or grammar.',
+    noEvidence: 'We could not find a specific line in your answer that showed this.',
+    resubmit: 'Send my answer again',
     imReady: "I'm ready",
     skipCheck: 'Skip and type my answers',
 
@@ -53,6 +58,7 @@ export const STRINGS = {
     getFeedback: 'Get my feedback',
     scoring: 'Reading your answer…',
     tip: 'Tip',
+    words: 'words',
 
     // feedback
     yourScore: 'Your score',
@@ -103,9 +109,9 @@ export const STRINGS = {
       'أجب على أسئلة مقابلات حقيقية أمام الكاميرا، واحصل على ملاحظات صادقة حول ما قلته فعلاً، وشاهد درجتك ترتفع. لا أحد يرى تدريبك سواك.',
     startPractice: 'ابدأ التدريب',
     seeProgress: 'تقدمي',
-    point1: 'المقابلة الأولى مجانية',
+    point1: 'تدريب مجاني بلا حدود',
     point2: 'بدون تسجيل',
-    point3: 'لا شيء يغادر جهازك',
+    point3: 'الفيديو لا يغادر هاتفك أبداً',
     pickRole: 'اختر وظيفتك',
     pickRoleBody: 'اختر الوظيفة التي تجري مقابلة لها. لكل وظيفة أسئلتها ومعايير تقييمها.',
     allIndustries: 'جميع القطاعات',
@@ -115,7 +121,7 @@ export const STRINGS = {
 
     beforeStart: 'قبل أن نبدأ',
     beforeStartBody:
-      'هذا تدريب. لا شيء هنا يُرسل إلى صاحب عمل، ولا يُسجَّل على أي خادم — يبقى الفيديو على جهازك.',
+      'هذا تدريب. لا شيء هنا يُرسل إلى صاحب عمل. الفيديو والصوت لا يغادران هذا الجهاز أبداً — يُرسل نص إجابتك فقط ليتم تقييمه، ولا يُحفظ بعد ذلك.',
     checkCamera: 'الكاميرا',
     checkMic: 'الميكروفون',
     checkTranscript: 'النص المباشر',
@@ -129,6 +135,11 @@ export const STRINGS = {
     expect2: 'وقت للتحضير قبل كل سؤال',
     expect3: 'أعد أي سؤال بقدر ما تشاء',
     expect4: 'ملاحظات ودرجة بعد كل إجابة',
+    expectTime: 'دقيقة إجمالاً، وبالوتيرة التي تناسبك',
+    scoringPolicy:
+      'نقيّم ما تقوله — لا شكلك ولا نبرة صوتك. لا تحليل للوجه، ولا لتعابير المشاعر، ولا خصم بسبب اللكنة أو النطق أو قواعد اللغة.',
+    noEvidence: 'لم نجد جملة محددة في إجابتك تُظهر هذا الجانب.',
+    resubmit: 'أرسل إجابتي مرة أخرى',
     imReady: 'أنا جاهز',
     skipCheck: 'تخطَّ واكتب إجاباتي',
 
@@ -146,6 +157,7 @@ export const STRINGS = {
     getFeedback: 'احصل على ملاحظاتي',
     scoring: 'نقرأ إجابتك…',
     tip: 'نصيحة',
+    words: 'كلمة',
 
     yourScore: 'درجتك',
     whatWorked: 'ما نجح',

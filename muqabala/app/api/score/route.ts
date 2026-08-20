@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { z } from 'zod';
 import { getRole } from '@/lib/roles';
-import { demoScore, type AnswerFeedback } from '@/lib/scoring';
+import { arabicUnavailable, demoScore, isArabicText, type AnswerFeedback } from '@/lib/scoring';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -29,15 +29,18 @@ You score the CONTENT of an answer only. You never judge, comment on, or score: 
 
 The transcript you receive comes from automatic speech recognition and may contain transcription errors. Never penalise a candidate for garbled words — judge the substance you can make out. If the transcript is too garbled or too short to judge fairly, say so honestly in the headline and give a score of 0.
 
+Candidates may answer in English or Arabic. Score an Arabic answer against exactly the same rubric, to exactly the same standard, as an English one — and write all of your feedback in the same language the candidate answered in.
+
 Your job is to make the candidate feel capable and clear about what to do next. Be warm, direct and concrete. Never be harsh, never be flattering. Every improvement you name must be actionable in their next attempt.
 
-Score each listed competency 0-10 against its rubric anchor, and quote the candidate's actual words as evidence for each one. The overall score is 0-100.`;
+Score each listed competency 0-10 against its rubric anchor, and quote the candidate's actual words as evidence for each one. If no part of the answer demonstrates a competency, set its evidence to an empty string rather than quoting an unrelated line. The overall score is 0-100.`;
 
 export async function POST(request: Request) {
   let body: {
     roleId?: string;
     questionId?: string;
     transcript?: string;
+    lang?: 'en' | 'ar';
   };
 
   try {
@@ -46,7 +49,7 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Invalid request body.' }, { status: 400 });
   }
 
-  const { roleId, questionId, transcript } = body;
+  const { roleId, questionId, transcript, lang } = body;
   if (!roleId || !questionId || typeof transcript !== 'string') {
     return Response.json({ error: 'roleId, questionId and transcript are required.' }, { status: 400 });
   }
@@ -57,7 +60,11 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Unknown role or question.' }, { status: 404 });
   }
 
-  const fallback = (): AnswerFeedback => demoScore(question, role, transcript);
+  // The heuristic scorer is English-only. Rather than hand an Arabic answer a
+  // near-floor score it does not deserve, decline to score it and say why.
+  const answeredInArabic = lang === 'ar' || isArabicText(transcript);
+  const fallback = (): AnswerFeedback =>
+    answeredInArabic ? arabicUnavailable(question.id) : demoScore(question, role, transcript);
 
   if (!process.env.ANTHROPIC_API_KEY) {
     return Response.json({ feedback: fallback() });
@@ -81,9 +88,10 @@ export async function POST(request: Request) {
         {
           role: 'user',
           content: `Role: ${role.title} (${role.industry}, ${role.level} level, Gulf market)
+Language the candidate is using: ${answeredInArabic ? 'Arabic — write all feedback in Arabic' : 'English'}
 
 Interview question asked:
-"${question.text}"
+"${answeredInArabic ? question.textAr : question.text}"
 
 Competencies to score, with their rubric anchors:
 ${rubric}
@@ -111,7 +119,7 @@ Score this answer. For each competency, quote the candidate's own words as evide
         id: c.id,
         label: c.label,
         score: Math.round(c.score),
-        evidence: c.evidence,
+        evidence: c.evidence.trim() ? c.evidence : null,
       })),
       strengths: parsed.strengths.slice(0, 3),
       improvements: parsed.improvements.slice(0, 3),

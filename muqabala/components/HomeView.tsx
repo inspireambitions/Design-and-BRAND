@@ -99,9 +99,12 @@ export function HomeView({ roles }: { roles: Role[] }) {
         </div>
       </section>
 
-      <footer className="foot">
-        <span>{t('privacy')}</span>
-        <span>Muqabala · Inspire Ambitions</span>
+      <footer className="foot" style={{ flexDirection: 'column', gap: '0.5rem' }}>
+        <span>{t('scoringPolicy')}</span>
+        <div className="row-between" style={{ width: '100%' }}>
+          <span>{t('privacy')}</span>
+          <span>Muqabala · Inspire Ambitions</span>
+        </div>
       </footer>
     </div>
   );
