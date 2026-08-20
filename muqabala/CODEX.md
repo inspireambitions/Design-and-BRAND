@@ -32,7 +32,19 @@ as its entry point.
 
 | Variable | Required? | Effect |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | No | Present → answers scored by Claude (`claude-opus-5`). Absent → the built-in heuristic scorer runs and the UI says so. The app is fully functional either way. |
+| `OPENROUTER_API_KEY` | No | **Primary provider (approved architecture).** Present → answers scored via OpenRouter using `SCORING_MODEL`. Takes precedence over the Anthropic key. |
+| `SCORING_MODEL` | No | OpenRouter model slug for scoring. Defaults to `openai/gpt-5.6` — verify the exact slug at openrouter.ai/models. Changing the model requires re-running `scripts/measure-consistency.mjs` before trusting its scores. |
+| `ANTHROPIC_API_KEY` | No | Alternative provider: direct Anthropic API (`claude-opus-5`). Used only when no OpenRouter key is set. |
+
+With no key at all, the offline **structure checker** runs (English only, labelled as such in
+the UI) and Arabic answers are declined with an explanation. The interview flow works end to
+end without a key, but scoring is structural, not a competency assessment.
+
+**Changing the scoring model or provider is gated, not free:** whatever serves scores to real
+users must first pass `scripts/measure-consistency.mjs` (spread and ranking checks, including
+the accented-answer fairness check) against a deployment using that model. The provider
+abstraction lives in `app/api/score/route.ts` — both paths share one prompt and one
+post-processing pipeline, so results stay comparable.
 
 **Commands**
 

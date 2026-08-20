@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { z } from 'zod';
-import { getRole } from '@/lib/roles';
+import { getRole, type Question, type Role } from '@/lib/roles';
 import { arabicUnavailable, structureCheck, isArabicText, type AnswerFeedback } from '@/lib/scoring';
 
 export const runtime = 'nodejs';
@@ -55,6 +55,39 @@ const FeedbackSchema = z.object({
   unscorable: z.boolean(),
 });
 
+type ParsedFeedback = z.infer<typeof FeedbackSchema>;
+
+/**
+ * Hand-written JSON Schema mirror of FeedbackSchema, for providers that take
+ * OpenAI-style `response_format: json_schema`. Strict mode requires
+ * `additionalProperties: false` and every property listed in `required`.
+ */
+const FEEDBACK_JSON_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['headline', 'competencies', 'strengths', 'improvements', 'coach_tip', 'unscorable'],
+  properties: {
+    headline: { type: 'string' },
+    competencies: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['id', 'score', 'evidence'],
+        properties: {
+          id: { type: 'string' },
+          score: { type: 'number' },
+          evidence: { type: 'string' },
+        },
+      },
+    },
+    strengths: { type: 'array', items: { type: 'string' } },
+    improvements: { type: 'array', items: { type: 'string' } },
+    coach_tip: { type: 'string' },
+    unscorable: { type: 'boolean' },
+  },
+} as const;
+
 const SYSTEM_PROMPT = `You are an interview coach for job seekers applying to roles in the Gulf (UAE, Saudi Arabia, Qatar, Oman, Bahrain, Kuwait). Many of your users are from the Philippines, India, Pakistan, Nepal, Kenya, Nigeria, Egypt and Lebanon, and English may be their second or third language.
 
 You score the CONTENT of an answer only. You never judge, comment on, or score: accent, pronunciation, grammar fluency, appearance, gender, nationality, age, or speaking speed. A candidate with imperfect English who tells a specific, well-structured story must score HIGHER than a fluent speaker who is vague.
@@ -68,6 +101,101 @@ Your job is to make the candidate feel capable and clear about what to do next. 
 Score each listed competency 0-10 against its rubric anchor, using the exact competency ids given to you and no others. Quote the candidate's actual words as evidence for each one. If no part of the answer demonstrates a competency, set its evidence to an empty string rather than quoting an unrelated line.
 
 Set unscorable to true only when the transcript is too garbled or too short to judge fairly. When you do, explain why in the headline and improvements, and do not invent scores.`;
+
+function buildUserPrompt(options: {
+  role: Role;
+  question: Question;
+  transcript: string;
+  jobTitle: string;
+  answeredInArabic: boolean;
+}): string {
+  const { role, question, transcript, jobTitle, answeredInArabic } = options;
+  const rubric = question.competencies
+    .map((cid) => {
+      const c = role.competencies.find((x) => x.id === cid);
+      return c ? `- ${c.id} ("${c.label}"): ${c.anchor}` : `- ${cid}`;
+    })
+    .join('\n');
+
+  return `Role: ${jobTitle} (${role.industry}, ${role.level} level, Gulf market)
+Language the candidate is using: ${answeredInArabic ? 'Arabic — write all feedback in Arabic' : 'English'}
+
+Interview question asked:
+"${answeredInArabic ? question.textAr : question.text}"
+
+Competencies to score, with their rubric anchors:
+${rubric}
+
+Candidate's transcribed answer:
+"""
+${transcript}
+"""
+
+Score this answer. Return one entry per competency id listed above, using those exact ids. Quote the candidate's own words as evidence. Give 1-3 strengths and 1-3 improvements, each one specific to what they actually said. The coach_tip is the single highest-leverage change they should make before their next attempt.`;
+}
+
+/**
+ * OpenRouter path (OpenAI-compatible API). Model comes from SCORING_MODEL so it
+ * can be changed — or A/B compared with the consistency gate — without a deploy.
+ * Returns null when the provider fails or produces output that fails validation;
+ * the caller falls back rather than trusting a malformed result.
+ */
+async function scoreViaOpenRouter(userPrompt: string): Promise<ParsedFeedback | null> {
+  const model = process.env.SCORING_MODEL || 'openai/gpt-5.6';
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': 'https://muqabala.app',
+      'X-Title': 'Muqabala Coach',
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: 4000,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: userPrompt },
+      ],
+      response_format: {
+        type: 'json_schema',
+        json_schema: { name: 'interview_feedback', strict: true, schema: FEEDBACK_JSON_SCHEMA },
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    console.error(`OpenRouter ${model} returned ${response.status}: ${await response.text()}`);
+    return null;
+  }
+
+  const data = (await response.json()) as {
+    choices?: { message?: { content?: string } }[];
+  };
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) return null;
+
+  const parsed = FeedbackSchema.safeParse(JSON.parse(content));
+  if (!parsed.success) {
+    console.error('OpenRouter output failed validation:', parsed.error.message);
+    return null;
+  }
+  return parsed.data;
+}
+
+/** Anthropic path, kept as the alternative provider. */
+async function scoreViaAnthropic(userPrompt: string): Promise<ParsedFeedback | null> {
+  const client = new Anthropic();
+  const response = await client.messages.parse({
+    model: 'claude-opus-5',
+    max_tokens: 4000,
+    system: SYSTEM_PROMPT,
+    output_config: { format: zodOutputFormat(FeedbackSchema) },
+    messages: [{ role: 'user', content: userPrompt }],
+  });
+  if (response.stop_reason === 'refusal' || !response.parsed_output) return null;
+  return response.parsed_output;
+}
 
 export async function POST(request: Request) {
   let body: {
@@ -110,58 +238,30 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Unknown role or question.' }, { status: 404 });
   }
 
-  // The heuristic scorer is English-only. Rather than hand an Arabic answer a
+  // The structure checker is English-only. Rather than hand an Arabic answer a
   // near-floor score it does not deserve, decline to score it and say why.
   const answeredInArabic = lang === 'ar' || isArabicText(transcript);
   const fallback = (): AnswerFeedback =>
     answeredInArabic ? arabicUnavailable(question.id) : structureCheck(question, transcript);
 
-  if (!process.env.ANTHROPIC_API_KEY) {
+  const useOpenRouter = Boolean(process.env.OPENROUTER_API_KEY);
+  const useAnthropic = !useOpenRouter && Boolean(process.env.ANTHROPIC_API_KEY);
+
+  if (!useOpenRouter && !useAnthropic) {
     return Response.json({ feedback: fallback() });
   }
 
   try {
-    const client = new Anthropic();
     const jobTitle = roleTitle?.trim() || role.title;
-    const rubric = question.competencies
-      .map((cid) => {
-        const c = role.competencies.find((x) => x.id === cid);
-        return c ? `- ${c.id} ("${c.label}"): ${c.anchor}` : `- ${cid}`;
-      })
-      .join('\n');
+    const userPrompt = buildUserPrompt({ role, question, transcript, jobTitle, answeredInArabic });
 
-    const response = await client.messages.parse({
-      model: 'claude-opus-5',
-      max_tokens: 4000,
-      system: SYSTEM_PROMPT,
-      output_config: { format: zodOutputFormat(FeedbackSchema) },
-      messages: [
-        {
-          role: 'user',
-          content: `Role: ${jobTitle} (${role.industry}, ${role.level} level, Gulf market)
-Language the candidate is using: ${answeredInArabic ? 'Arabic — write all feedback in Arabic' : 'English'}
+    const parsed = useOpenRouter
+      ? await scoreViaOpenRouter(userPrompt)
+      : await scoreViaAnthropic(userPrompt);
 
-Interview question asked:
-"${answeredInArabic ? question.textAr : question.text}"
-
-Competencies to score, with their rubric anchors:
-${rubric}
-
-Candidate's transcribed answer:
-"""
-${transcript}
-"""
-
-Score this answer. Return one entry per competency id listed above, using those exact ids. Quote the candidate's own words as evidence. Give 1-3 strengths and 1-3 improvements, each one specific to what they actually said. The coach_tip is the single highest-leverage change they should make before their next attempt.`,
-        },
-      ],
-    });
-
-    if (response.stop_reason === 'refusal' || !response.parsed_output) {
+    if (!parsed) {
       return Response.json({ feedback: fallback() });
     }
-
-    const parsed = response.parsed_output;
 
     // Only competencies this question actually asks for are accepted, and their
     // labels come from our rubric, not from the model. Anything else is dropped.
@@ -216,7 +316,7 @@ Score this answer. Return one entry per competency id listed above, using those 
 
     return Response.json({ feedback });
   } catch (error) {
-    console.error('AI scoring failed, using demo scorer:', error);
+    console.error('AI scoring failed, using structure checker:', error);
     return Response.json({ feedback: fallback() });
   }
 }
