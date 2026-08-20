@@ -123,7 +123,15 @@ muqabala/
 │   ├── InterviewFlow.tsx       # the state machine — the heart of the app
 │   ├── FeedbackCard.tsx, ScoreRing.tsx
 └── lib/
-    ├── roles.ts                # 12 roles × competencies × questions (EN + AR)
+    ├── roles/                  # the catalogue, split by industry group
+    │   ├── shared.ts           # types, competency sets, q() helper, opener/closer
+    │   ├── hospitality.ts      # hospitality, F&B, aviation
+    │   ├── trades.ts           # construction and trades
+    │   ├── operations.ts       # logistics, retail, facilities, beauty
+    │   ├── care.ts             # healthcare and domestic care
+    │   ├── office.ts           # corporate, finance, sales, education, tech
+    │   ├── custom.ts           # the catch-all interview for any job
+    │   └── index.ts            # assembles ROLES, getRole, INDUSTRIES
     ├── scoring.ts              # types + the deterministic heuristic scorer
     ├── speech.ts               # Web Speech API dictation wrapper
     ├── i18n.ts                 # all UI strings, EN + AR
@@ -132,6 +140,17 @@ muqabala/
 
 **Stack:** Next.js (App Router) + TypeScript + hand-written CSS (no Tailwind — one less
 build dependency). `@anthropic-ai/sdk` + `zod` for structured scoring output.
+
+**Adding a role** is pure data: add an entry to the right file in `lib/roles/`, reusing a
+shared competency set and the shared `opener`/`closer`. Give it three role-specific questions
+with real English and Arabic text. Prioritise by how many people actually interview for the
+job in the Gulf, not by even coverage across industries — the catalogue deliberately leans
+towards trades, hospitality, logistics and care because that is where the employment mass is.
+
+**The catch-all** (`lib/roles/custom.ts`, surfaced at `/practice/custom`) exists because no
+catalogue can list every job. Never remove it in favour of "just adding more roles" — it is
+what stops a candidate hitting a dead end. Its next evolution is Daniel Chen's JD→interview
+generator: paste a job advert instead of typing a title.
 
 ### The interview state machine (`components/InterviewFlow.tsx`)
 
@@ -165,7 +184,7 @@ labels which one produced the score.
 
 ## 5. Known gaps / roadmap
 
-**Shipped:** 12 roles across 11 industries, bilingual EN/AR with RTL, camera + live transcript,
+**Shipped:** 39 roles across 17 industries plus a catch-all interview for any job, bilingual EN/AR with RTL, camera + live transcript,
 unlimited retries, evidence-based feedback, progress tracking, works with or without an API key.
 
 **Deliberately not built yet** (in rough priority order):
