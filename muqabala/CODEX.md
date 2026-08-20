@@ -85,16 +85,26 @@ the code works.
 1b. **Never score a language you cannot score fairly.** If a scoring path cannot judge a
    language properly, decline with an explanation in that language (see `arabicUnavailable`
    in `lib/scoring.ts`). An unfair score is worse than no score.
+1d. **Never claim to measure what you cannot measure.** The offline path is a *structure
+   check* (`structureCheck` in `lib/scoring.ts`), not a competency assessment, and the UI
+   says so. It must also refuse text that games it — a checker that ranks keyword soup above
+   a real answer destroys trust the moment a candidate notices. Never present its output as
+   role competence.
+1e. **Declining is not a zero.** `AnswerFeedback.status` is `'scored' | 'unscored'`. When
+   unscored, render no score at all. A zero ring tells a candidate they failed when nothing
+   was assessed.
 1c. **Never fabricate evidence.** `CompetencyScore.evidence` is nullable. If nothing in the
    answer demonstrates a competency, return null — never quote an unrelated sentence.
 2. **Never penalise a candidate for a bad transcript.** Speech recognition is worse on some
    accents. If a transcript is too short or too garbled to judge, say so honestly and score 0
    with an explanation — never assign a low score to a garbled answer.
-3. **Nothing leaves the device without saying so.** Video and audio never leave the device;
-   only the text transcript is sent for scoring, and onward to Anthropic when a key is set.
-   The UI says exactly this. If you ever send more, change the copy in the same commit —
-   an earlier version of this app claimed "nothing leaves your phone" while POSTing the
-   transcript, and the board caught it.
+3. **Nothing leaves the device without saying so.** What actually leaves: the **transcript**
+   (to `/api/score`, and onward to Anthropic when a key is set), and the **audio** when
+   voice-to-text runs without confirmed on-device recognition — browser speech recognition
+   sends audio to the browser vendor's service by default. The video is never uploaded.
+   The UI states exactly this and offers typing instead. Two earlier versions got this
+   wrong ("nothing leaves your phone", then "your audio never leaves this device") and both
+   were caught in review. If you change what is sent, change the copy in the same commit.
 4. **AI recommends, humans decide.** Never build automated rejection.
 5. **Feedback must be actionable and specific.** Every improvement must quote or reference
    what the candidate actually said and be doable on the next attempt. No generic advice.
