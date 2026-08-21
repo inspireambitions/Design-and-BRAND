@@ -3,6 +3,7 @@ import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import OpenAI from 'openai';
 import { zodTextFormat } from 'openai/helpers/zod';
 import { getRole, type Question, type Role } from '@/lib/roles';
+import { verifyInterview, roleFromToken } from '@/lib/interview-token';
 import { arabicUnavailable, structureCheck, isArabicText, type AnswerFeedback } from '@/lib/scoring';
 import { reportScoringFailure } from '@/lib/sentry-server';
 import {
@@ -319,7 +320,7 @@ export async function POST(request: Request) {
   if (!parsedBody.success) {
     return Response.json({ error: 'roleId, questionId and transcript are required.' }, { status: 400 });
   }
-  const { roleId, questionId, transcript, lang, roleTitle } = parsedBody.data;
+  const { roleId, questionId, transcript, lang, roleTitle, interviewToken } = parsedBody.data;
 
   if (transcript.length > MAX_TRANSCRIPT_CHARS) {
     return Response.json(
@@ -349,7 +350,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const role = getRole(roleId);
+  // A tailored interview has no catalogue entry, so its rubric arrives as a
+  // signed token. Verification happens before any field is trusted; a token
+  // that fails is treated as absent rather than as a hint.
+  const verified = interviewToken ? verifyInterview(interviewToken) : null;
+  const role = verified ? roleFromToken(verified) : getRole(roleId);
   const question = role?.questions.find((q) => q.id === questionId);
   if (!role || !question) {
     return Response.json({ error: 'Unknown role or question.' }, { status: 404 });

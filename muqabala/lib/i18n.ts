@@ -74,7 +74,7 @@ export const STRINGS = {
     customStart: 'Start my interview',
     jdLabel: 'Paste the job advert (optional)',
     jdPlaceholder: 'Paste the full job description here — duties, requirements, systems, shift pattern…',
-    jdHint: 'Optional. Paste the advert and every question will come from that specific job, the way the real interviewer would ask them.',
+    jdHint: 'Optional. Paste the advert and every question will come from that specific job. The advert and your job title are sent to our AI provider to write the questions.',
     jdTooShort: 'A little more of the advert and we can build the exact interview for this job.',
     jdReady: 'Good — your questions will be built from this advert.',
     jdLinkNotSupported:
@@ -84,6 +84,7 @@ export const STRINGS = {
     jdBuildingHint: 'Reading the advert and writing your questions. This takes up to about half a minute.',
     tailoredBadge: 'Built from your job advert',
     genericBadge: 'General interview',
+    genericWhy: 'We could not build questions from that advert this time, so this is our general interview. It still works for any job.',
     rateTitle: 'How was that?',
     rateBody: 'This is a test version. Your answer here tells us whether it is actually helping.',
     rateUseful: 'How useful was this practice?',
@@ -145,6 +146,9 @@ export const STRINGS = {
     practiceAgain: 'Practise this interview again',
     tryAnotherRole: 'Try another role',
     savedLocally: 'Saved on this device so you can track your improvement.',
+    noScoreTitle: 'We could not score this interview',
+    noScoreBody:
+      'None of your answers were scored, so there is no result to show. Your answers and feedback are below. You can try the interview again whenever you are ready.',
     reportTitle: 'Interview practice report',
     saveReport: 'Save as PDF',
     copyReport: 'Copy report',
@@ -240,7 +244,7 @@ export const STRINGS = {
     customStart: 'ابدأ مقابلتي',
     jdLabel: 'الصق إعلان الوظيفة (اختياري)',
     jdPlaceholder: 'الصق وصف الوظيفة كاملاً هنا — المهام والمتطلبات والأنظمة ونظام الدوام…',
-    jdHint: 'اختياري. الصق الإعلان وستأتي كل الأسئلة من تلك الوظيفة تحديداً، تماماً كما سيسألك المُحاور الحقيقي.',
+    jdHint: 'اختياري. الصق الإعلان وستأتي كل الأسئلة من تلك الوظيفة. يُرسل الإعلان والمسمى الوظيفي إلى مزود الذكاء الاصطناعي لكتابة الأسئلة.',
     jdTooShort: 'أضف المزيد من الإعلان لنتمكن من بناء المقابلة الدقيقة لهذه الوظيفة.',
     jdReady: 'ممتاز — ستُبنى أسئلتك من هذا الإعلان.',
     jdLinkNotSupported:
@@ -250,6 +254,7 @@ export const STRINGS = {
     jdBuildingHint: 'نقرأ الإعلان ونكتب أسئلتك. يستغرق هذا حتى نصف دقيقة تقريباً.',
     tailoredBadge: 'مبنية من إعلان وظيفتك',
     genericBadge: 'مقابلة عامة',
+    genericWhy: 'لم نتمكن من بناء أسئلة من ذلك الإعلان هذه المرة، لذا هذه مقابلتنا العامة. وهي تصلح لأي وظيفة.',
     rateTitle: 'كيف كانت التجربة؟',
     rateBody: 'هذه نسخة تجريبية. إجابتك هنا تخبرنا إن كانت تساعد فعلاً.',
     rateUseful: 'ما مدى فائدة هذا التدريب؟',
@@ -308,6 +313,9 @@ export const STRINGS = {
     practiceAgain: 'تدرّب على هذه المقابلة مرة أخرى',
     tryAnotherRole: 'جرّب وظيفة أخرى',
     savedLocally: 'محفوظ على هذا الجهاز لتتابع تحسّنك.',
+    noScoreTitle: 'لم نتمكن من تقييم هذه المقابلة',
+    noScoreBody:
+      'لم يتم تقييم أي من إجاباتك، لذا لا توجد نتيجة لعرضها. إجاباتك والملاحظات موجودة أدناه. يمكنك إعادة المقابلة متى شئت.',
     reportTitle: 'تقرير التدرب على المقابلة',
     saveReport: 'احفظ كـ PDF',
     copyReport: 'انسخ التقرير',

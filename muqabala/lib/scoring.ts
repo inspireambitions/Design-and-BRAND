@@ -44,7 +44,8 @@ export type Attempt = {
   roleId: string;
   roleTitle: string;
   startedAt: string;
-  overallScore: number;
+  /** Null when no answer in the interview was scored. */
+  overallScore: number | null;
   answers: { questionId: string; questionText: string; transcript: string; feedback: AnswerFeedback }[];
   rating?: AttemptRating;
 };
@@ -332,8 +333,12 @@ export function structureCheck(question: Question, transcript: string): AnswerFe
   };
 }
 
-export function overallFromAnswers(answers: { feedback: AnswerFeedback }[]): number {
+/**
+ * Null when no answer was scored at all. A zero would read as "you failed",
+ * when in fact nothing was ever judged — a distinction the candidate is owed.
+ */
+export function overallFromAnswers(answers: { feedback: AnswerFeedback }[]): number | null {
   const scored = answers.filter((a) => a.feedback.status === 'scored');
-  if (scored.length === 0) return 0;
+  if (scored.length === 0) return null;
   return Math.round(scored.reduce((s, a) => s + a.feedback.score, 0) / scored.length);
 }

@@ -60,11 +60,13 @@ function formatClock(seconds: number): string {
 /** The whole interview as plain text — copyable, sendable, readable anywhere. */
 function buildReportText(
   roleTitle: string,
-  overall: number,
+  overall: number | null,
   answers: CompletedAnswer[],
   labels: { report: string; score: string; question: string; yourAnswer: string; worked: string; improve: string },
 ): string {
-  const lines: string[] = [`${labels.report} — ${roleTitle}`, `${labels.score}: ${overall}/100`, ''];
+  const lines: string[] = [`${labels.report} — ${roleTitle}`];
+  if (overall !== null) lines.push(`${labels.score}: ${overall}/100`);
+  lines.push('');
   answers.forEach((a, i) => {
     lines.push(`${labels.question} ${i + 1}: ${a.questionText}`);
     if (a.feedback.status === 'scored') lines.push(`${labels.score}: ${a.feedback.score}/100`);
@@ -80,12 +82,15 @@ export function InterviewFlow({
   role,
   customTitle,
   tailored = false,
+  interviewToken,
 }: {
   role: Role;
   /** Job title typed by the candidate when practising a role not in the catalogue. */
   customTitle?: string;
   /** True when the questions were generated from a pasted job advert. */
   tailored?: boolean;
+  /** Signed rubric that lets the server score a generated interview. */
+  interviewToken?: string;
 }) {
   const { lang, t } = useLang();
 
@@ -287,6 +292,7 @@ export function InterviewFlow({
           transcript,
           lang,
           roleTitle: customTitle,
+          interviewToken,
         }),
       });
       if (!response.ok) {
@@ -329,7 +335,7 @@ export function InterviewFlow({
       scoringInFlightRef.current = false;
       setIsScoring(false);
     }
-  }, [customTitle, lang, question.id, role.id, transcript]);
+  }, [customTitle, interviewToken, lang, question.id, role.id, transcript]);
 
   useEffect(() => {
     if (retrySeconds === null) return;
@@ -366,6 +372,11 @@ export function InterviewFlow({
     };
     const nextAnswers = [...answers, completed];
     setAnswers(nextAnswers);
+    // Release this answer's recording now, including on the final question.
+    if (playbackUrl) {
+      URL.revokeObjectURL(playbackUrl);
+      setPlaybackUrl(null);
+    }
     setFeedback(null);
     setScoringError(null);
     setRetrySeconds(null);
@@ -382,7 +393,7 @@ export function InterviewFlow({
       setSecondsLeft(role.questions[index + 1].prepSeconds);
       setStage('prep');
     }
-  }, [answers, feedback, index, isLast, question.id, questionText, role.questions, transcript]);
+  }, [answers, feedback, index, isLast, playbackUrl, question.id, questionText, role.questions, transcript]);
 
   // Persist the finished interview once, when results are shown.
   useEffect(() => {
@@ -402,7 +413,7 @@ export function InterviewFlow({
     track('interview_completed', {
       role_id: role.id,
       lang,
-      overall_score: attempt.overallScore,
+      overall_score: attempt.overallScore ?? undefined,
       questions_answered: attempt.answers.length,
       scoring_source: attempt.answers[0]?.feedback.source ?? 'unknown',
     });
@@ -807,17 +818,26 @@ export function InterviewFlow({
         <div className="stack-lg">
           <div className="card stack">
             <p className="eyebrow">{t('interviewComplete')}</p>
-            <div className="score-head">
-              <ScoreRing value={overallFromAnswers(answers)} />
+            {overallFromAnswers(answers) !== null ? (
+              <div className="score-head">
+                <ScoreRing value={overallFromAnswers(answers) ?? 0} />
+                <div>
+                  <h2 style={{ fontSize: '1.4rem' }}>
+                    {t('overallScore')}: {overallFromAnswers(answers)}/100
+                  </h2>
+                  <p className="muted" style={{ marginTop: '0.3rem' }}>
+                    {t('resultsBody')}
+                  </p>
+                </div>
+              </div>
+            ) : (
               <div>
-                <h2 style={{ fontSize: '1.4rem' }}>
-                  {t('overallScore')}: {overallFromAnswers(answers)}/100
-                </h2>
+                <h2 style={{ fontSize: '1.3rem' }}>{t('noScoreTitle')}</h2>
                 <p className="muted" style={{ marginTop: '0.3rem' }}>
-                  {t('resultsBody')}
+                  {t('noScoreBody')}
                 </p>
               </div>
-            </div>
+            )}
             <p className="report-meta">
               {role.title} · {new Date().toLocaleDateString()}
             </p>
@@ -854,7 +874,11 @@ export function InterviewFlow({
             <p className="tiny no-print">{t('saveReportHint')}</p>
           </div>
 
-          {savedAttempt && <RatingCard attempt={savedAttempt} />}
+          {savedAttempt && (
+            <div className="no-print">
+              <RatingCard attempt={savedAttempt} />
+            </div>
+          )}
 
           {answers.map((answer, i) => (
             <div key={`${answer.questionId}-${i}`} className="stack-sm">
@@ -874,7 +898,7 @@ export function InterviewFlow({
             </div>
           ))}
 
-          <div className="row">
+          <div className="row no-print">
             <Link
               href={`/practice/${role.id}`}
               className="btn btn-primary"

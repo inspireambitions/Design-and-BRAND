@@ -19,10 +19,11 @@ export function CustomRoleStart() {
   const [jobText, setJobText] = useState('');
   const [role, setRole] = useState<Role | null>(null);
   const [tailored, setTailored] = useState(false);
+  const [token, setToken] = useState<string | undefined>(undefined);
   const [building, setBuilding] = useState(false);
 
   if (role) {
-    return <InterviewFlow role={role} customTitle={role.title} tailored={tailored} />;
+    return <InterviewFlow role={role} customTitle={role.title} tailored={tailored} interviewToken={token} />;
   }
 
   const trimmedTitle = title.trim();
@@ -43,8 +44,9 @@ export function CustomRoleStart() {
         }),
       });
       if (!response.ok) throw new Error(String(response.status));
-      const data = (await response.json()) as { role: Role; tailored: boolean };
+      const data = (await response.json()) as { role: Role; tailored: boolean; token?: string };
       setTailored(Boolean(data.tailored));
+      setToken(data.token);
       setRole(data.role);
     } catch {
       // Never strand the candidate: fall back to the generic interview.

@@ -12,9 +12,10 @@ type RoleGroup = {
   roleId: string;
   roleTitle: string;
   attempts: Attempt[];
-  best: number;
-  first: number;
-  latest: number;
+  /** Null when this role has no scored attempt yet. */
+  best: number | null;
+  first: number | null;
+  latest: number | null;
 };
 
 export function ProgressView() {
@@ -37,13 +38,19 @@ export function ProgressView() {
     return Array.from(byRole.entries()).map(([roleId, list]) => {
       // loadAttempts returns newest first; oldest is the first attempt.
       const chronological = [...list].reverse();
+      const scored = list.map((a) => a.overallScore).filter((n): n is number => n !== null);
+      const scoredChronological = chronological
+        .map((a) => a.overallScore)
+        .filter((n): n is number => n !== null);
       return {
         roleId,
         roleTitle: list[0].roleTitle,
         attempts: list,
-        best: Math.max(...list.map((a) => a.overallScore)),
-        first: chronological[0].overallScore,
-        latest: chronological[chronological.length - 1].overallScore,
+        // Unscored interviews carry no number; they must not drag an average
+        // down or masquerade as a zero in the candidate's own history.
+        best: scored.length ? Math.max(...scored) : null,
+        first: scoredChronological.length ? scoredChronological[0] : null,
+        latest: scoredChronological.length ? scoredChronological[scoredChronological.length - 1] : null,
       };
     });
   }, [attempts]);
@@ -77,12 +84,14 @@ export function ProgressView() {
         )}
 
         {groups.map((group) => {
-          const delta = group.latest - group.first;
-          const deltaClass = delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat';
+          // With no scored attempt there is no trend to report.
+          const delta =
+            group.latest !== null && group.first !== null ? group.latest - group.first : null;
+          const deltaClass = delta === null ? 'flat' : delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat';
           return (
             <div key={group.roleId} className="card stack">
               <div className="score-head">
-                <ScoreRing value={group.best} />
+                <ScoreRing value={group.best ?? 0} />
                 <div>
                   <h2 style={{ fontSize: '1.2rem' }}>{group.roleTitle}</h2>
                   <div className="row" style={{ marginTop: '0.4rem', gap: '0.4rem' }}>
@@ -92,7 +101,7 @@ export function ProgressView() {
                     <span className="chip">
                       {group.attempts.length} {t('attempts')}
                     </span>
-                    {group.attempts.length > 1 && (
+                    {group.attempts.length > 1 && delta !== null && (
                       <span className={`chip ${delta > 0 ? 'chip-good' : delta < 0 ? 'chip-crit' : ''}`}>
                         {t('improvement')} {delta > 0 ? '+' : ''}
                         {delta}
@@ -113,7 +122,7 @@ export function ProgressView() {
                         minute: '2-digit',
                       })}
                     </span>
-                    <span className="comp-score">{attempt.overallScore}/100</span>
+                    <span className="comp-score">{attempt.overallScore === null ? '—' : `${attempt.overallScore}/100`}</span>
                     <span className={`delta ${deltaClass}`}>
                       {attempt.answers.length} {t('questions')}
                     </span>

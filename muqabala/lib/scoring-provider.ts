@@ -7,6 +7,8 @@ export const ScoreRequestSchema = z
     transcript: z.string(),
     lang: z.enum(['en', 'ar']).optional(),
     roleTitle: z.string().max(160).optional(),
+    /** Signed rubric for an interview built from a pasted job advert. */
+    interviewToken: z.string().max(64_000).optional(),
   })
   .strict();
 

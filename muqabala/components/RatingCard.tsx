@@ -25,7 +25,7 @@ export function RatingCard({ attempt }: { attempt: Attempt }) {
       role_id: attempt.roleId,
       stars: rating.stars,
       confidence: rating.confidence,
-      overall_score: attempt.overallScore,
+      overall_score: attempt.overallScore ?? undefined,
     });
     setSaved(true);
   };
@@ -43,7 +43,7 @@ export function RatingCard({ attempt }: { attempt: Attempt }) {
   const summary = [
     `Muqabala test result`,
     `Role: ${attempt.roleTitle}`,
-    `Score: ${attempt.overallScore}/100`,
+    attempt.overallScore === null ? 'Score: not scored' : `Score: ${attempt.overallScore}/100`,
     `Questions answered: ${attempt.answers.length}`,
     stars > 0 ? `Usefulness: ${stars}/5` : null,
     confidence ? `Feels: ${confidence} ready` : null,
