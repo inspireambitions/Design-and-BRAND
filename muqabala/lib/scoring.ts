@@ -74,10 +74,22 @@ function clamp(n: number, lo: number, hi: number): number {
  * "evidence" for four different competencies looks like proof and is not.
  */
 function bestSentence(text: string, re: RegExp): string | null {
-  const sentences = text
+  let sentences = text
     .split(/(?<=[.!?؟।])\s+|\n+/)
     .map((s) => s.trim())
     .filter((s) => s.length > 15);
+
+  // A dictated answer may arrive as one long stream with no punctuation to
+  // split on. Fall back to word-run chunks so evidence can still be quoted
+  // back to the candidate rather than silently disappearing.
+  if (sentences.length <= 1) {
+    const words = text.split(/\s+/).filter(Boolean);
+    if (words.length > 24) {
+      const chunks: string[] = [];
+      for (let i = 0; i < words.length; i += 18) chunks.push(words.slice(i, i + 18).join(' '));
+      sentences = chunks.filter((c) => c.length > 15);
+    }
+  }
   if (sentences.length === 0) return null;
   const scored = sentences
     .map((s) => ({ s, hits: countMatches(s, re) }))
@@ -107,6 +119,15 @@ function hasSignalInRange(text: string, re: RegExp, startFrac: number, endFrac: 
   return countMatches(slice, re) > 0;
 }
 
+/**
+ * Whether the transcript arrived with punctuation to reason about. Live
+ * dictation often returns none, and its absence says nothing about how well
+ * the candidate spoke — only about what the recogniser emitted.
+ */
+function hasUsablePunctuation(text: string, wordCount: number): boolean {
+  return countMatches(text, /[.!?؟]/g) >= Math.floor(wordCount / 40);
+}
+
 /** Sentences with enough words to carry meaning. */
 function wellFormedSentences(text: string): number {
   return text
@@ -130,11 +151,16 @@ function looksLikeKeywordSoup(text: string, wordCount: number): boolean {
     countMatches(text, NUMBERS);
   const triggerDensity = triggers / Math.max(wordCount, 1);
   const sentences = wellFormedSentences(text);
-  // Densely packed markers, heavy repetition, or a long answer that never
-  // forms real sentences. Any of the three means this is not a spoken story.
-  return (
-    triggerDensity > 0.28 || uniqueRatio < 0.4 || (wordCount > 60 && sentences < 2)
-  );
+  // Live dictation routinely returns one unpunctuated stream, so an answer with
+  // no full stops is a transcription artifact, not a sign of keyword stuffing.
+  // Judging structure by punctuation there would refuse to score exactly the
+  // candidates who spoke their answer instead of typing it.
+  const structureLooksWrong =
+    hasUsablePunctuation(text, wordCount) && wordCount > 60 && sentences < 2;
+
+  // Densely packed markers, heavy repetition, or — only where punctuation
+  // exists to judge by — an answer that never forms real sentences.
+  return triggerDensity > 0.28 || uniqueRatio < 0.4 || structureLooksWrong;
 }
 
 /** True when the text is predominantly Arabic script. */
@@ -232,8 +258,12 @@ export function structureCheck(question: Question, transcript: string): AnswerFe
   const outcomes = hasOutcome ? uniqueMatches(text, OUTCOME) : 0;
   const sentences = wellFormedSentences(text);
 
-  // A dimension can only score well inside an answer that forms real sentences.
-  const prose = clamp(sentences / 3, 0.4, 1);
+  // A dimension can only score well inside an answer that forms real sentences —
+  // but only where punctuation exists to judge that by. A dictated answer with
+  // no full stops must not be scaled down for something the recogniser, not the
+  // candidate, failed to produce. The keyword-soup check above still guards
+  // against genuinely unstructured input.
+  const prose = hasUsablePunctuation(text, wordCount) ? clamp(sentences / 3, 0.4, 1) : 1;
 
   const situationScore = clamp((hasSituation ? 6 + Math.min(situations, 2) : 2) * prose, 2, 10);
   const ownActionsScore = clamp(
