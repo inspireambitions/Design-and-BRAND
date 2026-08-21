@@ -1,9 +1,12 @@
 import { expect, test } from "@playwright/test";
 
-const base = process.env.BASE_URL || "http://127.0.0.1:4326/career-change-roadmap";
+const base = process.env.BASE_URL || "http://localhost:4326/career-change-roadmap";
+const chromeLaunch = process.platform === "darwin"
+  ? { executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" }
+  : { channel: "chrome" as const };
 
 test.use({
-  launchOptions: { executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" },
+  launchOptions: chromeLaunch,
 });
 
 for (const viewport of [
@@ -39,4 +42,3 @@ test("corrupt saved data recovers without an error screen", async ({ page }) => 
   await expect(page.getByLabel("Country")).toBeVisible();
   await expect(page.locator("[data-nextjs-dialog]")).toHaveCount(0);
 });
-

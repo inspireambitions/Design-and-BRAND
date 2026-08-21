@@ -1,10 +1,13 @@
 import { expect, test } from "@playwright/test";
 
 const base = process.env.LIVE_BASE_URL || "https://inspireambitions.com/career-change-roadmap";
+const chromeLaunch = process.platform === "darwin"
+  ? { executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" }
+  : { channel: "chrome" as const };
 
 test.use({
   viewport: { width: 390, height: 844 },
-  launchOptions: { executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" },
+  launchOptions: chromeLaunch,
 });
 
 for (const viewport of [

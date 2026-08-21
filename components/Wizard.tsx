@@ -122,7 +122,12 @@ export function Wizard() {
     const hasDeepLink = Boolean(from || to || industry);
     const isHospitality = industry.toLowerCase() === "hospitality";
 
-    if (startFresh) store.clear();
+    if (startFresh) {
+      store.clear();
+      // `fresh=1` is a one-time instruction. Leaving it in browser history
+      // lets a back gesture clear a completed roadmap and reopen question one.
+      router.replace("/start", { scroll: false });
+    }
     if (saved && !startFresh && !hasDeepLink) {
       setSavedProfile(saved);
       setHydrated(true);
@@ -145,7 +150,7 @@ export function Wizard() {
       ...(to ? { targetRole: to, directionMode: "known" as const } : {}),
     }));
     setHydrated(true);
-  }, [params]);
+  }, [params, router]);
 
   function usePreviousAnswers() {
     if (!savedProfile) return;
@@ -293,7 +298,9 @@ export function Wizard() {
       }
       store.saveReport(await res.json());
       store.setUnlocked(false);
-      router.push("/report");
+      // A completed questionnaire must not remain behind the report as a
+      // restart path. The explicit "Start a fresh plan" control owns that job.
+      router.replace("/report");
     } catch (cause) {
       setGenerating(false);
       setError(cause instanceof Error ? cause.message : "Something went wrong. Please try again.");

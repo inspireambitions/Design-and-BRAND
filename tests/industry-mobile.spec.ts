@@ -1,10 +1,13 @@
 import { expect, test } from "@playwright/test";
 
-const base = process.env.BASE_URL || "http://127.0.0.1:4326/career-change-roadmap";
+const base = process.env.BASE_URL || "http://localhost:4326/career-change-roadmap";
+const chromeLaunch = process.platform === "darwin"
+  ? { executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" }
+  : { channel: "chrome" as const };
 
 test.use({
   viewport: { width: 390, height: 844 },
-  launchOptions: { executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" },
+  launchOptions: chromeLaunch,
 });
 
 async function continueButton(page: import("@playwright/test").Page) {
