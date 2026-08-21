@@ -91,12 +91,14 @@ export function ProgressView() {
           return (
             <div key={group.roleId} className="card stack">
               <div className="score-head">
-                <ScoreRing value={group.best ?? 0} />
+                {/* No ring when nothing was ever scored: a zero would read as a
+                    result, when in fact no result exists. */}
+                {group.best !== null && <ScoreRing value={group.best} />}
                 <div>
                   <h2 style={{ fontSize: '1.2rem' }}>{group.roleTitle}</h2>
                   <div className="row" style={{ marginTop: '0.4rem', gap: '0.4rem' }}>
-                    <span className="chip chip-jade">
-                      {t('best')} {group.best}
+                    <span className={`chip ${group.best === null ? '' : 'chip-jade'}`}>
+                      {group.best === null ? t('notScoredYet') : `${t('best')} ${group.best}`}
                     </span>
                     <span className="chip">
                       {group.attempts.length} {t('attempts')}

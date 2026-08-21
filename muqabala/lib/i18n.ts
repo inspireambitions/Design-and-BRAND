@@ -21,7 +21,7 @@ export const STRINGS = {
     // device check
     beforeStart: 'Before we start',
     beforeStartBody:
-      'This is practice. Nothing here is shown to an employer. Your video is never uploaded or saved anywhere — only the text of your answer is sent to be scored, and it is not stored afterwards. We collect anonymous usage statistics and technical error reports, such as the route and error type — never your video, your audio, or the words of your answers.',
+      'This is practice. Nothing here is shown to an employer. Your video is never uploaded or saved anywhere. The text of your answer is sent to our AI provider to be scored, and if you pasted a job advert, that advert and your job title were sent there too, to write your questions. Your completed answer text and feedback are stored in this browser until you clear your history. We also collect anonymous usage statistics and technical error reports, such as the route and error type — never your video, your audio, or the words of your answers.',
     checkCamera: 'Camera',
     checkMic: 'Microphone',
     checkTranscript: 'Live transcript',
@@ -145,7 +145,7 @@ export const STRINGS = {
     weakest: 'Focus here next',
     practiceAgain: 'Practise this interview again',
     tryAnotherRole: 'Try another role',
-    savedLocally: 'Saved on this device so you can track your improvement.',
+    savedLocally: 'Stored in this browser so you can track your improvement. Clearing your history removes it.',
     noScoreTitle: 'We could not score this interview',
     noScoreBody:
       'None of your answers were scored, so there is no result to show. Your answers and feedback are below. You can try the interview again whenever you are ready.',
@@ -160,6 +160,7 @@ export const STRINGS = {
     progressEmpty: 'No practice interviews yet. Your scores will appear here once you finish one.',
     attempts: 'attempts',
     best: 'Best',
+    notScoredYet: 'No scored attempt yet',
     latest: 'Latest',
     firstAttempt: 'First attempt',
     improvement: 'Improvement',
@@ -191,7 +192,7 @@ export const STRINGS = {
 
     beforeStart: 'قبل أن نبدأ',
     beforeStartBody:
-      'هذا تدريب. لا شيء هنا يُعرض على صاحب عمل. الفيديو لا يُرفع ولا يُحفظ في أي مكان — يُرسل نص إجابتك فقط ليتم تقييمه، ولا يُحفظ بعد ذلك. نجمع إحصاءات استخدام وتقارير أخطاء تقنية مجهولة الهوية، مثل مسار الصفحة ونوع الخطأ — وليس أبداً الفيديو أو الصوت أو كلمات إجاباتك.',
+      'هذا تدريب. لا شيء هنا يُعرض على صاحب عمل. الفيديو لا يُرفع ولا يُحفظ في أي مكان. يُرسل نص إجابتك إلى مزود الذكاء الاصطناعي لتقييمه، وإذا ألصقت إعلان وظيفة فقد أُرسل الإعلان والمسمى الوظيفي أيضاً لكتابة أسئلتك. يُخزَّن نص إجاباتك المكتملة وملاحظاتها في هذا المتصفح حتى تمسح السجل. كما نجمع إحصاءات استخدام وتقارير أخطاء تقنية مجهولة الهوية، مثل مسار الصفحة ونوع الخطأ — وليس أبداً الفيديو أو الصوت أو كلمات إجاباتك.',
     checkCamera: 'الكاميرا',
     checkMic: 'الميكروفون',
     checkTranscript: 'النص المباشر',
@@ -312,7 +313,7 @@ export const STRINGS = {
     weakest: 'ركّز هنا لاحقاً',
     practiceAgain: 'تدرّب على هذه المقابلة مرة أخرى',
     tryAnotherRole: 'جرّب وظيفة أخرى',
-    savedLocally: 'محفوظ على هذا الجهاز لتتابع تحسّنك.',
+    savedLocally: 'مخزَّن في هذا المتصفح لتتابع تحسّنك. مسح السجل يزيله.',
     noScoreTitle: 'لم نتمكن من تقييم هذه المقابلة',
     noScoreBody:
       'لم يتم تقييم أي من إجاباتك، لذا لا توجد نتيجة لعرضها. إجاباتك والملاحظات موجودة أدناه. يمكنك إعادة المقابلة متى شئت.',
@@ -326,6 +327,7 @@ export const STRINGS = {
     progressEmpty: 'لا توجد مقابلات تدريبية بعد. ستظهر درجاتك هنا بعد إكمال واحدة.',
     attempts: 'محاولات',
     best: 'الأفضل',
+    notScoredYet: 'لا توجد محاولة مُقيَّمة بعد',
     latest: 'الأحدث',
     firstAttempt: 'المحاولة الأولى',
     improvement: 'التحسّن',

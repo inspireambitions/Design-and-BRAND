@@ -8,11 +8,25 @@ import { signInterview } from '@/lib/interview-token';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
+/**
+ * The platform kills this function at maxDuration. Generation must therefore
+ * give up early enough to still answer, so the candidate gets the general
+ * interview instead of a dead request. Budget: one attempt, no retry, with
+ * headroom for validation and the response itself.
+ */
+const GENERATION_DEADLINE_MS = 32_000;
+
 /** A pasted job advert. Long enough for a detailed posting, short enough to bound cost. */
 const MAX_JOB_TEXT_CHARS = 12000;
 /** Refused before the body is even parsed, so oversized posts cost nothing. */
 const MAX_BODY_BYTES = 32 * 1024;
-/** A whole-deployment daily ceiling, so one bad day cannot drain the budget. */
+/**
+ * Best-effort daily ceiling. This counter lives in process memory, so on a
+ * serverless platform it is PER INSTANCE, not per deployment — several
+ * instances each allow this many. It is a brake, not a hard cap; a real
+ * deployment-wide limit needs the platform's own rate limiting (Vercel
+ * Firewall) or shared storage.
+ */
 const GLOBAL_DAILY_LIMIT = Number(process.env.INTERVIEW_DAILY_LIMIT ?? 400);
 const MIN_JOB_TEXT_CHARS = 120;
 
@@ -188,7 +202,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    const client = new OpenAI({ timeout: 45_000, maxRetries: 1 });
+    // No retry: a second attempt cannot fit inside the platform's ceiling, and
+    // a timed-out request that returns nothing is worse than a general interview.
+    const client = new OpenAI({ timeout: GENERATION_DEADLINE_MS, maxRetries: 0 });
+    const abort = AbortSignal.timeout(GENERATION_DEADLINE_MS);
     const response = await client.responses.parse({
       model: process.env.INTERVIEW_MODEL || process.env.OPENAI_SCORING_MODEL || 'gpt-5.6-sol',
       instructions: SYSTEM_PROMPT,
@@ -204,7 +221,7 @@ Build their first-round interview.`,
       text: { format: zodTextFormat(GeneratedInterview, 'generated_interview') },
       max_output_tokens: 3500,
       store: false,
-    });
+    }, { signal: abort });
 
     const parsed = response.output_parsed;
     if (!parsed) {
@@ -213,11 +230,33 @@ Build their first-round interview.`,
 
     // ---- semantic validation: a schema-valid interview can still be unusable ----
 
+    // Every generated string is model output and must be screened — a
+    // discriminatory phrase or an echoed instruction is no safer for sitting in
+    // a rubric anchor or a competency label than in a question.
+    const generatedText = [
+      parsed.role_title,
+      parsed.industry,
+      ...parsed.competencies.flatMap((c) => [c.label, c.label_ar, c.anchor]),
+      ...parsed.questions.flatMap((q) => [q.text, q.text_ar, q.hint, q.hint_ar]),
+    ].join(' \n ');
+
+    if (FORBIDDEN.some((re) => re.test(generatedText))) {
+      console.warn('Generated interview rejected: protected-characteristic content.');
+      return Response.json({ role: buildCustomRole(jobTitle), tailored: false, reason: 'unsafe' });
+    }
+    if (PROMPT_ECHO.some((re) => re.test(generatedText))) {
+      console.warn('Generated interview rejected: model echoed its instructions.');
+      return Response.json({ role: buildCustomRole(jobTitle), tailored: false, reason: 'invalid' });
+    }
+
     const competencies: Competency[] = [];
     const seen = new Set<string>();
     for (const c of parsed.competencies) {
       const id = slug(c.id);
-      if (!id || seen.has(id)) continue; // duplicate ids would make scoring ambiguous
+      // A duplicate id would make scoring ambiguous about which rubric applies.
+      if (!id || seen.has(id)) {
+        return Response.json({ role: buildCustomRole(jobTitle), tailored: false, reason: 'invalid' });
+      }
       seen.add(id);
       competencies.push({ id, label: c.label, labelAr: c.label_ar, anchor: c.anchor });
     }
@@ -227,22 +266,12 @@ Build their first-round interview.`,
 
     const questions: Question[] = [];
     for (const [index, q] of parsed.questions.entries()) {
-      const haystack = `${q.text} ${q.text_ar} ${q.hint} ${q.hint_ar}`;
-
-      // A question about a protected characteristic is unlawful or unfair in a
-      // first-round screen. One is enough to discard the whole interview.
-      if (FORBIDDEN.some((re) => re.test(haystack))) {
-        console.warn('Generated interview rejected: protected-characteristic question.');
-        return Response.json({ role: buildCustomRole(jobTitle), tailored: false, reason: 'unsafe' });
-      }
-      if (PROMPT_ECHO.some((re) => re.test(haystack))) {
-        console.warn('Generated interview rejected: model echoed its instructions.');
-        return Response.json({ role: buildCustomRole(jobTitle), tailored: false, reason: 'invalid' });
-      }
-
-      // Every referenced competency must be one we actually defined.
-      const ids = [...new Set(q.competency_ids.map(slug))].filter((id) => seen.has(id));
-      if (ids.length === 0) {
+      // An unknown competency id means the model invented a rubric we never
+      // defined. Filtering it away would hide that and score the answer against
+      // a silently narrowed rubric, so reject the interview instead.
+      const ids = [...new Set(q.competency_ids.map(slug))];
+      if (ids.length === 0 || ids.some((id) => !seen.has(id))) {
+        console.warn('Generated interview rejected: question names an unknown competency.');
         return Response.json({ role: buildCustomRole(jobTitle), tailored: false, reason: 'invalid' });
       }
 
@@ -290,7 +319,18 @@ Build their first-round interview.`,
 
     return Response.json({ role, tailored: true, token });
   } catch (error) {
-    console.error('Interview generation failed, using the generic interview:', error);
-    return Response.json({ role: buildCustomRole(jobTitle), tailored: false });
+    const timedOut =
+      error instanceof Error && /abort|timeout|timed out/i.test(`${error.name} ${error.message}`);
+    console.error(
+      timedOut
+        ? 'Interview generation exceeded its budget; returning the general interview.'
+        : 'Interview generation failed; returning the general interview:',
+      error,
+    );
+    return Response.json({
+      role: buildCustomRole(jobTitle),
+      tailored: false,
+      reason: timedOut ? 'timeout' : 'error',
+    });
   }
 }

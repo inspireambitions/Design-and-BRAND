@@ -20,10 +20,19 @@ export function CustomRoleStart() {
   const [role, setRole] = useState<Role | null>(null);
   const [tailored, setTailored] = useState(false);
   const [token, setToken] = useState<string | undefined>(undefined);
+  const [fellBack, setFellBack] = useState(false);
   const [building, setBuilding] = useState(false);
 
   if (role) {
-    return <InterviewFlow role={role} customTitle={role.title} tailored={tailored} interviewToken={token} />;
+    return (
+      <InterviewFlow
+        role={role}
+        customTitle={role.title}
+        tailored={tailored}
+        fellBack={fellBack}
+        interviewToken={token}
+      />
+    );
   }
 
   const trimmedTitle = title.trim();
@@ -47,10 +56,13 @@ export function CustomRoleStart() {
       const data = (await response.json()) as { role: Role; tailored: boolean; token?: string };
       setTailored(Boolean(data.tailored));
       setToken(data.token);
+      // They pasted an advert but we could not build from it — say so.
+      setFellBack(usableJob && !data.tailored);
       setRole(data.role);
     } catch {
       // Never strand the candidate: fall back to the generic interview.
       setTailored(false);
+      setFellBack(usableJob);
       setRole(buildCustomRole(trimmedTitle));
     } finally {
       setBuilding(false);

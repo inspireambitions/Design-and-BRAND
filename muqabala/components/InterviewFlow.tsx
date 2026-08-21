@@ -83,6 +83,7 @@ export function InterviewFlow({
   customTitle,
   tailored = false,
   interviewToken,
+  fellBack = false,
 }: {
   role: Role;
   /** Job title typed by the candidate when practising a role not in the catalogue. */
@@ -91,6 +92,8 @@ export function InterviewFlow({
   tailored?: boolean;
   /** Signed rubric that lets the server score a generated interview. */
   interviewToken?: string;
+  /** True when an advert was pasted but tailoring did not succeed. */
+  fellBack?: boolean;
 }) {
   const { lang, t } = useLang();
 
@@ -456,6 +459,11 @@ export function InterviewFlow({
               <span className={`chip ${tailored ? 'chip-gold' : ''}`} style={{ marginTop: '0.5rem' }}>
                 {tailored ? t('tailoredBadge') : t('genericBadge')}
               </span>
+            )}
+            {fellBack && !tailored && (
+              <p className="notice notice-warn tiny" style={{ marginTop: '0.5rem' }}>
+                {t('genericWhy')}
+              </p>
             )}
             <p className="lede" style={{ marginTop: '0.6rem' }}>
               {t('beforeStartBody')}
