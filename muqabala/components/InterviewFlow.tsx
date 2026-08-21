@@ -56,6 +56,26 @@ function formatClock(seconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
+
+/** The whole interview as plain text — copyable, sendable, readable anywhere. */
+function buildReportText(
+  roleTitle: string,
+  overall: number,
+  answers: CompletedAnswer[],
+  labels: { report: string; score: string; question: string; yourAnswer: string; worked: string; improve: string },
+): string {
+  const lines: string[] = [`${labels.report} — ${roleTitle}`, `${labels.score}: ${overall}/100`, ''];
+  answers.forEach((a, i) => {
+    lines.push(`${labels.question} ${i + 1}: ${a.questionText}`);
+    if (a.feedback.status === 'scored') lines.push(`${labels.score}: ${a.feedback.score}/100`);
+    lines.push(`${labels.yourAnswer}: ${a.transcript || '—'}`);
+    if (a.feedback.strengths.length) lines.push(`${labels.worked}: ${a.feedback.strengths.join(' | ')}`);
+    if (a.feedback.improvements.length) lines.push(`${labels.improve}: ${a.feedback.improvements.join(' | ')}`);
+    lines.push('');
+  });
+  return lines.join('\n');
+}
+
 export function InterviewFlow({
   role,
   customTitle,
@@ -81,6 +101,7 @@ export function InterviewFlow({
   const [requestingCamera, setRequestingCamera] = useState(false);
   const [micLevel, setMicLevel] = useState(0);
   const [playbackUrl, setPlaybackUrl] = useState<string | null>(null);
+  const [reportCopied, setReportCopied] = useState(false);
   const [speechOk, setSpeechOk] = useState(true);
   const [onDeviceSpeech, setOnDeviceSpeech] = useState(false);
   const [voiceDeclined, setVoiceDeclined] = useState(false);
@@ -797,7 +818,40 @@ export function InterviewFlow({
                 </p>
               </div>
             </div>
+            <p className="report-meta">
+              {role.title} · {new Date().toLocaleDateString()}
+            </p>
             <p className="tiny">{t('savedLocally')}</p>
+
+            <div className="row no-print">
+              <button type="button" className="btn btn-quiet" onClick={() => window.print()}>
+                {t('saveReport')}
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(
+                      buildReportText(role.title, overallFromAnswers(answers), answers, {
+                        report: t('reportTitle'),
+                        score: t('overallScore'),
+                        question: t('question'),
+                        yourAnswer: t('yourAnswer'),
+                        worked: t('whatWorked'),
+                        improve: t('whatToImprove'),
+                      }),
+                    );
+                    setReportCopied(true);
+                  } catch {
+                    /* clipboard blocked — printing still works */
+                  }
+                }}
+              >
+                {reportCopied ? t('rateCopied') : t('copyReport')}
+              </button>
+            </div>
+            <p className="tiny no-print">{t('saveReportHint')}</p>
           </div>
 
           {savedAttempt && <RatingCard attempt={savedAttempt} />}
@@ -808,6 +862,14 @@ export function InterviewFlow({
                 {t('question')} {i + 1}
               </p>
               <h3 style={{ fontSize: '1.05rem' }}>{answer.questionText}</h3>
+              {answer.transcript && (
+                <div className="answer-recap">
+                  <span className="rate-label">{t('yourAnswer')}</span>
+                  <p className="muted" style={{ marginTop: '0.25rem' }}>
+                    {answer.transcript}
+                  </p>
+                </div>
+              )}
               <FeedbackCard feedback={answer.feedback} />
             </div>
           ))}

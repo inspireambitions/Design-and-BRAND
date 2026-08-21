@@ -145,6 +145,11 @@ export const STRINGS = {
     practiceAgain: 'Practise this interview again',
     tryAnotherRole: 'Try another role',
     savedLocally: 'Saved on this device so you can track your improvement.',
+    reportTitle: 'Interview practice report',
+    saveReport: 'Save as PDF',
+    copyReport: 'Copy report',
+    saveReportHint:
+      'Opens your phone\u2019s print screen — choose "Save as PDF" to keep the full report, or send it to yourself.',
 
     // progress
     progressTitle: 'Your progress',
@@ -303,6 +308,11 @@ export const STRINGS = {
     practiceAgain: 'تدرّب على هذه المقابلة مرة أخرى',
     tryAnotherRole: 'جرّب وظيفة أخرى',
     savedLocally: 'محفوظ على هذا الجهاز لتتابع تحسّنك.',
+    reportTitle: 'تقرير التدرب على المقابلة',
+    saveReport: 'احفظ كـ PDF',
+    copyReport: 'انسخ التقرير',
+    saveReportHint:
+      'يفتح شاشة الطباعة في هاتفك — اختر "حفظ كـ PDF" للاحتفاظ بالتقرير كاملاً، أو أرسله لنفسك.',
 
     progressTitle: 'تقدمك',
     progressEmpty: 'لا توجد مقابلات تدريبية بعد. ستظهر درجاتك هنا بعد إكمال واحدة.',

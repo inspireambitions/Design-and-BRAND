@@ -1012,3 +1012,84 @@ body[dir='rtl'] .mic-label {
   border: 1px solid var(--line);
   display: block;
 }
+
+/* ---------- report ---------- */
+
+.report-meta {
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 650;
+  color: var(--ink-soft);
+}
+
+.answer-recap {
+  background: var(--surface-sunk);
+  border-radius: var(--radius);
+  padding: 0.75rem 0.9rem;
+}
+
+/* Saving the report uses the phone's own print-to-PDF, so it works on every
+   browser without a download the sandbox or mobile Safari might block. */
+@media print {
+  .no-print,
+  .topbar,
+  .rail,
+  .foot,
+  .star-row,
+  .filter-btn {
+    display: none !important;
+  }
+
+  :root {
+    --ground: #FFFFFF;
+    --surface: #FFFFFF;
+    --surface-sunk: #F4F4F4;
+    --ink: #111111;
+    --ink-soft: #444444;
+    --ink-faint: #666666;
+    --line: #CCCCCC;
+    --line-strong: #999999;
+  }
+
+  body {
+    background: #FFFFFF;
+    color: #111111;
+  }
+
+  .shell {
+    max-width: none;
+    padding: 0;
+  }
+
+  .card,
+  .card-flat,
+  .answer-recap,
+  .comp-row {
+    box-shadow: none;
+    border-color: #CCCCCC;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .stack-sm h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  a[href]::after {
+    content: '';
+  }
+}
+
+/* The logo doubles as the home link, so give it a comfortable tap area. */
+.brand {
+  min-height: 44px;
+  padding-block: 0.35rem;
+  padding-inline-end: 0.35rem;
+}
+
+/* Every control meets the 44px minimum touch target — these are thumbs on
+   phones, often in a hurry, sometimes one-handed. */
+.btn {
+  min-height: 44px;
+}
