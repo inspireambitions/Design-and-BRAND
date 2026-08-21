@@ -12,9 +12,9 @@ export const maxDuration = 60;
  * The platform kills this function at maxDuration. Generation must therefore
  * give up early enough to still answer, so the candidate gets the general
  * interview instead of a dead request. Budget: one attempt, no retry, with
- * headroom for validation and the response itself.
+ * ten seconds of headroom for validation and the response itself.
  */
-const GENERATION_DEADLINE_MS = 32_000;
+const GENERATION_DEADLINE_MS = 50_000;
 
 /** A pasted job advert. Long enough for a detailed posting, short enough to bound cost. */
 const MAX_JOB_TEXT_CHARS = 12000;
