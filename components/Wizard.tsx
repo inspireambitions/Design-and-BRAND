@@ -126,7 +126,7 @@ export function Wizard() {
       store.clear();
       // `fresh=1` is a one-time instruction. Leaving it in browser history
       // lets a back gesture clear a completed roadmap and reopen question one.
-      router.replace("/start", { scroll: false });
+      window.history.replaceState(window.history.state, "", window.location.pathname);
     }
     if (saved && !startFresh && !hasDeepLink) {
       setSavedProfile(saved);
@@ -150,7 +150,7 @@ export function Wizard() {
       ...(to ? { targetRole: to, directionMode: "known" as const } : {}),
     }));
     setHydrated(true);
-  }, [params, router]);
+  }, [params]);
 
   function usePreviousAnswers() {
     if (!savedProfile) return;

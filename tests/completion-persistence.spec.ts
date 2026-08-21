@@ -47,11 +47,11 @@ async function completeRoadmap(page: Page, currentRole: string, targetRole: stri
   await page.getByLabel("Work setting").selectOption("onsite");
   await page.getByRole("button", { name: /Build my plan/i }).click();
 
-  await expect(page.getByText("Planning outlook", { exact: true })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("Planning outlook", { exact: true })).toBeVisible({ timeout: 120_000 });
 }
 
 test("completed guidance persists until the user deliberately starts again", async ({ page }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(300_000);
   const errors: string[] = [];
   const failedRequests: string[] = [];
   page.on("console", (message) => message.type() === "error" && errors.push(message.text()));

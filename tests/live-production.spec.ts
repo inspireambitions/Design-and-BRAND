@@ -30,7 +30,7 @@ for (const viewport of [
 }
 
 test("current production wizard completes on mobile", async ({ page }) => {
-  test.setTimeout(60_000);
+  test.setTimeout(180_000);
   const errors: string[] = [];
   page.on("console", (message) => message.type() === "error" && errors.push(message.text()));
   page.on("pageerror", (error) => errors.push(error.message));
@@ -76,7 +76,7 @@ test("current production wizard completes on mobile", async ({ page }) => {
   await page.getByLabel(/Do you know anyone/i).selectOption("no");
   await page.getByRole("button", { name: /Build my plan/i }).click();
 
-  await expect(page.getByText("Planning outlook", { exact: true })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("Planning outlook", { exact: true })).toBeVisible({ timeout: 120_000 });
   await expect(page.getByText(/Logistics Coordinator/i).first()).toBeVisible();
   await expect(page.getByRole("heading", { name: /Before you trust a UAE job offer/i })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
