@@ -26,9 +26,10 @@ export type AnswerFeedback = {
   /**
    * 'ai' judges the role's competency rubric. 'structure' is the offline
    * checker, which measures how an answer is built — not role competence.
-   * The two must never be presented to a candidate as the same thing.
+   * 'none' records an answer that the candidate chose to keep after scoring
+   * failed. These states must never be presented as the same thing.
    */
-  source: 'ai' | 'structure';
+  source: 'ai' | 'structure' | 'none';
 };
 
 /** How the candidate felt afterwards. The product's whole promise is measured here. */

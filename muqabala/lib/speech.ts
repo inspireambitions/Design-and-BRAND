@@ -75,7 +75,7 @@ export async function isOnDeviceRecognitionAvailable(langCode: string): Promise<
 }
 
 export type SpeechSession = {
-  stop: () => void;
+  stop: () => { finalText: string; interimText: string };
 };
 
 /**
@@ -104,9 +104,11 @@ export function startDictation(
   }
 
   let finalText = '';
+  let interimText = '';
   let stopped = false;
 
   recognition.onresult = (event) => {
+    if (stopped) return;
     let interim = '';
     for (let i = event.resultIndex; i < event.results.length; i += 1) {
       const result = event.results[i];
@@ -117,7 +119,8 @@ export function startDictation(
         interim += text;
       }
     }
-    onUpdate(finalText, interim.trim());
+    interimText = interim.trim();
+    onUpdate(finalText, interimText);
   };
 
   recognition.onerror = (event) => {
@@ -152,6 +155,7 @@ export function startDictation(
       } catch {
         /* ignore */
       }
+      return { finalText, interimText };
     },
   };
 }

@@ -25,9 +25,12 @@ export function FeedbackCard({
                 {t('attemptNumber')} {attempt}
               </span>
             )}
-            <span className="chip">
-              {t('scoredBy')} {feedback.source === 'ai' ? t('scoredByAi') : t('scoredByStructure')}
-            </span>
+            {feedback.source !== 'none' && (
+              <span className="chip">
+                {t('scoredBy')}{' '}
+                {feedback.source === 'ai' ? t('scoredByAi') : t('scoredByStructure')}
+              </span>
+            )}
           </div>
         </div>
       </div>

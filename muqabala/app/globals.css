@@ -765,6 +765,22 @@ body[dir='rtl'] .coach-tip strong {
   flex-wrap: wrap;
 }
 
+.flow-actions {
+  position: sticky;
+  bottom: 0.75rem;
+  z-index: 5;
+  padding: 0.7rem;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(10px);
+}
+
+.flow-actions .btn-primary {
+  flex: 1 1 11rem;
+}
+
 .checklist {
   display: flex;
   flex-direction: column;
@@ -891,6 +907,19 @@ body[dir='rtl'] .coach-tip strong {
 @media (max-width: 640px) {
   .card { padding: 1.1rem; }
   .history-row { grid-template-columns: 1fr auto; }
+  .flow-actions .btn { min-height: 44px; }
+}
+
+@media (min-width: 641px) {
+  .flow-actions {
+    position: static;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
 }
 
 /* Catch-all role card — visually distinct from the catalogue entries it follows. */

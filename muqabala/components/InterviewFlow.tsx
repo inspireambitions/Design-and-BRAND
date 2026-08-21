@@ -119,6 +119,7 @@ export function InterviewFlow({
   const [interim, setInterim] = useState('');
   const [feedback, setFeedback] = useState<AnswerFeedback | null>(null);
   const [isScoring, setIsScoring] = useState(false);
+  const [isFinalizing, setIsFinalizing] = useState(false);
   const [scoringError, setScoringError] = useState<ScoringError | null>(null);
   const [retrySeconds, setRetrySeconds] = useState<number | null>(null);
   const [answers, setAnswers] = useState<CompletedAnswer[]>([]);
@@ -131,6 +132,8 @@ export function InterviewFlow({
   const playbackRef = useRef<HTMLVideoElement | null>(null);
   const savedRef = useRef(false);
   const scoringInFlightRef = useRef(false);
+  const finalizingRef = useRef(false);
+  const advancingRef = useRef(false);
   const scoringSessionRef = useRef<string | null>(null);
   const automaticRetriesRef = useRef(0);
   const [savedAttempt, setSavedAttempt] = useState<Attempt | null>(null);
@@ -155,10 +158,33 @@ export function InterviewFlow({
   }, [lang]);
 
   const stopDictation = useCallback(() => {
-    dictationRef.current?.stop();
+    const captured = dictationRef.current?.stop();
     dictationRef.current = null;
+    if (captured) {
+      setTranscript(
+        [captured.finalText.trim(), captured.interimText.trim()].filter(Boolean).join(' '),
+      );
+    }
     setInterim('');
   }, []);
+
+  const switchToTyping = useCallback(async () => {
+    stopDictation();
+    setVoiceDeclined(true);
+    meterRef.current?.stop();
+    meterRef.current = null;
+    setMicLevel(0);
+
+    const recorder = recorderRef.current;
+    recorderRef.current = null;
+    if (recorder) {
+      const unusedUrl = await recorder.stop();
+      if (unusedUrl) URL.revokeObjectURL(unusedUrl);
+    }
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    setCameraState('idle');
+  }, [stopDictation]);
 
   // Release camera and microphone when the component unmounts.
   useEffect(() => {
@@ -219,7 +245,7 @@ export function InterviewFlow({
     setSecondsLeft(question.answerSeconds);
     setStage('record');
 
-    if (streamRef.current) {
+    if (useVoice && streamRef.current) {
       recorderRef.current = startRecording(streamRef.current);
       meterRef.current = startLevelMeter(streamRef.current, setMicLevel);
     }
@@ -236,17 +262,25 @@ export function InterviewFlow({
   }, [lang, playbackUrl, question.answerSeconds, useVoice]);
 
   const finishAnswer = useCallback(async () => {
-    stopDictation();
-    meterRef.current?.stop();
-    meterRef.current = null;
-    setMicLevel(0);
-    setStage('review');
+    if (finalizingRef.current) return;
+    finalizingRef.current = true;
+    setIsFinalizing(true);
+    try {
+      stopDictation();
+      meterRef.current?.stop();
+      meterRef.current = null;
+      setMicLevel(0);
+      setStage('review');
 
-    const recorder = recorderRef.current;
-    recorderRef.current = null;
-    if (recorder) {
-      const url = await recorder.stop();
-      if (url) setPlaybackUrl(url);
+      const recorder = recorderRef.current;
+      recorderRef.current = null;
+      if (recorder) {
+        const url = await recorder.stop();
+        if (url) setPlaybackUrl(url);
+      }
+    } finally {
+      finalizingRef.current = false;
+      setIsFinalizing(false);
     }
   }, [stopDictation]);
 
@@ -365,13 +399,14 @@ export function InterviewFlow({
     startPrep();
   }, [startPrep]);
 
-  const advance = useCallback(() => {
-    if (!feedback) return;
+  const completeCurrentAnswer = useCallback((answerFeedback: AnswerFeedback) => {
+    if (advancingRef.current) return;
+    advancingRef.current = true;
     const completed: CompletedAnswer = {
       questionId: question.id,
       questionText,
       transcript,
-      feedback,
+      feedback: answerFeedback,
     };
     const nextAnswers = [...answers, completed];
     setAnswers(nextAnswers);
@@ -396,7 +431,32 @@ export function InterviewFlow({
       setSecondsLeft(role.questions[index + 1].prepSeconds);
       setStage('prep');
     }
-  }, [answers, feedback, index, isLast, playbackUrl, question.id, questionText, role.questions, transcript]);
+    window.setTimeout(() => {
+      advancingRef.current = false;
+    }, 0);
+  }, [answers, index, isLast, playbackUrl, question.id, questionText, role.questions, transcript]);
+
+  const advance = useCallback(() => {
+    if (feedback) completeCurrentAnswer(feedback);
+  }, [completeCurrentAnswer, feedback]);
+
+  const continueWithoutFeedback = useCallback(() => {
+    setRetrySeconds(null);
+    setScoringError(null);
+    scoringSessionRef.current = null;
+    automaticRetriesRef.current = 0;
+    completeCurrentAnswer({
+      questionId: question.id,
+      score: 0,
+      status: 'unscored',
+      headline: t('feedbackSkippedTitle'),
+      competencies: [],
+      strengths: [],
+      improvements: [t('feedbackSkippedBody')],
+      coachTip: '',
+      source: 'none',
+    });
+  }, [completeCurrentAnswer, question.id, t]);
 
   // Persist the finished interview once, when results are shown.
   useEffect(() => {
@@ -471,47 +531,40 @@ export function InterviewFlow({
           </div>
 
           <div className="card stack">
-            <div className="video-frame">
-              <video ref={videoRef} muted playsInline />
-              {cameraState !== 'granted' && (
-                <div className="video-placeholder">
-                  {cameraState === 'denied' ? t('cameraDeniedHelp') : t('cameraIdle')}
+            {useVoice ? (
+              <>
+                <div className="video-frame">
+                  <video ref={videoRef} muted playsInline />
+                  {cameraState !== 'granted' && (
+                    <div className="video-placeholder">
+                      {cameraState === 'denied' ? t('cameraDeniedHelp') : t('cameraIdle')}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            <ul className="checklist">
-              <li>
-                <span
-                  className={`check-icon ${
-                    cameraState === 'granted' ? '' : cameraState === 'denied' ? 'fail' : 'pending'
-                  }`}
-                >
-                  {cameraState === 'granted' ? '✓' : cameraState === 'denied' ? '!' : '·'}
-                </span>
-                <span>
-                  {t('checkCamera')} &amp; {t('checkMic')}
-                </span>
-              </li>
-              <li>
-                <span className={`check-icon ${useVoice ? '' : 'fail'}`}>
-                  {useVoice ? '✓' : '!'}
-                </span>
-                <span>
-                  {t('checkTranscript')}
-                  <br />
-                  <span className="tiny">
-                    {!speechOk
-                      ? t('transcriptUnsupported')
-                      : voiceDeclined
-                        ? t('transcriptUnsupported')
-                        : t('transcriptReady')}
-                  </span>
-                </span>
-              </li>
-            </ul>
+                <ul className="checklist">
+                  <li>
+                    <span
+                      className={`check-icon ${
+                        cameraState === 'granted' ? '' : cameraState === 'denied' ? 'fail' : 'pending'
+                      }`}
+                    >
+                      {cameraState === 'granted' ? '✓' : cameraState === 'denied' ? '!' : '·'}
+                    </span>
+                    <span>
+                      {t('checkCamera')} &amp; {t('checkMic')}
+                    </span>
+                  </li>
+                  <li>
+                    <span className="check-icon">✓</span>
+                    <span>
+                      {t('checkTranscript')}
+                      <br />
+                      <span className="tiny">{t('transcriptReady')}</span>
+                    </span>
+                  </li>
+                </ul>
 
-            {useVoice && (
               <div className={`notice ${onDeviceSpeech ? '' : 'notice-warn'} tiny`}>
                 {onDeviceSpeech ? t('speechOnDevice') : t('speechCloud')}
                 {!onDeviceSpeech && (
@@ -519,36 +572,39 @@ export function InterviewFlow({
                     <button
                       type="button"
                       className="btn btn-quiet"
-                      onClick={() => setVoiceDeclined(true)}
+                      onClick={() => void switchToTyping()}
                     >
                       {t('speechTypeInstead')}
                     </button>
                   </div>
                 )}
               </div>
-            )}
-
-            {speechOk && voiceDeclined && (
-              <div className="row">
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  onClick={() => setVoiceDeclined(false)}
-                >
-                  {t('speechUseVoice')}
-                </button>
+                {cameraState !== 'granted' && (
+                  <button
+                    type="button"
+                    className="btn btn-quiet"
+                    disabled={requestingCamera}
+                    onClick={() => void enableCamera()}
+                  >
+                    {cameraState === 'denied' ? t('cameraRetry') : t('enableCamera')}
+                  </button>
+                )}
+              </>
+            ) : (
+              <div className="notice">
+                <strong>{t('typingModeTitle')}</strong>
+                <p className="tiny" style={{ marginTop: '0.35rem' }}>{t('typingModeBody')}</p>
+                {speechOk && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    style={{ marginTop: '0.7rem' }}
+                    onClick={() => setVoiceDeclined(false)}
+                  >
+                    {t('speechUseVoice')}
+                  </button>
+                )}
               </div>
-            )}
-
-            {cameraState !== 'granted' && (
-              <button
-                type="button"
-                className="btn btn-quiet"
-                disabled={requestingCamera}
-                onClick={() => void enableCamera()}
-              >
-                {cameraState === 'denied' ? t('cameraRetry') : t('enableCamera')}
-              </button>
             )}
           </div>
 
@@ -593,7 +649,7 @@ export function InterviewFlow({
                 // Ask here rather than in a separate step: this tap is the user
                 // gesture browsers want, and it comes after the disclosure the
                 // candidate has just read.
-                await enableCamera();
+                if (useVoice) await enableCamera();
                 startPrep();
               }}
             >
@@ -627,7 +683,7 @@ export function InterviewFlow({
             <div className={`timer-big ${secondsLeft <= 5 ? 'low' : ''}`}>
               {formatClock(secondsLeft)}
             </div>
-            <p className="muted">{t('prepBody')}</p>
+            <p className="muted">{useVoice ? t('prepBody') : t('prepBodyType')}</p>
             <div className="row" style={{ justifyContent: 'center' }}>
               <button type="button" className="btn btn-primary" onClick={beginRecording}>
                 {t('startAnswer')}
@@ -648,36 +704,40 @@ export function InterviewFlow({
           </div>
 
           <div className="card stack">
-            <div className="video-frame">
-              <video ref={videoRef} muted playsInline />
-              {cameraState !== 'granted' && (
-                <div className="video-placeholder">
-                  {cameraState === 'denied' ? t('cameraDeniedHelp') : t('cameraIdle')}
+            {useVoice && (
+              <>
+                <div className="video-frame">
+                  <video ref={videoRef} muted playsInline />
+                  {cameraState !== 'granted' && (
+                    <div className="video-placeholder">
+                      {cameraState === 'denied' ? t('cameraDeniedHelp') : t('cameraIdle')}
+                    </div>
+                  )}
+                  <span className="video-badge">
+                    <span className="rec-dot" aria-hidden="true" />
+                    {t('recording')} · {formatClock(secondsLeft)}
+                  </span>
                 </div>
-              )}
-              <span className="video-badge">
-                <span className="rec-dot" aria-hidden="true" />
-                {t('recording')} · {formatClock(secondsLeft)}
-              </span>
-            </div>
 
-            <div className="meter" aria-hidden="true">
-              <div
-                className={`meter-fill ${secondsLeft <= 15 ? 'crit' : 'gold'}`}
-                style={{ width: `${(secondsLeft / question.answerSeconds) * 100}%` }}
-              />
-            </div>
+                <div className="meter" aria-hidden="true">
+                  <div
+                    className={`meter-fill ${secondsLeft <= 15 ? 'crit' : 'gold'}`}
+                    style={{ width: `${(secondsLeft / question.answerSeconds) * 100}%` }}
+                  />
+                </div>
 
-            {/* Proof the microphone is live. Reassurance only — never recorded or scored. */}
-            <div className="mic-row">
-              <span className="mic-label">{t('micLive')}</span>
-              <span className="mic-bars" aria-hidden="true">
-                {[0.08, 0.2, 0.34, 0.5, 0.68].map((threshold) => (
-                  <span key={threshold} className={`mic-bar ${micLevel > threshold ? 'on' : ''}`} />
-                ))}
-              </span>
-              <span className="tiny">{micLevel > 0.08 ? t('micHearing') : t('micQuiet')}</span>
-            </div>
+                {/* Proof the microphone is live. Reassurance only — never recorded or scored. */}
+                <div className="mic-row">
+                  <span className="mic-label">{t('micLive')}</span>
+                  <span className="mic-bars" aria-hidden="true">
+                    {[0.08, 0.2, 0.34, 0.5, 0.68].map((threshold) => (
+                      <span key={threshold} className={`mic-bar ${micLevel > threshold ? 'on' : ''}`} />
+                    ))}
+                  </span>
+                  <span className="tiny">{micLevel > 0.08 ? t('micHearing') : t('micQuiet')}</span>
+                </div>
+              </>
+            )}
 
             {useVoice && silentTranscript && (
               <div className="notice notice-warn tiny">
@@ -687,8 +747,7 @@ export function InterviewFlow({
                     type="button"
                     className="btn btn-quiet"
                     onClick={() => {
-                      stopDictation();
-                      setVoiceDeclined(true);
+                      void switchToTyping();
                     }}
                   >
                     {t('speechTypeInstead')}
@@ -722,8 +781,13 @@ export function InterviewFlow({
               </p>
             </div>
 
-            <button type="button" className="btn btn-record" onClick={finishAnswer}>
-              {t('stopAndScore')}
+            <button
+              type="button"
+              className="btn btn-record"
+              onClick={finishAnswer}
+              disabled={isFinalizing}
+            >
+              {useVoice ? t('stopAndScore') : t('reviewTypedAnswer')}
             </button>
           </div>
         </div>
@@ -785,7 +849,10 @@ export function InterviewFlow({
                 )}
               </div>
             )}
-            <div className="row">
+            {transcript.trim().length === 0 && (
+              <p className="tiny" role="status">{t('answerRequired')}</p>
+            )}
+            <div className="row flow-actions">
               <button
                 type="button"
                 className="btn btn-primary"
@@ -801,6 +868,11 @@ export function InterviewFlow({
               <button type="button" className="btn btn-quiet" onClick={retryQuestion}>
                 {t('tryAgain')}
               </button>
+              {scoringError && (
+                <button type="button" className="btn btn-ghost" onClick={continueWithoutFeedback}>
+                  {t('continueWithoutFeedback')}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -810,7 +882,7 @@ export function InterviewFlow({
       {stage === 'feedback' && feedback && (
         <div className="stack">
           <FeedbackCard feedback={feedback} attempt={attemptCount} />
-          <div className="row">
+          <div className="row flow-actions">
             <button type="button" className="btn btn-primary" onClick={advance}>
               {isLast ? t('finishInterview') : t('nextQuestion')}
             </button>
