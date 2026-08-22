@@ -832,7 +832,7 @@ export function InterviewFlow({
                   ? t('continueWithVideo')
                   : t('continueWithTyping')}
             </button>
-            <Link href="/" className="btn btn-ghost" style={{ textDecoration: 'none' }}>
+            <Link href="/practice" className="btn btn-ghost" style={{ textDecoration: 'none' }}>
               {t('back')}
             </Link>
           </div>
@@ -1306,7 +1306,7 @@ export function InterviewFlow({
             >
               {t('practiceAgain')}
             </Link>
-            <Link href="/" className="btn btn-quiet" style={{ textDecoration: 'none' }}>
+            <Link href="/practice" className="btn btn-quiet" style={{ textDecoration: 'none' }}>
               {t('tryAnotherRole')}
             </Link>
             <Link href="/progress" className="btn btn-ghost" style={{ textDecoration: 'none' }}>

@@ -76,7 +76,7 @@ export function ProgressView() {
           <div className="card stack">
             <p className="muted">{t('progressEmpty')}</p>
             <div>
-              <Link href="/" className="btn btn-primary" style={{ textDecoration: 'none' }}>
+              <Link href="/practice" className="btn btn-primary" style={{ textDecoration: 'none' }}>
                 {t('startPractice')}
               </Link>
             </div>

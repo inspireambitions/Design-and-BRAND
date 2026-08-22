@@ -62,7 +62,7 @@ export function HomeView({ roles }: { roles: Role[] }) {
           <span className="chip chip-jade">{t('point3')}</span>
         </div>
 
-        <div className="card stack hero-form">
+        <div className="card stack hero-form" id="job-ad">
           <div>
             <h2 style={{ fontSize: '1.15rem' }}>{t('heroFormTitle')}</h2>
             <p className="muted" style={{ marginTop: '0.3rem', fontSize: '0.92rem' }}>

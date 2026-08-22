@@ -4,7 +4,6 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { Lang, StringKey } from '@/lib/i18n';
 import { t as translate } from '@/lib/i18n';
 import { loadLang, saveLang } from '@/lib/storage';
-import { initAnalytics } from '@/lib/analytics';
 
 type LanguageContextValue = {
   lang: Lang;
@@ -25,7 +24,16 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setLangState(loadLang());
-    initAnalytics();
+    if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+      const startAnalytics = () => {
+        void import('@/lib/analytics').then(({ initAnalytics }) => initAnalytics());
+      };
+      if ('requestIdleCallback' in window) {
+        window.requestIdleCallback(startAnalytics, { timeout: 2000 });
+      } else {
+        globalThis.setTimeout(startAnalytics, 0);
+      }
+    }
   }, []);
 
   useEffect(() => {

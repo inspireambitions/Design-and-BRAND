@@ -155,7 +155,7 @@ export function CustomRoleStart() {
             >
               {building ? t('jdBuilding') : usableJob ? t('jdStartTailored') : t('customStart')}
             </button>
-            <Link href="/" className="btn btn-quiet" style={{ textDecoration: 'none' }}>
+            <Link href="/practice" className="btn btn-quiet" style={{ textDecoration: 'none' }}>
               {t('back')}
             </Link>
           </div>

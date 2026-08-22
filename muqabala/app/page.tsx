@@ -1,6 +1,34 @@
-import { ROLES } from '@/lib/roles';
-import { HomeView } from '@/components/HomeView';
+import type { Metadata } from 'next';
+import { ROLES, type Role } from '@/lib/roles';
+import type { MarketingRole } from '@/lib/marketing-content';
+import { MarketingHome } from '@/components/MarketingSite';
+
+export const metadata: Metadata = {
+  alternates: { canonical: '/' },
+};
+
+const POPULAR_ROLE_IDS = [
+  'front-office-agent',
+  'customer-service',
+  'nurse',
+  'accountant',
+  'sales-executive',
+  'electrician',
+];
 
 export default function HomePage() {
-  return <HomeView roles={ROLES} />;
+  const popularRoles = POPULAR_ROLE_IDS
+    .map((id) => ROLES.find((role) => role.id === id))
+    .filter((role): role is Role => Boolean(role))
+    .map<MarketingRole>((role) => ({
+      id: role.id,
+      industry: role.industry,
+      industryAr: role.industryAr,
+      title: role.title,
+      titleAr: role.titleAr,
+      blurb: role.blurb,
+      blurbAr: role.blurbAr,
+      questionCount: role.questions.length,
+    }));
+  return <MarketingHome roles={popularRoles} />;
 }
