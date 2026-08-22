@@ -1159,6 +1159,65 @@ body[dir='rtl'] .mic-label {
   background: var(--jade-soft);
 }
 
+.mode-card:disabled,
+.mode-card[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.answer-method {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.method-card {
+  min-height: 118px;
+}
+
+.method-title-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.choice-note {
+  flex: 0 0 auto;
+  color: var(--jade);
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 0.12rem 0.42rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+body[dir='rtl'] .choice-note {
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.method-details {
+  gap: 0.8rem;
+}
+
+.expectation-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.expectation-keyline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--ink);
+}
+
 .mode-title {
   font-family: var(--font-display);
   font-weight: 700;

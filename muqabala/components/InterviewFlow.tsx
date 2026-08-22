@@ -640,7 +640,7 @@ export function InterviewFlow({
             </details>
           </div>
 
-          {/* ---------- how do you want to practise ---------- */}
+          {/* ---------- interview format ---------- */}
           <div className="mode-row">
             <button
               type="button"
@@ -664,6 +664,51 @@ export function InterviewFlow({
             )}
           </div>
 
+          {/* ---------- answer method ---------- */}
+          <section className="answer-method" aria-labelledby="answer-method-title">
+            <div>
+              <p className="eyebrow" id="answer-method-title">
+                {t('answerMethodTitle')}
+              </p>
+              <p className="tiny" style={{ marginTop: '0.25rem' }}>
+                {t('answerMethodBody')}
+              </p>
+            </div>
+            <div className="mode-row" role="group" aria-labelledby="answer-method-title">
+              <button
+                type="button"
+                className={`mode-card method-card ${useVoice ? 'on' : ''}`}
+                aria-pressed={useVoice}
+                aria-disabled={!speechOk}
+                onClick={() => {
+                  if (!speechOk) return;
+                  setVoiceDeclined(false);
+                  setDeviceFallback(false);
+                }}
+              >
+                <span className="method-title-row">
+                  <span className="mode-title">{t('answerVideoTitle')}</span>
+                  {speechOk && <span className="choice-note">{t('answerVideoBest')}</span>}
+                </span>
+                <span className="tiny">
+                  {speechOk ? t('answerVideoBody') : t('answerVideoUnavailable')}
+                </span>
+              </button>
+              <button
+                type="button"
+                className={`mode-card method-card ${!useVoice ? 'on' : ''}`}
+                aria-pressed={!useVoice}
+                onClick={() => void switchToTyping()}
+              >
+                <span className="method-title-row">
+                  <span className="mode-title">{t('answerTypeTitle')}</span>
+                  <span className="choice-note">{t('answerTypeBest')}</span>
+                </span>
+                <span className="tiny">{t('answerTypeBody')}</span>
+              </button>
+            </div>
+          </section>
+
           {/* Guided shows the questions before the camera is ever mentioned —
               proof before commitment. The mock keeps them hidden on purpose. */}
           {mode === 'guided' ? (
@@ -683,7 +728,7 @@ export function InterviewFlow({
             </p>
           )}
 
-          <div className="card stack">
+          <div className="card stack method-details">
             {useVoice ? (
               <>
                 <div className="video-frame">
@@ -718,20 +763,9 @@ export function InterviewFlow({
                   </li>
                 </ul>
 
-              <div className={`notice ${onDeviceSpeech ? '' : 'notice-warn'} tiny`}>
-                {onDeviceSpeech ? t('speechOnDevice') : t('speechCloud')}
-                {!onDeviceSpeech && (
-                  <div className="row" style={{ marginTop: '0.6rem' }}>
-                    <button
-                      type="button"
-                      className="btn btn-quiet"
-                      onClick={() => void switchToTyping()}
-                    >
-                      {t('speechTypeInstead')}
-                    </button>
-                  </div>
-                )}
-              </div>
+                <div className={`notice ${onDeviceSpeech ? '' : 'notice-warn'} tiny`}>
+                  {onDeviceSpeech ? t('speechOnDevice') : t('speechCloud')}
+                </div>
                 {cameraState !== 'granted' && (
                   <button
                     type="button"
@@ -746,47 +780,27 @@ export function InterviewFlow({
             ) : (
               <div className="notice">
                 <strong>{t('typingModeTitle')}</strong>
-                <p className="tiny" style={{ marginTop: '0.35rem' }}>{t('typingModeBody')}</p>
-                {speechOk && (
-                  <button
-                    type="button"
-                    className="btn btn-ghost"
-                    style={{ marginTop: '0.7rem' }}
-                    onClick={() => setVoiceDeclined(false)}
-                  >
-                    {t('speechUseVoice')}
-                  </button>
-                )}
+                <p className="tiny" style={{ marginTop: '0.35rem' }}>
+                  {t('typingModeBody')}
+                </p>
               </div>
             )}
           </div>
 
-          <div className="card-flat">
-            <p className="eyebrow" style={{ marginBottom: '0.7rem' }}>
-              {t('whatToExpect')}
+          <div className="card-flat expectation-summary">
+            <p className="eyebrow">{t('whatToExpect')}</p>
+            <p className="expectation-keyline">
+              <strong>
+                {activeQuestions.length} {t('expect1')}
+              </strong>
+              <span aria-hidden="true">·</span>
+              <strong>
+                {estimateMinutes({ ...role, questions: activeQuestions })} {t('expectTime')}
+              </strong>
             </p>
-            <ul className="checklist">
-              <li>
-                <span className="check-icon">{activeQuestions.length}</span>
-                <span>{t('expect1')}</span>
-              </li>
-              <li>
-                <span className="check-icon">✓</span>
-                <span>{t('expect2')}</span>
-              </li>
-              <li>
-                <span className="check-icon">✓</span>
-                <span>{t('expect3')}</span>
-              </li>
-              <li>
-                <span className="check-icon">✓</span>
-                <span>{t('expect4')}</span>
-              </li>
-              <li>
-                <span className="check-icon">{estimateMinutes({ ...role, questions: activeQuestions })}</span>
-                <span>{t('expectTime')}</span>
-              </li>
-            </ul>
+            <p className="tiny">
+              {t('expect2')}. {t('expect3')}. {t('expect4')}.
+            </p>
             <p className="notice tiny" style={{ marginTop: '0.9rem' }}>
               {t('scoringPolicy')}
             </p>
@@ -812,7 +826,11 @@ export function InterviewFlow({
                 startPrep();
               }}
             >
-              {requestingCamera ? t('cameraStarting') : t('imReady')}
+              {requestingCamera
+                ? t('cameraStarting')
+                : useVoice
+                  ? t('continueWithVideo')
+                  : t('continueWithTyping')}
             </button>
             <Link href="/" className="btn btn-ghost" style={{ textDecoration: 'none' }}>
               {t('back')}
@@ -968,6 +986,7 @@ export function InterviewFlow({
               ) : (
                 <textarea
                   className="answer-box"
+                  aria-label={t('yourAnswer')}
                   placeholder={t('typeAnswer')}
                   value={transcript}
                   onChange={(e) => setTranscript(e.target.value)}
@@ -1014,6 +1033,7 @@ export function InterviewFlow({
 
             <textarea
               className="answer-box"
+              aria-label={t('yourAnswer')}
               placeholder={t('typeAnswer')}
               value={transcript}
               onChange={(e) => {
