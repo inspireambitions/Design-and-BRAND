@@ -19,13 +19,13 @@ const validFeedback = {
 };
 
 test('the provider schema and server validator enforce the same text limits', () => {
-  assert.equal(FEEDBACK_JSON_SCHEMA.properties.headline.maxLength, 120);
+  assert.equal(FEEDBACK_JSON_SCHEMA.properties.headline.maxLength, 160);
   assert.equal(FEEDBACK_JSON_SCHEMA.properties.strengths.maxItems, 3);
   assert.equal(FEEDBACK_JSON_SCHEMA.properties.improvements.maxItems, 3);
   assert.equal(FEEDBACK_JSON_SCHEMA.properties.competencies.items.properties.evidence.maxLength, 400);
   assert.equal(FEEDBACK_JSON_SCHEMA.properties.coach_tip.maxLength, 600);
   assert.equal(FeedbackSchema.safeParse(validFeedback).success, true);
-  assert.equal(FeedbackSchema.safeParse({ ...validFeedback, headline: 'x'.repeat(121) }).success, false);
+  assert.equal(FeedbackSchema.safeParse({ ...validFeedback, headline: 'x'.repeat(161) }).success, false);
   assert.equal(
     FeedbackSchema.safeParse({ ...validFeedback, strengths: ['1', '2', '3', '4'] }).success,
     false,

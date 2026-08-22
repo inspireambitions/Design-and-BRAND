@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { Role } from '@/lib/roles';
-import { drawInterview } from '@/lib/interview-draw';
+import type { Question, Role } from '@/lib/roles';
+import { drawInterview, drawMockQuestions } from '@/lib/interview-draw';
 import { loadAttempts } from '@/lib/storage';
 import { InterviewFlow } from './InterviewFlow';
 
@@ -17,6 +17,7 @@ import { InterviewFlow } from './InterviewFlow';
  */
 export function PracticeInterview({ role }: { role: Role }) {
   const [drawn, setDrawn] = useState<Role | null>(null);
+  const [mockQuestions, setMockQuestions] = useState<Question[] | null>(null);
 
   useEffect(() => {
     let completed = 0;
@@ -26,6 +27,7 @@ export function PracticeInterview({ role }: { role: Role }) {
       completed = 0;
     }
     setDrawn(drawInterview(role, completed));
+    setMockQuestions(drawMockQuestions(role, completed));
     // The role prop is static per page; draw exactly once per mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [role.id]);
@@ -35,5 +37,5 @@ export function PracticeInterview({ role }: { role: Role }) {
   // that), then swap in the drawn variant as soon as the attempt count is
   // read. The swap happens at the check stage, where no question text is on
   // screen, and the opener is identical in every variant — so it is invisible.
-  return <InterviewFlow role={drawn ?? role} />;
+  return <InterviewFlow role={drawn ?? role} mockQuestions={mockQuestions ?? undefined} />;
 }

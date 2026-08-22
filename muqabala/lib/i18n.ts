@@ -82,6 +82,11 @@ export const STRINGS = {
     jdStartTailored: 'Build my interview',
     jdBuilding: 'Building your interview…',
     jdBuildingHint: 'Reading the advert and writing your questions. This takes up to about half a minute.',
+    heroFormTitle: 'Have a job advert? Start there.',
+    heroFormBody:
+      'Paste the advert and rehearse an interview written for that exact job. No advert? Type the job title instead.',
+    heroFormHint:
+      'The advert and your job title are sent to our AI provider to write the questions.',
     tailoredBadge: 'Built from your job advert',
     genericBadge: 'General interview',
     genericWhy: 'We could not build questions from that advert this time, so this is our general interview. It still works for any job.',
@@ -99,6 +104,15 @@ export const STRINGS = {
     rateCopied: 'Copied — paste it to us on WhatsApp.',
     rateSkip: 'Skip',
     copy: 'Copy',
+    beforeStartShort: 'This is practice. No employer sees it, and your video never leaves your phone.',
+    beforeStartMore: 'What we do with your answers',
+    modeGuidedTitle: 'Guided Practice',
+    modeGuidedBody: '5 questions · feedback after every answer · retake anything',
+    modeMockTitle: 'Full Mock Interview',
+    modeMockBody: '8 questions · one at a time · full report at the end · about 25–30 min',
+    revealTitle: 'Your questions — read them before you start',
+    mockHiddenNote:
+      'Mock questions stay hidden until you answer each one — just like the real interview. Your full report comes at the end.',
     timeLeft: 'Time left',
     streamLostBody:
       'Recording stopped — this happens when a call comes in or you switch apps. Nothing after that point was captured.',
@@ -110,9 +124,10 @@ export const STRINGS = {
     copyFallbackHint: 'Copying is blocked in this browser. Press and hold the text below, then copy it.',
     coachingTitle: 'Want a person in your corner?',
     coachingBody:
-      'Optional one-to-one coaching with a real coach before your interview — practise live, ask anything, get honest advice.',
+      'Optional one-to-one coaching with Kim, an HR Career Specialist, before your interview — practise live, ask anything, get honest advice.',
     coachingCta: 'Ask about coaching on WhatsApp',
-    coachingNote: 'Coaching is optional and separate. The app stays free to practise with.',
+    coachingNote:
+      'Coaching is optional and separate, and it is preparation only — it is not a job offer and does not guarantee one. The app stays free to practise with.',
     speechOnDevice: 'Voice-to-text runs on your device — your speech is not sent anywhere.',
     speechCloud:
       'Voice-to-text: to turn your speech into text, your browser sends the audio to its own speech service (for example Google on Chrome). If you would rather nothing left your device, type your answer instead.',
@@ -167,6 +182,7 @@ export const STRINGS = {
     resultsBody: 'Here is how the whole interview went, question by question.',
     strongest: 'Strongest answer',
     weakest: 'Focus here next',
+    nextAction: 'Your next step',
     practiceAgain: 'Practise this interview again',
     tryAnotherRole: 'Try another role',
     savedLocally: 'Stored in this browser so you can track your improvement. Clearing your history removes it.',
@@ -277,6 +293,11 @@ export const STRINGS = {
     jdStartTailored: 'ابنِ مقابلتي',
     jdBuilding: 'نبني مقابلتك…',
     jdBuildingHint: 'نقرأ الإعلان ونكتب أسئلتك. يستغرق هذا حتى نصف دقيقة تقريباً.',
+    heroFormTitle: 'لديك إعلان وظيفة؟ ابدأ منه.',
+    heroFormBody:
+      'الصق الإعلان وتدرّب على مقابلة مكتوبة لتلك الوظيفة بالذات. لا يوجد إعلان؟ اكتب المسمى الوظيفي بدلاً منه.',
+    heroFormHint:
+      'يُرسل الإعلان والمسمى الوظيفي إلى مزود الذكاء الاصطناعي لكتابة الأسئلة.',
     tailoredBadge: 'مبنية من إعلان وظيفتك',
     genericBadge: 'مقابلة عامة',
     genericWhy: 'لم نتمكن من بناء أسئلة من ذلك الإعلان هذه المرة، لذا هذه مقابلتنا العامة. وهي تصلح لأي وظيفة.',
@@ -294,6 +315,15 @@ export const STRINGS = {
     rateCopied: 'تم النسخ — أرسله لنا على واتساب.',
     rateSkip: 'تخطَّ',
     copy: 'انسخ',
+    beforeStartShort: 'هذا تدريب. لا يراه أي صاحب عمل، والفيديو لا يغادر هاتفك أبداً.',
+    beforeStartMore: 'ماذا نفعل بإجاباتك',
+    modeGuidedTitle: 'تدريب موجّه',
+    modeGuidedBody: '٥ أسئلة · ملاحظات بعد كل إجابة · أعد أي سؤال',
+    modeMockTitle: 'مقابلة تجريبية كاملة',
+    modeMockBody: '٨ أسئلة · واحداً تلو الآخر · تقرير كامل في النهاية · حوالي ٢٥–٣٠ دقيقة',
+    revealTitle: 'أسئلتك — اقرأها قبل أن تبدأ',
+    mockHiddenNote:
+      'أسئلة المقابلة التجريبية تبقى مخفية حتى تجيب على كل منها — تماماً كالمقابلة الحقيقية. تقريرك الكامل يصلك في النهاية.',
     timeLeft: 'الوقت المتبقي',
     streamLostBody:
       'توقف التسجيل — يحدث هذا عند ورود مكالمة أو التبديل بين التطبيقات. لم يُلتقط أي شيء بعد تلك اللحظة.',
@@ -305,9 +335,10 @@ export const STRINGS = {
     copyFallbackHint: 'النسخ محظور في هذا المتصفح. اضغط مطولاً على النص أدناه ثم انسخه.',
     coachingTitle: 'هل تريد شخصاً يقف إلى جانبك؟',
     coachingBody:
-      'تدريب شخصي اختياري مع مدرب حقيقي قبل مقابلتك — تدرّب مباشرة، واسأل ما تشاء، واحصل على نصيحة صادقة.',
+      'تدريب شخصي اختياري مع كيم — خبرة متخصصة في الموارد البشرية والمسارات المهنية — قبل مقابلتك: تدرّب مباشرة، واسأل ما تشاء، واحصل على نصيحة صادقة.',
     coachingCta: 'اسأل عن التدريب عبر واتساب',
-    coachingNote: 'التدريب الشخصي اختياري ومنفصل. يبقى التطبيق مجانياً للتدرب.',
+    coachingNote:
+      'التدريب الشخصي اختياري ومنفصل، وهو للتحضير فقط — ليس عرض عمل ولا يضمن الحصول على وظيفة. يبقى التطبيق مجانياً للتدرب.',
     speechOnDevice: 'تحويل الصوت إلى نص يعمل على جهازك — صوتك لا يُرسل إلى أي مكان.',
     speechCloud:
       'تحويل الصوت إلى نص: لتحويل كلامك إلى نص، يرسل متصفحك الصوت إلى خدمة التعرف على الكلام الخاصة به (مثل جوجل في كروم). إذا كنت تفضّل ألا يغادر شيء جهازك، اكتب إجابتك بدلاً من ذلك.',
@@ -359,6 +390,7 @@ export const STRINGS = {
     resultsBody: 'إليك كيف سارت المقابلة بالكامل، سؤالاً بسؤال.',
     strongest: 'أقوى إجابة',
     weakest: 'ركّز هنا لاحقاً',
+    nextAction: 'خطوتك التالية',
     practiceAgain: 'تدرّب على هذه المقابلة مرة أخرى',
     tryAnotherRole: 'جرّب وظيفة أخرى',
     savedLocally: 'مخزَّن في هذا المتصفح لتتابع تحسّنك. مسح السجل يزيله.',

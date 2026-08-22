@@ -1122,3 +1122,80 @@ body[dir='rtl'] .mic-label {
 .btn {
   min-height: 44px;
 }
+
+/* ---------- practice mode choice ---------- */
+
+.mode-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.7rem;
+}
+
+@media (max-width: 430px) {
+  .mode-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mode-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  text-align: start;
+  background: var(--surface);
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+  font: inherit;
+  color: inherit;
+  min-height: 44px;
+}
+
+.mode-card.on {
+  border-color: var(--jade);
+  background: var(--jade-soft);
+}
+
+.mode-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+body[dir='rtl'] .mode-title {
+  font-family: var(--font-arabic);
+}
+
+.reveal-list {
+  margin: 0;
+  padding-inline-start: 1.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  font-size: 0.95rem;
+}
+
+.disclosure summary {
+  cursor: pointer;
+  color: var(--jade);
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+/* ---------- landing advert form + results summary ---------- */
+
+.hero-form {
+  margin-top: 1.4rem;
+  text-align: start;
+}
+
+textarea.answer-box-compact {
+  min-height: 5.5rem;
+}
+
+.summary-item p {
+  font-size: 0.95rem;
+}

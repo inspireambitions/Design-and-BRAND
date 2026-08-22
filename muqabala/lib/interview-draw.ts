@@ -1,5 +1,6 @@
 import type { Question, Role } from './roles';
 
+
 /**
  * Draws the interview a candidate actually takes.
  *
@@ -37,4 +38,26 @@ export function drawInterview(role: Role, completedAttempts: number): Role {
   }
 
   return { ...role, questions: [opener, ...middles, closer] };
+}
+
+/**
+ * The Full Mock set: opener + six middles + closer, drawn from the same pool
+ * with the same determinism. Null when the role has no bank to widen with —
+ * callers hide the mock option rather than faking one.
+ */
+export function drawMockQuestions(role: Role, completedAttempts: number): Question[] | null {
+  const bank = role.bank ?? [];
+  if (bank.length === 0 || role.questions.length < 3) return null;
+
+  const opener = role.questions[0];
+  const closer = role.questions[role.questions.length - 1];
+  const pool: Question[] = [...role.questions.slice(1, -1), ...bank];
+  const take = 6;
+  if (pool.length < take) return null;
+
+  const variant = Math.max(0, Math.floor(completedAttempts));
+  const start = (variant * take) % pool.length;
+  const middles: Question[] = [];
+  for (let i = 0; i < take; i += 1) middles.push(pool[(start + i) % pool.length]);
+  return [opener, ...middles, closer];
 }

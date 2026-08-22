@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { buildCustomRole, type Role } from '@/lib/roles';
+import { takeHeroDraft } from '@/lib/hero-draft';
 import { useLang } from './LanguageProvider';
 import { TopBar } from './TopBar';
 import { InterviewFlow } from './InterviewFlow';
@@ -22,6 +23,52 @@ export function CustomRoleStart() {
   const [token, setToken] = useState<string | undefined>(undefined);
   const [fellBack, setFellBack] = useState(false);
   const [building, setBuilding] = useState(false);
+  const draftHandled = useRef(false);
+
+  const startWith = async (titleArg: string, jobArg: string) => {
+    const usable = !looksLikeUrl(jobArg) && jobArg.length >= 120;
+    setBuilding(true);
+    try {
+      const response = await fetch('/api/interview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jobTitle: titleArg,
+          jobText: usable ? jobArg : '',
+        }),
+      });
+      if (!response.ok) throw new Error(String(response.status));
+      const data = (await response.json()) as { role: Role; tailored: boolean; token?: string };
+      setTailored(Boolean(data.tailored));
+      setToken(data.token);
+      // They pasted an advert but we could not build from it — say so.
+      setFellBack(usable && !data.tailored);
+      setRole(data.role);
+    } catch {
+      // Never strand the candidate: fall back to the generic interview.
+      setTailored(false);
+      setFellBack(usable);
+      setRole(buildCustomRole(titleArg));
+    } finally {
+      setBuilding(false);
+    }
+  };
+
+  // A draft handed over from the landing-page advert form: prefill, and when
+  // the advert is complete enough to tailor from, start building immediately.
+  useEffect(() => {
+    if (draftHandled.current) return;
+    draftHandled.current = true;
+    const draft = takeHeroDraft();
+    if (!draft) return;
+    setTitle(draft.jobTitle);
+    setJobText(draft.jobText);
+    const job = draft.jobText.trim();
+    if (!looksLikeUrl(job) && job.length >= 120) {
+      void startWith(draft.jobTitle.trim(), job);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (role) {
     return (
@@ -41,33 +88,7 @@ export function CustomRoleStart() {
   const usableJob = !pastedLink && trimmedJob.length >= 120;
   const canStart = trimmedTitle.length >= 2 || usableJob;
 
-  const start = async () => {
-    setBuilding(true);
-    try {
-      const response = await fetch('/api/interview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jobTitle: trimmedTitle,
-          jobText: usableJob ? trimmedJob : '',
-        }),
-      });
-      if (!response.ok) throw new Error(String(response.status));
-      const data = (await response.json()) as { role: Role; tailored: boolean; token?: string };
-      setTailored(Boolean(data.tailored));
-      setToken(data.token);
-      // They pasted an advert but we could not build from it — say so.
-      setFellBack(usableJob && !data.tailored);
-      setRole(data.role);
-    } catch {
-      // Never strand the candidate: fall back to the generic interview.
-      setTailored(false);
-      setFellBack(usableJob);
-      setRole(buildCustomRole(trimmedTitle));
-    } finally {
-      setBuilding(false);
-    }
-  };
+  const start = () => startWith(trimmedTitle, trimmedJob);
 
   return (
     <div className="shell shell-narrow">

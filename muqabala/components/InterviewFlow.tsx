@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Role } from '@/lib/roles';
+import type { Question, Role } from '@/lib/roles';
 import type { AnswerFeedback, Attempt } from '@/lib/scoring';
 import { overallFromAnswers } from '@/lib/scoring';
 import { saveAttempt } from '@/lib/storage';
@@ -85,6 +85,7 @@ export function InterviewFlow({
   tailored = false,
   interviewToken,
   fellBack = false,
+  mockQuestions,
 }: {
   role: Role;
   /** Job title typed by the candidate when practising a role not in the catalogue. */
@@ -95,6 +96,8 @@ export function InterviewFlow({
   interviewToken?: string;
   /** True when an advert was pasted but tailoring did not succeed. */
   fellBack?: boolean;
+  /** Eight-question set for Full Mock mode; absent when the role cannot support it. */
+  mockQuestions?: Question[];
 }) {
   const { lang, t } = useLang();
 
@@ -114,6 +117,11 @@ export function InterviewFlow({
   const [speechOk, setSpeechOk] = useState(true);
   const [onDeviceSpeech, setOnDeviceSpeech] = useState(false);
   const [voiceDeclined, setVoiceDeclined] = useState(false);
+  /**
+   * Guided: revealed questions, feedback after each answer, retakes.
+   * Mock: eight questions one at a time, no interruptions, report at the end.
+   */
+  const [mode, setMode] = useState<'guided' | 'mock'>('guided');
   const [recordingLive, setRecordingLive] = useState(false);
   const lastHeardRef = useRef(0);
   const [meterUnavailable, setMeterUnavailable] = useState(false);
@@ -146,11 +154,13 @@ export function InterviewFlow({
   const [savedAttempt, setSavedAttempt] = useState<Attempt | null>(null);
 
   const useVoice = speechOk && !voiceDeclined;
-  const question = role.questions[index];
+  const activeQuestions =
+    mode === 'mock' && mockQuestions && mockQuestions.length > 0 ? mockQuestions : role.questions;
+  const question = activeQuestions[index];
   // Latched, not instantaneous: ordinary pauses between sentences must not
   // flip the caption to "we cannot hear you" four times a second.
   const heardRecently = micLevel > 0.08 || Date.now() - lastHeardRef.current < 2500;
-  const isLast = index === role.questions.length - 1;
+  const isLast = index === activeQuestions.length - 1;
   const questionText = lang === 'ar' ? question.textAr : question.text;
   const hintText = lang === 'ar' ? question.hintAr : question.hint;
 
@@ -170,11 +180,13 @@ export function InterviewFlow({
   const stopDictation = useCallback(() => {
     const captured = dictationRef.current?.stop();
     dictationRef.current = null;
-    if (captured) {
-      setTranscript(
-        [captured.finalText.trim(), captured.interimText.trim()].filter(Boolean).join(' '),
-      );
-    }
+    // A dictation session that heard nothing must not wipe the transcript:
+    // when speech dies mid-question the candidate falls back to typing, and
+    // an empty capture here would erase what they typed.
+    const heard = captured
+      ? [captured.finalText.trim(), captured.interimText.trim()].filter(Boolean).join(' ')
+      : '';
+    if (heard) setTranscript(heard);
     setInterim('');
   }, []);
 
@@ -368,6 +380,10 @@ export function InterviewFlow({
     return () => window.clearTimeout(id);
   }, [stage, secondsLeft, beginRecording, finishAnswer, useVoice, streamLost]);
 
+  // completeCurrentAnswer is declared later in the file; the mock path inside
+  // submitForScoring reaches it through a ref kept current on every render.
+  const completeAnswerRef = useRef<((fb: AnswerFeedback) => void) | null>(null);
+
   const submitForScoring = useCallback(async () => {
     if (scoringInFlightRef.current) return;
     scoringInFlightRef.current = true;
@@ -417,10 +433,17 @@ export function InterviewFlow({
         );
       }
       const data = (await response.json()) as { feedback: AnswerFeedback };
-      setFeedback(data.feedback);
-      setStage('feedback');
       scoringSessionRef.current = null;
       automaticRetriesRef.current = 0;
+      if (mode === 'mock') {
+        // The mock does not interrupt: the score is banked and the interview
+        // moves straight on, exactly like a real first round. Everything is
+        // shown together in the final report.
+        completeAnswerRef.current?.(data.feedback);
+      } else {
+        setFeedback(data.feedback);
+        setStage('feedback');
+      }
     } catch (error) {
       const requestError =
         error instanceof ScoringRequestError
@@ -439,7 +462,7 @@ export function InterviewFlow({
       scoringInFlightRef.current = false;
       setIsScoring(false);
     }
-  }, [customTitle, interviewToken, lang, question.id, role.id, transcript]);
+  }, [customTitle, interviewToken, lang, mode, question.id, role.id, transcript]);
 
   useEffect(() => {
     if (retrySeconds === null) return;
@@ -495,13 +518,15 @@ export function InterviewFlow({
       setStage('done');
     } else {
       setIndex((i) => i + 1);
-      setSecondsLeft(role.questions[index + 1].prepSeconds);
+      setSecondsLeft(activeQuestions[index + 1].prepSeconds);
       setStage('prep');
     }
     window.setTimeout(() => {
       advancingRef.current = false;
     }, 0);
-  }, [answers, index, isLast, playbackUrl, question.id, questionText, role.questions, transcript]);
+  }, [answers, index, isLast, playbackUrl, question.id, questionText, activeQuestions, transcript]);
+
+  completeAnswerRef.current = completeCurrentAnswer;
 
   const advance = useCallback(() => {
     if (feedback) completeCurrentAnswer(feedback);
@@ -562,7 +587,7 @@ export function InterviewFlow({
       <TopBar showProgressLink={false} locked={stage !== 'check' && stage !== 'done'} />
 
       <div className="rail" aria-hidden="true">
-        {role.questions.map((q, i) => (
+        {activeQuestions.map((q, i) => (
           <span
             key={q.id}
             className={`rail-step ${i < index ? 'done' : i === index ? 'current' : ''}`}
@@ -571,7 +596,7 @@ export function InterviewFlow({
       </div>
       <p className="tiny" style={{ marginBottom: '1.4rem' }}>
         {lang === 'ar' ? role.titleAr : role.title} · {t('question')} {index + 1} {t('of')}{' '}
-        {role.questions.length}
+        {activeQuestions.length}
       </p>
 
       {/* ---------- device check ---------- */}
@@ -593,9 +618,58 @@ export function InterviewFlow({
               </p>
             )}
             <p className="lede" style={{ marginTop: '0.6rem' }}>
-              {t('beforeStartBody')}
+              {t('beforeStartShort')}
             </p>
+            <details className="disclosure" style={{ marginTop: '0.5rem' }}>
+              <summary className="tiny">{t('beforeStartMore')}</summary>
+              <p className="tiny" style={{ marginTop: '0.4rem' }}>
+                {t('beforeStartBody')}
+              </p>
+            </details>
           </div>
+
+          {/* ---------- how do you want to practise ---------- */}
+          <div className="mode-row">
+            <button
+              type="button"
+              className={`mode-card ${mode === 'guided' ? 'on' : ''}`}
+              aria-pressed={mode === 'guided'}
+              onClick={() => setMode('guided')}
+            >
+              <span className="mode-title">{t('modeGuidedTitle')}</span>
+              <span className="tiny">{t('modeGuidedBody')}</span>
+            </button>
+            {mockQuestions && mockQuestions.length > 0 && (
+              <button
+                type="button"
+                className={`mode-card ${mode === 'mock' ? 'on' : ''}`}
+                aria-pressed={mode === 'mock'}
+                onClick={() => setMode('mock')}
+              >
+                <span className="mode-title">{t('modeMockTitle')}</span>
+                <span className="tiny">{t('modeMockBody')}</span>
+              </button>
+            )}
+          </div>
+
+          {/* Guided shows the questions before the camera is ever mentioned —
+              proof before commitment. The mock keeps them hidden on purpose. */}
+          {mode === 'guided' ? (
+            <div className="card-flat">
+              <p className="eyebrow" style={{ marginBottom: '0.6rem' }}>
+                {t('revealTitle')}
+              </p>
+              <ol className="reveal-list">
+                {activeQuestions.map((q) => (
+                  <li key={q.id}>{lang === 'ar' ? q.textAr : q.text}</li>
+                ))}
+              </ol>
+            </div>
+          ) : (
+            <p className="notice tiny" style={{ margin: 0 }}>
+              {t('mockHiddenNote')}
+            </p>
+          )}
 
           <div className="card stack">
             {useVoice ? (
@@ -681,7 +755,7 @@ export function InterviewFlow({
             </p>
             <ul className="checklist">
               <li>
-                <span className="check-icon">{role.questions.length}</span>
+                <span className="check-icon">{activeQuestions.length}</span>
                 <span>{t('expect1')}</span>
               </li>
               <li>
@@ -697,7 +771,7 @@ export function InterviewFlow({
                 <span>{t('expect4')}</span>
               </li>
               <li>
-                <span className="check-icon">{estimateMinutes(role)}</span>
+                <span className="check-icon">{estimateMinutes({ ...role, questions: activeQuestions })}</span>
                 <span>{t('expectTime')}</span>
               </li>
             </ul>
@@ -958,9 +1032,11 @@ export function InterviewFlow({
                     ? t('retryNow')
                     : t('getFeedback')}
               </button>
-              <button type="button" className="btn btn-quiet" onClick={retryQuestion}>
-                {t('tryAgain')}
-              </button>
+              {mode === 'guided' && (
+                <button type="button" className="btn btn-quiet" onClick={retryQuestion}>
+                  {t('tryAgain')}
+                </button>
+              )}
               {scoringError && (
                 <button type="button" className="btn btn-ghost" onClick={continueWithoutFeedback}>
                   {t('continueWithoutFeedback')}
@@ -1109,6 +1185,42 @@ export function InterviewFlow({
             )}
             <p className="tiny no-print">{t('saveReportHint')}</p>
           </div>
+
+          {(() => {
+            // Strongest answer / focus area / next action — computed only from
+            // answers the AI actually scored, and only when there are at least
+            // two so "strongest" and "focus" are different questions.
+            const scored = answers
+              .map((a, i) => ({ ...a, index: i }))
+              .filter((a) => a.feedback.status === 'scored');
+            if (scored.length < 2) return null;
+            const best = scored.reduce((a, b) => (b.feedback.score > a.feedback.score ? b : a));
+            const worst = scored.reduce((a, b) => (b.feedback.score < a.feedback.score ? b : a));
+            if (best.index === worst.index) return null;
+            const action = worst.feedback.coachTip || worst.feedback.improvements[0] || null;
+            return (
+              <div className="card stack-sm">
+                <div className="summary-item">
+                  <span className="rate-label">{t('strongest')}</span>
+                  <p style={{ marginTop: '0.25rem' }}>
+                    {t('question')} {best.index + 1} · {best.feedback.score}/100 — {best.questionText}
+                  </p>
+                </div>
+                <div className="summary-item">
+                  <span className="rate-label">{t('weakest')}</span>
+                  <p style={{ marginTop: '0.25rem' }}>
+                    {t('question')} {worst.index + 1} · {worst.feedback.score}/100 — {worst.questionText}
+                  </p>
+                </div>
+                {action && (
+                  <div className="summary-item">
+                    <span className="rate-label">{t('nextAction')}</span>
+                    <p style={{ marginTop: '0.25rem' }}>{action}</p>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {savedAttempt && (
             <div className="no-print">
