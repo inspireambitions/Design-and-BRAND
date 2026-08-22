@@ -30,6 +30,13 @@ export type Role = {
   blurbAr: string;
   competencies: Competency[];
   questions: Question[];
+  /**
+   * Extra questions this role can draw on so repeat practice does not repeat
+   * the interview. Never rendered directly: the interview a candidate takes is
+   * drawn by lib/interview-draw.ts from questions + bank. Scoring must accept
+   * ids from either list.
+   */
+  bank?: Question[];
 };
 
 export const STAR_HINT =

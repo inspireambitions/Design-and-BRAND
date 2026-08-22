@@ -5,7 +5,7 @@ import { LanguageProvider } from '@/components/LanguageProvider';
 export const metadata: Metadata = {
   title: 'Muqabala — Interview practice for Gulf jobs',
   description:
-    'Practise real Gulf job interviews on camera and get honest, specific feedback on what you actually said. Free first interview, no sign-up.',
+    'Practise real interview questions for Gulf jobs — from anywhere in the world. Honest, specific feedback on what you actually said. Free, unlimited, no sign-up.',
 };
 
 export const viewport: Viewport = {

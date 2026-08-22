@@ -6,9 +6,25 @@ import { officeRoles } from './office';
 import { energyRoles, automotiveRoles } from './industrial';
 import { creativeRoles } from './creative';
 import { CUSTOM_ROLE_ID, buildCustomRole } from './custom';
+import { serviceCompetencies, technicalCompetencies, careCompetencies, type Role } from './shared';
+import { serviceBank, technicalBank, careBank } from './banks';
 
 export type { Competency, Question, Role } from './shared';
 export { CUSTOM_ROLE_ID, buildCustomRole };
+
+/**
+ * Attach the shared question bank matching each role's competency family, so
+ * repeat practice draws fresh questions instead of the same five. Matched by
+ * reference: every catalogue role imports one of the three shared competency
+ * arrays. Roles with bespoke competencies (none today) get no bank, which the
+ * draw logic treats as "no rotation" — never an error.
+ */
+function withBank(role: Role): Role {
+  if (role.competencies === serviceCompetencies) return { ...role, bank: serviceBank };
+  if (role.competencies === technicalCompetencies) return { ...role, bank: technicalBank };
+  if (role.competencies === careCompetencies) return { ...role, bank: careBank };
+  return role;
+}
 
 export const ROLES = [
   ...hospitalityRoles,
@@ -22,7 +38,7 @@ export const ROLES = [
   ...energyRoles,
   ...automotiveRoles,
   ...creativeRoles,
-];
+].map(withBank);
 
 export function getRole(id: string) {
   if (id === CUSTOM_ROLE_ID) return buildCustomRole();

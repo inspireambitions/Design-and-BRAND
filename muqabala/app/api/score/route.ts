@@ -355,7 +355,11 @@ export async function POST(request: Request) {
   // that fails is treated as absent rather than as a hint.
   const verified = interviewToken ? verifyInterview(interviewToken) : null;
   const role = verified ? roleFromToken(verified) : getRole(roleId);
-  const question = role?.questions.find((q) => q.id === questionId);
+  // Drawn interviews can include shared-bank questions, so the lookup covers
+  // questions and bank alike. A drawn question must never 404 at scoring.
+  const question =
+    role?.questions.find((q) => q.id === questionId) ??
+    role?.bank?.find((q) => q.id === questionId);
   if (!role || !question) {
     return Response.json({ error: 'Unknown role or question.' }, { status: 404 });
   }

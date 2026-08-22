@@ -5,7 +5,7 @@ export const STRINGS = {
     tagline: 'Practice until the interview feels less scary.',
     heroTitle: 'Rehearse your Gulf job interview. As many times as you need.',
     heroBody:
-      'Answer real interview questions on camera, get honest feedback on what you actually said, and watch your score climb. Your practice is never shown to an employer.',
+      'Answer real interview questions on camera, get honest feedback on what you actually said, and watch your score climb. Wherever you are — Manila, Mumbai, Nairobi or Dubai — practise for the Gulf job you want. Your practice is never shown to an employer.',
     startPractice: 'Start practising',
     seeProgress: 'My progress',
     point1: 'Free, unlimited practice',
@@ -97,6 +97,11 @@ export const STRINGS = {
     rateSendHint: 'Opens WhatsApp with your result so we can see how the test went. Nothing is sent automatically.',
     rateCopied: 'Copied — paste it to us on WhatsApp.',
     rateSkip: 'Skip',
+    coachingTitle: 'Want a person in your corner?',
+    coachingBody:
+      'Optional one-to-one coaching with a real coach before your interview — practise live, ask anything, get honest advice.',
+    coachingCta: 'Ask about coaching on WhatsApp',
+    coachingNote: 'Coaching is optional and separate. The app stays free to practise with.',
     speechOnDevice: 'Voice-to-text runs on your device — your speech is not sent anywhere.',
     speechCloud:
       'Voice-to-text: to turn your speech into text, your browser sends the audio to its own speech service (for example Google on Chrome). If you would rather nothing left your device, type your answer instead.',
@@ -185,7 +190,7 @@ export const STRINGS = {
     tagline: 'تدرّب حتى تصبح المقابلة أقل رهبة.',
     heroTitle: 'تدرّب على مقابلة عملك في الخليج. بقدر ما تحتاج.',
     heroBody:
-      'أجب على أسئلة مقابلات حقيقية أمام الكاميرا، واحصل على ملاحظات صادقة حول ما قلته فعلاً، وشاهد درجتك ترتفع. تدريبك لا يُعرض على أي صاحب عمل.',
+      'أجب على أسئلة مقابلات حقيقية أمام الكاميرا، واحصل على ملاحظات صادقة حول ما قلته فعلاً، وشاهد درجتك ترتفع. أينما كنت — في مانيلا أو مومباي أو نيروبي أو دبي — تدرّب على وظيفة الخليج التي تريدها. تدريبك لا يُعرض على أي صاحب عمل.',
     startPractice: 'ابدأ التدريب',
     seeProgress: 'تقدمي',
     point1: 'تدريب مجاني بلا حدود',
@@ -276,6 +281,11 @@ export const STRINGS = {
     rateSendHint: 'يفتح واتساب بنتيجتك حتى نرى كيف سارت التجربة. لا يُرسل شيء تلقائياً.',
     rateCopied: 'تم النسخ — أرسله لنا على واتساب.',
     rateSkip: 'تخطَّ',
+    coachingTitle: 'هل تريد شخصاً يقف إلى جانبك؟',
+    coachingBody:
+      'تدريب شخصي اختياري مع مدرب حقيقي قبل مقابلتك — تدرّب مباشرة، واسأل ما تشاء، واحصل على نصيحة صادقة.',
+    coachingCta: 'اسأل عن التدريب عبر واتساب',
+    coachingNote: 'التدريب الشخصي اختياري ومنفصل. يبقى التطبيق مجانياً للتدرب.',
     speechOnDevice: 'تحويل الصوت إلى نص يعمل على جهازك — صوتك لا يُرسل إلى أي مكان.',
     speechCloud:
       'تحويل الصوت إلى نص: لتحويل كلامك إلى نص، يرسل متصفحك الصوت إلى خدمة التعرف على الكلام الخاصة به (مثل جوجل في كروم). إذا كنت تفضّل ألا يغادر شيء جهازك، اكتب إجابتك بدلاً من ذلك.',

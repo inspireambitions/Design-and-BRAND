@@ -270,6 +270,36 @@ are met, missing, or not yet applicable:
 | **Daniel Chen** | SaaS go-to-market | Free top-of-funnel hook, pilot playbook, publishable proof metrics, self-serve pricing |
 | **Fatima Al-Farsi** | Employment & data-protection counsel | Consent/retention/deletion as features, per-country question packs, no face or emotion scoring |
 
+## Decisions from the first outside-adviser feedback (August 2026)
+
+A trusted adviser reviewed the live app. What we took, and what we decided:
+
+- **Question bank + rotation (built).** He found that practising a role twice gives
+  the identical five questions — a real defect in the "practise until ready"
+  promise. Catalogue roles now carry a shared bank per competency family
+  (`lib/roles/banks.ts`); each attempt draws a fresh set (`lib/interview-draw.ts`),
+  deterministically, seeded by the device's completed attempts. Scoring accepts
+  bank ids; a drawn question can never 404. Attempt one always gets the curated
+  core set. A longer-interview option (8 questions) is queued, not built.
+- **"From anywhere in the world" (built).** He read the app as Gulf-residents-only.
+  It is for people anywhere applying TO Gulf jobs — the hero and the meta
+  description now say so. This also removed the false "Free first interview"
+  claim from the meta description. Full internationalisation was considered and
+  deliberately deferred: the Gulf focus is the moat; only two strings couple the
+  question set to the Gulf, so widening later is cheap. Do not genericise the
+  product to chase "international" before the Gulf position is won.
+- **Personal coaching door (built, dormant).** His larger point — people trust
+  people; the founder should coach, with the app as the assistant. We are not
+  betting the product on it, but the results screen now shows an optional
+  "ask about coaching" card that opens the candidate's own WhatsApp. It renders
+  ONLY when NEXT_PUBLIC_COACHING_WHATSAPP is set, so current deployments are
+  unchanged. It also measures demand for the coaching thesis before anyone
+  commits to it.
+- **Pricing (open).** He warned AED 79 is real money for a candidate earning
+  AED 1,500-2,500/month. Unresolved; the standing options are candidate-cheap +
+  employer-paid (phase two) or coaching-funded. Do not ship candidate pricing
+  without revisiting this.
+
 The full strategy document these came from is the "Beating Spark Hire" board artifact; ask the
 project owner for the link if the reasoning behind a decision is unclear.
 

@@ -19,6 +19,7 @@ import { TopBar } from './TopBar';
 import { FeedbackCard } from './FeedbackCard';
 import { ScoreRing } from './ScoreRing';
 import { RatingCard } from './RatingCard';
+import { CoachingCard } from './CoachingCard';
 
 type Stage = 'check' | 'prep' | 'record' | 'review' | 'feedback' | 'done';
 
@@ -959,6 +960,8 @@ export function InterviewFlow({
               <RatingCard attempt={savedAttempt} />
             </div>
           )}
+
+          <CoachingCard />
 
           {answers.map((answer, i) => (
             <div key={`${answer.questionId}-${i}`} className="stack-sm">

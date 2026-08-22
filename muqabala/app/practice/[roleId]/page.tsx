@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { ROLES, getRole } from '@/lib/roles';
-import { InterviewFlow } from '@/components/InterviewFlow';
+import { PracticeInterview } from '@/components/PracticeInterview';
 
 export function generateStaticParams() {
   return ROLES.map((role) => ({ roleId: role.id }));
@@ -15,5 +15,5 @@ export default async function PracticePage({
   const role = getRole(roleId);
   if (!role) notFound();
 
-  return <InterviewFlow role={role} />;
+  return <PracticeInterview role={role} />;
 }
