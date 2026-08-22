@@ -114,6 +114,12 @@ export function InterviewFlow({
   const [speechOk, setSpeechOk] = useState(true);
   const [onDeviceSpeech, setOnDeviceSpeech] = useState(false);
   const [voiceDeclined, setVoiceDeclined] = useState(false);
+  const [recordingLive, setRecordingLive] = useState(false);
+  const lastHeardRef = useRef(0);
+  const [meterUnavailable, setMeterUnavailable] = useState(false);
+  const [streamLost, setStreamLost] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
 
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [transcript, setTranscript] = useState('');
@@ -141,6 +147,9 @@ export function InterviewFlow({
 
   const useVoice = speechOk && !voiceDeclined;
   const question = role.questions[index];
+  // Latched, not instantaneous: ordinary pauses between sentences must not
+  // flip the caption to "we cannot hear you" four times a second.
+  const heardRecently = micLevel > 0.08 || Date.now() - lastHeardRef.current < 2500;
   const isLast = index === role.questions.length - 1;
   const questionText = lang === 'ar' ? question.textAr : question.text;
   const hintText = lang === 'ar' ? question.hintAr : question.hint;
@@ -246,9 +255,19 @@ export function InterviewFlow({
     setSecondsLeft(question.answerSeconds);
     setStage('record');
 
+    setStreamLost(false);
+    const live = Boolean(useVoice && streamRef.current);
+    setRecordingLive(live);
     if (useVoice && streamRef.current) {
       recorderRef.current = startRecording(streamRef.current);
-      meterRef.current = startLevelMeter(streamRef.current, setMicLevel);
+      meterRef.current = startLevelMeter(
+        streamRef.current,
+        (level) => {
+          if (level > 0.08) lastHeardRef.current = Date.now();
+          setMicLevel(level);
+        },
+        () => setMeterUnavailable(true),
+      );
     }
     if (useVoice) {
       dictationRef.current = startDictation(
@@ -285,6 +304,47 @@ export function InterviewFlow({
     }
   }, [stopDictation]);
 
+  // The OS kills camera and microphone on a phone call or an app switch, and
+  // nothing tells the page. Watch the tracks themselves, and when the page
+  // comes back to the foreground check whether capture died while it was away
+  // — checking on return avoids false alarms on desktop tab switches.
+  useEffect(() => {
+    if (stage !== 'record' || !recordingLive) return;
+    const stream = streamRef.current;
+    if (!stream) return;
+    const markLost = () => {
+      stopDictation();
+      meterRef.current?.stop();
+      meterRef.current = null;
+      setMicLevel(0);
+      setStreamLost(true);
+    };
+    const tracks = stream.getTracks();
+    tracks.forEach((track) => {
+      track.addEventListener('ended', markLost);
+    });
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (stream.getTracks().some((track) => track.readyState === 'ended')) markLost();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      tracks.forEach((track) => track.removeEventListener('ended', markLost));
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [stage, recordingLive, stopDictation]);
+
+  // An interview in progress is unsaved work: warn before the tab is closed.
+  useEffect(() => {
+    const inProgress = stage !== 'check' && stage !== 'done';
+    if (!inProgress) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [stage]);
+
   const startPrep = useCallback(() => {
     setSecondsLeft(question.prepSeconds);
     setStage('prep');
@@ -293,6 +353,12 @@ export function InterviewFlow({
   // Countdown for both the prep and recording stages.
   useEffect(() => {
     if (stage !== 'prep' && stage !== 'record') return;
+    // Typing has no clock: cutting someone off mid-sentence with a timer they
+    // were never shown punishes exactly the people pushed into typing by a
+    // camera denial or a speech failure. "Review answer" is the only exit.
+    if (stage === 'record' && !useVoice) return;
+    // A lost stream freezes the clock instead of racing on over dead capture.
+    if (stage === 'record' && streamLost) return;
     if (secondsLeft <= 0) {
       if (stage === 'prep') beginRecording();
       else finishAnswer();
@@ -300,7 +366,7 @@ export function InterviewFlow({
     }
     const id = window.setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
     return () => window.clearTimeout(id);
-  }, [stage, secondsLeft, beginRecording, finishAnswer]);
+  }, [stage, secondsLeft, beginRecording, finishAnswer, useVoice, streamLost]);
 
   const submitForScoring = useCallback(async () => {
     if (scoringInFlightRef.current) return;
@@ -472,7 +538,7 @@ export function InterviewFlow({
       overallScore: overallFromAnswers(answers),
       answers,
     };
-    saveAttempt(attempt);
+    setSaveFailed(!saveAttempt(attempt));
     setSavedAttempt(attempt);
     track('interview_completed', {
       role_id: role.id,
@@ -493,7 +559,7 @@ export function InterviewFlow({
 
   return (
     <div className="shell shell-narrow">
-      <TopBar showProgressLink={false} />
+      <TopBar showProgressLink={false} locked={stage !== 'check' && stage !== 'done'} />
 
       <div className="rail" aria-hidden="true">
         {role.questions.map((q, i) => (
@@ -714,10 +780,18 @@ export function InterviewFlow({
                       {cameraState === 'denied' ? t('cameraDeniedHelp') : t('cameraIdle')}
                     </div>
                   )}
-                  <span className="video-badge">
-                    <span className="rec-dot" aria-hidden="true" />
-                    {t('recording')} · {formatClock(secondsLeft)}
-                  </span>
+                  {recordingLive && !streamLost ? (
+                    <span className="video-badge">
+                      <span className="rec-dot" aria-hidden="true" />
+                      {t('recording')} · {formatClock(secondsLeft)}
+                    </span>
+                  ) : (
+                    // No capture is happening: never claim "Recording" to
+                    // someone who declined the camera or whose stream died.
+                    <span className="video-badge">
+                      {t('timeLeft')} · {formatClock(secondsLeft)}
+                    </span>
+                  )}
                 </div>
 
                 <div className="meter" aria-hidden="true">
@@ -727,16 +801,34 @@ export function InterviewFlow({
                   />
                 </div>
 
-                {/* Proof the microphone is live. Reassurance only — never recorded or scored. */}
-                <div className="mic-row">
-                  <span className="mic-label">{t('micLive')}</span>
-                  <span className="mic-bars" aria-hidden="true">
-                    {[0.08, 0.2, 0.34, 0.5, 0.68].map((threshold) => (
-                      <span key={threshold} className={`mic-bar ${micLevel > threshold ? 'on' : ''}`} />
-                    ))}
-                  </span>
-                  <span className="tiny">{micLevel > 0.08 ? t('micHearing') : t('micQuiet')}</span>
-                </div>
+                {/* Proof the microphone is live. Reassurance only — never
+                    recorded or scored — and shown only when a working meter
+                    exists: a silent meter must hide, not accuse. */}
+                {recordingLive && !streamLost && !meterUnavailable && (
+                  <div className="mic-row">
+                    <span className="mic-label">{t('micLive')}</span>
+                    <span className="mic-bars" aria-hidden="true">
+                      {[0.08, 0.2, 0.34, 0.5, 0.68].map((threshold) => (
+                        <span key={threshold} className={`mic-bar ${micLevel > threshold ? 'on' : ''}`} />
+                      ))}
+                    </span>
+                    <span className="tiny">{heardRecently ? t('micHearing') : t('micQuiet')}</span>
+                  </div>
+                )}
+
+                {streamLost && (
+                  <div className="notice notice-warn tiny">
+                    {t('streamLostBody')}
+                    <div className="row" style={{ marginTop: '0.6rem' }}>
+                      <button type="button" className="btn btn-quiet" onClick={retryQuestion}>
+                        {t('streamLostRestart')}
+                      </button>
+                      <button type="button" className="btn btn-ghost" onClick={finishAnswer}>
+                        {t('streamLostKeep')}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </>
             )}
 
@@ -922,10 +1014,51 @@ export function InterviewFlow({
             <p className="report-meta">
               {role.title} · {new Date().toLocaleDateString()}
             </p>
-            <p className="tiny">{t('savedLocally')}</p>
+            {saveFailed ? (
+              <p className="notice notice-warn tiny" style={{ margin: 0 }}>
+                {t('storageBlocked')}
+              </p>
+            ) : (
+              <p className="tiny">{t('savedLocally')}</p>
+            )}
 
             <div className="row no-print">
-              <button type="button" className="btn btn-quiet" onClick={() => window.print()}>
+              {typeof navigator !== 'undefined' && typeof navigator.share === 'function' && (
+                <button
+                  type="button"
+                  className="btn btn-quiet"
+                  onClick={() => {
+                    navigator
+                      .share({
+                        text: buildReportText(role.title, overallFromAnswers(answers), answers, {
+                          report: t('reportTitle'),
+                          score: t('overallScore'),
+                          question: t('question'),
+                          yourAnswer: t('yourAnswer'),
+                          worked: t('whatWorked'),
+                          improve: t('whatToImprove'),
+                        }),
+                      })
+                      .catch(() => {});
+                  }}
+                >
+                  {t('shareReport')}
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn btn-quiet"
+                onClick={() => {
+                  // window.print is missing inside some in-app browsers; a
+                  // button that throws silently is worse than none.
+                  try {
+                    if (typeof window.print === 'function') window.print();
+                    else setCopyFailed(true);
+                  } catch {
+                    setCopyFailed(true);
+                  }
+                }}
+              >
                 {t('saveReport')}
               </button>
               <button
@@ -945,13 +1078,35 @@ export function InterviewFlow({
                     );
                     setReportCopied(true);
                   } catch {
-                    /* clipboard blocked — printing still works */
+                    // Blocked clipboard (common in in-app browsers): show the
+                    // text to hold-and-copy instead of failing silently.
+                    setCopyFailed(true);
                   }
                 }}
               >
                 {reportCopied ? t('rateCopied') : t('copyReport')}
               </button>
             </div>
+            {copyFailed && (
+              <div className="stack-sm no-print">
+                <p className="notice notice-warn tiny" style={{ margin: 0 }}>
+                  {t('copyFallbackHint')}
+                </p>
+                <textarea
+                  className="answer-box"
+                  readOnly
+                  value={buildReportText(role.title, overallFromAnswers(answers), answers, {
+                    report: t('reportTitle'),
+                    score: t('overallScore'),
+                    question: t('question'),
+                    yourAnswer: t('yourAnswer'),
+                    worked: t('whatWorked'),
+                    improve: t('whatToImprove'),
+                  })}
+                  onFocus={(event) => event.currentTarget.select()}
+                />
+              </div>
+            )}
             <p className="tiny no-print">{t('saveReportHint')}</p>
           </div>
 

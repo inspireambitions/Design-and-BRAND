@@ -94,9 +94,20 @@ export const STRINGS = {
     rateLess: 'Less ready',
     rateThanks: 'Thank you — that genuinely helps.',
     rateSend: 'Send this to the team',
-    rateSendHint: 'Opens WhatsApp with your result so we can see how the test went. Nothing is sent automatically.',
+    rateSendHint:
+      'Your two answers above are saved as anonymous statistics. This button just opens WhatsApp on your phone with a short summary — you choose whether to send it.',
     rateCopied: 'Copied — paste it to us on WhatsApp.',
     rateSkip: 'Skip',
+    copy: 'Copy',
+    timeLeft: 'Time left',
+    streamLostBody:
+      'Recording stopped — this happens when a call comes in or you switch apps. Nothing after that point was captured.',
+    streamLostRestart: 'Restart this answer',
+    streamLostKeep: 'Keep what I said so far',
+    storageBlocked:
+      'This browser is blocking storage, so this result cannot be kept here. Save or copy your report now — it will be gone when you close this tab.',
+    shareReport: 'Share report',
+    copyFallbackHint: 'Copying is blocked in this browser. Press and hold the text below, then copy it.',
     coachingTitle: 'Want a person in your corner?',
     coachingBody:
       'Optional one-to-one coaching with a real coach before your interview — practise live, ask anything, get honest advice.',
@@ -278,9 +289,20 @@ export const STRINGS = {
     rateLess: 'أقل استعداداً',
     rateThanks: 'شكراً لك — هذا يساعدنا فعلاً.',
     rateSend: 'أرسل هذا للفريق',
-    rateSendHint: 'يفتح واتساب بنتيجتك حتى نرى كيف سارت التجربة. لا يُرسل شيء تلقائياً.',
+    rateSendHint:
+      'إجابتاك أعلاه تُحفظان كإحصاءات مجهولة الهوية. هذا الزر يفتح واتساب على هاتفك برسالة قصيرة — وأنت من يقرر إرسالها.',
     rateCopied: 'تم النسخ — أرسله لنا على واتساب.',
     rateSkip: 'تخطَّ',
+    copy: 'انسخ',
+    timeLeft: 'الوقت المتبقي',
+    streamLostBody:
+      'توقف التسجيل — يحدث هذا عند ورود مكالمة أو التبديل بين التطبيقات. لم يُلتقط أي شيء بعد تلك اللحظة.',
+    streamLostRestart: 'أعد هذه الإجابة',
+    streamLostKeep: 'احتفظ بما قلته حتى الآن',
+    storageBlocked:
+      'هذا المتصفح يمنع التخزين، لذا لا يمكن الاحتفاظ بهذه النتيجة هنا. احفظ تقريرك أو انسخه الآن — سيختفي عند إغلاق هذه الصفحة.',
+    shareReport: 'شارك التقرير',
+    copyFallbackHint: 'النسخ محظور في هذا المتصفح. اضغط مطولاً على النص أدناه ثم انسخه.',
     coachingTitle: 'هل تريد شخصاً يقف إلى جانبك؟',
     coachingBody:
       'تدريب شخصي اختياري مع مدرب حقيقي قبل مقابلتك — تدرّب مباشرة، واسأل ما تشاء، واحصل على نصيحة صادقة.',

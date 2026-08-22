@@ -13,7 +13,7 @@ export const ScoreRequestSchema = z
   .strict();
 
 export const FeedbackSchema = z.object({
-  headline: z.string().max(120),
+  headline: z.string().max(160),
   competencies: z
     .array(
       z.object({
@@ -38,7 +38,7 @@ export const FEEDBACK_JSON_SCHEMA = {
   additionalProperties: false,
   required: ['headline', 'competencies', 'strengths', 'improvements', 'coach_tip', 'unscorable'],
   properties: {
-    headline: { type: 'string', maxLength: 120 },
+    headline: { type: 'string', maxLength: 160 },
     competencies: {
       type: 'array',
       maxItems: 10,

@@ -96,6 +96,7 @@ export type LevelMeter = {
 export function startLevelMeter(
   stream: MediaStream,
   onLevel: (level: number) => void,
+  onUnavailable?: () => void,
 ): LevelMeter | null {
   const AudioCtx =
     typeof window === 'undefined'
@@ -113,6 +114,20 @@ export function startLevelMeter(
 
   let frame = 0;
   let stopped = false;
+
+  // iOS creates the context suspended when construction happens outside a user
+  // gesture (our prep countdown auto-advances into recording). A suspended
+  // context reports silence forever — which the UI would phrase as "we cannot
+  // hear you" to someone speaking normally. Resume it, and if it never starts,
+  // say so via the callback so the meter is hidden instead of accusing.
+  if (context.state === 'suspended') {
+    context.resume().catch(() => {});
+  }
+  setTimeout(() => {
+    if (!stopped && context.state !== 'running') {
+      onUnavailable?.();
+    }
+  }, 2000);
 
   try {
     const source = context.createMediaStreamSource(stream);

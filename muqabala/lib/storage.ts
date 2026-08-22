@@ -18,15 +18,18 @@ export function loadAttempts(): Attempt[] {
   }
 }
 
-export function saveAttempt(attempt: Attempt): void {
-  if (typeof window === 'undefined') return;
+/** Returns whether the attempt was actually persisted, so the UI never claims a save that failed. */
+export function saveAttempt(attempt: Attempt): boolean {
+  if (typeof window === 'undefined') return false;
   try {
     const all = loadAttempts();
     // Keep the 100 most recent so localStorage never fills up.
     const next = [attempt, ...all].slice(0, 100);
     window.localStorage.setItem(ATTEMPTS_KEY, JSON.stringify(next));
+    return true;
   } catch {
     // Storage full or blocked (private mode) — practice still works, history just is not kept.
+    return false;
   }
 }
 

@@ -6,6 +6,9 @@ import { rateAttempt } from '@/lib/storage';
 import { track } from '@/lib/analytics';
 import { useLang } from './LanguageProvider';
 
+/** Same number as the coaching card: set once in Vercel, never in code. */
+const TEAM_NUMBER = (process.env.NEXT_PUBLIC_COACHING_WHATSAPP ?? '').replace(/[^\d]/g, '');
+
 /**
  * Asked once, after the interview is finished. Two questions only:
  * whether the practice was useful, and whether the candidate feels readier
@@ -63,7 +66,10 @@ export function RatingCard({ attempt }: { attempt: Attempt }) {
       }
     }
     if (typeof window !== 'undefined') {
-      window.open(`https://wa.me/?text=${encodeURIComponent(summary)}`, '_blank', 'noopener');
+      // With a configured number the message opens addressed to the team;
+      // without one, WhatsApp's own contact picker is the honest fallback.
+      const target = TEAM_NUMBER ? `https://wa.me/${TEAM_NUMBER}` : 'https://wa.me/';
+      window.open(`${target}?text=${encodeURIComponent(summary)}`, '_blank', 'noopener');
     }
   };
 
@@ -136,7 +142,7 @@ export function RatingCard({ attempt }: { attempt: Attempt }) {
               {t('rateSend')}
             </button>
             <button type="button" className="btn btn-ghost" onClick={copy}>
-              {copied ? t('rateCopied') : 'Copy'}
+              {copied ? t('rateCopied') : t('copy')}
             </button>
           </div>
           <p className="tiny">{t('rateSendHint')}</p>
