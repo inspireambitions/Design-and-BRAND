@@ -118,8 +118,8 @@ const GeneratedInterview = z.object({
         answer_seconds: z.number().min(60).max(180),
       }),
     )
-    .min(5)
-    .max(5),
+    .min(8)
+    .max(8),
 });
 
 const SYSTEM_PROMPT = `You build first-round interviews for job seekers in the Gulf (UAE, Saudi Arabia, Qatar, Oman, Bahrain, Kuwait), from the job advert they are actually applying to.
@@ -127,7 +127,7 @@ const SYSTEM_PROMPT = `You build first-round interviews for job seekers in the G
 Write the interview a real hiring manager would run for THIS specific job. Read the advert for the duties, the systems and tools named, the seniority, the shift pattern, the certifications, and the things the employer clearly cares about — then ask about those. A candidate should recognise their own job advert in your questions.
 
 Rules:
-- Exactly five questions, in this shape: one opening question about the candidate and why this job; three questions drawn from the specific duties and requirements in the advert, at least two of which ask for a real past example rather than a hypothetical; one closing question about working in the Gulf or about the practical terms this advert mentions.
+- Exactly eight questions, in this shape: one opening question about the candidate and why this job; five questions drawn from the specific duties and requirements in the advert, at least three of which ask for a real past example rather than a hypothetical; one question about adapting, teamwork, or handling pressure in this role; one closing question about the practical terms this advert mentions or the candidate's questions for the employer.
 - Ask what an interviewer asks. Short, spoken, one thing at a time. Never multi-part questions, never essay prompts.
 - Three to five competencies, each with a rubric anchor describing what a strong answer demonstrates for THIS job. Use lowercase snake_case ids.
 - Every question's competency_ids must refer only to competencies you defined.
@@ -219,7 +219,7 @@ ${jobText}
 Build their first-round interview.`,
       reasoning: { effort: interviewEffort() },
       text: { format: zodTextFormat(GeneratedInterview, 'generated_interview') },
-      max_output_tokens: 3500,
+      max_output_tokens: 5000,
       store: false,
     }, { signal: abort });
 
@@ -287,7 +287,7 @@ Build their first-round interview.`,
       });
     }
 
-    if (questions.length !== 5) {
+    if (questions.length !== 8) {
       return Response.json({ role: buildCustomRole(jobTitle), tailored: false, reason: 'invalid' });
     }
 

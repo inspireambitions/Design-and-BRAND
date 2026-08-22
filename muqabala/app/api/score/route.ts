@@ -10,7 +10,9 @@ import {
   FEEDBACK_JSON_SCHEMA,
   FeedbackSchema,
   ScoreRequestSchema,
+  completeFeedbackHeadline,
   fetchProviderWithRetry,
+  removeRepeatedEvidence,
   retryAfterMilliseconds,
   type ParsedFeedback,
 } from '@/lib/scoring-provider';
@@ -176,7 +178,9 @@ Candidates may answer in English or Arabic. Score an Arabic answer against exact
 
 Your job is to make the candidate feel capable and clear about what to do next. Be warm, direct and concrete. Never be harsh, never be flattering. Every improvement you name must be actionable in their next attempt.
 
-Score each listed competency 0-10 against its rubric anchor, using the exact competency ids given to you and no others. Quote the candidate's actual words as evidence for each one. If no part of the answer demonstrates a competency, set its evidence to an empty string rather than quoting an unrelated line.
+Write the headline as one complete sentence under 100 characters. Never end it with a conjunction, dash or unfinished clause.
+
+Score each listed competency 0-10 against its rubric anchor, using the exact competency ids given to you and no others. Quote the candidate's actual words as evidence for each one. Do not reuse the same quote for several competencies unless those exact words clearly demonstrate each one. If no part of the answer demonstrates a competency, set its evidence to an empty string rather than quoting an unrelated line.
 
 Set unscorable to true only when the transcript is too garbled or too short to judge fairly. When you do, explain why in the headline and improvements, and do not invent scores.`;
 
@@ -403,19 +407,20 @@ export async function POST(request: Request) {
     // Only competencies this question actually asks for are accepted, and their
     // labels come from our rubric, not from the model. Anything else is dropped.
     const returned = new Map(parsed.competencies.map((c) => [c.id, c]));
-    const competencies = question.competencies.flatMap((cid) => {
+    const competencies = removeRepeatedEvidence(question.competencies.flatMap((cid) => {
       const scored = returned.get(cid);
       if (!scored) return [];
       const def = role.competencies.find((x) => x.id === cid);
       return [
         {
           id: cid,
-          label: def?.label ?? cid,
+          label: (answeredInArabic ? def?.labelAr : def?.label) ?? cid,
           score: Math.round(Math.max(0, Math.min(10, scored.score))),
           evidence: scored.evidence.trim() ? scored.evidence : null,
         },
       ];
-    });
+    }));
+    const headline = completeFeedbackHeadline(parsed.headline, answeredInArabic ? 'ar' : 'en');
 
     // A model that scored nothing we asked for has not produced a usable result.
     if (parsed.unscorable || competencies.length === 0) {
@@ -424,7 +429,7 @@ export async function POST(request: Request) {
           questionId: question.id,
           score: 0,
           status: 'unscored',
-          headline: parsed.headline,
+          headline,
           competencies: [],
           strengths: [],
           improvements: parsed.improvements.slice(0, 3),
@@ -443,7 +448,7 @@ export async function POST(request: Request) {
       questionId: question.id,
       score: overall,
       status: 'scored',
-      headline: parsed.headline,
+      headline,
       competencies,
       strengths: parsed.strengths.slice(0, 3),
       improvements: parsed.improvements.slice(0, 3),

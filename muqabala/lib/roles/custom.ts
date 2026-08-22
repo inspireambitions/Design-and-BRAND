@@ -50,6 +50,18 @@ export function buildCustomRole(title?: string): Role {
         20,
         90,
       ),
+      q(
+        'teamwork',
+        'Tell me about a time you had to work with someone whose approach was different from yours.',
+        'حدثني عن مرة عملت فيها مع شخص كان أسلوبه مختلفاً عن أسلوبك.',
+        ['communication', 'problem_solving', 'ownership'],
+      ),
+      q(
+        'mistake',
+        'Tell me about a mistake you made at work. What did you do after you noticed it?',
+        'حدثني عن خطأ ارتكبته في العمل. ماذا فعلت بعد أن لاحظته؟',
+        ['ownership', 'problem_solving', 'evidence'],
+      ),
       closer,
     ],
   };

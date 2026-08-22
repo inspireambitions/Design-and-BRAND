@@ -3,9 +3,9 @@ import './globals.css';
 import { LanguageProvider } from '@/components/LanguageProvider';
 
 export const metadata: Metadata = {
-  title: 'Muqabala — Interview practice for Gulf jobs',
+  title: 'Muqabala | Interview practice for Gulf jobs',
   description:
-    'Practise real Gulf job interviews on camera and get honest, specific feedback on what you actually said. Free first interview, no sign-up.',
+    'Practise Gulf job interviews as often as you need. Get specific feedback on your answers. Free, unlimited practice with no sign-up.',
 };
 
 export const viewport: Viewport = {

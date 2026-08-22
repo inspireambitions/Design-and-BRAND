@@ -4,7 +4,9 @@ import {
   FEEDBACK_JSON_SCHEMA,
   FeedbackSchema,
   ScoreRequestSchema,
+  completeFeedbackHeadline,
   fetchProviderWithRetry,
+  removeRepeatedEvidence,
   retryAfterMilliseconds,
 } from '../lib/scoring-provider.ts';
 import { scrubSentryEvent } from '../lib/sentry-scrub.ts';
@@ -102,6 +104,32 @@ test('invalid and overlong model outputs fail validation', () => {
       coach_tip: 'x'.repeat(601),
     }).success,
     false,
+  );
+});
+
+test('unfinished headlines are made complete without inventing a new claim', () => {
+  assert.equal(
+    completeFeedbackHeadline('You identified escalation, but explain how you helped fix or', 'en'),
+    'You identified escalation, but explain how you helped fix.',
+  );
+  assert.equal(
+    completeFeedbackHeadline('أوضحت متى تصعّد المشكلة لكن و', 'ar'),
+    'أوضحت متى تصعّد المشكلة.',
+  );
+});
+
+test('the same quote is not presented as separate evidence twice', () => {
+  assert.deepEqual(
+    removeRepeatedEvidence([
+      { id: 'ownership', evidence: '“I spoke to the manager.”' },
+      { id: 'problem_solving', evidence: 'I spoke to the manager.' },
+      { id: 'customer_focus', evidence: 'I apologised to the guest.' },
+    ]),
+    [
+      { id: 'ownership', evidence: '“I spoke to the manager.”' },
+      { id: 'problem_solving', evidence: null },
+      { id: 'customer_focus', evidence: 'I apologised to the guest.' },
+    ],
   );
 });
 

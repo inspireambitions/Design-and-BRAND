@@ -36,6 +36,7 @@ type EventName = 'interview_started' | 'interview_completed' | 'rating_submitted
 type EventProps = Partial<{
   role_id: string;
   lang: string;
+  input_mode: 'voice' | 'typing';
   overall_score: number;
   questions_answered: number;
   scoring_source: string;

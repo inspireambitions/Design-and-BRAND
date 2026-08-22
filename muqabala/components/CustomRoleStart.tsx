@@ -5,7 +5,10 @@ import { useState } from 'react';
 import { buildCustomRole, type Role } from '@/lib/roles';
 import { useLang } from './LanguageProvider';
 import { TopBar } from './TopBar';
-import { InterviewFlow } from './InterviewFlow';
+import { InterviewFlow, type InterviewMode } from './InterviewFlow';
+
+const MIN_JOB_TEXT_CHARS = 120;
+const MAX_JOB_TEXT_CHARS = 12_000;
 
 /** Someone pasted a link instead of the advert text. */
 function looksLikeUrl(value: string): boolean {
@@ -14,7 +17,7 @@ function looksLikeUrl(value: string): boolean {
 }
 
 export function CustomRoleStart() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [title, setTitle] = useState('');
   const [jobText, setJobText] = useState('');
   const [role, setRole] = useState<Role | null>(null);
@@ -22,23 +25,98 @@ export function CustomRoleStart() {
   const [token, setToken] = useState<string | undefined>(undefined);
   const [fellBack, setFellBack] = useState(false);
   const [building, setBuilding] = useState(false);
+  const [mode, setMode] = useState<InterviewMode | null>(null);
 
-  if (role) {
+  if (role && mode) {
+    const selectedRole = mode === 'guided' ? { ...role, questions: role.questions.slice(0, 5) } : role;
     return (
       <InterviewFlow
-        role={role}
+        role={selectedRole}
         customTitle={role.title}
         tailored={tailored}
         fellBack={fellBack}
         interviewToken={token}
+        mode={mode}
       />
+    );
+  }
+
+  if (role) {
+    return (
+      <div className="shell shell-narrow">
+        <TopBar showProgressLink={false} />
+        <div className="stack-lg question-reveal">
+          <div>
+            <p className="eyebrow">{t('questionRevealEyebrow')}</p>
+            <h1 style={{ fontSize: '1.75rem' }}>{t('questionRevealTitle')}</h1>
+            <p className="lede" style={{ marginTop: '0.6rem' }}>{t('questionRevealBody')}</p>
+            <span className={`chip ${tailored ? 'chip-gold' : ''}`} style={{ marginTop: '0.7rem' }}>
+              {tailored ? t('tailoredBadge') : t('genericBadge')}
+            </span>
+            {fellBack && !tailored && (
+              <p className="notice notice-warn tiny" style={{ marginTop: '0.7rem' }}>{t('genericWhy')}</p>
+            )}
+          </div>
+
+          <div className="practice-paths">
+            <section className="card stack mode-card mode-card-featured">
+              <div>
+                <p className="eyebrow">{t('guidedLabel')}</p>
+                <h2 style={{ fontSize: '1.35rem' }}>{t('guidedTitle')}</h2>
+                <p className="muted" style={{ marginTop: '0.45rem' }}>{t('guidedBody')}</p>
+              </div>
+              <ol className="question-list">
+                {role.questions.slice(0, 5).map((question, index) => (
+                  <li key={question.id}>
+                    <span>{index + 1}</span>
+                    {lang === 'ar' ? question.textAr : question.text}
+                  </li>
+                ))}
+              </ol>
+              <button type="button" className="btn btn-primary" onClick={() => setMode('guided')}>
+                {t('guidedCta')}
+              </button>
+            </section>
+
+            <section className="card stack mode-card">
+              <div>
+                <p className="eyebrow">{t('mockLabel')}</p>
+                <h2 style={{ fontSize: '1.35rem' }}>{t('mockTitle')}</h2>
+                <p className="muted" style={{ marginTop: '0.45rem' }}>{t('mockBody')}</p>
+              </div>
+              <ul className="mode-facts">
+                <li>{t('mockFactQuestions')}</li>
+                <li>{t('mockFactFeedback')}</li>
+                <li>{t('mockFactTime')}</li>
+              </ul>
+              <button type="button" className="btn btn-quiet" onClick={() => setMode('mock')}>
+                {t('mockCta')}
+              </button>
+            </section>
+          </div>
+
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => {
+              setRole(null);
+              setMode(null);
+              setToken(undefined);
+              setTailored(false);
+              setFellBack(false);
+            }}
+          >
+            {t('changeJobAdvert')}
+          </button>
+        </div>
+      </div>
     );
   }
 
   const trimmedTitle = title.trim();
   const trimmedJob = jobText.trim();
   const pastedLink = looksLikeUrl(trimmedJob);
-  const usableJob = !pastedLink && trimmedJob.length >= 120;
+  const usableJob = !pastedLink && trimmedJob.length >= MIN_JOB_TEXT_CHARS;
   const canStart = trimmedTitle.length >= 2 || usableJob;
 
   const start = async () => {
@@ -92,6 +170,7 @@ export function CustomRoleStart() {
               className="text-input"
               type="text"
               value={title}
+              maxLength={120}
               placeholder={t('customPlaceholder')}
               autoComplete="organization-title"
               onChange={(e) => setTitle(e.target.value)}
@@ -106,9 +185,13 @@ export function CustomRoleStart() {
               id="job-ad"
               className="answer-box"
               value={jobText}
+              maxLength={MAX_JOB_TEXT_CHARS}
               placeholder={t('jdPlaceholder')}
               onChange={(e) => setJobText(e.target.value)}
             />
+            <span className="tiny" style={{ textAlign: 'end' }}>
+              {jobText.length.toLocaleString()} / {MAX_JOB_TEXT_CHARS.toLocaleString()} {t('jdCount')}
+            </span>
           </label>
 
           {pastedLink ? (

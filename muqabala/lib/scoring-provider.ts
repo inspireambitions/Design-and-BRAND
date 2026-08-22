@@ -32,6 +32,56 @@ export const FeedbackSchema = z.object({
 
 export type ParsedFeedback = z.infer<typeof FeedbackSchema>;
 
+const ENGLISH_TRAILING_CONNECTOR = /\b(and|or|but|because|so|to|with|for|by|from|while|that|which|who|a|an|the)$/i;
+const ARABIC_TRAILING_CONNECTOR = /(?:^|\s)(و|أو|لكن|لأن|إلى|مع|من|في)$/;
+
+/**
+ * Structured output limits stop oversized text, but a model can still end a
+ * headline on "and" or "or" to stay under the limit. Clean that edge without
+ * inventing a new claim about the candidate's answer.
+ */
+export function completeFeedbackHeadline(value: string, lang: 'en' | 'ar'): string {
+  let headline = value.trim().replace(/\s+/g, ' ');
+  if (!headline) {
+    return lang === 'ar' ? 'راجع ملاحظات إجابتك أدناه.' : 'Review the feedback on your answer below.';
+  }
+
+  if (headline.length > 116) {
+    const clipped = headline.slice(0, 116);
+    headline = clipped.includes(' ') ? clipped.slice(0, clipped.lastIndexOf(' ')) : clipped;
+  }
+
+  headline = headline.replace(/[\s,;:\-–—]+$/g, '');
+  const connector = lang === 'ar' ? ARABIC_TRAILING_CONNECTOR : ENGLISH_TRAILING_CONNECTOR;
+  while (connector.test(headline)) {
+    headline = headline.replace(connector, '').replace(/[\s,;:\-–—]+$/g, '').trim();
+  }
+
+  if (!headline) {
+    return lang === 'ar' ? 'راجع ملاحظات إجابتك أدناه.' : 'Review the feedback on your answer below.';
+  }
+  return /[.!?؟]$/.test(headline) ? headline : `${headline}.`;
+}
+
+/**
+ * The same quote under several competencies looks like several pieces of
+ * proof. Keep its first honest use and show no evidence for later duplicates.
+ */
+export function removeRepeatedEvidence<T extends { evidence: string | null }>(items: T[]): T[] {
+  const seen = new Set<string>();
+  return items.map((item) => {
+    if (!item.evidence) return item;
+    const key = item.evidence
+      .toLocaleLowerCase()
+      .replace(/[“”"'‘’.,!?؟:;\-–—]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!key || seen.has(key)) return { ...item, evidence: null };
+    seen.add(key);
+    return item;
+  });
+}
+
 /** Strict JSON Schema mirror of FeedbackSchema for OpenAI-compatible providers. */
 export const FEEDBACK_JSON_SCHEMA = {
   type: 'object',

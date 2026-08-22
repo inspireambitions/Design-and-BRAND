@@ -84,7 +84,7 @@ console.log('\n3. Tailored questions can actually be scored (the release blocker
       });
       if (r.status !== 200) { scoredAll = false; detail = `${q.id} -> ${r.status} ${JSON.stringify(r.json).slice(0,80)}`; break; }
     }
-    check('all five generated questions score without 404', scoredAll, detail);
+    check('all eight generated questions score without 404', scoredAll, detail);
 
     const forged = await post('/api/score', {
       roleId: 'custom', questionId: role.questions[0].id, transcript: 'x '.repeat(40), lang: 'en',
