@@ -119,6 +119,7 @@ export function InterviewFlow({
   const [voiceDeclined, setVoiceDeclined] = useState(false);
   const [limitedExperience, setLimitedExperience] = useState(false);
   const [interrupted, setInterrupted] = useState(false);
+  const [deviceFallback, setDeviceFallback] = useState(false);
 
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [transcript, setTranscript] = useState('');
@@ -252,21 +253,32 @@ export function InterviewFlow({
     setSecondsLeft(question.answerSeconds);
     setStage('record');
 
-    if (useVoice && streamRef.current) {
-      recorderRef.current = startRecording(streamRef.current);
-      meterRef.current = startLevelMeter(streamRef.current, setMicLevel);
-    }
     if (useVoice) {
-      dictationRef.current = startDictation(
+      const speechSession = startDictation(
         lang === 'ar' ? 'ar-AE' : 'en-US',
         (finalText, interimText) => {
           setTranscript(finalText);
           setInterim(interimText);
         },
-        () => setSpeechOk(false),
+        () => {
+          setSpeechOk(false);
+          setDeviceFallback(true);
+          void switchToTyping();
+        },
       );
+      if (!speechSession) {
+        setSpeechOk(false);
+        setDeviceFallback(true);
+        void switchToTyping();
+        return;
+      }
+      dictationRef.current = speechSession;
+      if (streamRef.current) {
+        recorderRef.current = startRecording(streamRef.current);
+        meterRef.current = startLevelMeter(streamRef.current, setMicLevel);
+      }
     }
-  }, [lang, playbackUrl, question.answerSeconds, useVoice]);
+  }, [lang, playbackUrl, question.answerSeconds, switchToTyping, useVoice]);
 
   const finishAnswer = useCallback(async () => {
     if (finalizingRef.current) return;
@@ -516,9 +528,13 @@ export function InterviewFlow({
   const beginWithVoice = useCallback(async () => {
     track('interview_started', { role_id: role.id, lang, input_mode: 'voice' });
     setVoiceDeclined(false);
-    await enableCamera();
+    const cameraReady = await enableCamera();
+    if (!cameraReady) {
+      setDeviceFallback(true);
+      await switchToTyping();
+    }
     startPrep();
-  }, [enableCamera, lang, role.id, startPrep]);
+  }, [enableCamera, lang, role.id, startPrep, switchToTyping]);
 
   const beginWithTyping = useCallback(async () => {
     track('interview_started', { role_id: role.id, lang, input_mode: 'typing' });
@@ -644,6 +660,12 @@ export function InterviewFlow({
       {/* ---------- preparation ---------- */}
       {stage === 'prep' && (
         <div className="stack">
+          {deviceFallback && (
+            <div className="notice notice-warn" role="status">
+              <strong>{t('deviceFallbackTitle')}</strong>
+              <p className="tiny" style={{ marginTop: '0.35rem' }}>{t('deviceFallbackBody')}</p>
+            </div>
+          )}
           <div className="card stack">
             <p className="eyebrow">
               {t('question')} {index + 1}
@@ -681,6 +703,12 @@ export function InterviewFlow({
       {/* ---------- recording ---------- */}
       {stage === 'record' && (
         <div className="stack">
+          {deviceFallback && !useVoice && (
+            <div className="notice notice-warn" role="status">
+              <strong>{t('deviceFallbackTitle')}</strong>
+              <p className="tiny" style={{ marginTop: '0.35rem' }}>{t('deviceFallbackBody')}</p>
+            </div>
+          )}
           <div className="card stack">
             <p className="eyebrow">
               {t('question')} {index + 1}
