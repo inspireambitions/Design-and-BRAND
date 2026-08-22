@@ -126,6 +126,7 @@ export function InterviewFlow({
   const lastHeardRef = useRef(0);
   const [meterUnavailable, setMeterUnavailable] = useState(false);
   const [streamLost, setStreamLost] = useState(false);
+  const [deviceFallback, setDeviceFallback] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
 
@@ -270,28 +271,39 @@ export function InterviewFlow({
     setStreamLost(false);
     const live = Boolean(useVoice && streamRef.current);
     setRecordingLive(live);
-    if (useVoice && streamRef.current) {
-      recorderRef.current = startRecording(streamRef.current);
-      meterRef.current = startLevelMeter(
-        streamRef.current,
-        (level) => {
-          if (level > 0.08) lastHeardRef.current = Date.now();
-          setMicLevel(level);
-        },
-        () => setMeterUnavailable(true),
-      );
-    }
     if (useVoice) {
-      dictationRef.current = startDictation(
+      const speechSession = startDictation(
         lang === 'ar' ? 'ar-AE' : 'en-US',
         (finalText, interimText) => {
           setTranscript(finalText);
           setInterim(interimText);
         },
-        () => setSpeechOk(false),
+        () => {
+          setSpeechOk(false);
+          setDeviceFallback(true);
+          void switchToTyping();
+        },
       );
+      if (!speechSession) {
+        setSpeechOk(false);
+        setDeviceFallback(true);
+        void switchToTyping();
+        return;
+      }
+      dictationRef.current = speechSession;
+      if (streamRef.current) {
+        recorderRef.current = startRecording(streamRef.current);
+        meterRef.current = startLevelMeter(
+          streamRef.current,
+          (level) => {
+            if (level > 0.08) lastHeardRef.current = Date.now();
+            setMicLevel(level);
+          },
+          () => setMeterUnavailable(true),
+        );
+      }
     }
-  }, [lang, playbackUrl, question.answerSeconds, useVoice]);
+  }, [lang, playbackUrl, question.answerSeconds, switchToTyping, useVoice]);
 
   const finishAnswer = useCallback(async () => {
     if (finalizingRef.current) return;
@@ -790,7 +802,13 @@ export function InterviewFlow({
                 // Ask here rather than in a separate step: this tap is the user
                 // gesture browsers want, and it comes after the disclosure the
                 // candidate has just read.
-                if (useVoice) await enableCamera();
+                if (useVoice) {
+                  const cameraReady = await enableCamera();
+                  if (!cameraReady) {
+                    setDeviceFallback(true);
+                    await switchToTyping();
+                  }
+                }
                 startPrep();
               }}
             >
@@ -806,6 +824,12 @@ export function InterviewFlow({
       {/* ---------- preparation ---------- */}
       {stage === 'prep' && (
         <div className="stack">
+          {deviceFallback && (
+            <div className="notice notice-warn" role="status">
+              <strong>{t('deviceFallbackTitle')}</strong>
+              <p className="tiny" style={{ marginTop: '0.35rem' }}>{t('deviceFallbackBody')}</p>
+            </div>
+          )}
           <div className="card stack">
             <p className="eyebrow">
               {t('question')} {index + 1}
@@ -837,6 +861,12 @@ export function InterviewFlow({
       {/* ---------- recording ---------- */}
       {stage === 'record' && (
         <div className="stack">
+          {deviceFallback && !useVoice && (
+            <div className="notice notice-warn" role="status">
+              <strong>{t('deviceFallbackTitle')}</strong>
+              <p className="tiny" style={{ marginTop: '0.35rem' }}>{t('deviceFallbackBody')}</p>
+            </div>
+          )}
           <div className="card stack">
             <p className="eyebrow">
               {t('question')} {index + 1}

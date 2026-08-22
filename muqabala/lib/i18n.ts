@@ -30,6 +30,8 @@ export const STRINGS = {
     cameraStarting: 'Starting camera…',
     cameraDeniedHelp:
       'Camera is off. Tap the lock or camera icon in your browser address bar, allow camera and microphone, then reload. You can also just type your answers — the feedback is exactly the same.',
+    deviceFallbackTitle: 'Camera or voice is not available in this browser.',
+    deviceFallbackBody: 'We switched to typing so you can continue. Your questions and feedback work exactly the same.',
     cameraRetry: 'Try camera again',
     micLive: 'Microphone',
     micHearing: 'We can hear you',
@@ -241,6 +243,8 @@ export const STRINGS = {
     cameraStarting: 'جاري تشغيل الكاميرا…',
     cameraDeniedHelp:
       'الكاميرا مغلقة. اضغط على أيقونة القفل أو الكاميرا في شريط عنوان المتصفح، واسمح بالكاميرا والميكروفون، ثم أعد تحميل الصفحة. يمكنك أيضاً كتابة إجاباتك — الملاحظات هي نفسها تماماً.',
+    deviceFallbackTitle: 'الكاميرا أو الصوت غير متاحين في هذا المتصفح.',
+    deviceFallbackBody: 'حوّلناك إلى الكتابة حتى تتمكن من المتابعة. تعمل الأسئلة والملاحظات بالطريقة نفسها تماماً.',
     cameraRetry: 'جرّب الكاميرا مرة أخرى',
     micLive: 'الميكروفون',
     micHearing: 'نسمعك بوضوح',
