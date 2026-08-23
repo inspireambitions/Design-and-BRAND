@@ -10,6 +10,21 @@ function readiness(value: 'more' | 'same' | 'less') {
   return 'about the same';
 }
 
+function RatingStars({ rating, size }: { rating: number; size: number }) {
+  return (
+    <div style={{ display: 'flex', gap: Math.round(size * 0.2) }}>
+      {[1, 2, 3, 4, 5].map((star) => (
+        <svg key={star} width={size} height={size} viewBox="0 0 24 24">
+          <path
+            d="M12 2.7 14.85 8.5l6.4.93-4.63 4.51 1.09 6.37L12 17.3l-5.71 3.01 1.09-6.37-4.63-4.51 6.4-.93L12 2.7Z"
+            fill={star <= rating ? '#f2b84b' : '#315247'}
+          />
+        </svg>
+      ))}
+    </div>
+  );
+}
+
 export async function GET(request: NextRequest) {
   const data = request.nextUrl.searchParams.get('data') || '';
   const signature = request.nextUrl.searchParams.get('sig') || '';
@@ -20,7 +35,6 @@ export async function GET(request: NextRequest) {
   const wide = format === 'wide';
   const width = wide ? 1200 : 1080;
   const height = wide ? 675 : 1080;
-  const stars = `${'★'.repeat(payload.stars)}${'☆'.repeat(5 - payload.stars)}`;
   const statement = `A Muqabala candidate completed ${payload.questions} interview questions and felt ${readiness(payload.confidence)} for the real interview.`;
 
   return new ImageResponse(
@@ -53,7 +67,7 @@ export async function GET(request: NextRequest) {
                 fontSize: wide ? 23 : 26,
               }}
             >
-              م
+              M
             </div>
             Muqabala
           </div>
@@ -87,8 +101,8 @@ export async function GET(request: NextRequest) {
               <span style={{ fontSize: wide ? 118 : 164, fontWeight: 700, letterSpacing: -7 }}>{payload.stars}</span>
               <span style={{ fontSize: wide ? 46 : 58, color: '#93ada2' }}>/5</span>
             </div>
-            <div style={{ display: 'flex', marginTop: 3, color: '#f2b84b', fontSize: wide ? 36 : 46, letterSpacing: 5 }}>
-              {stars}
+            <div style={{ display: 'flex', marginTop: 8 }}>
+              <RatingStars rating={payload.stars} size={wide ? 34 : 44} />
             </div>
           </div>
           <div
@@ -119,9 +133,9 @@ export async function GET(request: NextRequest) {
         >
           <div style={{ display: 'flex', gap: 20 }}>
             <span>{payload.role}</span>
-            <span>·</span>
+            <span style={{ width: 1, height: 18, background: '#315247' }} />
             <span>{payload.questions} questions</span>
-            {payload.score === null ? null : <><span>·</span><span>{payload.score}/100</span></>}
+            {payload.score === null ? null : <><span style={{ width: 1, height: 18, background: '#315247' }} /><span>{payload.score}/100</span></>}
           </div>
           <div style={{ display: 'flex', color: '#46c7ae', fontWeight: 800 }}>trymuqabala.com</div>
         </div>
