@@ -18,7 +18,9 @@ export default function RolesPage() {
     titleAr: role.titleAr,
     blurb: role.blurb,
     blurbAr: role.blurbAr,
-    questionCount: role.questions.length,
+    questionCount: role.bank && role.questions.slice(1, -1).length + role.bank.length >= 6
+      ? 8
+      : role.questions.length,
   }));
   return <InterviewRolesPage roles={roleSummaries} />;
 }

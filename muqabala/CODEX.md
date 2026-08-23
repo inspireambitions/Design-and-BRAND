@@ -280,7 +280,10 @@ A trusted adviser reviewed the live app. What we took, and what we decided:
   (`lib/roles/banks.ts`); each attempt draws a fresh set (`lib/interview-draw.ts`),
   deterministically, seeded by the device's completed attempts. Scoring accepts
   bank ids; a drawn question can never 404. Attempt one always gets the curated
-  core set. A longer-interview option (8 questions) is queued, not built.
+  core set. Full Interview is now the primary journey: eight questions, one at
+  a time, no coaching or scores between questions, and a full report at the end.
+  Quick Guided Practice remains available with five questions, immediate
+  feedback and retakes.
 - **"From anywhere in the world" (built).** He read the app as Gulf-residents-only.
   It is for people anywhere applying TO Gulf jobs — the hero and the meta
   description now say so. This also removed the false "Free first interview"

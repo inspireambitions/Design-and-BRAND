@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import type { Role } from '@/lib/roles';
+import { drawMockQuestions } from '@/lib/interview-draw';
 import { HERO_DRAFT_KEY } from '@/lib/hero-draft';
 import { useLang } from './LanguageProvider';
 import { TopBar } from './TopBar';
@@ -13,8 +14,8 @@ const LEVEL_LABELS = {
   ar: { Entry: 'مبتدئ', Mid: 'متوسط', Senior: 'أول' },
 } as const;
 
-function estimateMinutes(role: Role): number {
-  const seconds = role.questions.reduce((s, q) => s + q.prepSeconds + q.answerSeconds, 0);
+function estimateMinutes(questions: Role['questions']): number {
+  const seconds = questions.reduce((s, q) => s + q.prepSeconds + q.answerSeconds, 0);
   return Math.max(5, Math.round(seconds / 60));
 }
 
@@ -146,23 +147,26 @@ export function HomeView({ roles }: { roles: Role[] }) {
         </div>
 
         <div className="grid grid-roles">
-          {visible.map((role) => (
-            <Link key={role.id} href={`/practice/${role.id}`} className="role-card">
-              <div className="role-meta">
-                <span className="chip chip-jade">
-                  {lang === 'ar' ? role.industryAr : role.industry}
-                </span>
-                <span className="chip">{LEVEL_LABELS[lang][role.level]}</span>
-              </div>
-              <h3>{lang === 'ar' ? role.titleAr : role.title}</h3>
-              <p className="muted" style={{ fontSize: '0.88rem' }}>
-                {lang === 'ar' ? role.blurbAr : role.blurb}
-              </p>
-              <p className="tiny" style={{ marginTop: '0.3rem' }}>
-                {role.questions.length} {t('questions')} · ~{estimateMinutes(role)} {t('minutes')}
-              </p>
-            </Link>
-          ))}
+          {visible.map((role) => {
+            const fullQuestions = drawMockQuestions(role, 0) ?? role.questions;
+            return (
+              <Link key={role.id} href={`/practice/${role.id}`} className="role-card">
+                <div className="role-meta">
+                  <span className="chip chip-jade">
+                    {lang === 'ar' ? role.industryAr : role.industry}
+                  </span>
+                  <span className="chip">{LEVEL_LABELS[lang][role.level]}</span>
+                </div>
+                <h3>{lang === 'ar' ? role.titleAr : role.title}</h3>
+                <p className="muted" style={{ fontSize: '0.88rem' }}>
+                  {lang === 'ar' ? role.blurbAr : role.blurb}
+                </p>
+                <p className="tiny" style={{ marginTop: '0.3rem' }}>
+                  {fullQuestions.length} {t('questions')} · ~{estimateMinutes(fullQuestions)} {t('minutes')}
+                </p>
+              </Link>
+            );
+          })}
 
           <Link href="/practice/custom" className="role-card role-card-custom">
             <div className="role-meta">

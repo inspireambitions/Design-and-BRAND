@@ -14,6 +14,16 @@ function looksLikeUrl(value: string): boolean {
   return /^https?:\/\/\S+$/i.test(trimmed) || (/^www\.\S+$/i.test(trimmed) && !trimmed.includes(' '));
 }
 
+/** Use a representative five-question subset for guided practice. */
+function guidedRole(fullRole: Role): Role {
+  if (fullRole.questions.length < 8) return fullRole;
+  const questions = fullRole.questions;
+  return {
+    ...fullRole,
+    questions: [questions[0], questions[1], questions[3], questions[5], questions.at(-1)!],
+  };
+}
+
 export function CustomRoleStart() {
   const { t } = useLang();
   const [title, setTitle] = useState('');
@@ -71,9 +81,11 @@ export function CustomRoleStart() {
   }, []);
 
   if (role) {
+    const guided = guidedRole(role);
     return (
       <InterviewFlow
-        role={role}
+        role={guided}
+        mockQuestions={role.questions.length >= 8 ? role.questions : undefined}
         customTitle={role.title}
         tailored={tailored}
         fellBack={fellBack}

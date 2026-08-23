@@ -121,7 +121,9 @@ export function InterviewFlow({
    * Guided: revealed questions, feedback after each answer, retakes.
    * Mock: eight questions one at a time, no interruptions, report at the end.
    */
-  const [mode, setMode] = useState<'guided' | 'mock'>('guided');
+  const [mode, setMode] = useState<'guided' | 'mock'>(() =>
+    mockQuestions && mockQuestions.length >= 8 ? 'mock' : 'guided',
+  );
   const [recordingLive, setRecordingLive] = useState(false);
   const lastHeardRef = useRef(0);
   const [meterUnavailable, setMeterUnavailable] = useState(false);
@@ -642,6 +644,20 @@ export function InterviewFlow({
 
           {/* ---------- interview format ---------- */}
           <div className="mode-row">
+            {mockQuestions && mockQuestions.length > 0 && (
+              <button
+                type="button"
+                className={`mode-card ${mode === 'mock' ? 'on' : ''}`}
+                aria-pressed={mode === 'mock'}
+                onClick={() => setMode('mock')}
+              >
+                <span className="method-title-row">
+                  <span className="mode-title">{t('modeMockTitle')}</span>
+                  <span className="choice-note">{t('modeRecommended')}</span>
+                </span>
+                <span className="tiny">{t('modeMockBody')}</span>
+              </button>
+            )}
             <button
               type="button"
               className={`mode-card ${mode === 'guided' ? 'on' : ''}`}
@@ -651,17 +667,6 @@ export function InterviewFlow({
               <span className="mode-title">{t('modeGuidedTitle')}</span>
               <span className="tiny">{t('modeGuidedBody')}</span>
             </button>
-            {mockQuestions && mockQuestions.length > 0 && (
-              <button
-                type="button"
-                className={`mode-card ${mode === 'mock' ? 'on' : ''}`}
-                aria-pressed={mode === 'mock'}
-                onClick={() => setMode('mock')}
-              >
-                <span className="mode-title">{t('modeMockTitle')}</span>
-                <span className="tiny">{t('modeMockBody')}</span>
-              </button>
-            )}
           </div>
 
           {/* ---------- answer method ---------- */}
@@ -781,7 +786,7 @@ export function InterviewFlow({
               <div className="notice">
                 <strong>{t('typingModeTitle')}</strong>
                 <p className="tiny" style={{ marginTop: '0.35rem' }}>
-                  {t('typingModeBody')}
+                  {mode === 'mock' ? t('typingModeBodyMock') : t('typingModeBody')}
                 </p>
               </div>
             )}
@@ -795,11 +800,13 @@ export function InterviewFlow({
               </strong>
               <span aria-hidden="true">·</span>
               <strong>
-                {estimateMinutes({ ...role, questions: activeQuestions })} {t('expectTime')}
+                {mode === 'mock'
+                  ? t('expectMockTime')
+                  : `${estimateMinutes({ ...role, questions: activeQuestions })} ${t('expectTime')}`}
               </strong>
             </p>
             <p className="tiny">
-              {t('expect2')}. {t('expect3')}. {t('expect4')}.
+              {mode === 'mock' ? t('modeMockExpect') : t('modeGuidedExpect')}
             </p>
             <p className="notice tiny" style={{ marginTop: '0.9rem' }}>
               {t('scoringPolicy')}
@@ -853,10 +860,12 @@ export function InterviewFlow({
               {t('question')} {index + 1}
             </p>
             <h2 style={{ fontSize: '1.35rem' }}>{questionText}</h2>
-            <div className="coach-tip">
-              <strong>{t('tip')}</strong>
-              {hintText}
-            </div>
+            {mode === 'guided' && (
+              <div className="coach-tip">
+                <strong>{t('tip')}</strong>
+                {hintText}
+              </div>
+            )}
           </div>
 
           <div className="card stack" style={{ alignItems: 'center', textAlign: 'center' }}>
@@ -1077,10 +1086,10 @@ export function InterviewFlow({
                 disabled={isScoring || transcript.trim().length === 0}
               >
                 {isScoring
-                  ? t('scoring')
+                  ? mode === 'mock' ? t('preparingNext') : t('scoring')
                   : scoringError
                     ? t('retryNow')
-                    : t('getFeedback')}
+                    : mode === 'mock' ? t('confirmAnswer') : t('getFeedback')}
               </button>
               {mode === 'guided' && (
                 <button type="button" className="btn btn-quiet" onClick={retryQuestion}>

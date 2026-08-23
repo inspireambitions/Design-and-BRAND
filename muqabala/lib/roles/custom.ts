@@ -41,6 +41,18 @@ export function buildCustomRole(title?: string): Role {
         ['problem_solving', 'ownership', 'communication'],
       ),
       q(
+        'teamwork',
+        'Tell me about a time you worked with other people to reach an important goal.',
+        'حدثني عن مرة عملت فيها مع أشخاص آخرين لتحقيق هدف مهم.',
+        ['communication', 'ownership', 'evidence'],
+      ),
+      q(
+        'mistake',
+        'Tell me about a mistake you made at work. How did you put it right?',
+        'حدثني عن خطأ ارتكبته في العمل. كيف صححته؟',
+        ['ownership', 'problem_solving', 'evidence'],
+      ),
+      q(
         'strength_weakness',
         'What is the one thing you are best at in your work, and what are you still working on?',
         'ما أفضل ما تتقنه في عملك، وما الذي ما زلت تعمل على تحسينه؟',
