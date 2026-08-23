@@ -60,3 +60,15 @@ test('migration enforces ownership, expiry and no anonymous table access', async
   assert.match(sql, /grant select, delete.*authenticated/is);
   assert.match(sql, /delete from public\.saved_reports[\s\S]*expires_at <= now\(\)/i);
 });
+
+test('magic-link email keeps the verified minimal Supabase template', async () => {
+  const html = await readFile(new URL('../supabase/templates/magic-link.html', import.meta.url), 'utf8');
+  assert.equal((html.match(/\{\{ \.ConfirmationURL \}\}/g) ?? []).length, 1);
+  assert.match(html, /href="\{\{ \.ConfirmationURL \}\}"/);
+  assert.doesNotMatch(html, /style\s*=/i);
+  assert.doesNotMatch(html, /<script|<iframe|on\w+\s*=/i);
+
+  for (const tag of html.match(/<[^>]+>/g) ?? []) {
+    assert.equal((tag.match(/"/g) ?? []).length % 2, 0, `Unbalanced quotes in ${tag}`);
+  }
+});

@@ -10,14 +10,16 @@ import { TopBar } from './TopBar';
 const copy = {
   en: {
     title: 'My saved reports', intro: 'Private reports you chose to keep. They are deleted automatically after 90 days.',
-    email: 'Email address', send: 'Email me a sign-in link', sent: 'Check your email to finish signing in.',
+    email: 'Email address', send: 'Email me a sign-in link', sending: 'Sending…', sent: 'Check your email to finish signing in.',
+    sendError: 'We could not send the sign-in link. Please try again in a few minutes.',
     empty: 'You have no saved reports yet.', start: 'Start an interview', signOut: 'Sign out', delete: 'Delete report',
     deleting: 'Deleting…', error: 'Reports could not be loaded. Try again.', notScored: 'Not scored', question: 'Question',
     worked: 'What worked', improve: 'What to improve', expires: 'Available until', privacy: 'Full answers and video are not stored here.',
   },
   ar: {
     title: 'تقاريري المحفوظة', intro: 'تقارير خاصة اخترت الاحتفاظ بها، وتُحذف تلقائياً بعد 90 يوماً.',
-    email: 'البريد الإلكتروني', send: 'أرسل رابط الدخول إلى بريدي', sent: 'تحقق من بريدك لإكمال تسجيل الدخول.',
+    email: 'البريد الإلكتروني', send: 'أرسل رابط الدخول إلى بريدي', sending: 'جارٍ الإرسال…', sent: 'تحقق من بريدك لإكمال تسجيل الدخول.',
+    sendError: 'تعذر إرسال رابط الدخول. حاول مرة أخرى بعد بضع دقائق.',
     empty: 'لا توجد تقارير محفوظة بعد.', start: 'ابدأ مقابلة', signOut: 'تسجيل الخروج', delete: 'حذف التقرير',
     deleting: 'جارٍ الحذف…', error: 'تعذر تحميل التقارير. حاول مرة أخرى.', notScored: 'لم يتم التقييم', question: 'السؤال',
     worked: 'ما الذي نجح', improve: 'ما الذي يحتاج إلى تحسين', expires: 'متاح حتى', privacy: 'لا تُحفظ إجاباتك الكاملة أو الفيديو هنا.',
@@ -30,7 +32,7 @@ export function SavedReportsView() {
   const [email, setEmail] = useState('');
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const [reports, setReports] = useState<StoredReport[]>([]);
-  const [status, setStatus] = useState<'loading' | 'ready' | 'sent' | 'error'>('loading');
+  const [status, setStatus] = useState<'loading' | 'ready' | 'sending' | 'sent' | 'send-error' | 'error'>('loading');
   const [deleting, setDeleting] = useState<string | null>(null);
 
   async function load() {
@@ -51,12 +53,13 @@ export function SavedReportsView() {
   async function sendLink(event: React.FormEvent) {
     event.preventDefault();
     const supabase = createBrowserSupabaseClient();
-    if (!supabase) { setStatus('error'); return; }
+    if (!supabase) { setStatus('send-error'); return; }
+    setStatus('sending');
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
       options: { shouldCreateUser: true, emailRedirectTo: `${window.location.origin}/auth/confirm?next=/reports` },
     });
-    setStatus(error ? 'error' : 'sent');
+    setStatus(error ? 'send-error' : 'sent');
   }
 
   async function remove(id: string) {
@@ -82,9 +85,10 @@ export function SavedReportsView() {
             <form className="save-report-form" onSubmit={sendLink}>
               <label htmlFor="saved-report-email">{c.email}</label>
               <input id="saved-report-email" type="email" autoComplete="email" required maxLength={254} value={email} onChange={(e) => setEmail(e.target.value)} />
-              <button className="btn btn-primary" type="submit">{c.send}</button>
+              <button className="btn btn-primary" type="submit" disabled={status === 'sending'}>{status === 'sending' ? c.sending : c.send}</button>
             </form>
             {status === 'sent' && <p className="status-success" role="status">{c.sent}</p>}
+            {status === 'send-error' && <p className="status-error" role="alert">{c.sendError}</p>}
           </section>
         )}
         {signedIn && <div className="row"><button className="btn btn-quiet" type="button" onClick={signOut}>{c.signOut}</button></div>}
