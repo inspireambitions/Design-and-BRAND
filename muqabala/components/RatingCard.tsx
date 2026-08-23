@@ -20,6 +20,29 @@ export function RatingCard({ attempt }: { attempt: Attempt }) {
   const [confidence, setConfidence] = useState<AttemptRating['confidence'] | null>(null);
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [sendState, setSendState] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle');
+
+  const sendToTeam = async (rating: AttemptRating) => {
+    setSendState('sending');
+    try {
+      const response = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          attemptId: attempt.id,
+          roleId: attempt.roleId,
+          stars: rating.stars,
+          confidence: rating.confidence,
+          overallScore: attempt.overallScore,
+          questionsAnswered: attempt.answers.length,
+          language: lang,
+        }),
+      });
+      setSendState(response.ok ? 'sent' : 'failed');
+    } catch {
+      setSendState('failed');
+    }
+  };
 
   const submit = (nextStars: number, nextConfidence: AttemptRating['confidence']) => {
     const rating: AttemptRating = { stars: nextStars, confidence: nextConfidence };
@@ -31,6 +54,7 @@ export function RatingCard({ attempt }: { attempt: Attempt }) {
       overall_score: attempt.overallScore ?? undefined,
     });
     setSaved(true);
+    void sendToTeam(rating);
   };
 
   const chooseStars = (value: number) => {
@@ -89,6 +113,7 @@ export function RatingCard({ attempt }: { attempt: Attempt }) {
           {t('rateTitle')}
         </p>
         <p className="muted">{t('rateBody')}</p>
+        <p className="tiny" style={{ marginTop: '0.45rem' }}>{t('ratePrivacy')}</p>
       </div>
 
       <div className="stack-sm">
@@ -111,7 +136,7 @@ export function RatingCard({ attempt }: { attempt: Attempt }) {
 
       <div className="stack-sm">
         <span className="rate-label">{t('rateConfidence')}</span>
-        <div className="row" style={{ gap: '0.4rem' }}>
+        <div className="row rating-choice-row" style={{ gap: '0.4rem' }}>
           {(
             [
               ['more', t('rateMore')],
@@ -134,10 +159,21 @@ export function RatingCard({ attempt }: { attempt: Attempt }) {
 
       {saved && (
         <div className="stack-sm">
-          <p className="notice tiny" style={{ margin: 0 }}>
-            {t('rateThanks')}
+          <p
+            className={`notice tiny${sendState === 'failed' ? ' notice-warn' : ''}`}
+            style={{ margin: 0 }}
+            role="status"
+            aria-live="polite"
+          >
+            {sendState === 'sending'
+              ? t('rateSending')
+              : sendState === 'sent'
+                ? t('rateSent')
+                : sendState === 'failed'
+                  ? t('rateSendFailed')
+                  : t('rateThanks')}
           </p>
-          <div className="row">
+          <div className="row rating-actions">
             <button type="button" className="btn btn-quiet" onClick={share}>
               {t('rateSend')}
             </button>

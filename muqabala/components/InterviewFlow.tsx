@@ -1158,7 +1158,7 @@ export function InterviewFlow({
               <p className="tiny">{t('savedLocally')}</p>
             )}
 
-            <div className="row no-print">
+            <div className="row no-print report-actions">
               {typeof navigator !== 'undefined' && typeof navigator.share === 'function' && (
                 <button
                   type="button"
