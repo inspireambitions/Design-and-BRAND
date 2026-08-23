@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { buildFeedbackEmail } from '../lib/feedback-email.ts';
 import { confidenceLabel, RatingFeedbackSchema } from '../lib/rating-feedback.ts';
+import { createFeedbackShareToken, verifyFeedbackShareToken } from '../lib/feedback-share.ts';
 
 const valid = {
   attemptId: 'front-desk-1724412345678',
@@ -40,11 +41,33 @@ test('only an explicitly approved rating receives a share-ready card', () => {
     rating,
     roleLabel: '<script>unsafe</script>',
     receivedAt: '2026-08-23T16:24:02.964Z',
+    shareUrls: {
+      square: 'https://trymuqabala.com/api/feedback/share-card?format=square',
+      wide: 'https://trymuqabala.com/api/feedback/share-card?format=wide',
+    },
   });
   assert.match(email.subject, /Approved social proof/);
   assert.match(email.html, /Approved for anonymous sharing/);
   assert.match(email.html, /Share-ready proof/);
+  assert.match(email.html, /Square image/);
+  assert.match(email.html, /Wide image/);
   assert.doesNotMatch(email.html, /<script>unsafe<\/script>/);
+});
+
+test('share-card data is signed and tampering is rejected', () => {
+  process.env.REPORT_CLAIM_SECRET = 'test-secret-that-is-longer-than-thirty-two-characters';
+  const payload = {
+    v: 1,
+    stars: 5,
+    confidence: 'more',
+    questions: 8,
+    role: 'Front Office Agent',
+    score: 78,
+  };
+  const token = createFeedbackShareToken(payload);
+  assert.deepEqual(verifyFeedbackShareToken(token.data, token.signature), payload);
+  assert.equal(verifyFeedbackShareToken(`${token.data}x`, token.signature), null);
+  assert.equal(verifyFeedbackShareToken(token.data, `${token.signature.slice(0, -1)}x`), null);
 });
 
 test('confidence labels are stable for the notification email', () => {

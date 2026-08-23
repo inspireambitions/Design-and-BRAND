@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { buildFeedbackEmail } from '@/lib/feedback-email';
 import { limitFeedback } from '@/lib/feedback-rate-limit';
 import { RatingFeedbackSchema } from '@/lib/rating-feedback';
+import { feedbackShareUrls } from '@/lib/feedback-share';
 import { getRole } from '@/lib/roles';
 
 export const runtime = 'nodejs';
@@ -56,7 +57,22 @@ export async function POST(request: Request) {
     .update(`${parsed.data.attemptId}:${parsed.data.stars}:${parsed.data.confidence}:${parsed.data.publicConsent}`)
     .digest('hex')
     .slice(0, 32);
-  const email = buildFeedbackEmail({ rating: parsed.data, roleLabel, receivedAt: sentAt });
+  let shareUrls: { square: string; wide: string } | undefined;
+  if (parsed.data.publicConsent) {
+    try {
+      shareUrls = feedbackShareUrls(new URL(request.url).origin, {
+        v: 1,
+        stars: parsed.data.stars,
+        confidence: parsed.data.confidence,
+        questions: parsed.data.questionsAnswered,
+        role: roleLabel,
+        score: parsed.data.overallScore,
+      });
+    } catch {
+      // The rating email still arrives if share-card signing is unavailable.
+    }
+  }
+  const email = buildFeedbackEmail({ rating: parsed.data, roleLabel, receivedAt: sentAt, shareUrls });
 
   let response: Response;
   try {

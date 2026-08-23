@@ -25,6 +25,7 @@ export function buildFeedbackEmail(input: {
   rating: RatingFeedback;
   roleLabel: string;
   receivedAt: string;
+  shareUrls?: { square: string; wide: string };
 }) {
   const { rating, receivedAt } = input;
   const roleLabel = escapeHtml(input.roleLabel);
@@ -52,6 +53,16 @@ export function buildFeedbackEmail(input: {
     `Received: ${receivedAt}`,
   ];
 
+  const downloadButtons = input.shareUrls
+    ? `<table role="presentation" cellspacing="0" cellpadding="0" style="margin-top:20px;border-collapse:separate;border-spacing:8px 0;"><tr>
+        <td><a href="${escapeHtml(input.shareUrls.square)}" style="display:inline-block;padding:12px 15px;border-radius:999px;background:#10261e;color:#f5f1e7;font:700 13px/1 Arial,sans-serif;text-decoration:none;">Square image</a></td>
+        <td><a href="${escapeHtml(input.shareUrls.wide)}" style="display:inline-block;padding:12px 15px;border-radius:999px;background:#287f70;color:#ffffff;font:700 13px/1 Arial,sans-serif;text-decoration:none;">Wide image</a></td>
+      </tr></table>`
+    : '';
+  const shareHelp = input.shareUrls
+    ? 'Square fits Instagram, LinkedIn and general social posts. Wide fits X and newsletters.'
+    : 'Screenshot the card above for social media or the website.';
+
   const shareCard = rating.publicConsent
     ? `<tr><td style="padding:0 28px 28px;">
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;background:#f5f1e7;border-radius:18px;color:#10261e;">
@@ -61,9 +72,10 @@ export function buildFeedbackEmail(input: {
             <div style="margin-top:8px;font:700 22px/1 Arial,sans-serif;letter-spacing:2px;color:#d69a28;">${stars}</div>
             <div style="margin-top:22px;font:700 25px/1.25 Georgia,serif;color:#10261e;">${escapeHtml(socialStatement)}</div>
             <div style="margin-top:22px;padding-top:16px;border-top:1px solid #cbd8d1;font:700 12px/1.4 Arial,sans-serif;letter-spacing:1px;text-transform:uppercase;color:#287f70;">Muqabala · Practise until you feel ready</div>
+            ${downloadButtons}
           </td></tr>
         </table>
-        <p style="margin:10px 4px 0;font:12px/1.5 Arial,sans-serif;color:#8ca59c;">This candidate approved anonymous sharing. Screenshot the card above for social media or the website.</p>
+        <p style="margin:10px 4px 0;font:12px/1.5 Arial,sans-serif;color:#8ca59c;">This candidate approved anonymous sharing. ${shareHelp}</p>
       </td></tr>`
     : '';
 
