@@ -1246,38 +1246,79 @@ export function InterviewFlow({
           </div>
 
           {(() => {
-            // Strongest answer / focus area / next action — computed only from
-            // answers the AI actually scored, and only when there are at least
-            // two so "strongest" and "focus" are different questions.
-            const scored = answers
-              .map((a, i) => ({ ...a, index: i }))
-              .filter((a) => a.feedback.status === 'scored');
-            if (scored.length < 2) return null;
-            const best = scored.reduce((a, b) => (b.feedback.score > a.feedback.score ? b : a));
-            const worst = scored.reduce((a, b) => (b.feedback.score < a.feedback.score ? b : a));
-            if (best.index === worst.index) return null;
-            const action = worst.feedback.coachTip || worst.feedback.improvements[0] || null;
+            const reportAnswers = answers.map((answer, answerIndex) => ({
+              ...answer,
+              index: answerIndex,
+            }));
+            const scored = reportAnswers.filter((answer) => answer.feedback.status === 'scored');
+            const weakest = scored.length
+              ? scored.reduce((current, answer) =>
+                  answer.feedback.score < current.feedback.score ? answer : current,
+                )
+              : null;
+
             return (
-              <div className="card stack-sm">
-                <div className="summary-item">
-                  <span className="rate-label">{t('strongest')}</span>
-                  <p style={{ marginTop: '0.25rem' }}>
-                    {t('question')} {best.index + 1} · {best.feedback.score}/100 — {best.questionText}
-                  </p>
+              <section className="report-overview" aria-labelledby="report-overview-title">
+                <div className="report-overview-heading">
+                  <h2 id="report-overview-title">{t('reportOverview')}</h2>
+                  <p className="muted">{t('reportOverviewBody')}</p>
                 </div>
-                <div className="summary-item">
-                  <span className="rate-label">{t('weakest')}</span>
-                  <p style={{ marginTop: '0.25rem' }}>
-                    {t('question')} {worst.index + 1} · {worst.feedback.score}/100 — {worst.questionText}
-                  </p>
+
+                <div className="report-answer-list">
+                  {reportAnswers.map((answer) => {
+                    const isWeakest = weakest?.index === answer.index;
+                    const nextStep =
+                      answer.feedback.coachTip || answer.feedback.improvements[0] || null;
+
+                    return (
+                      <details
+                        key={`${answer.questionId}-${answer.index}`}
+                        className={`report-answer${isWeakest ? ' report-answer-focus' : ''}`}
+                        open={isWeakest || (scored.length === 0 && answer.index === 0)}
+                      >
+                        <summary className="report-answer-summary">
+                          <span className="report-question-number" aria-hidden="true">
+                            {answer.index + 1}
+                          </span>
+                          <span className="report-answer-verdict">
+                            <span className="report-answer-label">
+                              {t('question')} {answer.index + 1}
+                              {isWeakest && <span className="chip chip-gold">{t('startHere')}</span>}
+                            </span>
+                            <strong dir="auto">{answer.feedback.headline}</strong>
+                          </span>
+                          <span className="report-answer-score">
+                            {answer.feedback.status === 'scored'
+                              ? `${answer.feedback.score}/100`
+                              : t('notScored')}
+                          </span>
+                        </summary>
+
+                        <div className="report-answer-body">
+                          <h3 dir="auto">{answer.questionText}</h3>
+                          {answer.transcript && (
+                            <div className="answer-recap">
+                              <span className="rate-label">{t('yourAnswer')}</span>
+                              <p className="muted" dir="auto">{answer.transcript}</p>
+                            </div>
+                          )}
+                          {isWeakest && nextStep && (
+                            <div className="report-next-answer">
+                              <strong>{t('strongerAnswerPlan')}</strong>
+                              <p dir="auto">{nextStep}</p>
+                            </div>
+                          )}
+                          <FeedbackCard
+                            feedback={answer.feedback}
+                            embedded
+                            hideCoachTip={isWeakest && Boolean(nextStep)}
+                          />
+                        </div>
+                      </details>
+                    );
+                  })}
                 </div>
-                {action && (
-                  <div className="summary-item">
-                    <span className="rate-label">{t('nextAction')}</span>
-                    <p style={{ marginTop: '0.25rem' }}>{action}</p>
-                  </div>
-                )}
-              </div>
+              </section>
             );
           })()}
 
@@ -1288,24 +1329,6 @@ export function InterviewFlow({
           )}
 
           <CoachingCard />
-
-          {answers.map((answer, i) => (
-            <div key={`${answer.questionId}-${i}`} className="stack-sm">
-              <p className="eyebrow" style={{ marginBottom: 0 }}>
-                {t('question')} {i + 1}
-              </p>
-              <h3 style={{ fontSize: '1.05rem' }}>{answer.questionText}</h3>
-              {answer.transcript && (
-                <div className="answer-recap">
-                  <span className="rate-label">{t('yourAnswer')}</span>
-                  <p className="muted" style={{ marginTop: '0.25rem' }}>
-                    {answer.transcript}
-                  </p>
-                </div>
-              )}
-              <FeedbackCard feedback={answer.feedback} />
-            </div>
-          ))}
 
           <div className="row no-print">
             <Link

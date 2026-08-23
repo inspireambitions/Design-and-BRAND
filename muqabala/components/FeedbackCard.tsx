@@ -7,18 +7,22 @@ import { ScoreRing } from './ScoreRing';
 export function FeedbackCard({
   feedback,
   attempt,
+  embedded = false,
+  hideCoachTip = false,
 }: {
   feedback: AnswerFeedback;
   attempt?: number;
+  embedded?: boolean;
+  hideCoachTip?: boolean;
 }) {
   const { t } = useLang();
 
   return (
-    <div className="card stack">
+    <div className={embedded ? 'feedback-embedded stack' : 'card stack'}>
       <div className="score-head">
         {feedback.status === 'scored' && <ScoreRing value={feedback.score} />}
         <div>
-          <h3 style={{ fontSize: '1.2rem' }}>{feedback.headline}</h3>
+          <h3 dir="auto" style={{ fontSize: '1.2rem' }}>{feedback.headline}</h3>
           <div className="row" style={{ marginTop: '0.45rem', gap: '0.4rem' }}>
             {attempt && attempt > 1 && (
               <span className="chip chip-gold">
@@ -45,7 +49,7 @@ export function FeedbackCard({
         <div>
           {feedback.competencies.map((competency) => (
             <div key={competency.id} className="comp-row">
-              <span className="comp-name">{competency.label}</span>
+              <span className="comp-name" dir="auto">{competency.label}</span>
               <span className="comp-score">{competency.score}/10</span>
               <div className="comp-bar meter" aria-hidden="true">
                 <div
@@ -55,7 +59,7 @@ export function FeedbackCard({
                   style={{ width: `${competency.score * 10}%` }}
                 />
               </div>
-              <p className="comp-evidence">{competency.evidence ?? t('noEvidence')}</p>
+              <p className="comp-evidence" dir="auto">{competency.evidence ?? t('noEvidence')}</p>
             </div>
           ))}
         </div>
@@ -68,7 +72,7 @@ export function FeedbackCard({
           </p>
           <ul className="feedback-list">
             {feedback.strengths.map((strength) => (
-              <li key={strength}>{strength}</li>
+              <li key={strength} dir="auto">{strength}</li>
             ))}
           </ul>
         </div>
@@ -81,16 +85,16 @@ export function FeedbackCard({
           </p>
           <ul className="feedback-list">
             {feedback.improvements.map((improvement) => (
-              <li key={improvement}>{improvement}</li>
+              <li key={improvement} dir="auto">{improvement}</li>
             ))}
           </ul>
         </div>
       )}
 
-      {feedback.coachTip && (
+      {feedback.coachTip && !hideCoachTip && (
         <div className="coach-tip">
           <strong>{t('biggestWin')}</strong>
-          {feedback.coachTip}
+          <span dir="auto">{feedback.coachTip}</span>
         </div>
       )}
     </div>
