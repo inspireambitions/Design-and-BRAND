@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useLang } from './LanguageProvider';
 import { TopBar } from './TopBar';
@@ -10,10 +10,16 @@ export function ClaimReportView() {
   const router = useRouter();
   const params = useSearchParams();
   const [failed, setFailed] = useState(false);
+  const started = useRef(false);
 
   useEffect(() => {
+    if (started.current) return;
+    started.current = true;
     const token = params.get('token');
     if (!token) { setFailed(true); return; }
+    // Remove the one-time token from visible browser history as soon as it has
+    // been captured. It remains email-bound, short-lived and single-use.
+    window.history.replaceState(window.history.state, '', '/reports/claim');
     fetch('/api/reports/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) })
       .then((response) => { if (!response.ok) throw new Error('claim'); router.replace('/reports'); })
       .catch(() => setFailed(true));
