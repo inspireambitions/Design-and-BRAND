@@ -48,6 +48,8 @@ test('only an explicitly approved rating receives a share-ready card', () => {
   });
   assert.match(email.subject, /Approved social proof/);
   assert.match(email.html, /Approved for anonymous sharing/);
+  assert.match(email.html, /Muqabala user feedback/);
+  assert.doesNotMatch(email.html, /Candidate signal/);
   assert.match(email.html, /Share-ready proof/);
   assert.match(email.html, /Square image/);
   assert.match(email.html, /Wide image/);

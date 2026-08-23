@@ -84,14 +84,14 @@ export function buildFeedbackEmail(input: {
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;background:#07150f;">
     <tr><td align="center" style="padding:28px 12px;">
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;border-collapse:collapse;background:#10261e;border:1px solid #28453a;border-radius:24px;overflow:hidden;">
-        <tr><td style="padding:28px 28px 20px;border-bottom:1px solid #28453a;">
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr>
-            <td style="font:700 20px/1 Arial,sans-serif;color:#f5f7f2;">Muqabala</td>
-            <td align="right"><span style="display:inline-block;padding:7px 10px;border:1px solid ${statusColour};border-radius:999px;font:700 10px/1 Arial,sans-serif;letter-spacing:1px;text-transform:uppercase;color:${statusColour};">${publicStatus}</span></td>
-          </tr></table>
+        <tr><td style="padding:28px 28px 22px;border-bottom:1px solid #28453a;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+            <tr><td style="font:700 20px/1 Arial,sans-serif;color:#f5f7f2;">Muqabala</td></tr>
+            <tr><td style="padding-top:15px;"><span style="display:inline-block;padding:8px 12px;border:1px solid ${statusColour};border-radius:999px;font:700 10px/1.25 Arial,sans-serif;letter-spacing:1px;text-transform:uppercase;color:${statusColour};">${publicStatus}</span></td></tr>
+          </table>
         </td></tr>
         <tr><td style="padding:30px 28px 8px;">
-          <div style="font:700 11px/1.4 Arial,sans-serif;letter-spacing:2px;text-transform:uppercase;color:#46c7ae;">Candidate signal</div>
+          <div style="font:700 11px/1.4 Arial,sans-serif;letter-spacing:2px;text-transform:uppercase;color:#46c7ae;">Muqabala user feedback</div>
           <div style="margin-top:16px;font:700 54px/1 Georgia,serif;color:#f5f7f2;">${rating.stars}<span style="font-size:25px;color:#8ca59c;">/5</span></div>
           <div style="margin-top:8px;font:700 23px/1 Arial,sans-serif;letter-spacing:3px;color:#f2b84b;">${stars}</div>
           <div style="margin-top:22px;font:700 27px/1.25 Georgia,serif;color:#f5f7f2;">${escapeHtml(confidence)} for the real interview.</div>
@@ -119,7 +119,7 @@ export function buildFeedbackEmail(input: {
 </body></html>`;
 
   const text = [
-    'MUQABALA CANDIDATE RATING',
+    'MUQABALA USER FEEDBACK',
     publicStatus,
     '',
     ...lines,
