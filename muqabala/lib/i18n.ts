@@ -108,6 +108,13 @@ export const STRINGS = {
     rateSendHint:
       'Your rating contains no name, email, answer text, audio or video. Sharing your result is optional.',
     rateCopied: 'Copied. Paste it to us on WhatsApp.',
+    ratePublicTitle: 'May we share this anonymous rating?',
+    ratePublicBody:
+      'We may show the star rating, job category, question count and whether you feel readier. We will never show your name or answers.',
+    ratePublicButton: 'Yes, share it anonymously',
+    ratePublicSending: 'Saving your permission…',
+    ratePublicThanks: 'Thank you. We may now use this anonymous rating on Muqabala social posts and pages.',
+    ratePublicFailed: 'We could not save your permission. Nothing will be published.',
     rateSkip: 'Skip',
     copy: 'Copy',
     beforeStartShort: 'This is practice. No employer sees it, and your video never leaves your phone.',
@@ -350,6 +357,13 @@ export const STRINGS = {
     rateSendHint:
       'لا يتضمن تقييمك اسماً أو بريداً إلكترونياً أو نص إجابة أو صوتاً أو فيديو. مشاركة نتيجتك اختيارية.',
     rateCopied: 'تم النسخ. أرسله لنا على واتساب.',
+    ratePublicTitle: 'هل تسمح لنا بمشاركة هذا التقييم المجهول؟',
+    ratePublicBody:
+      'قد نعرض عدد النجوم وفئة الوظيفة وعدد الأسئلة وما إذا كنت تشعر باستعداد أكبر. لن نعرض اسمك أو إجاباتك.',
+    ratePublicButton: 'نعم، شاركوه دون اسمي',
+    ratePublicSending: 'نحفظ موافقتك…',
+    ratePublicThanks: 'شكراً لك. يمكننا الآن استخدام هذا التقييم المجهول في منشورات وصفحات مقابلة.',
+    ratePublicFailed: 'تعذر حفظ موافقتك. لن يتم نشر أي شيء.',
     rateSkip: 'تخطَّ',
     copy: 'انسخ',
     beforeStartShort: 'هذا تدريب. لا يراه أي صاحب عمل، والفيديو لا يغادر هاتفك أبداً.',

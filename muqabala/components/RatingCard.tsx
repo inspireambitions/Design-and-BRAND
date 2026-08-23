@@ -21,9 +21,10 @@ export function RatingCard({ attempt }: { attempt: Attempt }) {
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
   const [sendState, setSendState] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle');
+  const [consentState, setConsentState] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle');
 
-  const sendToTeam = async (rating: AttemptRating) => {
-    setSendState('sending');
+  const sendToTeam = async (rating: AttemptRating, publicConsent = false) => {
+    publicConsent ? setConsentState('sending') : setSendState('sending');
     try {
       const response = await fetch('/api/feedback', {
         method: 'POST',
@@ -36,11 +37,14 @@ export function RatingCard({ attempt }: { attempt: Attempt }) {
           overallScore: attempt.overallScore,
           questionsAnswered: attempt.answers.length,
           language: lang,
+          publicConsent,
         }),
       });
-      setSendState(response.ok ? 'sent' : 'failed');
+      publicConsent
+        ? setConsentState(response.ok ? 'sent' : 'failed')
+        : setSendState(response.ok ? 'sent' : 'failed');
     } catch {
-      setSendState('failed');
+      publicConsent ? setConsentState('failed') : setSendState('failed');
     }
   };
 
@@ -104,6 +108,11 @@ export function RatingCard({ attempt }: { attempt: Attempt }) {
     } catch {
       /* clipboard blocked — the share button still works */
     }
+  };
+
+  const allowAnonymousSharing = () => {
+    if (!confidence || stars < 1 || consentState === 'sending' || consentState === 'sent') return;
+    void sendToTeam({ stars, confidence }, true);
   };
 
   return (
@@ -182,6 +191,27 @@ export function RatingCard({ attempt }: { attempt: Attempt }) {
             </button>
           </div>
           <p className="tiny">{t('rateSendHint')}</p>
+          {sendState === 'sent' && (
+            <div className="notice stack-sm" style={{ marginTop: '0.45rem' }}>
+              <strong>{t('ratePublicTitle')}</strong>
+              <p className="tiny" style={{ margin: 0 }}>{t('ratePublicBody')}</p>
+              {consentState === 'sent' ? (
+                <p className="tiny" style={{ margin: 0 }} role="status">{t('ratePublicThanks')}</p>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-quiet"
+                  disabled={consentState === 'sending'}
+                  onClick={allowAnonymousSharing}
+                >
+                  {consentState === 'sending' ? t('ratePublicSending') : t('ratePublicButton')}
+                </button>
+              )}
+              {consentState === 'failed' && (
+                <p className="tiny" style={{ margin: 0 }} role="status">{t('ratePublicFailed')}</p>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

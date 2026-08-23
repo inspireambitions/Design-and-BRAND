@@ -9,6 +9,7 @@ export const RatingFeedbackSchema = z
     overallScore: z.number().int().min(0).max(100).nullable(),
     questionsAnswered: z.number().int().min(1).max(12),
     language: z.enum(['en', 'ar']),
+    publicConsent: z.boolean().default(false),
   })
   .strict();
 
@@ -19,4 +20,3 @@ export function confidenceLabel(value: RatingFeedback['confidence']): string {
   if (value === 'less') return 'Less ready';
   return 'About the same';
 }
-
