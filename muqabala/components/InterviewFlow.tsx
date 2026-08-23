@@ -20,6 +20,7 @@ import { FeedbackCard } from './FeedbackCard';
 import { ScoreRing } from './ScoreRing';
 import { RatingCard } from './RatingCard';
 import { CoachingCard } from './CoachingCard';
+import { SaveReportAcrossDevices } from './SaveReportAcrossDevices';
 
 type Stage = 'check' | 'prep' | 'record' | 'review' | 'feedback' | 'done';
 
@@ -1323,9 +1324,12 @@ export function InterviewFlow({
           })()}
 
           {savedAttempt && (
-            <div className="no-print">
-              <RatingCard attempt={savedAttempt} />
-            </div>
+            <>
+              <SaveReportAcrossDevices attempt={savedAttempt} />
+              <div className="no-print">
+                <RatingCard attempt={savedAttempt} />
+              </div>
+            </>
           )}
 
           <CoachingCard />

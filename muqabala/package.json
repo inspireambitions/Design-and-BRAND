@@ -8,11 +8,16 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test:resilience": "node --experimental-strip-types --test --test-isolation=none scripts/scoring-resilience.test.mjs scripts/speech-session.test.mjs"
+    "test:resilience": "node --experimental-strip-types --test --test-isolation=none scripts/scoring-resilience.test.mjs scripts/speech-session.test.mjs",
+    "test:reports": "node --experimental-strip-types --test --test-isolation=none scripts/saved-report-security.test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",
     "@sentry/nextjs": "^10.70.0",
+    "@supabase/ssr": "0.12.4",
+    "@supabase/supabase-js": "2.112.3",
+    "@upstash/ratelimit": "2.0.8",
+    "@upstash/redis": "1.38.2",
     "next": "^16.3.1",
     "openai": "^7.5.0",
     "posthog-js": "^1.418.6",
