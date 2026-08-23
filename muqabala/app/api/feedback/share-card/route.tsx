@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
             gap: wide ? 72 : 34,
           }}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', minWidth: wide ? 300 : undefined }}>
+          <div style={{ display: 'flex', flexDirection: 'column', width: wide ? 300 : 890 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', fontFamily: 'Georgia, serif' }}>
               <span style={{ fontSize: wide ? 118 : 164, fontWeight: 700, letterSpacing: -7 }}>{payload.stars}</span>
               <span style={{ fontSize: wide ? 46 : 58, color: '#93ada2' }}>/5</span>
