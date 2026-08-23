@@ -253,6 +253,15 @@ export function InterviewFlow({
     }
   }, []);
 
+  const retryVideoFromFallback = useCallback(async () => {
+    if (!speechOk) return;
+    const cameraReady = await enableCamera();
+    if (cameraReady) {
+      setVoiceDeclined(false);
+      setDeviceFallback(false);
+    }
+  }, [enableCamera, speechOk]);
+
   // Re-attach the stream whenever the video element remounts between stages.
   useEffect(() => {
     if (cameraState === 'granted' && videoRef.current && streamRef.current) {
@@ -854,6 +863,18 @@ export function InterviewFlow({
             <div className="notice notice-warn" role="status">
               <strong>{t('deviceFallbackTitle')}</strong>
               <p className="tiny" style={{ marginTop: '0.35rem' }}>{t('deviceFallbackBody')}</p>
+              <p className="tiny" style={{ marginTop: '0.35rem' }}>{t('deviceFallbackBrowserHelp')}</p>
+              {speechOk && (
+                <button
+                  type="button"
+                  className="btn btn-quiet"
+                  style={{ marginTop: '0.65rem' }}
+                  disabled={requestingCamera}
+                  onClick={() => void retryVideoFromFallback()}
+                >
+                  {requestingCamera ? t('cameraStarting') : t('cameraRetry')}
+                </button>
+              )}
             </div>
           )}
           <div className="card stack">
@@ -893,6 +914,7 @@ export function InterviewFlow({
             <div className="notice notice-warn" role="status">
               <strong>{t('deviceFallbackTitle')}</strong>
               <p className="tiny" style={{ marginTop: '0.35rem' }}>{t('deviceFallbackBody')}</p>
+              <p className="tiny" style={{ marginTop: '0.35rem' }}>{t('deviceFallbackNextQuestion')}</p>
             </div>
           )}
           <div className="card stack">

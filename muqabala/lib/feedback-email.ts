@@ -37,7 +37,9 @@ export function buildFeedbackEmail(input: {
     ? 'Approved for anonymous sharing'
     : 'Private feedback. Do not publish';
   const statusColour = rating.publicConsent ? '#46c7ae' : '#f2b84b';
-  const subject = rating.publicConsent
+  const subject = rating.suggestion
+    ? `New Muqabala suggestion · ${rating.stars}/5 · ${confidence}`
+    : rating.publicConsent
     ? `Approved social proof · ${rating.stars}/5 · ${confidence}`
     : `New Muqabala rating · ${rating.stars}/5 · ${confidence}`;
   const socialStatement = `A Muqabala candidate completed ${rating.questionsAnswered} interview questions and felt ${confidence.toLowerCase()} for the real interview.`;
@@ -79,6 +81,18 @@ export function buildFeedbackEmail(input: {
       </td></tr>`
     : '';
 
+  const suggestionBlock = rating.suggestion
+    ? `<tr><td style="padding:0 28px 28px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;background:#18342a;border:1px solid #28453a;border-radius:16px;">
+          <tr><td style="padding:20px;">
+            <div style="font:700 11px/1.4 Arial,sans-serif;letter-spacing:2px;text-transform:uppercase;color:#46c7ae;">Private written suggestion</div>
+            <div style="margin-top:12px;font:16px/1.6 Arial,sans-serif;color:#f5f7f2;white-space:pre-wrap;">${escapeHtml(rating.suggestion)}</div>
+          </td></tr>
+        </table>
+        <p style="margin:10px 4px 0;font:12px/1.5 Arial,sans-serif;color:#8ca59c;">This text is private. It is not covered by anonymous sharing permission.</p>
+      </td></tr>`
+    : '';
+
   const html = `<!doctype html>
 <html><body style="margin:0;background:#07150f;color:#f5f7f2;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;background:#07150f;">
@@ -108,10 +122,11 @@ export function buildFeedbackEmail(input: {
             </tr>
           </table>
         </td></tr>
+        ${suggestionBlock}
         ${shareCard}
         <tr><td align="center" style="padding:4px 28px 30px;">
           <a href="${SITE_URL}" style="display:inline-block;padding:13px 20px;border-radius:999px;background:#46c7ae;color:#07150f;font:700 14px/1 Arial,sans-serif;text-decoration:none;">Open Muqabala</a>
-          <p style="margin:20px 0 0;font:12px/1.6 Arial,sans-serif;color:#8ca59c;">No name, email address, answer text, audio or video was collected with this rating.<br>Received ${escapeHtml(receivedAt)}</p>
+          <p style="margin:20px 0 0;font:12px/1.6 Arial,sans-serif;color:#8ca59c;">No account details, interview answers, audio or video were attached automatically.${rating.suggestion ? ' The written suggestion appears exactly as submitted.' : ''}<br>Received ${escapeHtml(receivedAt)}</p>
         </td></tr>
       </table>
     </td></tr>
@@ -123,9 +138,12 @@ export function buildFeedbackEmail(input: {
     publicStatus,
     '',
     ...lines,
+    ...(rating.suggestion ? ['', 'PRIVATE WRITTEN SUGGESTION', rating.suggestion] : []),
     ...(rating.publicConsent ? ['', 'SHARE-READY PROOF', socialStatement, `Rated ${rating.stars}/5.`] : []),
     '',
-    'No name, email address, answer text, audio or video was collected with this rating.',
+    rating.suggestion
+      ? 'No account details, interview answers, audio or video were attached automatically. The written suggestion appears exactly as submitted.'
+      : 'No account details, interview answers, audio or video were attached automatically.',
   ].join('\n');
 
   return { html, subject, text };

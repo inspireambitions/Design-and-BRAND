@@ -22,9 +22,14 @@ export function RatingCard({ attempt }: { attempt: Attempt }) {
   const [copied, setCopied] = useState(false);
   const [sendState, setSendState] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle');
   const [consentState, setConsentState] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle');
+  const [suggestion, setSuggestion] = useState('');
+  const [suggestionState, setSuggestionState] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle');
 
-  const sendToTeam = async (rating: AttemptRating, publicConsent = false) => {
-    publicConsent ? setConsentState('sending') : setSendState('sending');
+  const sendToTeam = async (rating: AttemptRating, publicConsent = false, writtenSuggestion?: string) => {
+    const isSuggestion = Boolean(writtenSuggestion?.trim());
+    if (isSuggestion) setSuggestionState('sending');
+    else if (publicConsent) setConsentState('sending');
+    else setSendState('sending');
     try {
       const response = await fetch('/api/feedback', {
         method: 'POST',
@@ -38,13 +43,16 @@ export function RatingCard({ attempt }: { attempt: Attempt }) {
           questionsAnswered: attempt.answers.length,
           language: lang,
           publicConsent,
+          suggestion: writtenSuggestion?.trim() || undefined,
         }),
       });
-      publicConsent
-        ? setConsentState(response.ok ? 'sent' : 'failed')
-        : setSendState(response.ok ? 'sent' : 'failed');
+      if (isSuggestion) setSuggestionState(response.ok ? 'sent' : 'failed');
+      else if (publicConsent) setConsentState(response.ok ? 'sent' : 'failed');
+      else setSendState(response.ok ? 'sent' : 'failed');
     } catch {
-      publicConsent ? setConsentState('failed') : setSendState('failed');
+      if (isSuggestion) setSuggestionState('failed');
+      else if (publicConsent) setConsentState('failed');
+      else setSendState('failed');
     }
   };
 
@@ -113,6 +121,11 @@ export function RatingCard({ attempt }: { attempt: Attempt }) {
   const allowAnonymousSharing = () => {
     if (!confidence || stars < 1 || consentState === 'sending' || consentState === 'sent') return;
     void sendToTeam({ stars, confidence }, true);
+  };
+
+  const sendSuggestion = () => {
+    if (!confidence || stars < 1 || !suggestion.trim() || suggestionState === 'sending') return;
+    void sendToTeam({ stars, confidence }, false, suggestion);
   };
 
   return (
@@ -191,6 +204,42 @@ export function RatingCard({ attempt }: { attempt: Attempt }) {
             </button>
           </div>
           <p className="tiny">{t('rateSendHint')}</p>
+          <div className="stack-sm rating-suggestion">
+            <label className="rate-label" htmlFor="rating-suggestion">
+              {t('rateSuggestionLabel')}
+            </label>
+            <textarea
+              id="rating-suggestion"
+              className="answer-box answer-box-compact"
+              value={suggestion}
+              maxLength={600}
+              disabled={suggestionState === 'sent'}
+              placeholder={t('rateSuggestionPlaceholder')}
+              onChange={(event) => {
+                setSuggestion(event.target.value);
+                if (suggestionState === 'failed') setSuggestionState('idle');
+              }}
+            />
+            <p className="tiny">{t('rateSuggestionPrivacy')}</p>
+            <div className="row">
+              <button
+                type="button"
+                className="btn btn-quiet"
+                disabled={!suggestion.trim() || suggestionState === 'sending' || suggestionState === 'sent'}
+                onClick={sendSuggestion}
+              >
+                {suggestionState === 'sending'
+                  ? t('rateSuggestionSending')
+                  : suggestionState === 'sent'
+                    ? t('rateSuggestionSent')
+                    : t('rateSuggestionButton')}
+              </button>
+              <span className="tiny">{suggestion.length}/600</span>
+            </div>
+            {suggestionState === 'failed' && (
+              <p className="tiny notice notice-warn" role="status">{t('rateSuggestionFailed')}</p>
+            )}
+          </div>
           {sendState === 'sent' && (
             <div className="notice stack-sm" style={{ marginTop: '0.45rem' }}>
               <strong>{t('ratePublicTitle')}</strong>

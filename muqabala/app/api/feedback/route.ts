@@ -54,7 +54,9 @@ export async function POST(request: Request) {
   const roleLabel = parsed.data.roleId === 'custom' ? 'Custom job advert' : role?.title || parsed.data.roleId;
   const sentAt = new Date().toISOString();
   const idempotencyHash = createHash('sha256')
-    .update(`${parsed.data.attemptId}:${parsed.data.stars}:${parsed.data.confidence}:${parsed.data.publicConsent}`)
+    .update(
+      `${parsed.data.attemptId}:${parsed.data.stars}:${parsed.data.confidence}:${parsed.data.publicConsent}:${parsed.data.suggestion ?? ''}`,
+    )
     .digest('hex')
     .slice(0, 32);
   let shareUrls: { square: string; wide: string } | undefined;

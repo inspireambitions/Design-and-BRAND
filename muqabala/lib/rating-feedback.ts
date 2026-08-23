@@ -10,6 +10,7 @@ export const RatingFeedbackSchema = z
     questionsAnswered: z.number().int().min(1).max(12),
     language: z.enum(['en', 'ar']),
     publicConsent: z.boolean().default(false),
+    suggestion: z.string().trim().min(1).max(600).optional(),
   })
   .strict();
 

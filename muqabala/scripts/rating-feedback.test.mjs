@@ -21,6 +21,25 @@ test('anonymous rating accepts only the bounded fields needed for the email', ()
   assert.equal(RatingFeedbackSchema.safeParse({ ...valid, transcript: 'private candidate answer' }).success, false);
   assert.equal(RatingFeedbackSchema.safeParse({ ...valid, stars: 6 }).success, false);
   assert.equal(RatingFeedbackSchema.safeParse({ ...valid, questionsAnswered: 50 }).success, false);
+  assert.equal(RatingFeedbackSchema.safeParse({ ...valid, suggestion: 'Clear and useful.' }).success, true);
+  assert.equal(RatingFeedbackSchema.safeParse({ ...valid, suggestion: 'x'.repeat(601) }).success, false);
+});
+
+test('written suggestions remain private and are escaped in the email', () => {
+  const rating = RatingFeedbackSchema.parse({
+    ...valid,
+    suggestion: '<script>Make the first screen simpler.</script>',
+  });
+  const email = buildFeedbackEmail({
+    rating,
+    roleLabel: 'Front Office Agent',
+    receivedAt: '2026-08-23T16:24:02.964Z',
+  });
+  assert.match(email.subject, /New Muqabala suggestion/);
+  assert.match(email.html, /Private written suggestion/);
+  assert.match(email.html, /Make the first screen simpler/);
+  assert.doesNotMatch(email.html, /<script>Make the first screen simpler/);
+  assert.doesNotMatch(email.html, /Share-ready proof/);
 });
 
 test('private rating email is polished but clearly blocked from public use', () => {

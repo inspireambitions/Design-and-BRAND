@@ -352,6 +352,18 @@ body[dir='rtl'] .eyebrow {
   grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
 }
 
+.role-picker {
+  max-width: 34rem;
+}
+
+.role-picker .eyebrow {
+  margin-bottom: 0;
+}
+
+.role-step-title {
+  font-size: 1.05rem;
+}
+
 .role-card {
   display: flex;
   flex-direction: column;
@@ -989,6 +1001,12 @@ body[dir='rtl'] .coach-tip strong {
 
 .star.on {
   color: var(--gold);
+}
+
+.rating-suggestion {
+  margin-top: 0.4rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
 }
 
 /* ---------- microphone level + playback ---------- */

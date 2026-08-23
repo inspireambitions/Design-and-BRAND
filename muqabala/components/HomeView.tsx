@@ -47,7 +47,7 @@ export function HomeView({ roles }: { roles: Role[] }) {
     [roles],
   );
 
-  const visible = industry ? roles.filter((r) => r.industry === industry) : roles;
+  const visible = industry ? roles.filter((r) => r.industry === industry) : [];
 
   return (
     <div className="shell">
@@ -118,66 +118,71 @@ export function HomeView({ roles }: { roles: Role[] }) {
           </p>
         </div>
 
-        <div className="filters">
-          <button
-            type="button"
-            className="filter-btn"
-            aria-pressed={industry === null}
-            onClick={() => setIndustry(null)}
+        <div className="card-flat stack-sm role-picker">
+          <label htmlFor="role-industry" className="eyebrow">
+            {t('roleStepIndustry')}
+          </label>
+          <select
+            id="role-industry"
+            className="text-input"
+            value={industry ?? ''}
+            onChange={(event) => setIndustry(event.target.value || null)}
           >
-            {t('allIndustries')}
-          </button>
-          {industries.map((ind) => {
-            const label =
-              lang === 'ar'
-                ? (roles.find((r) => r.industry === ind)?.industryAr ?? ind)
-                : ind;
-            return (
-              <button
-                key={ind}
-                type="button"
-                className="filter-btn"
-                aria-pressed={industry === ind}
-                onClick={() => setIndustry(ind)}
-              >
-                {label}
-              </button>
-            );
-          })}
+            <option value="">{t('industryPlaceholder')}</option>
+            {industries.map((ind) => {
+              const label =
+                lang === 'ar'
+                  ? (roles.find((r) => r.industry === ind)?.industryAr ?? ind)
+                  : ind;
+              return (
+                <option key={ind} value={ind}>
+                  {label}
+                </option>
+              );
+            })}
+          </select>
+          <p className="tiny">{t('rolePickerHint')}</p>
         </div>
 
-        <div className="grid grid-roles">
-          {visible.map((role) => {
-            const fullQuestions = drawMockQuestions(role, 0) ?? role.questions;
-            return (
-              <Link key={role.id} href={`/practice/${role.id}`} className="role-card">
-                <div className="role-meta">
-                  <span className="chip chip-jade">
-                    {lang === 'ar' ? role.industryAr : role.industry}
-                  </span>
-                  <span className="chip">{LEVEL_LABELS[lang][role.level]}</span>
-                </div>
-                <h3>{lang === 'ar' ? role.titleAr : role.title}</h3>
-                <p className="muted" style={{ fontSize: '0.88rem' }}>
-                  {lang === 'ar' ? role.blurbAr : role.blurb}
-                </p>
-                <p className="tiny" style={{ marginTop: '0.3rem' }}>
-                  {fullQuestions.length} {t('questions')} · ~{estimateMinutes(fullQuestions)} {t('minutes')}
-                </p>
-              </Link>
-            );
-          })}
-
-          <Link href="/practice/custom" className="role-card role-card-custom">
-            <div className="role-meta">
-              <span className="chip chip-gold">{t('customEyebrow')}</span>
+        {industry ? (
+          <div className="stack-sm" aria-live="polite">
+            <h3 className="role-step-title">{t('roleStepRole')}</h3>
+            <div className="grid grid-roles">
+              {visible.map((role) => {
+                const fullQuestions = drawMockQuestions(role, 0) ?? role.questions;
+                return (
+                  <Link key={role.id} href={`/practice/${role.id}`} className="role-card">
+                    <div className="role-meta">
+                      <span className="chip chip-jade">
+                        {lang === 'ar' ? role.industryAr : role.industry}
+                      </span>
+                      <span className="chip">{LEVEL_LABELS[lang][role.level]}</span>
+                    </div>
+                    <h3>{lang === 'ar' ? role.titleAr : role.title}</h3>
+                    <p className="muted" style={{ fontSize: '0.88rem' }}>
+                      {lang === 'ar' ? role.blurbAr : role.blurb}
+                    </p>
+                    <p className="tiny" style={{ marginTop: '0.3rem' }}>
+                      {fullQuestions.length} {t('questions')} · ~{estimateMinutes(fullQuestions)} {t('minutes')}
+                    </p>
+                  </Link>
+                );
+              })}
             </div>
-            <h3>{t('customCta')}</h3>
-            <p className="muted" style={{ fontSize: '0.88rem' }}>
-              {t('customCtaBody')}
-            </p>
-          </Link>
-        </div>
+          </div>
+        ) : (
+          <p className="notice tiny" role="status">{t('roleChoosePrompt')}</p>
+        )}
+
+        <Link href="/practice/custom" className="role-card role-card-custom">
+          <div className="role-meta">
+            <span className="chip chip-gold">{t('customEyebrow')}</span>
+          </div>
+          <h3>{t('customCta')}</h3>
+          <p className="muted" style={{ fontSize: '0.88rem' }}>
+            {t('customCtaBody')}
+          </p>
+        </Link>
       </section>
 
       <footer className="foot" style={{ flexDirection: 'column', gap: '0.5rem' }}>
