@@ -36,8 +36,8 @@ export function TopBar({
       )}
       <div className="topbar-actions">
         {showProgressLink && (
-          <Link href="/progress" className="btn-ghost" style={{ textDecoration: 'none' }}>
-            {t('seeProgress')}
+          <Link href="/account" className="btn-ghost" style={{ textDecoration: 'none' }}>
+            {t('myAccount')}
           </Link>
         )}
         <button

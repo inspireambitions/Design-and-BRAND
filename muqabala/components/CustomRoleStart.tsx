@@ -39,9 +39,14 @@ export function CustomRoleStart() {
     const usable = !looksLikeUrl(jobArg) && jobArg.length >= 120;
     setBuilding(true);
     try {
+      let candidateSession = window.sessionStorage.getItem('muqabala.candidate.v1');
+      if (!candidateSession) {
+        candidateSession = window.crypto.randomUUID();
+        window.sessionStorage.setItem('muqabala.candidate.v1', candidateSession);
+      }
       const response = await fetch('/api/interview', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Candidate-Session': candidateSession },
         body: JSON.stringify({
           jobTitle: titleArg,
           jobText: usable ? jobArg : '',

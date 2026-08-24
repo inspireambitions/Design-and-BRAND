@@ -39,6 +39,8 @@ as its entry point.
 | `ANTHROPIC_API_KEY` | No | Alternative provider: direct Anthropic API (`claude-opus-5`). Used only when neither OpenAI nor OpenRouter is configured. |
 | `SCORING_REASONING` | No | Reasoning effort for OpenAI and OpenRouter: `low`/`medium`/`high`. Defaults to `medium`; benchmark changes with the consistency gate. |
 | `OPENROUTER_RPM_LIMIT` | No | Local per-instance OpenRouter traffic ceiling. Defaults to 9, below the current new-account limit of 10 RPM. The live consistency gate is also paced by default. |
+| `UPSTASH_REDIS_REST_URL` | Production | Upstash REST endpoint used for deployment-wide candidate and AI generation limits. Server-only. |
+| `UPSTASH_REDIS_REST_TOKEN` | Production | Upstash write token used by the shared limits. Server-only. Never expose it through a `NEXT_PUBLIC_` variable. |
 | `NEXT_PUBLIC_POSTHOG_KEY` | No | Enables anonymous usage analytics (PostHog EU). Events are only the explicit calls in `lib/analytics.ts` — role ids, language, scores, ratings. Never transcripts, typed job titles, video, audio, or personal data. Autocapture, pageviews and session recording are disabled. The pre-interview disclosure covers this collection. |
 | `NEXT_PUBLIC_POSTHOG_HOST` | No | PostHog host; defaults to `https://eu.i.posthog.com`. |
 | `SENTRY_DSN` | No | Enables server-only technical error reporting. `lib/sentry-server.ts` strips requests, users, breadcrumbs, contexts and extras. Scoring events contain only route, provider, model, status and failure code. |
@@ -219,6 +221,12 @@ temporary failures twice with a countdown, and offers a manual retry. OpenRouter
 bounded `Retry-After` handling and `require_parameters: true`. The fixed-corpus gate is paced
 below 10 RPM by default. Provider failures log only technical tags to Sentry; candidate text
 is scrubbed before an event leaves the server.
+
+**Rate limiting:** production uses Upstash Redis so every Vercel instance shares the same
+per-candidate scoring limit, tailored-interview limit and daily generation ceiling. Candidate
+IP addresses are hashed before becoming Redis keys. The Upstash client times out after one
+second and falls back to an in-process brake, so a Redis incident does not stop an interview.
+Local development also uses the in-process brake when no Upstash credentials are set.
 
 **Direct OpenAI production acceptance gate, 20 August 2026:** `gpt-5.6-sol`, medium
 reasoning, five runs per frozen answer against `https://design-and-brand-orpin.vercel.app`,

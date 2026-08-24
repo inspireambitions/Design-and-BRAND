@@ -4,6 +4,10 @@ import { z } from 'zod';
 import { buildCustomRole } from '@/lib/roles';
 import type { Competency, Question, Role } from '@/lib/roles';
 import { signInterview } from '@/lib/interview-token';
+import {
+  limitInterviewGeneration,
+  limitInterviewGenerationDaily,
+} from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -20,50 +24,7 @@ const GENERATION_DEADLINE_MS = 50_000;
 const MAX_JOB_TEXT_CHARS = 12000;
 /** Refused before the body is even parsed, so oversized posts cost nothing. */
 const MAX_BODY_BYTES = 32 * 1024;
-/**
- * Best-effort daily ceiling. This counter lives in process memory, so on a
- * serverless platform it is PER INSTANCE, not per deployment — several
- * instances each allow this many. It is a brake, not a hard cap; a real
- * deployment-wide limit needs the platform's own rate limiting (Vercel
- * Firewall) or shared storage.
- */
-const GLOBAL_DAILY_LIMIT = Number(process.env.INTERVIEW_DAILY_LIMIT ?? 400);
 const MIN_JOB_TEXT_CHARS = 120;
-
-const RATE_LIMIT = 5;
-const RATE_WINDOW_MS = 10 * 60 * 1000;
-const hits = new Map<string, { count: number; resetAt: number }>();
-
-function rateLimited(request: Request): boolean {
-  const ip =
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown';
-  const now = Date.now();
-  const entry = hits.get(ip);
-  if (!entry || now > entry.resetAt) {
-    hits.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
-    if (hits.size > 5000) {
-      for (const [key, value] of hits) if (now > value.resetAt) hits.delete(key);
-    }
-    return false;
-  }
-  entry.count += 1;
-  return entry.count > RATE_LIMIT;
-}
-
-let globalDay = '';
-let globalCount = 0;
-
-function globalLimitReached(): boolean {
-  const today = new Date().toISOString().slice(0, 10);
-  if (today !== globalDay) {
-    globalDay = today;
-    globalCount = 0;
-  }
-  globalCount += 1;
-  return globalCount > GLOBAL_DAILY_LIMIT;
-}
 
 const RequestSchema = z
   .object({
@@ -187,14 +148,20 @@ export async function POST(request: Request) {
     return Response.json({ role: buildCustomRole(jobTitle), tailored: false });
   }
 
-  if (rateLimited(request)) {
+  const candidateSession = request.headers.get('x-candidate-session');
+  const candidateIdentity = candidateSession && /^[a-f0-9-]{36}$/i.test(candidateSession)
+    ? candidateSession
+    : undefined;
+  const rateLimit = await limitInterviewGeneration(request, candidateIdentity);
+  if (rateLimit.limited) {
+    const retryAfterSeconds = Math.max(120, rateLimit.retryAfterSeconds);
     return Response.json(
       { error: { code: 'rate_limited', message: 'Too many interviews built in a short time. Please wait a few minutes.' } },
-      { status: 429, headers: { 'Retry-After': '120' } },
+      { status: 429, headers: { 'Retry-After': String(retryAfterSeconds) } },
     );
   }
 
-  if (globalLimitReached()) {
+  if ((await limitInterviewGenerationDaily()).limited) {
     // Budget ceiling reached for the day: still give a usable interview.
     return Response.json({ role: buildCustomRole(jobTitle), tailored: false, reason: 'busy' });
   }

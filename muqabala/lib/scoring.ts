@@ -30,6 +30,9 @@ export type AnswerFeedback = {
    * failed. These states must never be presented as the same thing.
    */
   source: 'ai' | 'structure' | 'none';
+  /** Stored so retry comparisons never mix different scoring systems. */
+  scoringVersion?: string;
+  rubricVersion?: string;
 };
 
 /** How the candidate felt afterwards. The product's whole promise is measured here. */

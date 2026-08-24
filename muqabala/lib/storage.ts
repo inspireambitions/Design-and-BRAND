@@ -12,7 +12,11 @@ export function loadAttempts(): Attempt[] {
     const raw = window.localStorage.getItem(ATTEMPTS_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as Attempt[]) : [];
+    if (!Array.isArray(parsed)) return [];
+    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1_000;
+    const retained = (parsed as Attempt[]).filter((attempt) => Date.parse(attempt.startedAt) >= cutoff);
+    if (retained.length !== parsed.length) window.localStorage.setItem(ATTEMPTS_KEY, JSON.stringify(retained));
+    return retained;
   } catch {
     return [];
   }
@@ -51,6 +55,22 @@ export function clearAttempts(): void {
     window.localStorage.removeItem(ATTEMPTS_KEY);
   } catch {
     /* ignore */
+  }
+}
+
+/** Remove transcripts and local history when the candidate signs out. */
+export function clearSensitiveLocalData(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    clearAttempts();
+    for (let index = window.localStorage.length - 1; index >= 0; index -= 1) {
+      const key = window.localStorage.key(index);
+      if (key?.startsWith('muqabala.interview.') || key?.startsWith('muqabala.draft.v1.')) {
+        window.localStorage.removeItem(key);
+      }
+    }
+  } catch {
+    /* storage may be blocked */
   }
 }
 

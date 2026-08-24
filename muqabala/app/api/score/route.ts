@@ -6,12 +6,19 @@ import { getRole, type Question, type Role } from '@/lib/roles';
 import { verifyInterview, roleFromToken } from '@/lib/interview-token';
 import { arabicUnavailable, structureCheck, isArabicText, type AnswerFeedback } from '@/lib/scoring';
 import { reportScoringFailure } from '@/lib/sentry-server';
+import { limitScoring } from '@/lib/rate-limit';
+import { interviewAccess } from '@/lib/server/interview-access';
+import { acquireAiCapacity, providerCircuitOpen, recordProviderResult, releaseAiCapacity } from '@/lib/server/ai-capacity';
+import { newOpaqueToken, privateNoStoreHeaders, tokenHash } from '@/lib/server/security';
+import { isSupabaseConfigured } from '@/lib/supabase/config';
 import {
   FEEDBACK_JSON_SCHEMA,
   FeedbackSchema,
   ScoreRequestSchema,
   fetchProviderWithRetry,
   retryAfterMilliseconds,
+  scoringProviderOrder,
+  validateScoringIntegrity,
   type ParsedFeedback,
 } from '@/lib/scoring-provider';
 
@@ -23,38 +30,13 @@ export const maxDuration = 60;
  * candidate practising — it is someone using a public endpoint as a free model.
  */
 const MAX_TRANSCRIPT_CHARS = 6000;
+const RUBRIC_VERSION = 'coach-content-rubric-2026-08-24';
 
-/** Per-IP budget. Deliberately generous for a real candidate, useless for a scraper. */
-const RATE_LIMIT = 30;
-const RATE_WINDOW_MS = 10 * 60 * 1000;
-const hits = new Map<string, { count: number; resetAt: number }>();
-const activeScoringSessions = new Set<string>();
 const openRouterStarts: number[] = [];
 const configuredOpenRouterLimit = Number(process.env.OPENROUTER_RPM_LIMIT || 9);
 const OPENROUTER_RPM_LIMIT = Number.isFinite(configuredOpenRouterLimit)
   ? Math.max(1, Math.floor(configuredOpenRouterLimit))
   : 9;
-
-function rateLimited(request: Request): boolean {
-  const ip =
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown';
-  const now = Date.now();
-  const entry = hits.get(ip);
-
-  if (!entry || now > entry.resetAt) {
-    hits.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
-    // Opportunistic cleanup so the map cannot grow without bound.
-    if (hits.size > 5000) {
-      for (const [key, value] of hits) if (now > value.resetAt) hits.delete(key);
-    }
-    return false;
-  }
-
-  entry.count += 1;
-  return entry.count > RATE_LIMIT;
-}
 
 class ProviderUnavailableError extends Error {
   constructor(
@@ -77,11 +59,6 @@ function reserveOpenRouterCapacity(): number {
   }
   openRouterStarts.push(now);
   return 0;
-}
-
-function scoringSession(request: Request): string | null {
-  const value = request.headers.get('x-scoring-session');
-  return value && /^[a-zA-Z0-9-]{8,80}$/.test(value) ? value : null;
 }
 
 function unavailableResponse(error: ProviderUnavailableError): Response {
@@ -131,7 +108,8 @@ async function scoreViaOpenAI(userPrompt: string): Promise<ParsedFeedback> {
   const effort = ['low', 'medium', 'high'].includes(rawEffort)
     ? (rawEffort as 'low' | 'medium' | 'high')
     : 'medium';
-  const client = new OpenAI({ timeout: 25_000, maxRetries: 2 });
+  // Fail quickly enough to leave room for the approved fallback provider.
+  const client = new OpenAI({ timeout: 15_000, maxRetries: 0 });
 
   try {
     const response = await client.responses.parse({
@@ -249,6 +227,9 @@ async function scoreViaOpenRouter(userPrompt: string): Promise<ParsedFeedback> {
       provider: { require_parameters: true },
     }),
   }, {
+    maxAttempts: 1,
+    maxTotalWaitMs: 0,
+    timeoutMs: 12_000,
     // Count every actual upstream attempt, including retries. A synthetic 429
     // returns the local wait time without spending a provider request.
     fetchImpl: async (input, init) => {
@@ -290,9 +271,9 @@ async function scoreViaOpenRouter(userPrompt: string): Promise<ParsedFeedback> {
 
 /** Anthropic path, kept as the alternative provider. */
 async function scoreViaAnthropic(userPrompt: string): Promise<ParsedFeedback> {
-  const client = new Anthropic();
+  const client = new Anthropic({ timeout: 15_000, maxRetries: 0 });
   const response = await client.messages.parse({
-    model: 'claude-opus-5',
+    model: process.env.ANTHROPIC_SCORING_MODEL || 'claude-opus-5',
     max_tokens: 4000,
     system: SYSTEM_PROMPT,
     output_config: { format: zodOutputFormat(FeedbackSchema) },
@@ -322,7 +303,7 @@ export async function POST(request: Request) {
   if (!parsedBody.success) {
     return Response.json({ error: 'roleId, questionId and transcript are required.' }, { status: 400 });
   }
-  const { roleId, questionId, transcript, lang, roleTitle, interviewToken } = parsedBody.data;
+  const { roleId, questionId, transcript, lang, roleTitle, interviewToken, interviewId, questionIndex } = parsedBody.data;
 
   if (transcript.length > MAX_TRANSCRIPT_CHARS) {
     return Response.json(
@@ -338,33 +319,140 @@ export async function POST(request: Request) {
     );
   }
 
-  if (rateLimited(request)) {
+  const stored = interviewId ? await interviewAccess(interviewId) : null;
+  if (!isSupabaseConfigured()) {
+    return Response.json(
+      { error: { code: 'account_storage_unavailable', message: 'Interview storage is temporarily unavailable.', retryable: true, retryAfterSeconds: 20 } },
+      { status: 503, headers: { 'Retry-After': '20' } },
+    );
+  }
+  if (!interviewId || questionIndex === undefined) {
+    return Response.json(
+      { error: { code: 'interview_context_required', message: 'Start the interview before requesting feedback.', retryable: false, retryAfterSeconds: 0 } },
+      { status: 400 },
+    );
+  }
+  if (stored && (!stored.interview || (!stored.owner && !stored.anonymous))) {
+    return Response.json({ error: 'Interview not found.' }, { status: 404 });
+  }
+
+  const rateLimit = await limitScoring(request, stored?.user?.id ?? (stored?.interview ? interviewId : undefined));
+  if (rateLimit.limited) {
+    const retryAfterSeconds = Math.max(60, rateLimit.retryAfterSeconds);
     return Response.json(
       {
         error: {
           code: 'candidate_rate_limited',
           message: 'Too many attempts in a short time. Please wait a few minutes and try again.',
           retryable: true,
-          retryAfterSeconds: 60,
+          retryAfterSeconds,
         },
       },
-      { status: 429, headers: { 'Retry-After': '60' } },
+      { status: 429, headers: { 'Retry-After': String(retryAfterSeconds) } },
     );
   }
 
-  // A tailored interview has no catalogue entry, so its rubric arrives as a
-  // signed token. Verification happens before any field is trusted; a token
-  // that fails is treated as absent rather than as a hint.
+  // A stored attempt is authoritative. The browser cannot swap its rubric,
+  // role or public first question after the attempt has been created.
   const verified = interviewToken ? verifyInterview(interviewToken) : null;
-  const role = verified ? roleFromToken(verified) : getRole(roleId);
-  // Drawn interviews can include shared-bank questions, so the lookup covers
-  // questions and bank alike. A drawn question must never 404 at scoring.
+  const role: Role | undefined = stored?.interview?.role_snapshot
+    ?? (verified ? roleFromToken(verified) : getRole(roleId));
+  if (stored?.interview && stored.interview.role_id !== roleId) {
+    return Response.json({ error: 'Role does not match this interview.' }, { status: 400 });
+  }
   const question =
-    role?.questions.find((q) => q.id === questionId) ??
-    role?.bank?.find((q) => q.id === questionId);
+    role?.questions.find((candidate) => candidate.id === questionId) ??
+    role?.bank?.find((candidate) => candidate.id === questionId);
   if (!role || !question) {
     return Response.json({ error: 'Unknown role or question.' }, { status: 404 });
   }
+  let replayedFeedback: AnswerFeedback | null = null;
+  let scoringClaimHash: string | null = null;
+  if (stored?.interview) {
+    if (questionIndex === undefined || stored.interview.question_snapshot[questionIndex]?.id !== questionId) {
+      return Response.json({ error: 'Question does not match this interview.' }, { status: 400 });
+    }
+    const storedQuestion = stored.interview.question_snapshot[questionIndex];
+    scoringClaimHash = tokenHash(newOpaqueToken());
+    const { data: claims, error } = await stored.admin!.rpc('claim_interview_scoring', {
+      p_interview_id: interviewId,
+      p_question_index: questionIndex,
+      p_question_id: questionId,
+      p_question_text: stored.interview.language === 'ar' ? storedQuestion.textAr : storedQuestion.text,
+      p_transcript: transcript,
+      p_scoring_claim_hash: scoringClaimHash,
+    });
+    if (error) return Response.json({ error: 'Your answer could not be saved.' }, { status: 503 });
+    const claim = claims?.[0];
+    if (!claim?.was_claimed) {
+      if (claim?.existing_feedback) {
+        replayedFeedback = claim.existing_feedback as AnswerFeedback;
+        scoringClaimHash = null;
+      }
+      else {
+        return Response.json(
+          { error: { code: 'scoring_already_active', message: 'This answer is already being scored.', retryable: true, retryAfterSeconds: 2 } },
+          { status: 409, headers: { 'Retry-After': '2' } },
+        );
+      }
+    }
+  }
+
+  const deliver = async (answerFeedback: AnswerFeedback): Promise<Response> => {
+    if (stored?.interview && interviewId && questionIndex !== undefined) {
+      let feedbackUpdate = stored.admin!.from('interview_answers').update({
+        feedback: answerFeedback,
+        scoring_status: answerFeedback.status === 'scored' ? 'scored' : 'unscored',
+      }).eq('interview_id', interviewId).eq('question_index', questionIndex).eq('transcript', transcript);
+      if (scoringClaimHash) feedbackUpdate = feedbackUpdate.eq('scoring_claim_hash', scoringClaimHash);
+      const { data: storedFeedback, error: feedbackError } = await feedbackUpdate.select('id').maybeSingle();
+      if (feedbackError || !storedFeedback) {
+        return Response.json(
+          { error: { code: 'feedback_storage_failed', message: 'Your feedback could not be stored safely.', retryable: true, retryAfterSeconds: 20 } },
+          { status: 503, headers: { 'Retry-After': '20' } },
+        );
+      }
+
+      const { data: rows } = await stored.admin!.from('interview_answers')
+        .select('feedback')
+        .eq('interview_id', interviewId);
+      const scores = (rows ?? [])
+        .map((row) => row.feedback as AnswerFeedback | null)
+        .filter((value): value is AnswerFeedback => value?.status === 'scored');
+      const overallScore = scores.length
+        ? Math.round(scores.reduce((sum, value) => sum + value.score, 0) / scores.length)
+        : null;
+      await stored.admin!.from('interviews').update({ overall_score: overallScore }).eq('id', interviewId);
+    }
+
+    const locked = Boolean(
+      !stored?.owner
+      && questionIndex !== undefined
+      && questionIndex > 0,
+    );
+    if (locked) {
+      return Response.json(
+        {
+          locked: true,
+          feedback: {
+            questionId,
+            score: 0,
+            status: 'unscored',
+            headline: 'Feedback saved. Verify your email to unlock it.',
+            competencies: [],
+            strengths: [],
+            improvements: [],
+            coachTip: '',
+            source: 'none',
+          } satisfies AnswerFeedback,
+        },
+        { headers: privateNoStoreHeaders() },
+      );
+    }
+    return Response.json({ feedback: answerFeedback }, { headers: privateNoStoreHeaders() });
+  };
+
+  if (replayedFeedback) return deliver(replayedFeedback);
 
   // The structure checker is English-only. Rather than hand an Arabic answer a
   // near-floor score it does not deserve, decline to score it and say why.
@@ -372,80 +460,69 @@ export async function POST(request: Request) {
   const fallback = (): AnswerFeedback =>
     answeredInArabic ? arabicUnavailable(question.id) : structureCheck(question, transcript);
 
-  const useOpenAI = Boolean(process.env.OPENAI_API_KEY);
-  const useOpenRouter = !useOpenAI && Boolean(process.env.OPENROUTER_API_KEY);
-  const useAnthropic = !useOpenAI && !useOpenRouter && Boolean(process.env.ANTHROPIC_API_KEY);
+  const providerOrder = scoringProviderOrder({
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+    ENABLE_ANTHROPIC_FALLBACK: process.env.ENABLE_ANTHROPIC_FALLBACK,
+    OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
+  });
+  const useOpenAI = providerOrder.includes('openai');
+  const useAnthropic = providerOrder.includes('anthropic');
+  const useOpenRouter = providerOrder.includes('openrouter');
 
   if (!useOpenAI && !useOpenRouter && !useAnthropic) {
-    return Response.json({ feedback: fallback() });
+    return deliver(fallback());
   }
 
-  const session = scoringSession(request);
-  if (session && activeScoringSessions.has(session)) {
+  const capacityAcquired = await acquireAiCapacity();
+  if (!capacityAcquired) {
+    if (stored?.interview && interviewId && questionIndex !== undefined) {
+      let releaseClaim = stored.admin!.from('interview_answers').update({ scoring_status: 'failed', scoring_claim_hash: null })
+        .eq('interview_id', interviewId).eq('question_index', questionIndex).eq('transcript', transcript);
+      if (scoringClaimHash) releaseClaim = releaseClaim.eq('scoring_claim_hash', scoringClaimHash);
+      await releaseClaim;
+    }
     return Response.json(
-      {
-        error: {
-          code: 'scoring_already_active',
-          message: 'This answer is already being scored.',
-          retryable: true,
-          retryAfterSeconds: 2,
-        },
-      },
-      { status: 409, headers: { 'Retry-After': '2' } },
+      { error: { code: 'scoring_capacity_busy', message: 'Scoring is busy. Your answer is saved.', retryable: true, retryAfterSeconds: 5 } },
+      { status: 503, headers: { 'Retry-After': '5' } },
     );
   }
-  if (session) activeScoringSessions.add(session);
 
   try {
     const jobTitle = roleTitle?.trim() || role.title;
     const userPrompt = buildUserPrompt({ role, question, transcript, jobTitle, answeredInArabic });
 
-    const parsed = useOpenAI
-      ? await scoreViaOpenAI(userPrompt)
-      : useOpenRouter
-        ? await scoreViaOpenRouter(userPrompt)
-        : await scoreViaAnthropic(userPrompt);
-
-    // Only competencies this question actually asks for are accepted, and their
-    // labels come from our rubric, not from the model. Anything else is dropped.
-    const returned = new Map(parsed.competencies.map((c) => [c.id, c]));
-    const competencies = question.competencies.flatMap((cid) => {
-      const scored = returned.get(cid);
-      if (!scored) return [];
-      const def = role.competencies.find((x) => x.id === cid);
-      return [
-        {
-          id: cid,
-          // The label the candidate screenshots must be in their language.
-          label: (answeredInArabic ? def?.labelAr : def?.label) ?? def?.label ?? cid,
-          score: Math.round(Math.max(0, Math.min(10, scored.score))),
-          evidence: scored.evidence.trim() ? scored.evidence : null,
-        },
-      ];
-    });
-
-    // A quote proves at most one competency. If the model reused a line, the
-    // highest-scoring competency keeps it and the rest show the honest
-    // "nothing specific showed this" state instead of borrowed proof.
-    const seenEvidence = new Map<string, number>();
-    for (const c of competencies) {
-      if (!c.evidence) continue;
-      const key = c.evidence.replace(/\s+/g, ' ').trim().toLowerCase();
-      const holder = seenEvidence.get(key);
-      if (holder === undefined) seenEvidence.set(key, c.score);
-      else if (c.score <= holder) c.evidence = null;
-      else {
-        for (const other of competencies) {
-          if (other !== c && other.evidence && other.evidence.replace(/\s+/g, ' ').trim().toLowerCase() === key) other.evidence = null;
-        }
-        seenEvidence.set(key, c.score);
+    const providers = [
+      ...(useOpenAI ? [{ name: 'openai' as const, score: scoreViaOpenAI }] : []),
+      ...(useAnthropic ? [{ name: 'anthropic' as const, score: scoreViaAnthropic }] : []),
+      ...(useOpenRouter ? [{ name: 'openrouter' as const, score: scoreViaOpenRouter }] : []),
+    ];
+    let parsed: ParsedFeedback | null = null;
+    let selectedProvider: 'openai' | 'anthropic' | 'openrouter' | null = null;
+    let lastProviderError: ProviderUnavailableError | null = null;
+    for (const provider of providers) {
+      if (await providerCircuitOpen(provider.name)) {
+        lastProviderError = new ProviderUnavailableError(provider.name, 503, 'busy', 30);
+        continue;
+      }
+      try {
+        parsed = await provider.score(userPrompt);
+        selectedProvider = provider.name;
+        await recordProviderResult(provider.name, true);
+        break;
+      } catch (error) {
+        const unavailable = error instanceof ProviderUnavailableError
+          ? error
+          : new ProviderUnavailableError(provider.name, 500, 'failed', 20);
+        recordProviderFailure(unavailable);
+        await recordProviderResult(provider.name, false);
+        lastProviderError = unavailable;
       }
     }
+    if (!parsed) throw lastProviderError ?? new ProviderUnavailableError('openai', 503, 'failed', 20);
 
-    // A model that scored nothing we asked for has not produced a usable result.
-    if (parsed.unscorable || competencies.length === 0) {
-      return Response.json({
-        feedback: {
+    if (parsed.unscorable) {
+      return deliver({
           questionId: question.id,
           score: 0,
           status: 'unscored',
@@ -455,9 +532,41 @@ export async function POST(request: Request) {
           improvements: parsed.improvements.slice(0, 3),
           coachTip: parsed.coach_tip,
           source: 'ai',
-        } satisfies AnswerFeedback,
-      });
+        } satisfies AnswerFeedback);
     }
+
+    const integrity = validateScoringIntegrity(parsed.competencies, question.competencies, transcript);
+    if (!integrity.ok) {
+      console.error('scoring_integrity_failure', { issue: integrity.issue });
+      return deliver({
+        questionId: question.id,
+        score: 0,
+        status: 'unscored',
+        headline: answeredInArabic
+          ? 'لم نتمكن من التحقق من هذه الملاحظات بشكل موثوق.'
+          : 'We could not verify this feedback safely.',
+        competencies: [],
+        strengths: [],
+        improvements: [answeredInArabic
+          ? 'إجابتك محفوظة. حاول الحصول على الملاحظات مرة أخرى.'
+          : 'Your answer is saved. Try getting feedback again.'],
+        coachTip: '',
+        source: 'ai',
+      } satisfies AnswerFeedback);
+    }
+
+    const returned = new Map(integrity.competencies.map((competency) => [competency.id, competency]));
+    const competencies = question.competencies.map((cid) => {
+      const scored = returned.get(cid)!;
+      const def = role.competencies.find((competency) => competency.id === cid);
+      return {
+        id: cid,
+        // The label the candidate screenshots must be in their language.
+        label: (answeredInArabic ? def?.labelAr : def?.label) ?? def?.label ?? cid,
+        score: Math.round(Math.max(0, Math.min(10, scored.score))),
+        evidence: scored.evidence,
+      };
+    });
 
     // The overall score is derived from the competency scores, never taken on trust.
     const overall = Math.round(
@@ -474,9 +583,15 @@ export async function POST(request: Request) {
       improvements: parsed.improvements.slice(0, 3),
       coachTip: parsed.coach_tip,
       source: 'ai',
+      rubricVersion: RUBRIC_VERSION,
+      scoringVersion: selectedProvider === 'openai'
+        ? `openai:${process.env.OPENAI_SCORING_MODEL || 'gpt-5.6-sol'}`
+        : selectedProvider === 'anthropic'
+          ? `anthropic:${process.env.ANTHROPIC_SCORING_MODEL || 'claude-opus-5'}`
+          : `openrouter:${process.env.SCORING_MODEL || 'openai/gpt-5.6-sol'}`,
     };
 
-    return Response.json({ feedback });
+    return deliver(feedback);
   } catch (error) {
     const unavailable =
       error instanceof ProviderUnavailableError
@@ -487,9 +602,15 @@ export async function POST(request: Request) {
             'failed',
             20,
           );
-    recordProviderFailure(unavailable);
+    if (!(error instanceof ProviderUnavailableError)) recordProviderFailure(unavailable);
+    if (stored?.interview && interviewId && questionIndex !== undefined) {
+      let failureUpdate = stored.admin!.from('interview_answers').update({ scoring_status: 'failed', scoring_claim_hash: null })
+        .eq('interview_id', interviewId).eq('question_index', questionIndex).eq('transcript', transcript);
+      if (scoringClaimHash) failureUpdate = failureUpdate.eq('scoring_claim_hash', scoringClaimHash);
+      await failureUpdate;
+    }
     return unavailableResponse(unavailable);
   } finally {
-    if (session) activeScoringSessions.delete(session);
+    await releaseAiCapacity();
   }
 }
