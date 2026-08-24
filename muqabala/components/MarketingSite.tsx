@@ -11,7 +11,7 @@ export function MarketingHeader() {
   return (
     <header className="marketing-header">
       <div className="marketing-wrap marketing-nav">
-        <Link href="/" className="marketing-brand" aria-label="Muqabala home">
+        <Link href="/" className="marketing-brand">
           <span className="marketing-brand-mark" aria-hidden="true">م</span>
           <span>Muqabala</span>
         </Link>

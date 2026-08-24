@@ -6,7 +6,8 @@ import { LanguageProvider } from '@/components/LanguageProvider';
 const displayFont = Bricolage_Grotesque({
   subsets: ['latin'],
   variable: '--font-bricolage',
-  display: 'swap',
+  // Avoid a late headline font swap becoming the page's LCP on slow phones.
+  display: 'optional',
 });
 
 const bodyFont = Public_Sans({
@@ -20,6 +21,9 @@ const arabicFont = IBM_Plex_Sans_Arabic({
   weight: ['400', '500', '600', '700'],
   variable: '--font-plex-arabic',
   display: 'swap',
+  // Four Arabic weights should load when Arabic is used, not be preloaded on
+  // every English page.
+  preload: false,
 });
 
 export const metadata: Metadata = {

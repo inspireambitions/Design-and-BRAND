@@ -7,6 +7,14 @@ import { verifyInterview, roleFromToken } from '@/lib/interview-token';
 import { arabicUnavailable, structureCheck, isArabicText, type AnswerFeedback } from '@/lib/scoring';
 import { reportScoringFailure } from '@/lib/sentry-server';
 import {
+  acquireScoringSession,
+  limitOpenRouterAttempt,
+  limitScoreDaily,
+  limitScoreNetwork,
+  type AiLimitResult,
+  type ScoringSessionLease,
+} from '@/lib/ai-rate-limit';
+import {
   FEEDBACK_JSON_SCHEMA,
   FeedbackSchema,
   ScoreRequestSchema,
@@ -24,38 +32,6 @@ export const maxDuration = 60;
  */
 const MAX_TRANSCRIPT_CHARS = 6000;
 
-/** Per-IP budget. Deliberately generous for a real candidate, useless for a scraper. */
-const RATE_LIMIT = 30;
-const RATE_WINDOW_MS = 10 * 60 * 1000;
-const hits = new Map<string, { count: number; resetAt: number }>();
-const activeScoringSessions = new Set<string>();
-const openRouterStarts: number[] = [];
-const configuredOpenRouterLimit = Number(process.env.OPENROUTER_RPM_LIMIT || 9);
-const OPENROUTER_RPM_LIMIT = Number.isFinite(configuredOpenRouterLimit)
-  ? Math.max(1, Math.floor(configuredOpenRouterLimit))
-  : 9;
-
-function rateLimited(request: Request): boolean {
-  const ip =
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown';
-  const now = Date.now();
-  const entry = hits.get(ip);
-
-  if (!entry || now > entry.resetAt) {
-    hits.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
-    // Opportunistic cleanup so the map cannot grow without bound.
-    if (hits.size > 5000) {
-      for (const [key, value] of hits) if (now > value.resetAt) hits.delete(key);
-    }
-    return false;
-  }
-
-  entry.count += 1;
-  return entry.count > RATE_LIMIT;
-}
-
 class ProviderUnavailableError extends Error {
   constructor(
     readonly provider: 'openai' | 'openrouter' | 'anthropic',
@@ -67,21 +43,30 @@ class ProviderUnavailableError extends Error {
   }
 }
 
-function reserveOpenRouterCapacity(): number {
-  const now = Date.now();
-  while (openRouterStarts.length > 0 && openRouterStarts[0] <= now - 60_000) {
-    openRouterStarts.shift();
-  }
-  if (openRouterStarts.length >= OPENROUTER_RPM_LIMIT) {
-    return Math.max(1, Math.ceil((openRouterStarts[0] + 60_000 - now) / 1000));
-  }
-  openRouterStarts.push(now);
-  return 0;
-}
-
 function scoringSession(request: Request): string | null {
   const value = request.headers.get('x-scoring-session');
   return value && /^[a-zA-Z0-9-]{8,80}$/.test(value) ? value : null;
+}
+
+function limitResponse(limit: AiLimitResult): Response {
+  const unavailable = limit.reason === 'unavailable';
+  const retryAfter = Math.max(1, limit.retryAfter || (unavailable ? 20 : 60));
+  return Response.json(
+    {
+      error: {
+        code: unavailable ? 'scoring_temporarily_unavailable' : 'candidate_rate_limited',
+        message: unavailable
+          ? 'AI scoring is temporarily unavailable. No score was produced.'
+          : 'Too many attempts in a short time. Please wait a few minutes and try again.',
+        retryable: true,
+        retryAfterSeconds: retryAfter,
+      },
+    },
+    {
+      status: unavailable ? 503 : 429,
+      headers: { 'Retry-After': String(retryAfter) },
+    },
+  );
 }
 
 function unavailableResponse(error: ProviderUnavailableError): Response {
@@ -252,11 +237,11 @@ async function scoreViaOpenRouter(userPrompt: string): Promise<ParsedFeedback> {
     // Count every actual upstream attempt, including retries. A synthetic 429
     // returns the local wait time without spending a provider request.
     fetchImpl: async (input, init) => {
-      const capacityDelay = reserveOpenRouterCapacity();
-      if (capacityDelay > 0) {
+      const capacity = await limitOpenRouterAttempt();
+      if (!capacity.success) {
         return new Response('', {
-          status: 429,
-          headers: { 'Retry-After': String(capacityDelay) },
+          status: capacity.reason === 'unavailable' ? 503 : 429,
+          headers: { 'Retry-After': String(Math.max(1, capacity.retryAfter)) },
         });
       }
       return fetch(input, init);
@@ -338,20 +323,6 @@ export async function POST(request: Request) {
     );
   }
 
-  if (rateLimited(request)) {
-    return Response.json(
-      {
-        error: {
-          code: 'candidate_rate_limited',
-          message: 'Too many attempts in a short time. Please wait a few minutes and try again.',
-          retryable: true,
-          retryAfterSeconds: 60,
-        },
-      },
-      { status: 429, headers: { 'Retry-After': '60' } },
-    );
-  }
-
   // A tailored interview has no catalogue entry, so its rubric arrives as a
   // signed token. Verification happens before any field is trusted; a token
   // that fails is treated as absent rather than as a hint.
@@ -380,8 +351,24 @@ export async function POST(request: Request) {
     return Response.json({ feedback: fallback() });
   }
 
+  // Both budgets live in Upstash in deployed environments, so every Vercel
+  // instance sees the same counters. A Redis failure produces no score and no
+  // provider spend rather than silently reopening the endpoint.
+  const networkLimit = await limitScoreNetwork(request);
+  if (!networkLimit.success) return limitResponse(networkLimit);
+
   const session = scoringSession(request);
-  if (session && activeScoringSessions.has(session)) {
+  let sessionLease: ScoringSessionLease | null = null;
+  if (session) sessionLease = await acquireScoringSession(session);
+  if (sessionLease && !sessionLease.acquired) {
+    if (sessionLease.retryAfter >= 20) {
+      return limitResponse({
+        configured: sessionLease.configured,
+        success: false,
+        retryAfter: sessionLease.retryAfter,
+        reason: 'unavailable',
+      });
+    }
     return Response.json(
       {
         error: {
@@ -394,7 +381,12 @@ export async function POST(request: Request) {
       { status: 409, headers: { 'Retry-After': '2' } },
     );
   }
-  if (session) activeScoringSessions.add(session);
+
+  const dailyLimit = await limitScoreDaily();
+  if (!dailyLimit.success) {
+    await sessionLease?.release();
+    return limitResponse(dailyLimit);
+  }
 
   try {
     const jobTitle = roleTitle?.trim() || role.title;
@@ -490,6 +482,6 @@ export async function POST(request: Request) {
     recordProviderFailure(unavailable);
     return unavailableResponse(unavailable);
   } finally {
-    if (session) activeScoringSessions.delete(session);
+    await sessionLease?.release();
   }
 }

@@ -1474,7 +1474,8 @@ body[dir='rtl'] .mic-label {
   border-radius: 0.55rem;
   background: var(--jade);
   color: white;
-  font-family: var(--font-arabic);
+  /* One logo glyph must not download the full Arabic font on English pages. */
+  font-family: "Segoe UI", Tahoma, sans-serif;
   font-size: 0.95rem;
   line-height: 1;
 }
@@ -2397,6 +2398,10 @@ textarea.answer-box-compact {
 
 .summary-item p {
   font-size: 0.95rem;
+}
+
+body[dir='rtl'] .marketing-brand-mark {
+  font-family: var(--font-arabic);
 }
 
 /* ---------- optional cross-device reports ---------- */

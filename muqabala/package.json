@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test:resilience": "node --experimental-strip-types --test --test-isolation=none scripts/scoring-resilience.test.mjs scripts/speech-session.test.mjs",
+    "test:resilience": "node --experimental-strip-types --test --test-isolation=none scripts/scoring-resilience.test.mjs scripts/speech-session.test.mjs scripts/launch-hardening.test.mjs",
     "test:reports": "node --experimental-strip-types --test --test-isolation=none scripts/saved-report-security.test.mjs scripts/rating-feedback.test.mjs"
   },
   "dependencies": {
