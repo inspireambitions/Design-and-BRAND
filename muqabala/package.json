@@ -8,8 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test:security": "node --experimental-strip-types --test --test-isolation=none scripts/account-security.test.mjs scripts/rate-limit.test.mjs",
-    "test:resilience": "node --experimental-strip-types --test --test-isolation=none scripts/account-security.test.mjs scripts/rate-limit.test.mjs scripts/scoring-resilience.test.mjs scripts/speech-session.test.mjs",
+    "test:security": "node --experimental-strip-types --test --test-isolation=none scripts/account-security.test.mjs scripts/interview-plan.test.mjs scripts/rate-limit.test.mjs",
+    "test:resilience": "node --experimental-strip-types --test --test-isolation=none scripts/account-security.test.mjs scripts/interview-plan.test.mjs scripts/rate-limit.test.mjs scripts/scoring-resilience.test.mjs scripts/speech-session.test.mjs",
     "load:test": "k6 run scripts/load/interview-journey.js"
   },
   "dependencies": {
