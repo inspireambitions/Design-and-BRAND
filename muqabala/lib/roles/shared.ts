@@ -4,6 +4,8 @@ export type Competency = {
   labelAr: string;
   /** What a strong answer demonstrates. Used by the scorer as the rubric anchor. */
   anchor: string;
+  /** Arabic rendering of the same anchor. Older signed interviews may omit it. */
+  anchorAr?: string;
 };
 
 export type Question = {
@@ -50,31 +52,36 @@ export const serviceCompetencies: Competency[] = [
     id: 'communication',
     label: 'Communication',
     labelAr: 'التواصل',
-    anchor: 'Speaks clearly and in a structured way that a guest or colleague could follow.',
+    anchor: 'Organises the answer in a clear sequence that a guest or colleague could follow.',
+    anchorAr: 'يرتّب الإجابة في تسلسل واضح يمكن للضيف أو الزميل متابعته.',
   },
   {
     id: 'ownership',
     label: 'Ownership',
     labelAr: 'تحمّل المسؤولية',
     anchor: 'Describes what they personally decided and did, not only what the team did.',
+    anchorAr: 'يصف ما قرره وفعله بنفسه، وليس ما فعله الفريق فقط.',
   },
   {
     id: 'problem_solving',
     label: 'Problem solving',
     labelAr: 'حل المشكلات',
     anchor: 'Shows a clear sequence of actions that resolved a real problem.',
+    anchorAr: 'يعرض تسلسلاً واضحاً للإجراءات التي حلّت مشكلة حقيقية.',
   },
   {
     id: 'evidence',
     label: 'Specific evidence',
     labelAr: 'أدلة محددة',
     anchor: 'Gives concrete details — numbers, names of systems, timeframes, outcomes.',
+    anchorAr: 'يقدم تفاصيل محددة مثل الأرقام وأسماء الأنظمة والمدد والنتائج.',
   },
   {
     id: 'customer_focus',
     label: 'Customer focus',
     labelAr: 'التركيز على العميل',
     anchor: 'Keeps the guest or customer experience central throughout the answer.',
+    anchorAr: 'يجعل تجربة الضيف أو العميل محور الإجابة من بدايتها إلى نهايتها.',
   },
 ];
 
@@ -85,30 +92,35 @@ export const technicalCompetencies: Competency[] = [
     label: 'Communication',
     labelAr: 'التواصل',
     anchor: 'Explains technical or procedural detail in language a non-expert can follow.',
+    anchorAr: 'يشرح التفاصيل الفنية أو الإجرائية بلغة يستطيع غير المتخصص متابعتها.',
   },
   {
     id: 'ownership',
     label: 'Ownership',
     labelAr: 'تحمّل المسؤولية',
     anchor: 'Describes what they personally decided and did, not only what the team did.',
+    anchorAr: 'يصف ما قرره وفعله بنفسه، وليس ما فعله الفريق فقط.',
   },
   {
     id: 'problem_solving',
     label: 'Problem solving',
     labelAr: 'حل المشكلات',
     anchor: 'Shows a clear diagnostic or procedural sequence that resolved a real problem.',
+    anchorAr: 'يعرض تسلسلاً واضحاً للتشخيص أو الإجراءات التي حلّت مشكلة حقيقية.',
   },
   {
     id: 'evidence',
     label: 'Specific evidence',
     labelAr: 'أدلة محددة',
     anchor: 'Gives concrete details — numbers, systems, standards, timeframes, outcomes.',
+    anchorAr: 'يقدم تفاصيل محددة مثل الأرقام والأنظمة والمعايير والمدد والنتائج.',
   },
   {
     id: 'compliance',
     label: 'Standards & safety',
     labelAr: 'المعايير والسلامة',
     anchor: 'Shows awareness of the rules, standards or safety requirements of the role.',
+    anchorAr: 'يُظهر فهماً لقواعد الوظيفة ومعاييرها ومتطلبات السلامة فيها.',
   },
 ];
 
@@ -119,30 +131,35 @@ export const careCompetencies: Competency[] = [
     label: 'Communication',
     labelAr: 'التواصل',
     anchor: 'Explains clearly and kindly to the person in their care and to their family.',
+    anchorAr: 'يشرح بوضوح ولطف للشخص الذي يرعاه ولأسرته.',
   },
   {
     id: 'ownership',
     label: 'Ownership',
     labelAr: 'تحمّل المسؤولية',
     anchor: 'Describes what they personally decided and did, not only what the team did.',
+    anchorAr: 'يصف ما قرره وفعله بنفسه، وليس ما فعله الفريق فقط.',
   },
   {
     id: 'problem_solving',
     label: 'Judgement',
     labelAr: 'حسن التقدير',
     anchor: 'Shows sound judgement about when to act alone and when to escalate.',
+    anchorAr: 'يُظهر حُسن التقدير في معرفة متى يتصرف بنفسه ومتى يصعّد الأمر.',
   },
   {
     id: 'evidence',
     label: 'Specific evidence',
     labelAr: 'أدلة محددة',
     anchor: 'Gives concrete details — what was observed, what was done, what changed.',
+    anchorAr: 'يقدم تفاصيل محددة عمّا لاحظه وما فعله وما الذي تغيّر.',
   },
   {
     id: 'compliance',
     label: 'Safety & dignity',
     labelAr: 'السلامة والكرامة',
     anchor: 'Protects the safety and the dignity of the person in their care.',
+    anchorAr: 'يحمي سلامة وكرامة الشخص الذي يرعاه.',
   },
 ];
 

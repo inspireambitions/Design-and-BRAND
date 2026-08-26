@@ -49,3 +49,31 @@ test('stopping dictation preserves interim-only speech', () => {
     globalThis.window = originalWindow;
   }
 });
+
+test('resumed dictation keeps earlier words once and appends new speech', () => {
+  const originalWindow = globalThis.window;
+  class FakeRecognition {
+    static instance;
+    constructor() {
+      FakeRecognition.instance = this;
+      this.lang = '';
+      this.onresult = null;
+      this.onerror = null;
+      this.onend = null;
+    }
+    start() {}
+    stop() {}
+    abort() {}
+  }
+  globalThis.window = { SpeechRecognition: FakeRecognition };
+  try {
+    const session = startDictation('ar-AE', () => {}, undefined, 'بدأت عملي في الفندق');
+    const finalResult = [{ transcript: ' ثم ساعدت الضيف', confidence: 0.9 }];
+    finalResult.isFinal = true;
+    FakeRecognition.instance.onresult({ resultIndex: 0, results: [finalResult] });
+    assert.equal(session.stop().finalText, 'بدأت عملي في الفندق ثم ساعدت الضيف');
+    assert.equal(FakeRecognition.instance.lang, 'ar-AE');
+  } finally {
+    globalThis.window = originalWindow;
+  }
+});

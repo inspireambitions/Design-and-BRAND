@@ -64,6 +64,7 @@ const GeneratedInterview = z.object({
         label: z.string().max(40),
         label_ar: z.string().max(60),
         anchor: z.string().max(240),
+        anchor_ar: z.string().max(300),
       }),
     )
     .min(3)
@@ -90,7 +91,7 @@ Write the interview a real hiring manager would run for THIS specific job. Read 
 Rules:
 - Exactly eight questions, in this order: one opening question about the candidate and why this job; two questions that ask for real past examples; two realistic situations drawn from the advert; two job-specific questions about the duties, tools or standards named in the advert; and one closing question about motivation or the practical terms this advert mentions.
 - Ask what an interviewer asks. Short, spoken, one thing at a time. Never multi-part questions, never essay prompts.
-- Three to five competencies, each with a rubric anchor describing what a strong answer demonstrates for THIS job. Use lowercase snake_case ids.
+- Three to five competencies, each with English and natural Arabic rubric anchors describing what a strong answer demonstrates for THIS job. Use lowercase snake_case ids.
 - Every question's competency_ids must refer only to competencies you defined.
 - answer_seconds is how long a spoken answer should take: 120 for most, up to 150 for a walk-me-through question.
 - The hint coaches the candidate on how to answer well. It never contains the answer.
@@ -206,7 +207,7 @@ Build their first-round interview.`,
     const generatedText = [
       parsed.role_title,
       parsed.industry,
-      ...parsed.competencies.flatMap((c) => [c.label, c.label_ar, c.anchor]),
+      ...parsed.competencies.flatMap((c) => [c.label, c.label_ar, c.anchor, c.anchor_ar]),
       ...parsed.questions.flatMap((q) => [q.text, q.text_ar, q.hint, q.hint_ar]),
     ].join(' \n ');
 
@@ -228,7 +229,7 @@ Build their first-round interview.`,
         return Response.json({ role: buildCustomRole(jobTitle), tailored: false, reason: 'invalid' });
       }
       seen.add(id);
-      competencies.push({ id, label: c.label, labelAr: c.label_ar, anchor: c.anchor });
+      competencies.push({ id, label: c.label, labelAr: c.label_ar, anchor: c.anchor, anchorAr: c.anchor_ar });
     }
     if (competencies.length < 3) {
       return Response.json({ role: buildCustomRole(jobTitle), tailored: false, reason: 'invalid' });

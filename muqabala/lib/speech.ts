@@ -86,6 +86,7 @@ export function startDictation(
   langCode: string,
   onUpdate: (finalText: string, interimText: string) => void,
   onError?: (error: string) => void,
+  initialText = '',
 ): SpeechSession | null {
   const Ctor = getConstructor();
   if (!Ctor) return null;
@@ -103,7 +104,7 @@ export function startDictation(
     /* property not supported — disclosure covers this case */
   }
 
-  let finalText = '';
+  let finalText = initialText.trim();
   let interimText = '';
   let stopped = false;
 

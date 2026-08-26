@@ -1,20 +1,11 @@
 import type { Metadata } from 'next';
-import { ROLES, type Role } from '@/lib/roles';
+import { POPULAR_ROLE_IDS, ROLES, type Role } from '@/lib/roles';
 import type { MarketingRole } from '@/lib/marketing-content';
 import { MarketingHome } from '@/components/MarketingSite';
 
 export const metadata: Metadata = {
   alternates: { canonical: '/' },
 };
-
-const POPULAR_ROLE_IDS = [
-  'front-office-agent',
-  'customer-service',
-  'nurse',
-  'accountant',
-  'sales-executive',
-  'electrician',
-];
 
 export default function HomePage() {
   const popularRoles = POPULAR_ROLE_IDS

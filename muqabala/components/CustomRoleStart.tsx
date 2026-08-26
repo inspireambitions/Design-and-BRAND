@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { buildCustomRole, type Role } from '@/lib/roles';
 import { takeHeroDraft } from '@/lib/hero-draft';
+import { loadLatestCustomInterviewDraft } from '@/lib/session-draft';
 import { useLang } from './LanguageProvider';
 import { TopBar } from './TopBar';
 import { InterviewFlow } from './InterviewFlow';
@@ -25,7 +26,7 @@ function guidedRole(fullRole: Role): Role {
 }
 
 export function CustomRoleStart() {
-  const { t } = useLang();
+  const { lang, t } = useLang();
   const [title, setTitle] = useState('');
   const [jobText, setJobText] = useState('');
   const [role, setRole] = useState<Role | null>(null);
@@ -74,6 +75,33 @@ export function CustomRoleStart() {
   useEffect(() => {
     if (draftHandled.current) return;
     draftHandled.current = true;
+    const resumeId = new URLSearchParams(window.location.search).get('resume');
+    if (resumeId) {
+      setBuilding(true);
+      fetch(`/api/interviews/${encodeURIComponent(resumeId)}/report`, { cache: 'no-store' })
+        .then(async (response) => response.ok ? response.json() : null)
+        .then((report) => {
+          if (!report || !Array.isArray(report.questionSnapshot) || report.questionSnapshot.length === 0) return;
+          const restored = buildCustomRole(report.roleTitle || t('customTitle'));
+          setTitle(report.roleTitle || '');
+          setRole({ ...restored, questions: report.questionSnapshot });
+        })
+        .catch(() => {})
+        .finally(() => setBuilding(false));
+      return;
+    }
+
+    const saved = loadLatestCustomInterviewDraft(window.localStorage);
+    if (saved) {
+      const restored = buildCustomRole(saved.customTitle || t('customTitle'));
+      setTitle(saved.customTitle || '');
+      setTailored(saved.tailored);
+      setFellBack(saved.fellBack);
+      setToken(saved.interviewToken);
+      setRole({ ...restored, questions: saved.questionSnapshot });
+      return;
+    }
+
     const draft = takeHeroDraft();
     if (!draft) return;
     setTitle(draft.jobTitle);
@@ -83,7 +111,7 @@ export function CustomRoleStart() {
       void startWith(draft.jobTitle.trim(), job);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [lang, t]);
 
   if (role) {
     const guided = guidedRole(role);

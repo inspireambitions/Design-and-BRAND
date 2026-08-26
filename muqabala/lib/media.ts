@@ -34,6 +34,8 @@ export function isRecordingSupported(): boolean {
 }
 
 export type AnswerRecorder = {
+  pause: () => void;
+  resume: () => void;
   /** Resolves with a playable object URL, or null when recording was not possible. */
   stop: () => Promise<string | null>;
 };
@@ -61,6 +63,20 @@ export function startRecording(stream: MediaStream): AnswerRecorder | null {
   }
 
   return {
+    pause: () => {
+      try {
+        if (recorder.state === 'recording') recorder.pause();
+      } catch {
+        /* the timer still pauses even when this browser cannot pause media */
+      }
+    },
+    resume: () => {
+      try {
+        if (recorder.state === 'paused') recorder.resume();
+      } catch {
+        /* recording support is best effort; transcript remains editable */
+      }
+    },
     stop: () =>
       new Promise<string | null>((resolve) => {
         if (recorder.state === 'inactive') {

@@ -6,7 +6,15 @@ import type { Question, Role } from '@/lib/roles';
 import type { AnswerFeedback, Attempt } from '@/lib/scoring';
 import { overallFromAnswers } from '@/lib/scoring';
 import { saveAttempt } from '@/lib/storage';
+import {
+  discardInterviewDraft,
+  loadInterviewDraft,
+  saveInterviewDraft,
+  type InterviewSessionDraft,
+} from '@/lib/session-draft';
 import { track } from '@/lib/analytics';
+import { rubricForQuestion } from '@/lib/question-rubric';
+import { compareRetries } from '@/lib/retry-comparison';
 import { startRecording, startLevelMeter, type AnswerRecorder, type LevelMeter } from '@/lib/media';
 import {
   isSpeechSupported,
@@ -100,7 +108,7 @@ export function InterviewFlow({
   /** Eight-question set for Full Mock mode; absent when the role cannot support it. */
   mockQuestions?: Question[];
 }) {
-  const { lang, t } = useLang();
+  const { lang, setLang, t } = useLang();
 
   const [stage, setStage] = useState<Stage>('check');
   const [index, setIndex] = useState(0);
@@ -129,9 +137,13 @@ export function InterviewFlow({
   const [streamLost, setStreamLost] = useState(false);
   const [deviceFallback, setDeviceFallback] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
+  const [localDraftSaveFailed, setLocalDraftSaveFailed] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
 
   const [secondsLeft, setSecondsLeft] = useState(0);
+  const [timerPaused, setTimerPaused] = useState(false);
+  const [extraTimeEnabled, setExtraTimeEnabled] = useState(false);
+  const [timerAnnouncement, setTimerAnnouncement] = useState('');
   const [transcript, setTranscript] = useState('');
   const [transcriptConfirmed, setTranscriptConfirmed] = useState(false);
   const [interim, setInterim] = useState('');
@@ -148,6 +160,9 @@ export function InterviewFlow({
   const [resumedQuestions, setResumedQuestions] = useState<Question[] | null>(null);
   const [syncState, setSyncState] = useState<'idle' | 'syncing' | 'saved' | 'error'>('idle');
   const [showContinueSignIn, setShowContinueSignIn] = useState(false);
+  const [pendingDraft, setPendingDraft] = useState<InterviewSessionDraft | null>(null);
+  const [confirmDiscardDraft, setConfirmDiscardDraft] = useState(false);
+  const [sessionLanguage, setSessionLanguage] = useState<'en' | 'ar' | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -176,10 +191,11 @@ export function InterviewFlow({
   // flip the caption to "we cannot hear you" four times a second.
   const heardRecently = micLevel > 0.08 || Date.now() - lastHeardRef.current < 2500;
   const isLast = index === activeQuestions.length - 1;
-  const questionText = lang === 'ar' ? question.textAr : question.text;
-  const hintText = lang === 'ar' ? question.hintAr : question.hint;
-
-  const localDraftKey = `muqabala.draft.v1.${role.id}`;
+  const interviewLanguage = sessionLanguage ?? lang;
+  const questionText = interviewLanguage === 'ar' ? question.textAr : question.text;
+  const hintText = interviewLanguage === 'ar' ? question.hintAr : question.hint;
+  const questionRubric = rubricForQuestion(role, question);
+  const reportRoleTitle = customTitle || (interviewLanguage === 'ar' ? role.titleAr : role.title);
 
   const persistProgress = useCallback(async (payload: {
     questionIndex: number;
@@ -209,50 +225,60 @@ export function InterviewFlow({
     return false;
   }, [serverAttemptId]);
 
-  // Restore either a signed-in cross-device attempt or this browser's latest draft.
+  const restoreDraft = useCallback((draft: InterviewSessionDraft) => {
+    const restoredQuestions = draft.questionSnapshot.length ? draft.questionSnapshot : activeQuestions;
+    const safeIndex = Math.max(0, Math.min(restoredQuestions.length - 1, draft.questionIndex));
+    setSessionLanguage(draft.language);
+    setLang(draft.language);
+    setServerAttemptId(draft.serverAttemptId);
+    setReportGateRequired(draft.reportGateRequired);
+    setResumedQuestions(restoredQuestions);
+    setIndex(safeIndex);
+    setMode(draft.mode);
+    setAnswerMethod(draft.answerMethod);
+    setTranscript(draft.transcript);
+    setTranscriptConfirmed(draft.transcriptConfirmed);
+    setFeedback(draft.feedback);
+    setAnswers(draft.answers);
+    setPreviousTry(draft.previousTry);
+    setAttemptCount(draft.attemptCount);
+    setReportUnlocked(draft.reportUnlocked);
+    setSecondsLeft(restoredQuestions[safeIndex]?.prepSeconds ?? 30);
+    setPendingDraft(null);
+    setConfirmDiscardDraft(false);
+    setStage(draft.stage);
+  }, [activeQuestions, setLang]);
+
+  // An account resume link is already an explicit choice. A browser-local
+  // draft is not: show Resume and Discard instead of silently moving screens.
   useEffect(() => {
     let cancelled = false;
     const resumeId = new URLSearchParams(window.location.search).get('resume');
-    const restore = (draft: {
-      id?: string | null;
-      index?: number;
-      mode?: 'guided' | 'mock';
-      transcript?: string;
-      answers?: CompletedAnswer[];
-      unlocked?: boolean;
-      questionSnapshot?: Question[];
-    }) => {
-      if (cancelled) return;
-      const restoredQuestions = Array.isArray(draft.questionSnapshot) && draft.questionSnapshot.length
-        ? draft.questionSnapshot
-        : activeQuestions;
-      const safeIndex = Math.max(0, Math.min(restoredQuestions.length - 1, draft.index ?? 0));
-      setServerAttemptId(draft.id ?? null);
-      setReportGateRequired(Boolean(draft.id));
-      setResumedQuestions(restoredQuestions);
-      setIndex(safeIndex);
-      if (draft.mode) setMode(draft.mode);
-      setTranscript(draft.transcript ?? '');
-      setAnswers(Array.isArray(draft.answers) ? draft.answers : []);
-      setReportUnlocked(Boolean(draft.unlocked));
-      setSecondsLeft(restoredQuestions[safeIndex]?.prepSeconds ?? 30);
-      setStage('prep');
-    };
-
     if (resumeId) {
       fetch(`/api/interviews/${encodeURIComponent(resumeId)}/report`, { cache: 'no-store' })
         .then(async (response) => response.ok ? response.json() : null)
         .then((report) => {
-          if (!report) return;
-          restore({
-            id: report.id,
-            index: report.currentQuestion,
-            mode: report.mode,
-            unlocked: report.unlocked,
-            questionSnapshot: report.questionSnapshot,
-            transcript: (report.answers ?? []).find(
-              (answer: { questionIndex: number }) => answer.questionIndex === report.currentQuestion,
-            )?.transcript ?? '',
+          if (!report || cancelled) return;
+          const restoredQuestions = Array.isArray(report.questionSnapshot) && report.questionSnapshot.length
+            ? report.questionSnapshot
+            : activeQuestions;
+          const currentTranscript = (report.answers ?? []).find(
+            (answer: { questionIndex: number }) => answer.questionIndex === report.currentQuestion,
+          )?.transcript ?? '';
+          restoreDraft({
+            version: 2,
+            roleId: role.id,
+            ...(customTitle ? { customTitle } : {}),
+            tailored,
+            fellBack,
+            language: report.language === 'ar' ? 'ar' : 'en',
+            stage: currentTranscript.trim() ? 'review' : 'prep',
+            questionIndex: report.currentQuestion ?? 0,
+            mode: report.mode === 'mock' ? 'mock' : 'guided',
+            answerMethod: 'type',
+            transcript: currentTranscript,
+            transcriptConfirmed: false,
+            feedback: null,
             answers: (report.answers ?? [])
               .filter((answer: { feedback?: AnswerFeedback | null }) => answer.feedback)
               .map((answer: { questionId: string; questionText: string; transcript: string; feedback: AnswerFeedback }) => ({
@@ -261,38 +287,63 @@ export function InterviewFlow({
                 transcript: answer.transcript,
                 feedback: answer.feedback,
               })),
+            previousTry: null,
+            attemptCount: 1,
+            serverAttemptId: report.id,
+            reportGateRequired: true,
+            reportUnlocked: Boolean(report.unlocked),
+            questionSnapshot: restoredQuestions,
+            updatedAt: report.updatedAt ?? new Date().toISOString(),
           });
         })
         .catch(() => {});
     } else {
-      try {
-        const raw = window.localStorage.getItem(localDraftKey);
-        if (raw) {
-          const draft = JSON.parse(raw);
-          const age = Date.now() - Date.parse(draft.updatedAt ?? '');
-          if (Number.isFinite(age) && age <= 24 * 60 * 60 * 1000) restore(draft);
-          else window.localStorage.removeItem(localDraftKey);
-        }
-      } catch {
-        // Local storage may be blocked. The interview still works in memory.
-      }
+      const draft = loadInterviewDraft(window.localStorage, {
+        roleId: role.id,
+        customTitle,
+        fallbackLanguage: lang,
+        fallbackQuestions: activeQuestions,
+      });
+      if (!cancelled) setPendingDraft(draft);
     }
     return () => { cancelled = true; };
-    // Restore exactly once for this role.
+    // Restore exactly once for this role and custom interview.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [role.id]);
+  }, [role.id, customTitle]);
 
   useEffect(() => {
     if (stage === 'check') return;
-    try {
-      if (stage === 'done') window.localStorage.removeItem(localDraftKey);
-      else window.localStorage.setItem(localDraftKey, JSON.stringify({
-        id: serverAttemptId, index, mode, transcript, answers, updatedAt: new Date().toISOString(),
-      }));
-    } catch {
-      // Local storage is an availability fallback, never a requirement.
+    if (stage === 'done') {
+      discardInterviewDraft(window.localStorage, role.id, customTitle);
+      setLocalDraftSaveFailed(false);
+      return;
     }
-  }, [answers, index, localDraftKey, mode, serverAttemptId, stage, transcript]);
+    const saved = saveInterviewDraft(window.localStorage, {
+      roleId: role.id,
+      customTitle,
+      interviewToken,
+      tailored,
+      fellBack,
+      language: interviewLanguage,
+      stage,
+      questionIndex: index,
+      mode,
+      answerMethod: selectedAnswerMethod,
+      transcript,
+      transcriptConfirmed,
+      feedback,
+      answers,
+      previousTry,
+      attemptCount,
+      serverAttemptId,
+      reportGateRequired,
+      reportUnlocked,
+      questionSnapshot: activeQuestions,
+    });
+    setLocalDraftSaveFailed(!saved);
+  }, [activeQuestions, answers, attemptCount, customTitle, feedback, fellBack, index, interviewLanguage,
+    interviewToken, mode, previousTry, reportGateRequired, reportUnlocked, role.id,
+    selectedAnswerMethod, serverAttemptId, stage, tailored, transcript, transcriptConfirmed]);
 
   // Save typed or transcribed words after a short pause. This runs before AI
   // scoring, so a provider outage or closed tab cannot erase the answer.
@@ -328,7 +379,7 @@ export function InterviewFlow({
     return () => window.removeEventListener('pagehide', flush);
   }, [index, serverAttemptId, stage, transcript]);
 
-  const createServerAttempt = useCallback(async (): Promise<string | null> => {
+  const createServerAttempt = useCallback(async (questionsOverride?: Question[]): Promise<string | null> => {
     if (serverAttemptId) return serverAttemptId;
     try {
       const response = await fetch('/api/interviews', {
@@ -336,10 +387,10 @@ export function InterviewFlow({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           roleId: role.id,
-          roleTitle: customTitle || role.title,
-          language: lang,
+          roleTitle: reportRoleTitle,
+          language: interviewLanguage,
           mode,
-          questions: activeQuestions.map(({ id, text, textAr, competencies, hint, hintAr, prepSeconds, answerSeconds }) => ({
+          questions: (questionsOverride ?? activeQuestions).map(({ id, text, textAr, competencies, hint, hintAr, prepSeconds, answerSeconds }) => ({
             id, text, textAr, competencies, hint, hintAr, prepSeconds, answerSeconds,
           })),
           interviewToken,
@@ -360,7 +411,7 @@ export function InterviewFlow({
       setReportGateRequired(true);
       return null;
     }
-  }, [activeQuestions, customTitle, interviewToken, lang, mode, role.id, role.title, serverAttemptId]);
+  }, [activeQuestions, interviewLanguage, interviewToken, mode, reportRoleTitle, role.id, serverAttemptId]);
 
   useEffect(() => {
     const supported = isSpeechSupported();
@@ -370,13 +421,13 @@ export function InterviewFlow({
       return;
     }
     let cancelled = false;
-    isOnDeviceRecognitionAvailable(lang === 'ar' ? 'ar-AE' : 'en-US').then((local) => {
+    isOnDeviceRecognitionAvailable(interviewLanguage === 'ar' ? 'ar-AE' : 'en-US').then((local) => {
       if (!cancelled) setOnDeviceSpeech(local);
     });
     return () => {
       cancelled = true;
     };
-  }, [lang]);
+  }, [interviewLanguage]);
 
   const stopDictation = useCallback(() => {
     const captured = dictationRef.current?.stop();
@@ -464,6 +515,19 @@ export function InterviewFlow({
     }
   }, []);
 
+  const resumeLocalDraft = useCallback(async (draft: InterviewSessionDraft) => {
+    let safeDraft = draft;
+    if (draft.stage === 'prep' && draft.answerMethod !== 'type') {
+      const captureReady = draft.answerMethod === 'video'
+        ? await enableCamera()
+        : await enableMicrophone();
+      if (!captureReady) {
+        setDeviceFallback(true);
+        safeDraft = { ...draft, answerMethod: 'type' };
+      }
+    }
+    restoreDraft(safeDraft);
+  }, [enableCamera, enableMicrophone, restoreDraft]);
   // Re-attach the stream whenever the video element remounts between stages.
   useEffect(() => {
     if (cameraState === 'granted' && videoRef.current && streamRef.current) {
@@ -471,6 +535,42 @@ export function InterviewFlow({
       videoRef.current.play().catch(() => {});
     }
   }, [cameraState, stage]);
+
+  const startSpeechCapture = useCallback((initialText = ''): boolean => {
+    const speechSession = startDictation(
+      interviewLanguage === 'ar' ? 'ar-AE' : 'en-US',
+      (finalText, interimText) => {
+        setTranscript(finalText);
+        setInterim(interimText);
+      },
+      () => {
+        setSpeechOk(false);
+        setDeviceFallback(true);
+        void switchToTyping();
+      },
+      initialText,
+    );
+    if (!speechSession) {
+      setSpeechOk(false);
+      setDeviceFallback(true);
+      void switchToTyping();
+      return false;
+    }
+    dictationRef.current = speechSession;
+    return true;
+  }, [interviewLanguage, switchToTyping]);
+
+  const startMicMeter = useCallback(() => {
+    if (!streamRef.current) return;
+    meterRef.current = startLevelMeter(
+      streamRef.current,
+      (level) => {
+        if (level > 0.08) lastHeardRef.current = Date.now();
+        setMicLevel(level);
+      },
+      () => setMeterUnavailable(true),
+    );
+  }, []);
 
   const beginRecording = useCallback(() => {
     setTranscript('');
@@ -480,44 +580,44 @@ export function InterviewFlow({
       setPlaybackUrl(null);
     }
     setSecondsLeft(question.answerSeconds);
+    setTimerPaused(false);
+    setTimerAnnouncement('');
     setStage('record');
 
     setStreamLost(false);
+    streamRef.current?.getTracks().forEach((track) => { track.enabled = true; });
     const live = Boolean(useVoice && streamRef.current);
     setRecordingLive(live);
     if (useVoice) {
-      const speechSession = startDictation(
-        lang === 'ar' ? 'ar-AE' : 'en-US',
-        (finalText, interimText) => {
-          setTranscript(finalText);
-          setInterim(interimText);
-        },
-        () => {
-          setSpeechOk(false);
-          setDeviceFallback(true);
-          void switchToTyping();
-        },
-      );
-      if (!speechSession) {
-        setSpeechOk(false);
-        setDeviceFallback(true);
-        void switchToTyping();
-        return;
-      }
-      dictationRef.current = speechSession;
+      if (!startSpeechCapture()) return;
       if (streamRef.current) {
         recorderRef.current = startRecording(streamRef.current);
-        meterRef.current = startLevelMeter(
-          streamRef.current,
-          (level) => {
-            if (level > 0.08) lastHeardRef.current = Date.now();
-            setMicLevel(level);
-          },
-          () => setMeterUnavailable(true),
-        );
+        startMicMeter();
       }
     }
-  }, [lang, playbackUrl, question.answerSeconds, switchToTyping, useVoice]);
+  }, [playbackUrl, question.answerSeconds, startMicMeter, startSpeechCapture, useVoice]);
+
+  const toggleMockPause = useCallback(() => {
+    if (mode !== 'mock' || stage !== 'record' || !useVoice) return;
+    if (!timerPaused) {
+      stopDictation();
+      meterRef.current?.stop();
+      meterRef.current = null;
+      recorderRef.current?.pause();
+      streamRef.current?.getTracks().forEach((track) => { track.enabled = false; });
+      setRecordingLive(false);
+      setTimerPaused(true);
+      setTimerAnnouncement(t('timerPausedStatus'));
+      return;
+    }
+    streamRef.current?.getTracks().forEach((track) => { track.enabled = true; });
+    recorderRef.current?.resume();
+    if (!startSpeechCapture(transcript)) return;
+    startMicMeter();
+    setRecordingLive(true);
+    setTimerPaused(false);
+    setTimerAnnouncement(t('timerResumedStatus'));
+  }, [mode, stage, startMicMeter, startSpeechCapture, stopDictation, t, timerPaused, transcript, useVoice]);
 
   const finishAnswer = useCallback(async () => {
     if (finalizingRef.current) return;
@@ -573,25 +673,31 @@ export function InterviewFlow({
     };
   }, [stage, recordingLive, stopDictation]);
 
-  // An interview in progress is unsaved work: warn before the tab is closed.
+  // Warn only when work is genuinely at risk. A successfully saved typed
+  // answer should survive an ordinary refresh without a contradictory prompt.
   useEffect(() => {
-    const inProgress = stage !== 'check' && stage !== 'done';
-    if (!inProgress) return;
+    const workAtRisk = (stage === 'record' && useVoice)
+      || isScoring
+      || syncState === 'error'
+      || localDraftSaveFailed;
+    if (!workAtRisk) return;
     const warn = (event: BeforeUnloadEvent) => {
       event.preventDefault();
     };
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
-  }, [stage]);
+  }, [isScoring, localDraftSaveFailed, stage, syncState, useVoice]);
 
   const startPrep = useCallback(() => {
     setSecondsLeft(question.prepSeconds);
+    setTimerPaused(false);
     setStage('prep');
   }, [question.prepSeconds]);
 
   // Countdown for both the prep and recording stages.
   useEffect(() => {
     if (stage !== 'prep' && stage !== 'record') return;
+    if (timerPaused) return;
     // Typing has no clock: cutting someone off mid-sentence with a timer they
     // were never shown punishes exactly the people pushed into typing by a
     // camera denial or a speech failure. "Review answer" is the only exit.
@@ -608,7 +714,7 @@ export function InterviewFlow({
     }
     const id = window.setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
     return () => window.clearTimeout(id);
-  }, [stage, secondsLeft, beginRecording, finishAnswer, useVoice, streamLost, mode]);
+  }, [stage, secondsLeft, beginRecording, finishAnswer, useVoice, streamLost, mode, timerPaused]);
 
   // completeCurrentAnswer is declared later in the file; the mock path inside
   // submitForScoring reaches it through a ref kept current on every render.
@@ -640,7 +746,7 @@ export function InterviewFlow({
           roleId: role.id,
           questionId: question.id,
           transcript,
-          lang,
+          lang: interviewLanguage,
           roleTitle: customTitle,
           interviewToken,
           interviewId: serverAttemptId ?? undefined,
@@ -694,7 +800,7 @@ export function InterviewFlow({
       scoringInFlightRef.current = false;
       setIsScoring(false);
     }
-  }, [customTitle, index, interviewToken, lang, mode, question.id, role.id, serverAttemptId, transcript, transcriptConfirmed]);
+  }, [customTitle, index, interviewLanguage, interviewToken, mode, question.id, role.id, serverAttemptId, transcript, transcriptConfirmed]);
 
   useEffect(() => {
     if (retrySeconds === null) return;
@@ -709,7 +815,7 @@ export function InterviewFlow({
     return () => window.clearTimeout(id);
   }, [retrySeconds, submitForScoring]);
 
-  const retryQuestion = useCallback(() => {
+  const retryQuestion = useCallback(async () => {
     if (feedback && transcript.trim()) {
       setPreviousTry({ transcript, feedback });
     }
@@ -722,8 +828,15 @@ export function InterviewFlow({
     setTranscript('');
     setTranscriptConfirmed(false);
     setInterim('');
+    if (useVoice && !streamRef.current) {
+      const captureReady = useVideo ? await enableCamera() : await enableMicrophone();
+      if (!captureReady) {
+        setDeviceFallback(true);
+        await switchToTyping();
+      }
+    }
     startPrep();
-  }, [feedback, startPrep, transcript]);
+  }, [enableCamera, enableMicrophone, feedback, startPrep, switchToTyping, transcript, useVideo, useVoice]);
 
   const completeCurrentAnswer = useCallback(async (answerFeedback: AnswerFeedback) => {
     if (advancingRef.current) return;
@@ -818,6 +931,7 @@ export function InterviewFlow({
     setPreviousTry(null);
     setFeedback(null);
     setPlaybackUrl(null);
+    setSessionLanguage(null);
     setStage('check');
   }, [mockQuestions]);
 
@@ -829,7 +943,7 @@ export function InterviewFlow({
     const attempt: Attempt = {
       id: `${role.id}-${Date.now()}`,
       roleId: role.id,
-      roleTitle: role.title,
+      roleTitle: reportRoleTitle,
       startedAt: new Date().toISOString(),
       overallScore: overallFromAnswers(answers),
       answers,
@@ -840,12 +954,12 @@ export function InterviewFlow({
     setSavedAttempt(attempt);
     track('interview_completed', {
       role_id: role.id,
-      lang,
+      lang: interviewLanguage,
       overall_score: attempt.overallScore ?? undefined,
       questions_answered: attempt.answers.length,
       scoring_source: attempt.answers[0]?.feedback.source ?? 'unknown',
     });
-  }, [answers, lang, role.id, role.title, serverAttemptId, stage]);
+  }, [answers, interviewLanguage, reportRoleTitle, role.id, serverAttemptId, stage]);
 
   const wordCount = `${transcript} ${interim}`.trim().split(/\s+/).filter(Boolean).length;
   // Speech recognition is unreliable inside iOS in-app browsers: it reports as
@@ -868,12 +982,17 @@ export function InterviewFlow({
         ))}
       </div>
       <p className="tiny" style={{ marginBottom: '1.4rem' }}>
-        {lang === 'ar' ? role.titleAr : role.title} · {t('question')} {index + 1} {t('of')}{' '}
+        {interviewLanguage === 'ar' ? role.titleAr : role.title} · {t('question')} {index + 1} {t('of')}{' '}
         {activeQuestions.length}
       </p>
       {serverAttemptId && stage !== 'check' && stage !== 'done' && syncState !== 'idle' && (
         <p className={`tiny ${syncState === 'error' ? 'notice notice-warn' : ''}`} role="status">
           {syncState === 'syncing' ? t('progressSyncing') : syncState === 'saved' ? t('progressSaved') : t('progressSaveFailed')}
+        </p>
+      )}
+      {localDraftSaveFailed && stage !== 'check' && stage !== 'done' && (
+        <p className="notice notice-warn tiny" role="status">
+          {t('localDraftSaveFailed')}
         </p>
       )}
       {serverAttemptId && !reportUnlocked && stage !== 'check' && stage !== 'done' && (
@@ -888,12 +1007,66 @@ export function InterviewFlow({
       )}
 
       {/* ---------- device check ---------- */}
-      {stage === 'check' && (
+      {stage === 'check' && pendingDraft && (
+        <section className="card stack" aria-labelledby="resume-draft-title">
+          <div>
+            <p className="eyebrow">{t('beforeStart')}</p>
+            <h1 id="resume-draft-title" style={{ fontSize: '1.75rem' }}>
+              {t('resumeDraftTitle')}
+            </h1>
+            <p className="lede" style={{ marginTop: '0.6rem' }}>{t('resumeDraftBody')}</p>
+          </div>
+          <div className="notice tiny">
+            <strong>{pendingDraft.customTitle || (pendingDraft.language === 'ar' ? role.titleAr : role.title)}</strong>
+            <p style={{ marginTop: '0.35rem' }}>
+              {t('question')} {pendingDraft.questionIndex + 1} {t('of')} {pendingDraft.questionSnapshot.length}
+            </p>
+            <p style={{ marginTop: '0.35rem' }}>
+              {pendingDraft.language === 'ar'
+                ? t('resumeDraftLanguageArabic')
+                : t('resumeDraftLanguageEnglish')}
+            </p>
+          </div>
+          {!confirmDiscardDraft ? (
+            <div className="row">
+              <button type="button" className="btn btn-primary" onClick={() => void resumeLocalDraft(pendingDraft)}>
+                {t('resumeInterview')}
+              </button>
+              <button type="button" className="btn btn-ghost" onClick={() => setConfirmDiscardDraft(true)}>
+                {t('discardSavedPractice')}
+              </button>
+            </div>
+          ) : (
+            <div className="notice notice-warn stack-sm" role="alert">
+              <strong>{t('discardDraftTitle')}</strong>
+              <p className="tiny">{t('discardDraftBody')}</p>
+              <div className="row">
+                <button type="button" className="btn btn-quiet" onClick={() => setConfirmDiscardDraft(false)}>
+                  {t('keepSavedPractice')}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => {
+                    discardInterviewDraft(window.localStorage, role.id, customTitle);
+                    setPendingDraft(null);
+                    setConfirmDiscardDraft(false);
+                  }}
+                >
+                  {t('deleteSavedPractice')}
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
+      {stage === 'check' && !pendingDraft && (
         <div className="stack">
           <div>
             <p className="eyebrow">{t('beforeStart')}</p>
             <h1 style={{ fontSize: '1.75rem' }}>
-              {lang === 'ar' ? role.titleAr : role.title}
+              {interviewLanguage === 'ar' ? role.titleAr : role.title}
             </h1>
             {role.id === 'custom' && (
               <span className={`chip ${tailored ? 'chip-gold' : ''}`} style={{ marginTop: '0.5rem' }}>
@@ -942,6 +1115,22 @@ export function InterviewFlow({
                 <span className="tiny">{t('modeGuidedBody')}</span>
             </button>
           </div>
+
+          {mode === 'mock' && (
+            <label className="check-row">
+              <input
+                type="checkbox"
+                checked={extraTimeEnabled}
+                onChange={(event) => setExtraTimeEnabled(event.target.checked)}
+              />
+              <span>
+                <strong>{t('extraTimeTitle')}</strong>
+                <span className="tiny" style={{ display: 'block', marginTop: '0.2rem' }}>
+                  {t('extraTimeBody')}
+                </span>
+              </span>
+            </label>
+          )}
 
           {/* ---------- answer method ---------- */}
           <section className="answer-method" aria-labelledby="answer-method-title">
@@ -1020,7 +1209,7 @@ export function InterviewFlow({
               </p>
               <ol className="reveal-list">
                 {activeQuestions.map((q) => (
-                  <li key={q.id}>{lang === 'ar' ? q.textAr : q.text}</li>
+                  <li key={q.id}>{interviewLanguage === 'ar' ? q.textAr : q.text}</li>
                 ))}
               </ol>
             </div>
@@ -1124,8 +1313,13 @@ export function InterviewFlow({
               className="btn btn-primary"
               disabled={requestingCamera}
               onClick={async () => {
+                const startingQuestions = mode === 'mock' && extraTimeEnabled
+                  ? activeQuestions.map((item) => ({ ...item, answerSeconds: item.answerSeconds + 60 }))
+                  : activeQuestions;
+                if (startingQuestions !== activeQuestions) setResumedQuestions(startingQuestions);
+                setSessionLanguage(lang);
                 track('interview_started', { role_id: role.id, lang });
-                await createServerAttempt();
+                await createServerAttempt(startingQuestions);
                 // Ask here rather than in a separate step: this tap is the user
                 // gesture browsers want, and it comes after the disclosure the
                 // candidate has just read.
@@ -1172,6 +1366,26 @@ export function InterviewFlow({
               <div className="coach-tip">
                 <strong>{t('tip')}</strong>
                 {hintText}
+              </div>
+            )}
+            {questionRubric.length > 0 && (
+              <div className="rubric-preview" aria-label={t('rubricPreviewTitle')}>
+                <div>
+                  <p className="eyebrow">{t('rubricPreviewTitle')}</p>
+                  <p className="tiny">{t('rubricPreviewBody')}</p>
+                </div>
+                <ul className="rubric-preview-list">
+                  {questionRubric.map((competency) => (
+                    <li key={competency.id}>
+                      <strong>{interviewLanguage === 'ar' ? competency.labelAr : competency.label}</strong>
+                      <span dir="auto">
+                        {interviewLanguage === 'ar' && competency.anchorAr
+                          ? competency.anchorAr
+                          : competency.anchor}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
           </div>
@@ -1246,6 +1460,31 @@ export function InterviewFlow({
                     style={{ width: `${(secondsLeft / question.answerSeconds) * 100}%` }}
                   />
                 </div>
+
+                {mode === 'mock' && (
+                  <div className="row timer-controls">
+                    <button
+                      type="button"
+                      className="btn btn-quiet"
+                      aria-pressed={timerPaused}
+                      onClick={toggleMockPause}
+                    >
+                      {timerPaused ? t('resumeTimer') : t('pauseTimer')}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      onClick={() => {
+                        setSecondsLeft((seconds) => seconds + 60);
+                        setTimerAnnouncement(t('extraTimeAdded'));
+                      }}
+                    >
+                      {t('addExtraTime')}
+                    </button>
+                    {timerPaused && <strong className="timer-paused-label">{t('paused')}</strong>}
+                  </div>
+                )}
+                <span className="sr-only" aria-live="polite">{timerAnnouncement}</span>
 
                 {/* Proof the microphone is live. Reassurance only — never
                     recorded or scored — and shown only when a working meter
@@ -1451,38 +1690,61 @@ export function InterviewFlow({
               <div className="comparison-grid">
                 <div className="answer-recap">
                   <span className="rate-label">{t('firstAnswer')}</span>
-                  <p>{previousTry.transcript}</p>
+                  <p dir="auto">{previousTry.transcript}</p>
                 </div>
                 <div className="answer-recap">
                   <span className="rate-label">{t('latestAnswer')}</span>
-                  <p>{transcript}</p>
+                  <p dir="auto">{transcript}</p>
                 </div>
               </div>
+              <div>
+                <p className="eyebrow">{t('previousAdvice')}</p>
+                {previousTry.feedback.improvements.length > 0 && (
+                  <ul className="feedback-list">
+                    {previousTry.feedback.improvements.map((item, adviceIndex) => (
+                      <li key={`${adviceIndex}-${item}`} dir="auto">{item}</li>
+                    ))}
+                  </ul>
+                )}
+                {previousTry.feedback.coachTip && (
+                  <p className="coach-tip" dir="auto">{previousTry.feedback.coachTip}</p>
+                )}
+              </div>
               {(() => {
-                const sameScoringVersion = previousTry.feedback.scoringVersion === feedback.scoringVersion;
-                const sameRubricVersion = previousTry.feedback.rubricVersion === feedback.rubricVersion;
-                if (!sameScoringVersion || !sameRubricVersion) {
+                const comparison = compareRetries(previousTry.feedback, feedback);
+                if (!comparison.compatible) {
                   return <p className="notice notice-warn tiny">{t('comparisonVersionChanged')}</p>;
                 }
-                const before = new Map(previousTry.feedback.competencies.map((item) => [item.id, item.evidence]));
-                const after = new Map(feedback.competencies.map((item) => [item.id, item.evidence]));
-                const added = feedback.competencies.filter((item) => item.evidence && item.evidence !== before.get(item.id));
-                const removed = previousTry.feedback.competencies.filter((item) => item.evidence && item.evidence !== after.get(item.id));
-                if (!added.length && !removed.length) return <p className="tiny">{t('noEvidenceChange')}</p>;
+                if (!comparison.evidenceAdded.length && !comparison.evidenceChanged.length
+                  && !comparison.stillMissing.length) {
+                  return <p className="tiny">{t('noEvidenceChange')}</p>;
+                 }
                 return (
                   <div className="comparison-grid">
                     <div>
                       <p className="eyebrow">{t('evidenceAdded')}</p>
                       <ul className="feedback-list">
-                        {added.map((item) => <li key={item.id}>{item.evidence}</li>)}
+                        {comparison.evidenceAdded.length > 0
+                          ? comparison.evidenceAdded.map((item) => <li key={item.id} dir="auto">{item.evidence}</li>)
+                          : <li>{t('noEvidenceAdded')}</li>}
                       </ul>
                     </div>
                     <div>
-                      <p className="eyebrow">{t('evidenceRemoved')}</p>
+                      <p className="eyebrow">{t('stillMissing')}</p>
                       <ul className="feedback-list">
-                        {removed.map((item) => <li key={item.id}>{item.evidence}</li>)}
+                        {comparison.stillMissing.length > 0
+                          ? comparison.stillMissing.map((item) => <li key={item.id}>{item.label}</li>)
+                          : <li>{t('nothingStillMissing')}</li>}
                       </ul>
                     </div>
+                    {comparison.evidenceChanged.length > 0 && (
+                      <div>
+                        <p className="eyebrow">{t('evidenceChanged')}</p>
+                        <ul className="feedback-list">
+                          {comparison.evidenceChanged.map((item) => <li key={item.id} dir="auto">{item.evidence}</li>)}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 );
               })()}
@@ -1509,8 +1771,8 @@ export function InterviewFlow({
           </div>
           {answers[0] && <div className="stack-sm">
             <p className="eyebrow">{t('question')} 1</p>
-            <h3>{answers[0].questionText}</h3>
-            <div className="answer-recap"><span className="rate-label">{t('yourAnswer')}</span><p>{answers[0].transcript}</p></div>
+            <h3 dir="auto">{answers[0].questionText}</h3>
+            <div className="answer-recap"><span className="rate-label">{t('yourAnswer')}</span><p dir="auto">{answers[0].transcript}</p></div>
             <FeedbackCard feedback={answers[0].feedback} />
           </div>}
           {mode === 'guided' && mockQuestions && mockQuestions.length >= 8 && (
@@ -1572,7 +1834,7 @@ export function InterviewFlow({
               </div>
             )}
             <p className="report-meta">
-              {role.title} · {new Date().toLocaleDateString()}
+              {reportRoleTitle} · {new Date().toLocaleDateString(interviewLanguage === 'ar' ? 'ar-AE' : 'en-GB')}
             </p>
             {saveFailed ? (
               <p className="notice notice-warn tiny" style={{ margin: 0 }}>
@@ -1590,7 +1852,7 @@ export function InterviewFlow({
                   onClick={() => {
                     navigator
                       .share({
-                        text: buildReportText(role.title, overallFromAnswers(answers), answers, {
+                        text: buildReportText(reportRoleTitle, overallFromAnswers(answers), answers, {
                           report: t('reportTitle'),
                           score: t('overallScore'),
                           question: t('question'),
@@ -1627,7 +1889,7 @@ export function InterviewFlow({
                 onClick={async () => {
                   try {
                     await navigator.clipboard.writeText(
-                      buildReportText(role.title, overallFromAnswers(answers), answers, {
+                      buildReportText(reportRoleTitle, overallFromAnswers(answers), answers, {
                         report: t('reportTitle'),
                         score: t('overallScore'),
                         question: t('question'),
@@ -1655,7 +1917,7 @@ export function InterviewFlow({
                 <textarea
                   className="answer-box"
                   readOnly
-                  value={buildReportText(role.title, overallFromAnswers(answers), answers, {
+                  value={buildReportText(reportRoleTitle, overallFromAnswers(answers), answers, {
                     report: t('reportTitle'),
                     score: t('overallScore'),
                     question: t('question'),
@@ -1719,12 +1981,12 @@ export function InterviewFlow({
               <p className="eyebrow" style={{ marginBottom: 0 }}>
                 {t('question')} {i + 1}
               </p>
-              <h3 style={{ fontSize: '1.05rem' }}>{answer.questionText}</h3>
+              <h3 style={{ fontSize: '1.05rem' }} dir="auto">{answer.questionText}</h3>
               {answer.transcript && (
                 <div className="answer-recap">
                   <span className="rate-label">{t('yourAnswer')}</span>
                   <p className="muted" style={{ marginTop: '0.25rem' }}>
-                    {answer.transcript}
+                    <span dir="auto">{answer.transcript}</span>
                   </p>
                 </div>
               )}

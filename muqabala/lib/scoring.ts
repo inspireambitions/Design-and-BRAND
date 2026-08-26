@@ -174,6 +174,12 @@ export function isArabicText(text: string): boolean {
   return arabic > 0 && arabic >= latin;
 }
 
+/** Any Arabic script means the English-only fallback cannot judge the whole
+ * answer fairly, even when most of the answer is in English. */
+export function containsArabicScript(text: string): boolean {
+  return /[؀-ۿ]/.test(text);
+}
+
 /**
  * Honest refusal for Arabic answers on the structure checker.
  * Every pattern in this checker is English-literal, so an Arabic answer would

@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { Lang, StringKey } from '@/lib/i18n';
 import { t as translate } from '@/lib/i18n';
 import { loadLang, saveLang } from '@/lib/storage';
+import { purgeExpiredInterviewDrafts } from '@/lib/session-draft';
 
 type LanguageContextValue = {
   lang: Lang;
@@ -23,6 +24,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Lang>('en');
 
   useEffect(() => {
+    purgeExpiredInterviewDrafts(window.localStorage);
     setLangState(loadLang());
     if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
       const startAnalytics = () => {

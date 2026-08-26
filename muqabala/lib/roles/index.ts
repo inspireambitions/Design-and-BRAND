@@ -13,6 +13,20 @@ export type { Competency, Question, Role } from './shared';
 export { CUSTOM_ROLE_ID, buildCustomRole };
 
 /**
+ * The small first-use shortlist shared by the marketing homepage and practice
+ * picker. Keep this ordered: it deliberately spans the largest candidate
+ * journeys instead of mirroring the full catalogue.
+ */
+export const POPULAR_ROLE_IDS = [
+  'front-office-agent',
+  'customer-service',
+  'nurse',
+  'accountant',
+  'sales-executive',
+  'electrician',
+] as const;
+
+/**
  * Attach the shared question bank matching each role's competency family, so
  * repeat practice draws fresh questions instead of the same five. Matched by
  * reference: every catalogue role imports one of the three shared competency
