@@ -12,10 +12,23 @@ export function configuredOrigin(): string {
   return (process.env.APP_ORIGIN || deploymentOrigin || 'https://trymuqabala.com').replace(/\/$/, '');
 }
 
+/** Origins allowed to mutate interview state (create attempt, share, save). */
+export function trustedOrigins(): string[] {
+  const origins = new Set<string>([configuredOrigin()]);
+  const productionAlias = process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL.replace(/^https?:\/\//, '')}`
+    : null;
+  if (productionAlias) origins.add(productionAlias.replace(/\/$/, ''));
+  // Stable Vercel production alias used in docs and gates.
+  origins.add('https://design-and-brand-orpin.vercel.app');
+  origins.add('https://trymuqabala.com');
+  return [...origins];
+}
+
 export function hasTrustedOrigin(request: Request): boolean {
   const origin = request.headers.get('origin');
   if (!origin) return false;
-  if (origin === configuredOrigin()) return true;
+  if (trustedOrigins().includes(origin)) return true;
   return process.env.NODE_ENV !== 'production' && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
 }
 
