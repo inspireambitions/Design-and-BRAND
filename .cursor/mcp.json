@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "vercel": {
+      "url": "https://mcp.vercel.com"
+    },
+    "supabase": {
+      "url": "https://mcp.supabase.com/mcp?project_ref=hmaxzpgsefzpflrwzopa&read_only=true&features=database%2Cdebugging%2Cdocs%2Cdevelopment"
+    }
+  }
+}
