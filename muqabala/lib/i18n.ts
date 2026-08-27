@@ -48,6 +48,15 @@ export const STRINGS = {
     checkCamera: 'Camera',
     checkMic: 'Microphone',
     checkTranscript: 'Words as you speak',
+    deviceGuidanceTitle: 'Best on your phone',
+    deviceGuidanceMobile:
+      'Video and speaking work best in Chrome on Android or Safari on iPhone. Typing works on any device with the same feedback.',
+    deviceGuidanceDesktopOk:
+      'On a computer, speaking or typing works best. Video practice is built for phones, but you still get the same feedback.',
+    deviceGuidanceDesktopLimited:
+      'This browser cannot record video on a computer. Choose speaking or typing. You get the same feedback.',
+    deviceGuidanceDesktopVideo:
+      'Video practice works best on a phone. On desktop, choose speaking or typing instead.',
     enableCamera: 'Test my camera first (optional)',
     cameraIdle: 'Your camera preview will appear here.',
     cameraStarting: 'Starting camera…',
@@ -339,6 +348,32 @@ export const STRINGS = {
     copyReport: 'Copy report',
     saveReportHint:
       'This opens your phone\u2019s print screen. Choose "Save as PDF" to keep the report.',
+    reportBandStrong: 'Strong answer structure. Keep refining the details.',
+    reportBandMid: 'Good foundation. A few clear additions will lift this.',
+    reportBandLow: 'You showed relevant experience. Structure is the next step.',
+    reportBandBuild: 'Early stage. Focus on one complete example per question.',
+    reportStatDate: 'Date',
+    reportStatQuestions: 'Questions',
+    reportStatScored: 'Scored',
+    reportStatPending: 'pending',
+    reportTrustNote: 'Scores reflect answer content only. We never score face, accent or personality.',
+    reportViewAnswer: 'View your answer',
+    reportFeedbackPending: 'Feedback could not be generated for this answer',
+    reportFeedbackPendingBody:
+      'Your answer is saved. Open this report on the device where you practised and try getting feedback again, or repeat the question in a new practice session.',
+    reportCompetencies: 'Competency breakdown',
+    reportFooterNote: 'Practice report only. Muqabala does not make hiring decisions.',
+    reportRetryFeedback: 'Try feedback again',
+    reportRetrying: 'Generating feedback…',
+    reportRetrySuccess: 'Feedback updated. The report will refresh.',
+    reportRetryFailed: 'Feedback could not be generated. Try again in a moment.',
+    starProbeEyebrow: 'Follow-up coaching',
+    starProbeTitle: 'Let us build a clearer example together',
+    starProbeBody: 'Your answer has good material. One short follow-up can help you show what you did more clearly.',
+    starProbeAccept: 'Answer follow-up',
+    starProbeSkip: 'Skip follow-up',
+    starProbeLabel: 'Follow-up',
+    starProbeReviewNote: 'This follow-up will be added to your earlier answer before feedback.',
 
     // progress
     progressTitle: 'Your progress',
@@ -405,6 +440,15 @@ export const STRINGS = {
     checkMic: 'الميكروفون',
     checkTranscript: 'النص المباشر',
     enableCamera: 'اختبر الكاميرا أولاً (اختياري)',
+    deviceGuidanceTitle: 'الأفضل على الهاتف',
+    deviceGuidanceMobile:
+      'يعمل الفيديو والتحدث بشكل أفضل في Chrome على Android أو Safari على iPhone. تعمل الكتابة على أي جهاز بنفس الملاحظات.',
+    deviceGuidanceDesktopOk:
+      'على الحاسوب، يعمل التحدث أو الكتابة بشكل أفضل. التدريب بالفيديو مخصص للهاتف، لكنك تحصل على نفس الملاحظات.',
+    deviceGuidanceDesktopLimited:
+      'لا يمكن لهذا المتصفح تسجيل الفيديو على الحاسوب. اختر التحدث أو الكتابة. ستحصل على نفس الملاحظات.',
+    deviceGuidanceDesktopVideo:
+      'التدريب بالفيديو يعمل بشكل أفضل على الهاتف. على الحاسوب، اختر التحدث أو الكتابة.',
     cameraIdle: 'ستظهر معاينة الكاميرا هنا.',
     cameraStarting: 'جاري تشغيل الكاميرا…',
     cameraDeniedHelp:
@@ -692,6 +736,32 @@ export const STRINGS = {
     copyReport: 'انسخ التقرير',
     saveReportHint:
       'يفتح هذا شاشة الطباعة في هاتفك. اختر "حفظ كـ PDF" للاحتفاظ بالتقرير.',
+    reportBandStrong: 'بنية إجابة قوية. واصل تحسين التفاصيل.',
+    reportBandMid: 'أساس جيد. بعض الإضافات الواضحة سترفع المستوى.',
+    reportBandLow: 'أظهرت خبرة مناسبة. البنية هي الخطوة التالية.',
+    reportBandBuild: 'مرحلة مبكرة. ركّز على مثال واحد كامل لكل سؤال.',
+    reportStatDate: 'التاريخ',
+    reportStatQuestions: 'الأسئلة',
+    reportStatScored: 'مُقيَّمة',
+    reportStatPending: 'معلّقة',
+    reportTrustNote: 'الدرجات تعكس محتوى الإجابة فقط. لا نقيّم الوجه أو اللهجة أو الشخصية.',
+    reportViewAnswer: 'عرض إجابتك',
+    reportFeedbackPending: 'تعذر إنشاء ملاحظات لهذه الإجابة',
+    reportFeedbackPendingBody:
+      'إجابتك محفوظة. افتح هذا التقرير على الجهاز الذي تدرّبت عليه وحاول الحصول على الملاحظات مرة أخرى، أو أعد السؤال في جلسة تدريب جديدة.',
+    reportCompetencies: 'تفصيل الكفاءات',
+    reportFooterNote: 'تقرير تدريب فقط. لا يتخذ مقابلة قرارات التوظيف.',
+    reportRetryFeedback: 'حاول الملاحظات مرة أخرى',
+    reportRetrying: 'جاري إنشاء الملاحظات…',
+    reportRetrySuccess: 'تم تحديث الملاحظات. سيتم تحديث التقرير.',
+    reportRetryFailed: 'تعذر إنشاء الملاحظات. حاول مرة أخرى بعد قليل.',
+    starProbeEyebrow: 'تدريب متابعة',
+    starProbeTitle: 'لنبني مثالاً أوضح معاً',
+    starProbeBody: 'إجابتك تحتوي على مادة جيدة. متابعة قصيرة تساعدك على توضيح ما فعلته.',
+    starProbeAccept: 'أجب على المتابعة',
+    starProbeSkip: 'تخطي المتابعة',
+    starProbeLabel: 'متابعة',
+    starProbeReviewNote: 'ستُضاف هذه المتابعة إلى إجابتك السابقة قبل الملاحظات.',
 
     progressTitle: 'تقدمك',
     progressEmpty: 'لا توجد مقابلات تدريبية بعد. ستظهر درجاتك هنا بعد إكمال واحدة.',

@@ -265,6 +265,10 @@ unlimited retries, evidence-based feedback, progress tracking, works with or wit
 
 ## 6. Working with the advisory board
 
+The formal **Product Council** charter, operating rhythm and active mandates live in
+[`docs/product-council.md`](./docs/product-council.md). Use it when evaluating significant
+product bets or reviewing external tester feedback.
+
 Product decisions on this project are reviewed against six standing advisors. When Codex is
 asked to **supervise** or review work, evaluate against their non-negotiables and say which
 are met, missing, or not yet applicable:

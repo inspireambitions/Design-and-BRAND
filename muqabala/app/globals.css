@@ -1072,6 +1072,369 @@ body[dir='rtl'] .mic-label {
 
 /* ---------- report ---------- */
 
+.report-hero {
+  padding: 1.35rem 1.25rem 1.15rem;
+  border: 1px solid color-mix(in srgb, var(--jade) 22%, var(--line));
+  background:
+    linear-gradient(165deg, color-mix(in srgb, var(--jade-soft) 85%, var(--surface)) 0%, var(--surface) 52%);
+  box-shadow: var(--shadow-lift);
+}
+
+.report-hero-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.report-hero-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.report-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.55rem;
+}
+
+.report-brand-mark {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.45rem;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-arabic);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--jade-deep);
+  background: var(--jade-soft);
+}
+
+.report-brand-name {
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.report-eyebrow {
+  color: var(--jade);
+  margin-bottom: 0.25rem;
+}
+
+.report-title {
+  font-size: clamp(1.45rem, 4.5vw, 1.85rem);
+  line-height: 1.15;
+  margin: 0;
+}
+
+.report-band {
+  margin: 0.55rem 0 0;
+  font-size: 0.95rem;
+  color: var(--ink-soft);
+  max-width: 28rem;
+}
+
+.report-hero-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  flex: none;
+}
+
+.report-overall-label {
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+body[dir='rtl'] .report-overall-label {
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.report-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin: 1.1rem 0 0;
+  padding: 0;
+}
+
+.report-stat {
+  margin: 0;
+  padding: 0.65rem 0.7rem;
+  border-radius: calc(var(--radius) - 2px);
+  background: color-mix(in srgb, var(--surface-sunk) 65%, var(--surface));
+  border: 1px solid var(--line);
+}
+
+.report-stat dt {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+body[dir='rtl'] .report-stat dt {
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.report-stat dd {
+  margin: 0.15rem 0 0;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.report-stat-note {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--warn);
+}
+
+.report-trust {
+  margin: 0.85rem 0 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+  color: var(--ink-faint);
+}
+
+.report-question {
+  border-inline-start: 3px solid var(--line-strong);
+  box-shadow: var(--shadow);
+}
+
+.report-question-strong { border-inline-start-color: var(--good); }
+.report-question-mid { border-inline-start-color: var(--gold); }
+.report-question-low { border-inline-start-color: var(--warn); }
+.report-question-build { border-inline-start-color: var(--crit); }
+.report-question-neutral { border-inline-start-color: var(--line-strong); }
+
+.report-question-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.85rem;
+}
+
+.report-question-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.report-question-badge {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--jade);
+  margin-bottom: 0.35rem;
+}
+
+body[dir='rtl'] .report-question-badge {
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.report-question-headline {
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+
+.report-question-headline strong {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.report-question-sep {
+  opacity: 0.45;
+  padding-inline: 0.2rem;
+}
+
+.report-question-text {
+  margin: 0.65rem 0 0;
+  font-size: 1.05rem;
+  line-height: 1.45;
+}
+
+.score-ring-sm {
+  width: 3.6rem;
+  height: 3.6rem;
+}
+
+.score-ring-sm .score-ring-inner {
+  width: 2.85rem;
+  height: 2.85rem;
+  font-size: 1rem;
+}
+
+.report-feedback-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-top: 0.95rem;
+}
+
+.report-feedback-block {
+  padding: 0.85rem 0.95rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+}
+
+.report-feedback-good {
+  background: color-mix(in srgb, var(--good-soft) 70%, var(--surface));
+  border-color: color-mix(in srgb, var(--good) 25%, var(--line));
+}
+
+.report-feedback-grow {
+  background: color-mix(in srgb, var(--gold-soft) 55%, var(--surface));
+  border-color: color-mix(in srgb, var(--gold) 25%, var(--line));
+}
+
+.report-block-label {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 0.45rem;
+}
+
+body[dir='rtl'] .report-block-label {
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.report-bullet-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.report-bullet-list li {
+  position: relative;
+  padding-inline-start: 1.15rem;
+  font-size: 0.94rem;
+  line-height: 1.55;
+}
+
+.report-feedback-good .report-bullet-list li::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0.55rem;
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 50%;
+  background: var(--good);
+}
+
+.report-feedback-grow .report-bullet-list li::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0.55rem;
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 50%;
+  background: var(--gold);
+}
+
+.report-coach-tip {
+  margin-top: 0;
+}
+
+.report-pending {
+  margin-top: 0.85rem;
+  padding: 0.85rem 0.95rem;
+  border-radius: var(--radius);
+  background: var(--warn-soft);
+  border: 1px solid color-mix(in srgb, var(--warn) 35%, var(--line));
+}
+
+.report-pending-title {
+  margin: 0 0 0.25rem;
+  font-family: var(--font-display);
+  font-weight: 650;
+  font-size: 0.92rem;
+  color: var(--warn);
+}
+
+.report-transcript,
+.report-competencies {
+  margin-top: 0.85rem;
+}
+
+.report-answer-body {
+  margin-top: 0.55rem;
+}
+
+.report-answer-body p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+
+.report-footer {
+  text-align: center;
+  color: var(--ink-faint);
+  padding: 0.5rem 0 1rem;
+}
+
+.report-retry {
+  margin-top: 0.75rem;
+}
+
+.device-guidance {
+  border-color: color-mix(in srgb, var(--jade) 28%, var(--line));
+  background: color-mix(in srgb, var(--jade-soft) 45%, var(--surface));
+}
+
+.star-probe-card {
+  border: 1px solid color-mix(in srgb, var(--jade) 30%, var(--line));
+  background: color-mix(in srgb, var(--jade-soft) 55%, var(--surface));
+  box-shadow: var(--shadow);
+}
+
+.star-probe-question {
+  margin: 0;
+  padding: 0.85rem 0.95rem;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.report-footer-brand {
+  margin-top: 0.35rem;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+}
+
 .report-meta {
   font-family: var(--font-display);
   font-size: 0.8rem;
@@ -1121,11 +1484,47 @@ body[dir='rtl'] .mic-label {
   .card,
   .card-flat,
   .answer-recap,
-  .comp-row {
+  .comp-row,
+  .report-hero,
+  .report-question,
+  .report-feedback-block,
+  .report-pending {
     box-shadow: none;
     border-color: #CCCCCC;
     break-inside: avoid;
     page-break-inside: avoid;
+  }
+
+  .report-hero {
+    background: #FFFFFF;
+    border-color: #CCCCCC;
+  }
+
+  .report-stat {
+    background: #F4F4F4;
+    border-color: #CCCCCC;
+  }
+
+  .report-feedback-good,
+  .report-feedback-grow,
+  .report-pending {
+    background: #F4F4F4;
+    border-color: #CCCCCC;
+  }
+
+  .report-transcript,
+  .report-competencies {
+    display: block;
+  }
+
+  .report-transcript > summary,
+  .report-competencies > summary {
+    display: none;
+  }
+
+  .report-transcript .answer-recap,
+  .report-competencies .stack-sm {
+    display: block !important;
   }
 
   .stack-sm h3 {

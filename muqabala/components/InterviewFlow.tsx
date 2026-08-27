@@ -15,7 +15,19 @@ import {
 import { track } from '@/lib/analytics';
 import { rubricForQuestion } from '@/lib/question-rubric';
 import { compareRetries } from '@/lib/retry-comparison';
+import {
+  combineProbeTranscript,
+  nextStarProbe,
+  probeQuestion,
+  type StarElement,
+} from '@/lib/star-probe';
 import { startRecording, startLevelMeter, type AnswerRecorder, type LevelMeter } from '@/lib/media';
+import {
+  defaultAnswerMethod,
+  detectDeviceCapabilities,
+  type DeviceCapabilities,
+  videoModeSupported,
+} from '@/lib/device-capabilities';
 import {
   isSpeechSupported,
   isOnDeviceRecognitionAvailable,
@@ -125,7 +137,10 @@ export function InterviewFlow({
   const [reportCopied, setReportCopied] = useState(false);
   const [speechOk, setSpeechOk] = useState(true);
   const [onDeviceSpeech, setOnDeviceSpeech] = useState(false);
-  const [answerMethod, setAnswerMethod] = useState<'speak' | 'type' | 'video'>('speak');
+  const [answerMethod, setAnswerMethod] = useState<'speak' | 'type' | 'video'>(() =>
+    defaultAnswerMethod(detectDeviceCapabilities()),
+  );
+  const [deviceCaps] = useState<DeviceCapabilities>(() => detectDeviceCapabilities());
   /**
    * Guided: revealed questions, feedback after each answer, retakes.
    * Mock: eight questions one at a time, no interruptions, report at the end.
@@ -163,6 +178,13 @@ export function InterviewFlow({
   const [pendingDraft, setPendingDraft] = useState<InterviewSessionDraft | null>(null);
   const [confirmDiscardDraft, setConfirmDiscardDraft] = useState(false);
   const [sessionLanguage, setSessionLanguage] = useState<'en' | 'ar' | null>(null);
+  const [starProbe, setStarProbe] = useState<{
+    element: StarElement;
+    question: string;
+    baseTranscript: string;
+  } | null>(null);
+  const [starProbeDeclined, setStarProbeDeclined] = useState(false);
+  const [starProbeUsed, setStarProbeUsed] = useState<Record<number, boolean>>({});
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -180,7 +202,13 @@ export function InterviewFlow({
 
   const selectedAnswerMethod = speechOk ? answerMethod : 'type';
   const useVoice = selectedAnswerMethod !== 'type';
-  const useVideo = selectedAnswerMethod === 'video';
+  const useVideo = selectedAnswerMethod === 'video' && videoModeSupported(deviceCaps);
+  const deviceGuidanceKey =
+    deviceCaps.guidance === 'mobile'
+      ? 'deviceGuidanceMobile'
+      : deviceCaps.guidance === 'desktopLimited'
+        ? 'deviceGuidanceDesktopLimited'
+        : 'deviceGuidanceDesktopOk' as const;
   const activeQuestions = resumedQuestions ?? (
     mode === 'mock' && mockQuestions && mockQuestions.length > 0
       ? mockQuestions
@@ -193,6 +221,17 @@ export function InterviewFlow({
   const isLast = index === activeQuestions.length - 1;
   const interviewLanguage = sessionLanguage ?? lang;
   const questionText = interviewLanguage === 'ar' ? question.textAr : question.text;
+  const promptText = starProbe?.question ?? questionText;
+  const scoringTranscript = starProbe
+    ? combineProbeTranscript(starProbe.baseTranscript, starProbe.question, transcript, t('starProbeLabel'))
+    : transcript;
+  const starFollowUp = feedback
+    && mode === 'guided'
+    && !starProbe
+    && !starProbeDeclined
+    && !starProbeUsed[index]
+    ? nextStarProbe(feedback)
+    : null;
   const hintText = interviewLanguage === 'ar' ? question.hintAr : question.hint;
   const questionRubric = rubricForQuestion(role, question);
   const reportRoleTitle = customTitle || (interviewLanguage === 'ar' ? role.titleAr : role.title);
@@ -224,6 +263,11 @@ export function InterviewFlow({
     setSyncState('error');
     return false;
   }, [serverAttemptId]);
+
+  useEffect(() => {
+    setStarProbeDeclined(false);
+    setStarProbe(null);
+  }, [index]);
 
   const restoreDraft = useCallback((draft: InterviewSessionDraft) => {
     const restoredQuestions = draft.questionSnapshot.length ? draft.questionSnapshot : activeQuestions;
@@ -477,7 +521,9 @@ export function InterviewFlow({
   }, [playbackUrl]);
 
   const enableCamera = useCallback(async (): Promise<boolean> => {
-    if (streamRef.current) return true;
+    if (streamRef.current?.getVideoTracks().some((track) => track.readyState === 'live')) return true;
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
     setRequestingCamera(true);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -502,7 +548,9 @@ export function InterviewFlow({
   }, []);
 
   const enableMicrophone = useCallback(async (): Promise<boolean> => {
-    if (streamRef.current) return true;
+    if (streamRef.current?.getTracks().some((track) => track.readyState === 'live')) return true;
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
     setRequestingCamera(true);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
@@ -528,6 +576,24 @@ export function InterviewFlow({
     }
     restoreDraft(safeDraft);
   }, [enableCamera, enableMicrophone, restoreDraft]);
+
+  const ensureCaptureReady = useCallback(async (): Promise<boolean> => {
+    if (!useVoice) return true;
+    const stream = streamRef.current;
+    if (stream?.getTracks().every((track) => track.readyState === 'live')) {
+      setStreamLost(false);
+      if (useVideo && stream.getVideoTracks().some((track) => track.readyState === 'live')) {
+        setCameraState('granted');
+      }
+      return true;
+    }
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    setCameraState('idle');
+    setStreamLost(false);
+    return useVideo ? enableCamera() : enableMicrophone();
+  }, [enableCamera, enableMicrophone, useVideo, useVoice]);
+
   // Re-attach the stream whenever the video element remounts between stages.
   useEffect(() => {
     if (cameraState === 'granted' && videoRef.current && streamRef.current) {
@@ -572,7 +638,7 @@ export function InterviewFlow({
     );
   }, []);
 
-  const beginRecording = useCallback(() => {
+  const beginRecording = useCallback(async () => {
     setTranscript('');
     setInterim('');
     if (playbackUrl) {
@@ -585,6 +651,14 @@ export function InterviewFlow({
     setStage('record');
 
     setStreamLost(false);
+    if (useVoice) {
+      const ready = await ensureCaptureReady();
+      if (!ready) {
+        setDeviceFallback(true);
+        await switchToTyping();
+        return;
+      }
+    }
     streamRef.current?.getTracks().forEach((track) => { track.enabled = true; });
     const live = Boolean(useVoice && streamRef.current);
     setRecordingLive(live);
@@ -595,7 +669,7 @@ export function InterviewFlow({
         startMicMeter();
       }
     }
-  }, [playbackUrl, question.answerSeconds, startMicMeter, startSpeechCapture, useVoice]);
+  }, [ensureCaptureReady, playbackUrl, question.answerSeconds, startMicMeter, startSpeechCapture, switchToTyping, useVoice]);
 
   const toggleMockPause = useCallback(() => {
     if (mode !== 'mock' || stage !== 'record' || !useVoice) return;
@@ -708,7 +782,7 @@ export function InterviewFlow({
     // A lost stream freezes the clock instead of racing on over dead capture.
     if (stage === 'record' && streamLost) return;
     if (secondsLeft <= 0) {
-      if (stage === 'prep') beginRecording();
+      if (stage === 'prep') void beginRecording();
       else finishAnswer();
       return;
     }
@@ -745,7 +819,7 @@ export function InterviewFlow({
         body: JSON.stringify({
           roleId: role.id,
           questionId: question.id,
-          transcript,
+          transcript: scoringTranscript,
           lang: interviewLanguage,
           roleTitle: customTitle,
           interviewToken,
@@ -779,6 +853,11 @@ export function InterviewFlow({
         // shown together in the final report.
         await completeAnswerRef.current?.(data.feedback);
       } else {
+        if (starProbe) {
+          setTranscript(scoringTranscript);
+          setStarProbe(null);
+          setStarProbeUsed((used) => ({ ...used, [index]: true }));
+        }
         setFeedback(data.feedback);
         setStage('feedback');
       }
@@ -800,7 +879,31 @@ export function InterviewFlow({
       scoringInFlightRef.current = false;
       setIsScoring(false);
     }
-  }, [customTitle, index, interviewLanguage, interviewToken, mode, question.id, role.id, serverAttemptId, transcript, transcriptConfirmed]);
+  }, [customTitle, index, interviewLanguage, interviewToken, mode, question.id, role.id, scoringTranscript, serverAttemptId, starProbe, transcript, transcriptConfirmed]);
+
+  const startStarProbe = useCallback(() => {
+    if (!feedback || !starFollowUp) return;
+    setStarProbe({
+      element: starFollowUp,
+      question: probeQuestion(starFollowUp, interviewLanguage),
+      baseTranscript: transcript,
+    });
+    setTranscript('');
+    setTranscriptConfirmed(false);
+    setInterim('');
+    setFeedback(null);
+    setScoringError(null);
+    setRetrySeconds(null);
+    scoringSessionRef.current = null;
+    automaticRetriesRef.current = 0;
+    setSecondsLeft(Math.min(question.prepSeconds, 20));
+    setStage('prep');
+  }, [feedback, interviewLanguage, question.prepSeconds, starFollowUp, transcript]);
+
+  const skipStarProbe = useCallback(() => {
+    setStarProbeDeclined(true);
+    setStarProbeUsed((used) => ({ ...used, [index]: true }));
+  }, [index]);
 
   useEffect(() => {
     if (retrySeconds === null) return;
@@ -825,6 +928,13 @@ export function InterviewFlow({
     setRetrySeconds(null);
     scoringSessionRef.current = null;
     automaticRetriesRef.current = 0;
+    setStarProbe(null);
+    setStarProbeDeclined(false);
+    setStarProbeUsed((used) => {
+      const next = { ...used };
+      delete next[index];
+      return next;
+    });
     setTranscript('');
     setTranscriptConfirmed(false);
     setInterim('');
@@ -875,7 +985,10 @@ export function InterviewFlow({
     setTranscriptConfirmed(false);
     setPreviousTry(null);
     setInterim('');
+    setStarProbe(null);
     setAttemptCount(1);
+    setStreamLost(false);
+    setRecordingLive(false);
 
     if (isLast) {
       setStage('done');
@@ -1089,6 +1202,11 @@ export function InterviewFlow({
             </details>
           </div>
 
+          <div className="notice device-guidance" role="note">
+            <strong>{t('deviceGuidanceTitle')}</strong>
+            <p className="tiny" style={{ marginTop: '0.35rem' }}>{t(deviceGuidanceKey)}</p>
+          </div>
+
           {/* ---------- interview format ---------- */}
           <div className="mode-row">
             {mode === 'mock' && mockQuestions && mockQuestions.length > 0 && (
@@ -1181,9 +1299,9 @@ export function InterviewFlow({
                 type="button"
                 className={`mode-card method-card ${selectedAnswerMethod === 'video' ? 'on' : ''}`}
                 aria-pressed={selectedAnswerMethod === 'video'}
-                aria-disabled={!speechOk}
+                aria-disabled={!speechOk || !videoModeSupported(deviceCaps)}
                 onClick={() => {
-                  if (!speechOk) return;
+                  if (!speechOk || !videoModeSupported(deviceCaps)) return;
                   streamRef.current?.getTracks().forEach((track) => track.stop());
                   streamRef.current = null;
                   setCameraState('idle');
@@ -1193,9 +1311,11 @@ export function InterviewFlow({
               >
                 <span className="method-title-row">
                   <span className="mode-title">{t('answerVideoTitle')}</span>
-                  <span className="choice-note">{t('answerVideoBest')}</span>
+                  {videoModeSupported(deviceCaps) && <span className="choice-note">{t('answerVideoBest')}</span>}
                 </span>
-                <span className="tiny">{t('answerVideoBody')}</span>
+                <span className="tiny">
+                  {videoModeSupported(deviceCaps) ? t('answerVideoBody') : t('deviceGuidanceDesktopVideo')}
+                </span>
               </button>
             </div>
           </section>
@@ -1359,16 +1479,16 @@ export function InterviewFlow({
           )}
           <div className="card stack">
             <p className="eyebrow">
-              {t('question')} {index + 1}
+              {starProbe ? t('starProbeEyebrow') : `${t('question')} ${index + 1}`}
             </p>
-            <h2 style={{ fontSize: '1.35rem' }}>{questionText}</h2>
-            {mode === 'guided' && (
+            <h2 style={{ fontSize: '1.35rem' }} dir="auto">{promptText}</h2>
+            {mode === 'guided' && !starProbe && (
               <div className="coach-tip">
                 <strong>{t('tip')}</strong>
                 {hintText}
               </div>
             )}
-            {questionRubric.length > 0 && (
+            {questionRubric.length > 0 && !starProbe && (
               <div className="rubric-preview" aria-label={t('rubricPreviewTitle')}>
                 <div>
                   <p className="eyebrow">{t('rubricPreviewTitle')}</p>
@@ -1399,7 +1519,7 @@ export function InterviewFlow({
             </div>
             <p className="muted">{useVoice ? t('prepBody') : t('prepBodyType')}</p>
             <div className="row" style={{ justifyContent: 'center' }}>
-              <button type="button" className="btn btn-primary" onClick={beginRecording}>
+              <button type="button" className="btn btn-primary" onClick={() => void beginRecording()}>
                 {t('startAnswer')}
               </button>
             </div>
@@ -1418,9 +1538,9 @@ export function InterviewFlow({
           )}
           <div className="card stack">
             <p className="eyebrow">
-              {t('question')} {index + 1}
+              {starProbe ? t('starProbeEyebrow') : `${t('question')} ${index + 1}`}
             </p>
-            <h2 style={{ fontSize: '1.25rem' }}>{questionText}</h2>
+            <h2 style={{ fontSize: '1.25rem' }} dir="auto">{promptText}</h2>
           </div>
 
           <div className="card stack">
@@ -1576,8 +1696,11 @@ export function InterviewFlow({
       {stage === 'review' && (
         <div className="stack">
           <div className="card stack">
-            <p className="eyebrow">{t('yourAnswer')}</p>
-            <h2 style={{ fontSize: '1.2rem' }}>{questionText}</h2>
+            <p className="eyebrow">{starProbe ? t('starProbeEyebrow') : t('yourAnswer')}</p>
+            <h2 style={{ fontSize: '1.2rem' }} dir="auto">{promptText}</h2>
+            {starProbe && (
+              <p className="tiny muted">{t('starProbeReviewNote')}</p>
+            )}
 
             {playbackUrl && (
               <div className="stack-sm">
@@ -1748,6 +1871,22 @@ export function InterviewFlow({
                   </div>
                 );
               })()}
+            </div>
+          )}
+          {starFollowUp && (
+            <div className="card stack-sm star-probe-card">
+              <p className="eyebrow">{t('starProbeEyebrow')}</p>
+              <h3 style={{ fontSize: '1.15rem' }}>{t('starProbeTitle')}</h3>
+              <p className="muted">{t('starProbeBody')}</p>
+              <p className="star-probe-question" dir="auto">{probeQuestion(starFollowUp, interviewLanguage)}</p>
+              <div className="row flow-actions">
+                <button type="button" className="btn btn-primary" onClick={startStarProbe}>
+                  {t('starProbeAccept')}
+                </button>
+                <button type="button" className="btn btn-quiet" onClick={skipStarProbe}>
+                  {t('starProbeSkip')}
+                </button>
+              </div>
             </div>
           )}
           <div className="row flow-actions">

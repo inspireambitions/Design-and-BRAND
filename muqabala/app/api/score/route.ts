@@ -5,6 +5,7 @@ import { zodTextFormat } from 'openai/helpers/zod';
 import { getRole, type Question, type Role } from '@/lib/roles';
 import { verifyInterview, roleFromToken } from '@/lib/interview-token';
 import { arabicUnavailable, structureCheck, containsArabicScript, type AnswerFeedback } from '@/lib/scoring';
+import { isRetryableFeedback } from '@/lib/report-feedback';
 import { reportScoringFailure } from '@/lib/sentry-server';
 import { limitScoring } from '@/lib/rate-limit';
 import { interviewAccess } from '@/lib/server/interview-access';
@@ -304,7 +305,7 @@ export async function POST(request: Request) {
   if (!parsedBody.success) {
     return Response.json({ error: 'roleId, questionId and transcript are required.' }, { status: 400 });
   }
-  const { roleId, questionId, transcript, lang, roleTitle, interviewToken, interviewId, questionIndex } = parsedBody.data;
+  const { roleId, questionId, transcript, lang, roleTitle, interviewToken, interviewId, questionIndex, rescore } = parsedBody.data;
 
   if (transcript.length > MAX_TRANSCRIPT_CHARS) {
     return Response.json(
@@ -373,6 +374,24 @@ export async function POST(request: Request) {
     if (questionIndex === undefined || stored.interview.question_snapshot[questionIndex]?.id !== questionId) {
       return Response.json({ error: 'Question does not match this interview.' }, { status: 400 });
     }
+    if (rescore && questionIndex !== undefined) {
+      const { data: existingAnswer } = await stored.admin!.from('interview_answers')
+        .select('feedback, transcript')
+        .eq('interview_id', interviewId)
+        .eq('question_index', questionIndex)
+        .maybeSingle();
+      if (
+        existingAnswer
+        && existingAnswer.transcript === transcript
+        && isRetryableFeedback(existingAnswer.feedback as AnswerFeedback | null)
+      ) {
+        await stored.admin!.from('interview_answers').update({
+          feedback: null,
+          scoring_status: 'failed',
+          scoring_claim_hash: null,
+        }).eq('interview_id', interviewId).eq('question_index', questionIndex);
+      }
+    }
     const storedQuestion = stored.interview.question_snapshot[questionIndex];
     scoringClaimHash = tokenHash(newOpaqueToken());
     const { data: claims, error } = await stored.admin!.rpc('claim_interview_scoring', {
@@ -403,7 +422,11 @@ export async function POST(request: Request) {
     if (stored?.interview && interviewId && questionIndex !== undefined) {
       let feedbackUpdate = stored.admin!.from('interview_answers').update({
         feedback: answerFeedback,
-        scoring_status: answerFeedback.status === 'scored' ? 'scored' : 'unscored',
+        scoring_status: answerFeedback.status === 'scored'
+          ? 'scored'
+          : isRetryableFeedback(answerFeedback)
+            ? 'failed'
+            : 'unscored',
       }).eq('interview_id', interviewId).eq('question_index', questionIndex).eq('transcript', transcript);
       if (scoringClaimHash) feedbackUpdate = feedbackUpdate.eq('scoring_claim_hash', scoringClaimHash);
       const { data: storedFeedback, error: feedbackError } = await feedbackUpdate.select('id').maybeSingle();
