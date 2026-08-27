@@ -48,6 +48,15 @@ export const STRINGS = {
     checkCamera: 'Camera',
     checkMic: 'Microphone',
     checkTranscript: 'Words as you speak',
+    deviceGuidanceTitle: 'Best on your phone',
+    deviceGuidanceMobile:
+      'Video and speaking work best in Chrome on Android or Safari on iPhone. Typing works on any device with the same feedback.',
+    deviceGuidanceDesktopOk:
+      'On a computer, speaking or typing works best. Video practice is built for phones, but you still get the same feedback.',
+    deviceGuidanceDesktopLimited:
+      'This browser cannot record video on a computer. Choose speaking or typing. You get the same feedback.',
+    deviceGuidanceDesktopVideo:
+      'Video practice works best on a phone. On desktop, choose speaking or typing instead.',
     enableCamera: 'Test my camera first (optional)',
     cameraIdle: 'Your camera preview will appear here.',
     cameraStarting: 'Starting camera…',
@@ -431,6 +440,15 @@ export const STRINGS = {
     checkMic: 'الميكروفون',
     checkTranscript: 'النص المباشر',
     enableCamera: 'اختبر الكاميرا أولاً (اختياري)',
+    deviceGuidanceTitle: 'الأفضل على الهاتف',
+    deviceGuidanceMobile:
+      'يعمل الفيديو والتحدث بشكل أفضل في Chrome على Android أو Safari على iPhone. تعمل الكتابة على أي جهاز بنفس الملاحظات.',
+    deviceGuidanceDesktopOk:
+      'على الحاسوب، يعمل التحدث أو الكتابة بشكل أفضل. التدريب بالفيديو مخصص للهاتف، لكنك تحصل على نفس الملاحظات.',
+    deviceGuidanceDesktopLimited:
+      'لا يمكن لهذا المتصفح تسجيل الفيديو على الحاسوب. اختر التحدث أو الكتابة. ستحصل على نفس الملاحظات.',
+    deviceGuidanceDesktopVideo:
+      'التدريب بالفيديو يعمل بشكل أفضل على الهاتف. على الحاسوب، اختر التحدث أو الكتابة.',
     cameraIdle: 'ستظهر معاينة الكاميرا هنا.',
     cameraStarting: 'جاري تشغيل الكاميرا…',
     cameraDeniedHelp:

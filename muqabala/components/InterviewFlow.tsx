@@ -23,6 +23,12 @@ import {
 } from '@/lib/star-probe';
 import { startRecording, startLevelMeter, type AnswerRecorder, type LevelMeter } from '@/lib/media';
 import {
+  defaultAnswerMethod,
+  detectDeviceCapabilities,
+  type DeviceCapabilities,
+  videoModeSupported,
+} from '@/lib/device-capabilities';
+import {
   isSpeechSupported,
   isOnDeviceRecognitionAvailable,
   startDictation,
@@ -131,7 +137,10 @@ export function InterviewFlow({
   const [reportCopied, setReportCopied] = useState(false);
   const [speechOk, setSpeechOk] = useState(true);
   const [onDeviceSpeech, setOnDeviceSpeech] = useState(false);
-  const [answerMethod, setAnswerMethod] = useState<'speak' | 'type' | 'video'>('speak');
+  const [answerMethod, setAnswerMethod] = useState<'speak' | 'type' | 'video'>(() =>
+    defaultAnswerMethod(detectDeviceCapabilities()),
+  );
+  const [deviceCaps] = useState<DeviceCapabilities>(() => detectDeviceCapabilities());
   /**
    * Guided: revealed questions, feedback after each answer, retakes.
    * Mock: eight questions one at a time, no interruptions, report at the end.
@@ -193,7 +202,13 @@ export function InterviewFlow({
 
   const selectedAnswerMethod = speechOk ? answerMethod : 'type';
   const useVoice = selectedAnswerMethod !== 'type';
-  const useVideo = selectedAnswerMethod === 'video';
+  const useVideo = selectedAnswerMethod === 'video' && videoModeSupported(deviceCaps);
+  const deviceGuidanceKey =
+    deviceCaps.guidance === 'mobile'
+      ? 'deviceGuidanceMobile'
+      : deviceCaps.guidance === 'desktopLimited'
+        ? 'deviceGuidanceDesktopLimited'
+        : 'deviceGuidanceDesktopOk' as const;
   const activeQuestions = resumedQuestions ?? (
     mode === 'mock' && mockQuestions && mockQuestions.length > 0
       ? mockQuestions
@@ -506,7 +521,9 @@ export function InterviewFlow({
   }, [playbackUrl]);
 
   const enableCamera = useCallback(async (): Promise<boolean> => {
-    if (streamRef.current) return true;
+    if (streamRef.current?.getVideoTracks().some((track) => track.readyState === 'live')) return true;
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
     setRequestingCamera(true);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -531,7 +548,9 @@ export function InterviewFlow({
   }, []);
 
   const enableMicrophone = useCallback(async (): Promise<boolean> => {
-    if (streamRef.current) return true;
+    if (streamRef.current?.getTracks().some((track) => track.readyState === 'live')) return true;
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
     setRequestingCamera(true);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
@@ -557,6 +576,24 @@ export function InterviewFlow({
     }
     restoreDraft(safeDraft);
   }, [enableCamera, enableMicrophone, restoreDraft]);
+
+  const ensureCaptureReady = useCallback(async (): Promise<boolean> => {
+    if (!useVoice) return true;
+    const stream = streamRef.current;
+    if (stream?.getTracks().every((track) => track.readyState === 'live')) {
+      setStreamLost(false);
+      if (useVideo && stream.getVideoTracks().some((track) => track.readyState === 'live')) {
+        setCameraState('granted');
+      }
+      return true;
+    }
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    setCameraState('idle');
+    setStreamLost(false);
+    return useVideo ? enableCamera() : enableMicrophone();
+  }, [enableCamera, enableMicrophone, useVideo, useVoice]);
+
   // Re-attach the stream whenever the video element remounts between stages.
   useEffect(() => {
     if (cameraState === 'granted' && videoRef.current && streamRef.current) {
@@ -601,7 +638,7 @@ export function InterviewFlow({
     );
   }, []);
 
-  const beginRecording = useCallback(() => {
+  const beginRecording = useCallback(async () => {
     setTranscript('');
     setInterim('');
     if (playbackUrl) {
@@ -614,6 +651,14 @@ export function InterviewFlow({
     setStage('record');
 
     setStreamLost(false);
+    if (useVoice) {
+      const ready = await ensureCaptureReady();
+      if (!ready) {
+        setDeviceFallback(true);
+        await switchToTyping();
+        return;
+      }
+    }
     streamRef.current?.getTracks().forEach((track) => { track.enabled = true; });
     const live = Boolean(useVoice && streamRef.current);
     setRecordingLive(live);
@@ -624,7 +669,7 @@ export function InterviewFlow({
         startMicMeter();
       }
     }
-  }, [playbackUrl, question.answerSeconds, startMicMeter, startSpeechCapture, useVoice]);
+  }, [ensureCaptureReady, playbackUrl, question.answerSeconds, startMicMeter, startSpeechCapture, switchToTyping, useVoice]);
 
   const toggleMockPause = useCallback(() => {
     if (mode !== 'mock' || stage !== 'record' || !useVoice) return;
@@ -737,7 +782,7 @@ export function InterviewFlow({
     // A lost stream freezes the clock instead of racing on over dead capture.
     if (stage === 'record' && streamLost) return;
     if (secondsLeft <= 0) {
-      if (stage === 'prep') beginRecording();
+      if (stage === 'prep') void beginRecording();
       else finishAnswer();
       return;
     }
@@ -942,6 +987,8 @@ export function InterviewFlow({
     setInterim('');
     setStarProbe(null);
     setAttemptCount(1);
+    setStreamLost(false);
+    setRecordingLive(false);
 
     if (isLast) {
       setStage('done');
@@ -1155,6 +1202,11 @@ export function InterviewFlow({
             </details>
           </div>
 
+          <div className="notice device-guidance" role="note">
+            <strong>{t('deviceGuidanceTitle')}</strong>
+            <p className="tiny" style={{ marginTop: '0.35rem' }}>{t(deviceGuidanceKey)}</p>
+          </div>
+
           {/* ---------- interview format ---------- */}
           <div className="mode-row">
             {mode === 'mock' && mockQuestions && mockQuestions.length > 0 && (
@@ -1247,9 +1299,9 @@ export function InterviewFlow({
                 type="button"
                 className={`mode-card method-card ${selectedAnswerMethod === 'video' ? 'on' : ''}`}
                 aria-pressed={selectedAnswerMethod === 'video'}
-                aria-disabled={!speechOk}
+                aria-disabled={!speechOk || !videoModeSupported(deviceCaps)}
                 onClick={() => {
-                  if (!speechOk) return;
+                  if (!speechOk || !videoModeSupported(deviceCaps)) return;
                   streamRef.current?.getTracks().forEach((track) => track.stop());
                   streamRef.current = null;
                   setCameraState('idle');
@@ -1259,9 +1311,11 @@ export function InterviewFlow({
               >
                 <span className="method-title-row">
                   <span className="mode-title">{t('answerVideoTitle')}</span>
-                  <span className="choice-note">{t('answerVideoBest')}</span>
+                  {videoModeSupported(deviceCaps) && <span className="choice-note">{t('answerVideoBest')}</span>}
                 </span>
-                <span className="tiny">{t('answerVideoBody')}</span>
+                <span className="tiny">
+                  {videoModeSupported(deviceCaps) ? t('answerVideoBody') : t('deviceGuidanceDesktopVideo')}
+                </span>
               </button>
             </div>
           </section>
@@ -1465,7 +1519,7 @@ export function InterviewFlow({
             </div>
             <p className="muted">{useVoice ? t('prepBody') : t('prepBodyType')}</p>
             <div className="row" style={{ justifyContent: 'center' }}>
-              <button type="button" className="btn btn-primary" onClick={beginRecording}>
+              <button type="button" className="btn btn-primary" onClick={() => void beginRecording()}>
                 {t('startAnswer')}
               </button>
             </div>

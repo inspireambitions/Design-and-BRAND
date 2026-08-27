@@ -1406,6 +1406,11 @@ body[dir='rtl'] .report-block-label {
   margin-top: 0.75rem;
 }
 
+.device-guidance {
+  border-color: color-mix(in srgb, var(--jade) 28%, var(--line));
+  background: color-mix(in srgb, var(--jade-soft) 45%, var(--surface));
+}
+
 .star-probe-card {
   border: 1px solid color-mix(in srgb, var(--jade) 30%, var(--line));
   background: color-mix(in srgb, var(--jade-soft) 55%, var(--surface));
