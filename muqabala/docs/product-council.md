@@ -81,11 +81,11 @@ Before any major bet, answer all five. Weak answers stop or shrink the work.
 
 | Issue | Council owner | Status |
 |---|---|---|
-| Questions 4–6 returned "Try getting feedback again" instead of real feedback | Priya | **Open** — scoring integrity failures need clearer recovery in reports |
+| Questions 4–6 returned "Try getting feedback again" instead of real feedback | Priya | **Shipped** — retry button on reports + failed scoring status |
 | Desktop Chrome/Explorer could not run video interview | Seat 8 + Category designer | **Open** — surface "use phone Chrome" guidance; fix desktop MediaRecorder path |
 | Video preview dropped on some questions (run 3) | Priya | **Open** — investigate stream lifecycle on long mocks |
-| Raw transcript dominates the report; feels utilitarian not premium | Category designer | **In progress** — premium report redesign |
-| Candidate struggled to understand questions and structure answers | Layla | **Roadmap** — STAR funnel/probing follow-ups (see mandate below) |
+| Raw transcript dominates the report; feels utilitarian not premium | Category designer | **Shipped** — premium report redesign |
+| Candidate struggled to understand questions and structure answers | Layla | **Shipped (guided)** — STAR follow-up probing after weak scores |
 
 ### Council verdict on STAR follow-ups
 

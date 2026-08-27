@@ -12,6 +12,8 @@ export const ScoreRequestSchema = z
     /** Server-owned attempt. When present, the answer is saved before scoring. */
     interviewId: z.string().uuid().optional(),
     questionIndex: z.number().int().min(0).max(19).optional(),
+    /** Clear a retryable failed score and generate fresh feedback. */
+    rescore: z.boolean().optional(),
   })
   .strict();
 

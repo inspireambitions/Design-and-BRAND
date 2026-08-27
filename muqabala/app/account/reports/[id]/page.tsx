@@ -19,6 +19,9 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
     client!.from('report_shares').select('id,expires_at').eq('interview_id', id).is('revoked_at', null).gt('expires_at', new Date().toISOString()).order('created_at', { ascending: false }),
   ]);
   if (!interview) notFound();
-  const report = reportProjection(interview as StoredInterview, (answers ?? []) as StoredAnswer[], true) as FullReportData;
+  const report = {
+    ...(reportProjection(interview as StoredInterview, (answers ?? []) as StoredAnswer[], true) as FullReportData),
+    allowRescore: true,
+  };
   return <main className="shell shell-narrow" lang={report.language} dir={report.language === 'ar' ? 'rtl' : 'ltr'}><TopBar showProgressLink={false} /><FullReport report={report} /><ReportActions interviewId={id} roleTitle={report.roleTitle} language={report.language} initialShares={shares ?? []} initialSaved={Boolean(interview.saved)} /></main>;
 }

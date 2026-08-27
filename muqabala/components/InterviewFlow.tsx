@@ -15,6 +15,12 @@ import {
 import { track } from '@/lib/analytics';
 import { rubricForQuestion } from '@/lib/question-rubric';
 import { compareRetries } from '@/lib/retry-comparison';
+import {
+  combineProbeTranscript,
+  nextStarProbe,
+  probeQuestion,
+  type StarElement,
+} from '@/lib/star-probe';
 import { startRecording, startLevelMeter, type AnswerRecorder, type LevelMeter } from '@/lib/media';
 import {
   isSpeechSupported,
@@ -163,6 +169,13 @@ export function InterviewFlow({
   const [pendingDraft, setPendingDraft] = useState<InterviewSessionDraft | null>(null);
   const [confirmDiscardDraft, setConfirmDiscardDraft] = useState(false);
   const [sessionLanguage, setSessionLanguage] = useState<'en' | 'ar' | null>(null);
+  const [starProbe, setStarProbe] = useState<{
+    element: StarElement;
+    question: string;
+    baseTranscript: string;
+  } | null>(null);
+  const [starProbeDeclined, setStarProbeDeclined] = useState(false);
+  const [starProbeUsed, setStarProbeUsed] = useState<Record<number, boolean>>({});
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -193,6 +206,17 @@ export function InterviewFlow({
   const isLast = index === activeQuestions.length - 1;
   const interviewLanguage = sessionLanguage ?? lang;
   const questionText = interviewLanguage === 'ar' ? question.textAr : question.text;
+  const promptText = starProbe?.question ?? questionText;
+  const scoringTranscript = starProbe
+    ? combineProbeTranscript(starProbe.baseTranscript, starProbe.question, transcript, t('starProbeLabel'))
+    : transcript;
+  const starFollowUp = feedback
+    && mode === 'guided'
+    && !starProbe
+    && !starProbeDeclined
+    && !starProbeUsed[index]
+    ? nextStarProbe(feedback)
+    : null;
   const hintText = interviewLanguage === 'ar' ? question.hintAr : question.hint;
   const questionRubric = rubricForQuestion(role, question);
   const reportRoleTitle = customTitle || (interviewLanguage === 'ar' ? role.titleAr : role.title);
@@ -224,6 +248,11 @@ export function InterviewFlow({
     setSyncState('error');
     return false;
   }, [serverAttemptId]);
+
+  useEffect(() => {
+    setStarProbeDeclined(false);
+    setStarProbe(null);
+  }, [index]);
 
   const restoreDraft = useCallback((draft: InterviewSessionDraft) => {
     const restoredQuestions = draft.questionSnapshot.length ? draft.questionSnapshot : activeQuestions;
@@ -745,7 +774,7 @@ export function InterviewFlow({
         body: JSON.stringify({
           roleId: role.id,
           questionId: question.id,
-          transcript,
+          transcript: scoringTranscript,
           lang: interviewLanguage,
           roleTitle: customTitle,
           interviewToken,
@@ -779,6 +808,11 @@ export function InterviewFlow({
         // shown together in the final report.
         await completeAnswerRef.current?.(data.feedback);
       } else {
+        if (starProbe) {
+          setTranscript(scoringTranscript);
+          setStarProbe(null);
+          setStarProbeUsed((used) => ({ ...used, [index]: true }));
+        }
         setFeedback(data.feedback);
         setStage('feedback');
       }
@@ -800,7 +834,31 @@ export function InterviewFlow({
       scoringInFlightRef.current = false;
       setIsScoring(false);
     }
-  }, [customTitle, index, interviewLanguage, interviewToken, mode, question.id, role.id, serverAttemptId, transcript, transcriptConfirmed]);
+  }, [customTitle, index, interviewLanguage, interviewToken, mode, question.id, role.id, scoringTranscript, serverAttemptId, starProbe, transcript, transcriptConfirmed]);
+
+  const startStarProbe = useCallback(() => {
+    if (!feedback || !starFollowUp) return;
+    setStarProbe({
+      element: starFollowUp,
+      question: probeQuestion(starFollowUp, interviewLanguage),
+      baseTranscript: transcript,
+    });
+    setTranscript('');
+    setTranscriptConfirmed(false);
+    setInterim('');
+    setFeedback(null);
+    setScoringError(null);
+    setRetrySeconds(null);
+    scoringSessionRef.current = null;
+    automaticRetriesRef.current = 0;
+    setSecondsLeft(Math.min(question.prepSeconds, 20));
+    setStage('prep');
+  }, [feedback, interviewLanguage, question.prepSeconds, starFollowUp, transcript]);
+
+  const skipStarProbe = useCallback(() => {
+    setStarProbeDeclined(true);
+    setStarProbeUsed((used) => ({ ...used, [index]: true }));
+  }, [index]);
 
   useEffect(() => {
     if (retrySeconds === null) return;
@@ -825,6 +883,13 @@ export function InterviewFlow({
     setRetrySeconds(null);
     scoringSessionRef.current = null;
     automaticRetriesRef.current = 0;
+    setStarProbe(null);
+    setStarProbeDeclined(false);
+    setStarProbeUsed((used) => {
+      const next = { ...used };
+      delete next[index];
+      return next;
+    });
     setTranscript('');
     setTranscriptConfirmed(false);
     setInterim('');
@@ -875,6 +940,7 @@ export function InterviewFlow({
     setTranscriptConfirmed(false);
     setPreviousTry(null);
     setInterim('');
+    setStarProbe(null);
     setAttemptCount(1);
 
     if (isLast) {
@@ -1359,16 +1425,16 @@ export function InterviewFlow({
           )}
           <div className="card stack">
             <p className="eyebrow">
-              {t('question')} {index + 1}
+              {starProbe ? t('starProbeEyebrow') : `${t('question')} ${index + 1}`}
             </p>
-            <h2 style={{ fontSize: '1.35rem' }}>{questionText}</h2>
-            {mode === 'guided' && (
+            <h2 style={{ fontSize: '1.35rem' }} dir="auto">{promptText}</h2>
+            {mode === 'guided' && !starProbe && (
               <div className="coach-tip">
                 <strong>{t('tip')}</strong>
                 {hintText}
               </div>
             )}
-            {questionRubric.length > 0 && (
+            {questionRubric.length > 0 && !starProbe && (
               <div className="rubric-preview" aria-label={t('rubricPreviewTitle')}>
                 <div>
                   <p className="eyebrow">{t('rubricPreviewTitle')}</p>
@@ -1418,9 +1484,9 @@ export function InterviewFlow({
           )}
           <div className="card stack">
             <p className="eyebrow">
-              {t('question')} {index + 1}
+              {starProbe ? t('starProbeEyebrow') : `${t('question')} ${index + 1}`}
             </p>
-            <h2 style={{ fontSize: '1.25rem' }}>{questionText}</h2>
+            <h2 style={{ fontSize: '1.25rem' }} dir="auto">{promptText}</h2>
           </div>
 
           <div className="card stack">
@@ -1576,8 +1642,11 @@ export function InterviewFlow({
       {stage === 'review' && (
         <div className="stack">
           <div className="card stack">
-            <p className="eyebrow">{t('yourAnswer')}</p>
-            <h2 style={{ fontSize: '1.2rem' }}>{questionText}</h2>
+            <p className="eyebrow">{starProbe ? t('starProbeEyebrow') : t('yourAnswer')}</p>
+            <h2 style={{ fontSize: '1.2rem' }} dir="auto">{promptText}</h2>
+            {starProbe && (
+              <p className="tiny muted">{t('starProbeReviewNote')}</p>
+            )}
 
             {playbackUrl && (
               <div className="stack-sm">
@@ -1748,6 +1817,22 @@ export function InterviewFlow({
                   </div>
                 );
               })()}
+            </div>
+          )}
+          {starFollowUp && (
+            <div className="card stack-sm star-probe-card">
+              <p className="eyebrow">{t('starProbeEyebrow')}</p>
+              <h3 style={{ fontSize: '1.15rem' }}>{t('starProbeTitle')}</h3>
+              <p className="muted">{t('starProbeBody')}</p>
+              <p className="star-probe-question" dir="auto">{probeQuestion(starFollowUp, interviewLanguage)}</p>
+              <div className="row flow-actions">
+                <button type="button" className="btn btn-primary" onClick={startStarProbe}>
+                  {t('starProbeAccept')}
+                </button>
+                <button type="button" className="btn btn-quiet" onClick={skipStarProbe}>
+                  {t('starProbeSkip')}
+                </button>
+              </div>
             </div>
           )}
           <div className="row flow-actions">

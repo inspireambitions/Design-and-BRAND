@@ -1,30 +1,25 @@
 import type { AnswerFeedback } from '@/lib/scoring';
 import { t } from '@/lib/i18n';
+import { isPendingFeedback } from '@/lib/report-feedback';
 import { ScoreRing } from './ScoreRing';
+import { ReportRetryFeedback } from './ReportRetryFeedback';
 
 export type FullReportData = {
   id: string;
+  roleId: string;
   roleTitle: string;
   language: 'en' | 'ar';
   overallScore: number | null;
   startedAt: string;
+  allowRescore?: boolean;
   answers: Array<{
     questionIndex: number;
+    questionId: string;
     questionText: string;
     transcript: string;
     feedback: AnswerFeedback | null;
   }>;
 };
-
-function isPendingFeedback(feedback: AnswerFeedback): boolean {
-  return (
-    feedback.status === 'unscored'
-    && feedback.improvements.some((item) =>
-      item.includes('Try getting feedback again')
-      || item.includes('حاول الحصول على الملاحظات'),
-    )
-  );
-}
 
 function scoreBand(lang: 'en' | 'ar', score: number): string {
   if (score >= 75) return t(lang, 'reportBandStrong');
@@ -43,13 +38,21 @@ function questionAccent(score: number | null): string {
 
 function ReportAnswer({
   language,
+  interviewId,
+  roleId,
+  allowRescore,
   questionIndex,
+  questionId,
   questionText,
   transcript,
   feedback,
 }: {
   language: 'en' | 'ar';
+  interviewId: string;
+  roleId: string;
+  allowRescore: boolean;
   questionIndex: number;
+  questionId: string;
   questionText: string;
   transcript: string;
   feedback: AnswerFeedback | null;
@@ -84,6 +87,16 @@ function ReportAnswer({
         <div className="report-pending" role="status">
           <p className="report-pending-title">{tr('reportFeedbackPending')}</p>
           <p className="tiny">{tr('reportFeedbackPendingBody')}</p>
+          {allowRescore && transcript && (
+            <ReportRetryFeedback
+              interviewId={interviewId}
+              roleId={roleId}
+              questionIndex={questionIndex}
+              questionId={questionId}
+              transcript={transcript}
+              language={language}
+            />
+          )}
         </div>
       )}
 
@@ -169,6 +182,7 @@ export function FullReport({ report }: { report: FullReportData }) {
     month: 'short',
     year: 'numeric',
   });
+  const allowRescore = report.allowRescore ?? false;
 
   return (
     <article className="report stack-lg" lang={report.language} dir={report.language === 'ar' ? 'rtl' : 'ltr'}>
@@ -221,7 +235,11 @@ export function FullReport({ report }: { report: FullReportData }) {
           <ReportAnswer
             key={answer.questionIndex}
             language={report.language}
+            interviewId={report.id}
+            roleId={report.roleId}
+            allowRescore={allowRescore}
             questionIndex={answer.questionIndex}
+            questionId={answer.questionId}
             questionText={answer.questionText}
             transcript={answer.transcript}
             feedback={answer.feedback}

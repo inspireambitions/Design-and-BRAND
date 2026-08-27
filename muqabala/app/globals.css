@@ -1402,6 +1402,27 @@ body[dir='rtl'] .report-block-label {
   padding: 0.5rem 0 1rem;
 }
 
+.report-retry {
+  margin-top: 0.75rem;
+}
+
+.star-probe-card {
+  border: 1px solid color-mix(in srgb, var(--jade) 30%, var(--line));
+  background: color-mix(in srgb, var(--jade-soft) 55%, var(--surface));
+  box-shadow: var(--shadow);
+}
+
+.star-probe-question {
+  margin: 0;
+  padding: 0.85rem 0.95rem;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
 .report-footer-brand {
   margin-top: 0.35rem;
   font-family: var(--font-display);
