@@ -339,6 +339,21 @@ export const STRINGS = {
     copyReport: 'Copy report',
     saveReportHint:
       'This opens your phone\u2019s print screen. Choose "Save as PDF" to keep the report.',
+    reportBandStrong: 'Strong answer structure. Keep refining the details.',
+    reportBandMid: 'Good foundation. A few clear additions will lift this.',
+    reportBandLow: 'You showed relevant experience. Structure is the next step.',
+    reportBandBuild: 'Early stage. Focus on one complete example per question.',
+    reportStatDate: 'Date',
+    reportStatQuestions: 'Questions',
+    reportStatScored: 'Scored',
+    reportStatPending: 'pending',
+    reportTrustNote: 'Scores reflect answer content only. We never score face, accent or personality.',
+    reportViewAnswer: 'View your answer',
+    reportFeedbackPending: 'Feedback could not be generated for this answer',
+    reportFeedbackPendingBody:
+      'Your answer is saved. Open this report on the device where you practised and try getting feedback again, or repeat the question in a new practice session.',
+    reportCompetencies: 'Competency breakdown',
+    reportFooterNote: 'Practice report only. Muqabala does not make hiring decisions.',
 
     // progress
     progressTitle: 'Your progress',
@@ -692,6 +707,21 @@ export const STRINGS = {
     copyReport: 'انسخ التقرير',
     saveReportHint:
       'يفتح هذا شاشة الطباعة في هاتفك. اختر "حفظ كـ PDF" للاحتفاظ بالتقرير.',
+    reportBandStrong: 'بنية إجابة قوية. واصل تحسين التفاصيل.',
+    reportBandMid: 'أساس جيد. بعض الإضافات الواضحة سترفع المستوى.',
+    reportBandLow: 'أظهرت خبرة مناسبة. البنية هي الخطوة التالية.',
+    reportBandBuild: 'مرحلة مبكرة. ركّز على مثال واحد كامل لكل سؤال.',
+    reportStatDate: 'التاريخ',
+    reportStatQuestions: 'الأسئلة',
+    reportStatScored: 'مُقيَّمة',
+    reportStatPending: 'معلّقة',
+    reportTrustNote: 'الدرجات تعكس محتوى الإجابة فقط. لا نقيّم الوجه أو اللهجة أو الشخصية.',
+    reportViewAnswer: 'عرض إجابتك',
+    reportFeedbackPending: 'تعذر إنشاء ملاحظات لهذه الإجابة',
+    reportFeedbackPendingBody:
+      'إجابتك محفوظة. افتح هذا التقرير على الجهاز الذي تدرّبت عليه وحاول الحصول على الملاحظات مرة أخرى، أو أعد السؤال في جلسة تدريب جديدة.',
+    reportCompetencies: 'تفصيل الكفاءات',
+    reportFooterNote: 'تقرير تدريب فقط. لا يتخذ مقابلة قرارات التوظيف.',
 
     progressTitle: 'تقدمك',
     progressEmpty: 'لا توجد مقابلات تدريبية بعد. ستظهر درجاتك هنا بعد إكمال واحدة.',
