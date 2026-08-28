@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation';
 import { t } from '@/lib/i18n';
 
 type ExistingShare = { id: string; expires_at: string };
+const COACHING_NUMBER = (process.env.NEXT_PUBLIC_COACHING_WHATSAPP ?? '').replace(/[^\d]/g, '');
 
-export function ReportActions({ interviewId, roleTitle, language, initialShares = [], initialSaved = false }: { interviewId: string; roleTitle: string; language: 'en' | 'ar'; initialShares?: ExistingShare[]; initialSaved?: boolean }) {
+export function ReportActions({ interviewId, roleId, roleTitle, language, initialShares = [], initialSaved = false }: { interviewId: string; roleId: string; roleTitle: string; language: 'en' | 'ar'; initialShares?: ExistingShare[]; initialSaved?: boolean }) {
   const router = useRouter();
   const tr = (key: Parameters<typeof t>[1]) => t(language, key);
   const [message, setMessage] = useState('');
@@ -14,6 +15,15 @@ export function ReportActions({ interviewId, roleTitle, language, initialShares 
   const [existingShares, setExistingShares] = useState(initialShares);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [saved, setSaved] = useState(initialSaved);
+  const practiceHref = roleId === 'custom'
+    ? `/practice/custom?template=${encodeURIComponent(interviewId)}&lang=${language}`
+    : `/practice/${encodeURIComponent(roleId)}?lang=${language}`;
+  const coachingText = language === 'ar'
+    ? 'مرحباً، أتدرب على المقابلات في تطبيق مقابلة وأود أن أسأل عن التدريب الشخصي.'
+    : 'Hi, I have been practising interviews on Muqabala and I would like to ask about personal coaching.';
+  const coachingHref = COACHING_NUMBER
+    ? `https://wa.me/${COACHING_NUMBER}?text=${encodeURIComponent(coachingText)}`
+    : '/contact';
 
   async function save() {
     if (busyAction) return;
@@ -91,9 +101,32 @@ export function ReportActions({ interviewId, roleTitle, language, initialShares 
   }
 
   return (
-    <div className="stack-sm no-print">
-      <div className="row">
-        <button type="button" className="btn btn-primary" disabled={Boolean(busyAction) || saved} onClick={save}>
+    <div className="report-actions stack no-print">
+      <section className="report-next-actions" aria-labelledby="report-next-title">
+        <h2 id="report-next-title">{tr('reportNextActionsTitle')}</h2>
+        <a className="btn btn-primary report-practise-again" href={practiceHref}>
+          {tr(roleId === 'custom' ? 'practiceAgain' : 'practiceRoleAgain')}
+        </a>
+        <a className="report-home-link" href="/">{tr('returnHome')}</a>
+      </section>
+
+      <section className="report-coaching" aria-labelledby="report-coaching-title">
+        <h2 id="report-coaching-title">{tr('reportCoachingTitle')}</h2>
+        <p>{tr('reportCoachingBody')}</p>
+        <a
+          className="btn btn-quiet report-coaching-button"
+          href={coachingHref}
+          target={COACHING_NUMBER ? '_blank' : undefined}
+          rel={COACHING_NUMBER ? 'noopener noreferrer' : undefined}
+        >
+          {tr('reportCoachingCta')}
+        </a>
+      </section>
+
+      <section className="report-management" aria-labelledby="report-management-title">
+        <h2 id="report-management-title">{tr('reportManagementTitle')}</h2>
+        <div className="row">
+        <button type="button" className="btn btn-quiet" disabled={Boolean(busyAction) || saved} onClick={save}>
           {saved ? tr('savedToAccount') : tr('saveToAccount')}
         </button>
         {saved && <a className="btn btn-quiet" href="/account">{tr('viewMyAccount')}</a>}
@@ -101,7 +134,7 @@ export function ReportActions({ interviewId, roleTitle, language, initialShares 
         {shareId && <button type="button" className="btn btn-ghost" disabled={Boolean(busyAction)} onClick={revoke}>{tr('revokeShare')}</button>}
         <button type="button" className="btn btn-ghost" onClick={() => window.print()}>{tr('saveAsPdf')}</button>
         <button type="button" className="btn btn-ghost" disabled={Boolean(busyAction)} onClick={deleteReport}>{tr('deleteReport')}</button>
-      </div>
+        </div>
       {message && <p className="notice tiny" role="status">{message}</p>}
       {existingShares.length > 0 && <div className="card-flat stack-sm">
         <span className="rate-label">{tr('activePrivateLinks')}</span>
@@ -115,6 +148,7 @@ export function ReportActions({ interviewId, roleTitle, language, initialShares 
           }}>{tr('revoke')}</button>
         </div>)}
       </div>}
+      </section>
     </div>
   );
 }

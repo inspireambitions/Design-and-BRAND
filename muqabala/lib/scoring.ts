@@ -8,6 +8,16 @@ export type CompetencyScore = {
   evidence: string | null;
 };
 
+export type UnscoredReason =
+  | 'answer_too_short'
+  | 'transcript_unclear'
+  | 'feedback_could_not_be_verified'
+  | 'scoring_service_unavailable'
+  | 'language_scoring_unavailable'
+  | 'question_not_answered'
+  | 'feedback_locked'
+  | 'reason_not_recorded';
+
 export type AnswerFeedback = {
   questionId: string;
   /**
@@ -17,6 +27,12 @@ export type AnswerFeedback = {
    */
   score: number;
   status: 'scored' | 'unscored';
+  /**
+   * Stable, localisable reason for declining to score. Optional only for
+   * reports saved before reason codes existed. The UI must never infer a
+   * candidate-facing explanation from model-written prose.
+   */
+  unscoredReason?: UnscoredReason;
   headline: string;
   competencies: CompetencyScore[];
   strengths: string[];
@@ -190,6 +206,7 @@ export function arabicUnavailable(questionId: string): AnswerFeedback {
     questionId,
     score: 0,
     status: 'unscored',
+    unscoredReason: 'language_scoring_unavailable',
     headline: 'التقييم التلقائي بالعربية غير متاح بعد',
     competencies: [],
     strengths: [],
@@ -225,6 +242,7 @@ export function structureCheck(question: Question, transcript: string): AnswerFe
       questionId: question.id,
       score: 0,
       status: 'unscored',
+      unscoredReason: 'answer_too_short',
       headline: 'Too short to check',
       competencies: [],
       strengths: [],
@@ -243,6 +261,7 @@ export function structureCheck(question: Question, transcript: string): AnswerFe
       questionId: question.id,
       score: 0,
       status: 'unscored',
+      unscoredReason: 'transcript_unclear',
       headline: 'We could not read this as an answer',
       competencies: [],
       strengths: [],
@@ -380,5 +399,7 @@ export function structureCheck(question: Question, transcript: string): AnswerFe
 export function overallFromAnswers(answers: { feedback: AnswerFeedback }[]): number | null {
   const scored = answers.filter((a) => a.feedback.status === 'scored');
   if (scored.length === 0) return null;
+  const sources = new Set(scored.map((answer) => answer.feedback.source));
+  if (sources.size !== 1) return null;
   return Math.round(scored.reduce((s, a) => s + a.feedback.score, 0) / scored.length);
 }

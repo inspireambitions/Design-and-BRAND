@@ -22,12 +22,19 @@ export async function generateMetadata({
 
 export default async function PracticePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ roleId: string }>;
+  searchParams: Promise<{ focus?: string | string[]; lang?: string | string[] }>;
 }) {
   const { roleId } = await params;
+  const query = await searchParams;
+  const focusQuestionId = typeof query.focus === 'string' && query.focus.length <= 160
+    ? query.focus
+    : undefined;
+  const initialLanguage = query.lang === 'ar' || query.lang === 'en' ? query.lang : undefined;
   const role = getRole(roleId);
   if (!role) notFound();
 
-  return <PracticeInterview role={role} />;
+  return <PracticeInterview role={role} focusQuestionId={focusQuestionId} initialLanguage={initialLanguage} />;
 }

@@ -1,4 +1,6 @@
 import { reportProjection, type StoredAnswer } from '@/lib/interviews';
+import { signInterview } from '@/lib/interview-token';
+import { buildCustomRole, type Role } from '@/lib/roles';
 import { interviewAccess } from '@/lib/server/interview-access';
 import { privateNoStoreHeaders } from '@/lib/server/security';
 
@@ -14,8 +16,34 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     .eq('interview_id', id)
     .order('question_index');
   if (error) return Response.json({ error: 'Report could not be loaded.' }, { status: 500 });
+  const storedRoleSnapshot = access.owner ? access.interview.role_snapshot as Role | null : null;
+  const roleSnapshot = storedRoleSnapshot
+    && Array.isArray(storedRoleSnapshot.questions)
+    && Array.isArray(storedRoleSnapshot.competencies)
+    ? storedRoleSnapshot
+    : null;
+  const genericQuestionIds = new Set(buildCustomRole(access.interview.role_title).questions.map((question) => question.id));
+  const tailored = Boolean(
+    roleSnapshot
+    && access.interview.role_id === 'custom'
+    && roleSnapshot.questions.some((question) => !genericQuestionIds.has(question.id)),
+  );
+  const interviewToken = roleSnapshot && access.interview.role_id === 'custom'
+    ? signInterview({
+        title: roleSnapshot.title,
+        industry: roleSnapshot.industry,
+        level: roleSnapshot.level,
+        competencies: roleSnapshot.competencies,
+        questions: roleSnapshot.questions,
+      })
+    : null;
   return Response.json(
-    reportProjection(access.interview, (data ?? []) as StoredAnswer[], Boolean(access.owner)),
+    {
+      ...reportProjection(access.interview, (data ?? []) as StoredAnswer[], Boolean(access.owner)),
+      roleSnapshot,
+      interviewToken,
+      tailored,
+    },
     { headers: privateNoStoreHeaders() },
   );
 }

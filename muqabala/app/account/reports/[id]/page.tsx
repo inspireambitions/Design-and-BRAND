@@ -23,5 +23,5 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
     ...(reportProjection(interview as StoredInterview, (answers ?? []) as StoredAnswer[], true) as FullReportData),
     allowRescore: true,
   };
-  return <main className="shell shell-narrow" lang={report.language} dir={report.language === 'ar' ? 'rtl' : 'ltr'}><TopBar showProgressLink={false} /><FullReport report={report} /><ReportActions interviewId={id} roleTitle={report.roleTitle} language={report.language} initialShares={shares ?? []} initialSaved={Boolean(interview.saved)} /></main>;
+  return <main className="shell shell-narrow" lang={report.language} dir={report.language === 'ar' ? 'rtl' : 'ltr'}><TopBar showProgressLink={false} /><FullReport report={report} /><ReportActions interviewId={id} roleId={report.roleId} roleTitle={report.roleTitle} language={report.language} initialShares={shares ?? []} initialSaved={Boolean(interview.saved)} /></main>;
 }

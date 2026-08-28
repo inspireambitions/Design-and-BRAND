@@ -4,7 +4,7 @@ import OpenAI from 'openai';
 import { zodTextFormat } from 'openai/helpers/zod';
 import { getRole, type Question, type Role } from '@/lib/roles';
 import { verifyInterview, roleFromToken } from '@/lib/interview-token';
-import { arabicUnavailable, structureCheck, containsArabicScript, type AnswerFeedback } from '@/lib/scoring';
+import { arabicUnavailable, structureCheck, containsArabicScript, overallFromAnswers, type AnswerFeedback } from '@/lib/scoring';
 import { isRetryableFeedback } from '@/lib/report-feedback';
 import { reportScoringFailure } from '@/lib/sentry-server';
 import { limitScoring } from '@/lib/rate-limit';
@@ -159,7 +159,7 @@ Your job is to make the candidate feel capable and clear about what to do next. 
 
 Score each listed competency 0-10 against its rubric anchor, using the exact competency ids given to you and no others. Quote the candidate's actual words as evidence for each one, and quote a DIFFERENT part of the answer for each competency — the same line must never appear as evidence twice. If no part of the answer demonstrates a competency, set its evidence to an empty string rather than quoting an unrelated line.
 
-Set unscorable to true only when the transcript is too garbled or too short to judge fairly. When you do, explain why in the headline and improvements, and do not invent scores.`;
+Set unscorable to true only when the transcript is too garbled or too short to judge fairly. Set unscorable_reason to too_short or unclear to record which one you found. Otherwise set it to none. When an answer is unscorable, explain why in the headline and improvements, and do not invent scores.`;
 
 function buildUserPrompt(options: {
   role: Role;
@@ -443,9 +443,7 @@ export async function POST(request: Request) {
       const scores = (rows ?? [])
         .map((row) => row.feedback as AnswerFeedback | null)
         .filter((value): value is AnswerFeedback => value?.status === 'scored');
-      const overallScore = scores.length
-        ? Math.round(scores.reduce((sum, value) => sum + value.score, 0) / scores.length)
-        : null;
+      const overallScore = overallFromAnswers(scores.map((feedback) => ({ feedback })));
       await stored.admin!.from('interviews').update({ overall_score: overallScore }).eq('id', interviewId);
     }
 
@@ -462,6 +460,7 @@ export async function POST(request: Request) {
             questionId,
             score: 0,
             status: 'unscored',
+            unscoredReason: 'feedback_locked',
             headline: 'Feedback saved. Verify your email to unlock it.',
             competencies: [],
             strengths: [],
@@ -548,9 +547,14 @@ export async function POST(request: Request) {
 
     if (parsed.unscorable) {
       return deliver({
-          questionId: question.id,
-          score: 0,
-          status: 'unscored',
+        questionId: question.id,
+        score: 0,
+        status: 'unscored',
+        unscoredReason: parsed.unscorable_reason === 'too_short'
+          ? 'answer_too_short'
+          : parsed.unscorable_reason === 'unclear'
+            ? 'transcript_unclear'
+            : 'reason_not_recorded',
           headline: parsed.headline,
           competencies: [],
           strengths: [],
@@ -567,6 +571,7 @@ export async function POST(request: Request) {
         questionId: question.id,
         score: 0,
         status: 'unscored',
+        unscoredReason: 'feedback_could_not_be_verified',
         headline: feedbackInArabic
           ? 'لم نتمكن من التحقق من هذه الملاحظات بشكل موثوق.'
           : 'We could not verify this feedback safely.',

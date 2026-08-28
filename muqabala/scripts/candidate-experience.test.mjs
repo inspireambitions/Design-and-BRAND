@@ -3,7 +3,9 @@ import test from 'node:test';
 
 import { rubricForQuestion } from '../lib/question-rubric.ts';
 import { compareRetries } from '../lib/retry-comparison.ts';
-import { containsArabicScript } from '../lib/scoring.ts';
+import { resolveUnscoredReason } from '../lib/report-feedback.ts';
+import { focusedQuestionFromRole } from '../lib/focused-question.ts';
+import { containsArabicScript, overallFromAnswers } from '../lib/scoring.ts';
 
 const competency = (id, evidence = null) => ({ id, label: id, score: evidence ? 8 : 2, evidence });
 const feedback = (overrides = {}) => ({
@@ -44,4 +46,44 @@ test('retry comparison separates added, changed and still-missing evidence', () 
 test('mixed-script answers require multilingual understanding even when Latin text dominates', () => {
   assert.equal(containsArabicScript('I called the guest ثم شرحت الحل and fixed the booking'), true);
   assert.equal(containsArabicScript('I called the guest and fixed the booking'), false);
+});
+
+test('reports use stored unscored reasons and never turn them into zero scores', () => {
+  const unscored = feedback({
+    score: 0,
+    status: 'unscored',
+    unscoredReason: 'feedback_could_not_be_verified',
+    source: 'ai',
+  });
+  assert.equal(resolveUnscoredReason(unscored, 'A complete saved answer.', 'failed'), 'feedback_could_not_be_verified');
+  assert.equal(resolveUnscoredReason(null, '', 'unscored'), 'question_not_answered');
+  assert.equal(resolveUnscoredReason(null, 'A saved answer.', 'failed'), 'scoring_service_unavailable');
+});
+
+test('older reports get a cautious reason without inventing a failure cause', () => {
+  const oldFeedback = feedback({ score: 0, status: 'unscored', source: 'ai' });
+  assert.equal(resolveUnscoredReason(oldFeedback, 'A complete answer.', 'unscored'), 'reason_not_recorded');
+});
+
+test('pending feedback is not reported as a scoring failure', () => {
+  assert.equal(resolveUnscoredReason(null, 'A saved answer.', 'pending'), null);
+});
+
+test('overall score is withheld when scoring sources measure different things', () => {
+  assert.equal(overallFromAnswers([
+    { feedback: feedback({ source: 'ai', score: 80 }) },
+    { feedback: feedback({ source: 'structure', score: 60 }) },
+  ]), null);
+  assert.equal(overallFromAnswers([
+    { feedback: feedback({ source: 'ai', score: 80 }) },
+    { feedback: feedback({ source: 'ai', score: 60 }) },
+  ]), 70);
+});
+
+test('report retry resolves the original question before rotation or subsetting', () => {
+  const question = (id) => ({ id });
+  const catalogue = { questions: [question('new-opener')], bank: [question('old-core')] };
+  assert.equal(focusedQuestionFromRole(catalogue, 'old-core')?.id, 'old-core');
+  const custom = { questions: Array.from({ length: 8 }, (_, index) => question(`custom-${index + 1}`)) };
+  assert.equal(focusedQuestionFromRole(custom, 'custom-7')?.id, 'custom-7');
 });

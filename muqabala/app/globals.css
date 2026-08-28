@@ -22,6 +22,8 @@
   --good-soft: #DCEFE6;
   --warn: #9A6410;
   --warn-soft: #F7EBD8;
+  --info: #416578;
+  --info-soft: #E4EEF3;
   --crit: #A33F2C;
   --crit-soft: #F8E5E0;
 
@@ -56,6 +58,8 @@
     --good-soft: #143025;
     --warn: #D9A448;
     --warn-soft: #2E2517;
+    --info: #8CB7CA;
+    --info-soft: #192B33;
     --crit: #E68B75;
     --crit-soft: #35201B;
 
@@ -84,6 +88,8 @@
   --good-soft: #143025;
   --warn: #D9A448;
   --warn-soft: #2E2517;
+  --info: #8CB7CA;
+  --info-soft: #192B33;
   --crit: #E68B75;
   --crit-soft: #35201B;
 
@@ -1300,8 +1306,7 @@ body[dir='rtl'] .mic-label {
 .report-hero {
   padding: 1.35rem 1.25rem 1.15rem;
   border: 1px solid color-mix(in srgb, var(--jade) 22%, var(--line));
-  background:
-    linear-gradient(165deg, color-mix(in srgb, var(--jade-soft) 85%, var(--surface)) 0%, var(--surface) 52%);
+  background: var(--surface);
   box-shadow: var(--shadow-lift);
 }
 
@@ -1362,6 +1367,13 @@ body[dir='rtl'] .mic-label {
   font-size: 0.95rem;
   color: var(--ink-soft);
   max-width: 28rem;
+}
+
+.report-score-basis {
+  margin: 0.35rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  font-weight: 600;
 }
 
 .report-hero-score {
@@ -1487,6 +1499,14 @@ body[dir='rtl'] .report-question-badge {
   font-variant-numeric: tabular-nums;
 }
 
+.report-score-source {
+  display: inline-block;
+  margin-top: 0.35rem;
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
 .report-question-sep {
   opacity: 0.45;
   padding-inline: 0.2rem;
@@ -1605,6 +1625,161 @@ body[dir='rtl'] .report-block-label {
   color: var(--warn);
 }
 
+.report-unscored-inline {
+  margin-top: 0.85rem;
+  padding: 0.85rem 0.95rem;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--warn-soft) 62%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--warn) 28%, var(--line));
+}
+
+.report-unscored-inline p {
+  margin: 0.45rem 0 0;
+}
+
+.report-unscored-inline .tiny {
+  color: var(--ink-soft);
+}
+
+.report-unscored-feedback_could_not_be_verified,
+.report-unscored-scoring_service_unavailable,
+.report-unscored-feedback_locked {
+  background: color-mix(in srgb, var(--info-soft) 70%, var(--surface));
+  border-color: color-mix(in srgb, var(--info) 30%, var(--line));
+}
+
+.report-unscored-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.75rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 0.45rem;
+  background: var(--warn-soft);
+  color: var(--warn);
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.09em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+body[dir='rtl'] .report-unscored-status {
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.report-unscored-status-feedback {
+  background: var(--info-soft);
+  color: var(--info);
+}
+
+.report-unscored-summary {
+  padding: 1.2rem;
+  border-color: var(--line-strong);
+  box-shadow: none;
+}
+
+.report-unscored-summary > h2 {
+  margin: 0;
+  color: var(--jade);
+  font-size: clamp(1.15rem, 4vw, 1.4rem);
+}
+
+.report-unscored-list {
+  margin-top: 0.6rem;
+}
+
+.report-unscored-row {
+  padding: 1rem 0;
+}
+
+.report-unscored-row + .report-unscored-row {
+  border-top: 1px solid var(--line);
+}
+
+.report-unscored-row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.report-unscored-row h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.report-unscored-row > p {
+  margin: 0.55rem 0 0;
+  color: var(--ink-soft);
+}
+
+.report-unscored-action,
+.report-unscored-row .report-retry .btn {
+  margin-top: 0.75rem;
+  min-height: 44px;
+  text-decoration: none;
+}
+
+.report-unscored-reassurance {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+
+.report-actions {
+  margin-top: 1.75rem;
+  gap: 1.4rem;
+}
+
+.report-next-actions,
+.report-coaching,
+.report-management {
+  padding-top: 1.15rem;
+  border-top: 1px solid var(--line);
+}
+
+.report-next-actions h2,
+.report-coaching h2,
+.report-management h2 {
+  margin: 0;
+  font-size: clamp(1.2rem, 4.4vw, 1.55rem);
+}
+
+.report-practise-again {
+  width: 100%;
+  margin-top: 0.85rem;
+  text-decoration: none;
+}
+
+.report-home-link {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  margin: 0.8rem auto 0;
+  color: var(--jade-deep);
+  font-weight: 700;
+  text-underline-offset: 0.2em;
+}
+
+.report-coaching p {
+  margin: 0.35rem 0 0;
+  color: var(--ink-soft);
+}
+
+.report-coaching-button {
+  width: 100%;
+  margin-top: 0.8rem;
+  text-decoration: none;
+}
+
+.report-management > .row {
+  margin-top: 0.75rem;
+}
+
 .report-transcript,
 .report-competencies {
   margin-top: 0.85rem;
@@ -1673,6 +1848,43 @@ body[dir='rtl'] .report-block-label {
   padding: 0.75rem 0.9rem;
 }
 
+@media (max-width: 600px) {
+  .report-hero,
+  .report-unscored-summary {
+    padding: 1rem;
+  }
+
+  .report-hero-top {
+    gap: 0.65rem;
+  }
+
+  .report-stat-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .report-stat:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .report-unscored-row-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .report-unscored-action,
+  .report-unscored-row .report-retry,
+  .report-unscored-row .report-retry .btn,
+  .report-management .btn {
+    width: 100%;
+  }
+
+  .report-management .row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
 /* Saving the report uses the phone's own print-to-PDF, so it works on every
    browser without a download the sandbox or mobile Safari might block. */
 @media print {
@@ -1713,7 +1925,8 @@ body[dir='rtl'] .report-block-label {
   .report-hero,
   .report-question,
   .report-feedback-block,
-  .report-pending {
+  .report-pending,
+  .report-unscored-summary {
     box-shadow: none;
     border-color: #CCCCCC;
     break-inside: avoid;
@@ -1732,7 +1945,8 @@ body[dir='rtl'] .report-block-label {
 
   .report-feedback-good,
   .report-feedback-grow,
-  .report-pending {
+  .report-pending,
+  .report-unscored-inline {
     background: #F4F4F4;
     border-color: #CCCCCC;
   }

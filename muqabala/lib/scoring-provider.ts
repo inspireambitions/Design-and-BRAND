@@ -33,6 +33,8 @@ export const FeedbackSchema = z.object({
   coach_tip: z.string().max(600),
   /** Set when the transcript is too garbled or too short to judge fairly. */
   unscorable: z.boolean(),
+  /** Explicit cause. Use none whenever unscorable is false. */
+  unscorable_reason: z.enum(['too_short', 'unclear', 'none']),
 });
 
 export type ParsedFeedback = z.infer<typeof FeedbackSchema>;
@@ -152,7 +154,7 @@ export function scoringProviderOrder(env: {
 export const FEEDBACK_JSON_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['headline', 'competencies', 'strengths', 'improvements', 'coach_tip', 'unscorable'],
+  required: ['headline', 'competencies', 'strengths', 'improvements', 'coach_tip', 'unscorable', 'unscorable_reason'],
   properties: {
     headline: { type: 'string', maxLength: 160 },
     competencies: {
@@ -173,6 +175,7 @@ export const FEEDBACK_JSON_SCHEMA = {
     improvements: { type: 'array', maxItems: 3, items: { type: 'string', maxLength: 400 } },
     coach_tip: { type: 'string', maxLength: 600 },
     unscorable: { type: 'boolean' },
+    unscorable_reason: { type: 'string', enum: ['too_short', 'unclear', 'none'] },
   },
 } as const;
 

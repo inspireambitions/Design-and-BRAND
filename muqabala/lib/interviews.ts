@@ -18,8 +18,9 @@ export const CreateInterviewSchema = z.object({
   roleTitle: z.string().min(1).max(200),
   language: z.enum(['en', 'ar']),
   mode: z.enum(['guided', 'mock', 'screening']),
-  questions: z.array(QuestionSnapshotSchema).min(1).max(20),
-  interviewToken: z.string().max(64_000).optional(),
+    questions: z.array(QuestionSnapshotSchema).min(1).max(20),
+    interviewToken: z.string().max(64_000).optional(),
+    focusQuestionId: z.string().min(1).max(160).optional(),
 });
 
 export const SaveAnswerSchema = z.object({
