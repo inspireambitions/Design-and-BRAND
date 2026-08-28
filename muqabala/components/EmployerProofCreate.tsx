@@ -116,118 +116,152 @@ export function EmployerProofCreate() {
   }
 
   return (
-    <div className="marketing-site">
+    <div className="marketing-site employer-create-page">
       <MarketingHeader />
       <main className="marketing-main">
-        <section className="marketing-wrap" style={{ padding: '3rem 0 4rem', maxWidth: '40rem' }}>
-          <p className="marketing-eyebrow">{t('proofHiringKicker')}</p>
-          <h1 style={{ fontSize: '2rem', lineHeight: 1.2 }}>{t('proofCreateTitle')}</h1>
-          <p className="marketing-lede" style={{ marginTop: '0.75rem' }}>{t('proofCreateBody')}</p>
-          <p className="tiny" style={{ marginTop: '0.75rem' }}>
-            {t('proofPracticeStaysPrivate')}
-          </p>
+        <section className="marketing-wrap employer-create-shell">
+          <div className="employer-create-intro">
+            <p className="marketing-eyebrow">{t('proofHiringKicker')}</p>
+            <h1>{t('proofCreateTitle')}</h1>
+            <p className="marketing-lede">{t('proofCreateBody')}</p>
+            <ol className="employer-create-steps" aria-label={t('proofCreateStepsLabel')}>
+              <li><span>1</span>{t('proofStepVacancy')}</li>
+              <li><span>2</span>{t('proofStepDescription')}</li>
+              <li><span>3</span>{t('proofStepShare')}</li>
+            </ol>
+            <p className="employer-create-privacy">{t('proofPracticeStaysPrivate')}</p>
+          </div>
 
           <form
-            className="stack"
-            style={{ marginTop: '2rem' }}
+            className="employer-create-form"
             onSubmit={(event) => {
               event.preventDefault();
               void createLink();
             }}
           >
-            <label className="stack-sm">
-              <span className="eyebrow">{t('proofCompanyLabel')}</span>
-              <input
-                className="answer-box"
-                dir="auto"
-                value={companyName}
-                onChange={(event) => {
-                  setCompanyName(event.target.value);
-                  setLink('');
-                }}
-                maxLength={80}
-                required
-                autoComplete="organization"
-                placeholder={t('proofCompanyPlaceholder')}
-              />
-            </label>
-            <label className="stack-sm">
-              <span className="eyebrow">{t('proofRecruiterLabel')}</span>
-              <input
-                className="answer-box"
-                dir="auto"
-                value={recruiterName}
-                onChange={(event) => {
-                  setRecruiterName(event.target.value);
-                  setLink('');
-                }}
-                maxLength={80}
-                autoComplete="name"
-                placeholder={t('proofRecruiterPlaceholder')}
-              />
-            </label>
-            <label className="stack-sm">
-              <span className="eyebrow">{t('proofJobTitleLabel')}</span>
-              <input
-                className="answer-box"
-                dir="auto"
-                value={jobTitle}
-                onChange={(event) => {
-                  setJobTitle(event.target.value);
-                  setGenerated(false);
-                  setLink('');
-                }}
-                maxLength={120}
-                required
-                placeholder={t('proofJobTitlePlaceholder')}
-              />
-            </label>
-            <label className="stack-sm">
-              <span className="eyebrow">{t('proofAdvertLabel')}</span>
-              <textarea
-                className="answer-box"
-                dir="auto"
-                value={jobText}
-                onChange={(event) => {
-                  setJobText(event.target.value);
-                  setGenerated(false);
-                  setLink('');
-                  if (tooShort && event.target.value.trim().length >= MIN_ADVERT_CHARS) setTooShort(false);
-                }}
-                rows={10}
-                required
-                placeholder={t('proofAdvertPlaceholder')}
-              />
-              <span className="tiny">{t('proofAdvertHelp')}</span>
-            </label>
-            <div className="proof-create-actions">
-              <button
-                type="button"
-                className="btn btn-quiet"
-                disabled={generating || creating || !companyReady || !titleReady}
-                onClick={() => void generateJobDescription()}
-              >
-                {generating ? t('proofGeneratingAdvert') : t('proofGenerateAdvert')}
-              </button>
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={creating || generating || !companyReady || !titleReady || !jobReady}
-              >
-                {creating ? t('proofCreating') : t('proofCreateAction')}
-              </button>
-            </div>
-            <div aria-live="polite">
-              {generated && <p className="notice notice-ok">{t('proofAdvertGenerated')}</p>}
-            </div>
-            {tooShort && <p className="notice notice-warn">{t('proofAdvertTooShort')}</p>}
-            {error === 'generate' && <p className="notice notice-warn">{t('proofGenerateFailed')}</p>}
-            {error === 'create' && <p className="notice notice-warn">{t('proofCreateFailed')}</p>}
+            <section className="employer-create-card" aria-labelledby="vacancy-details-heading">
+              <div className="employer-create-card-heading">
+                <span aria-hidden="true">1</span>
+                <h2 id="vacancy-details-heading">{t('proofStepVacancy')}</h2>
+              </div>
+              <div className="stack">
+                <label className="stack-sm">
+                  <span className="eyebrow">{t('proofCompanyLabel')}</span>
+                  <input
+                    className="answer-box"
+                    dir="auto"
+                    value={companyName}
+                    onChange={(event) => {
+                      setCompanyName(event.target.value);
+                      setLink('');
+                    }}
+                    maxLength={80}
+                    required
+                    autoComplete="organization"
+                    placeholder={t('proofCompanyPlaceholder')}
+                  />
+                </label>
+                <label className="stack-sm">
+                  <span className="eyebrow">{t('proofJobTitleLabel')}</span>
+                  <input
+                    className="answer-box"
+                    dir="auto"
+                    value={jobTitle}
+                    onChange={(event) => {
+                      setJobTitle(event.target.value);
+                      setGenerated(false);
+                      setLink('');
+                    }}
+                    maxLength={120}
+                    required
+                    placeholder={t('proofJobTitlePlaceholder')}
+                  />
+                </label>
+                <details className="employer-recruiter">
+                  <summary>{t('proofRecruiterLabel')}</summary>
+                  <label className="stack-sm">
+                    <span className="sr-only">{t('proofRecruiterLabel')}</span>
+                    <input
+                      className="answer-box"
+                      dir="auto"
+                      value={recruiterName}
+                      onChange={(event) => {
+                        setRecruiterName(event.target.value);
+                        setLink('');
+                      }}
+                      maxLength={80}
+                      autoComplete="name"
+                      placeholder={t('proofRecruiterPlaceholder')}
+                    />
+                  </label>
+                </details>
+              </div>
+            </section>
+
+            <section className="employer-create-card" aria-labelledby="job-description-heading">
+              <div className="employer-create-card-heading">
+                <span aria-hidden="true">2</span>
+                <div>
+                  <h2 id="job-description-heading">{t('proofStepDescription')}</h2>
+                  <p>{t('proofAdvertHelp')}</p>
+                </div>
+              </div>
+              <label className="stack-sm">
+                <span className="sr-only">{t('proofAdvertLabel')}</span>
+                <textarea
+                  className="answer-box employer-job-description"
+                  dir="auto"
+                  value={jobText}
+                  onChange={(event) => {
+                    setJobText(event.target.value);
+                    setGenerated(false);
+                    setLink('');
+                    if (tooShort && event.target.value.trim().length >= MIN_ADVERT_CHARS) setTooShort(false);
+                  }}
+                  rows={8}
+                  required
+                  placeholder={t('proofAdvertPlaceholder')}
+                />
+              </label>
+              <p className="employer-create-next" aria-live="polite">
+                {!companyReady || !titleReady
+                  ? t('proofAddBasicsFirst')
+                  : jobReady
+                    ? t('proofReadyToCreate')
+                    : t('proofAddDescriptionNext')}
+              </p>
+              <div className="proof-create-actions">
+                <button
+                  type="button"
+                  className={`btn ${jobReady ? 'btn-quiet' : 'btn-primary'}`}
+                  disabled={generating || creating || !companyReady || !titleReady}
+                  onClick={() => void generateJobDescription()}
+                >
+                  {generating ? t('proofGeneratingAdvert') : t('proofGenerateAdvert')}
+                </button>
+                <button
+                  type="submit"
+                  className={`btn ${jobReady ? 'btn-primary' : 'btn-quiet'}`}
+                  disabled={creating || generating || !companyReady || !titleReady || !jobReady}
+                >
+                  {creating ? t('proofCreating') : t('proofCreateAction')}
+                </button>
+              </div>
+              <div aria-live="polite">
+                {generated && <p className="notice notice-ok">{t('proofAdvertGenerated')}</p>}
+              </div>
+              {tooShort && <p className="notice notice-warn">{t('proofAdvertTooShort')}</p>}
+              {error === 'generate' && <p className="notice notice-warn">{t('proofGenerateFailed')}</p>}
+              {error === 'create' && <p className="notice notice-warn">{t('proofCreateFailed')}</p>}
+            </section>
           </form>
 
           {link && (
-            <div className="card stack" style={{ marginTop: '1.5rem' }}>
-              <p className="eyebrow">{t('proofLinkTitle')}</p>
+            <div className="card stack employer-link-card">
+              <div className="employer-create-card-heading">
+                <span aria-hidden="true">3</span>
+                <h2>{t('proofStepShare')}</h2>
+              </div>
               <p className="tiny" style={{ overflowWrap: 'anywhere' }}>{link}</p>
               <p className="tiny">{t('proofLinkReady')}</p>
               <div className="row">
@@ -241,7 +275,7 @@ export function EmployerProofCreate() {
             </div>
           )}
 
-          <p className="tiny" style={{ marginTop: '2rem' }}>
+          <p className="tiny employer-create-coach-link">
             {t('proofCandidatesUseCoach')}{' '}
             <Link href="/practice">{t('startPractice')}</Link>
           </p>
