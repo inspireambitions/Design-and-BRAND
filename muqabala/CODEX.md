@@ -139,43 +139,48 @@ the code works.
 
 ## 4. Architecture
 
-Deliberately minimal so it could ship in a day. **No database, no auth, no file storage.**
+The first version shipped without persistence. The live product now has **accounts,
+Supabase storage, magic-link/OTP sign-in, and private report sharing**. Video still
+never leaves the device. Do not treat older notes in this file as current if they
+say there is no database.
+
+**Production identity**
+
+- Website: `https://trymuqabala.com`
+- Vercel team: `kim-ks-projects`
+- Vercel project: `muqabala` (`prj_mLU2A8yiW61V4a4da54GryoIcSXX`)
+- Supabase project: `Muqabala` (`hmaxzpgsefzpflrwzopa`)
+- Cursor MCP config: repo-root `.cursor/mcp.json` (Vercel OAuth + read-only Supabase)
+
+**Application tables** (names only): `interviews`, `interview_answers`, `report_shares`,
+`auth_claims`. Schema lives in `supabase/migrations/`.
 
 ```
 muqabala/
 ├── app/
-│   ├── layout.tsx              # fonts, LanguageProvider, metadata
-│   ├── page.tsx                # landing → HomeView
-│   ├── globals.css             # ALL styling — design tokens + components, light & dark
-│   ├── icon.svg                # favicon
-│   ├── practice/[roleId]/      # the interview itself (prerendered per role)
-│   ├── progress/               # attempt history from localStorage
-│   └── api/score/route.ts      # the only server code: scoring
-├── components/
-│   ├── LanguageProvider.tsx    # EN/AR context, sets <html dir> for RTL
-│   ├── TopBar.tsx, HomeView.tsx, ProgressView.tsx
-│   ├── InterviewFlow.tsx       # the state machine — the heart of the app
-│   ├── FeedbackCard.tsx, ScoreRing.tsx
-└── lib/
-    ├── roles/                  # the catalogue, split by industry group
-    │   ├── shared.ts           # types, competency sets, q() helper, opener/closer
-    │   ├── hospitality.ts      # hospitality, F&B, aviation
-    │   ├── trades.ts           # construction and trades
-    │   ├── operations.ts       # logistics, retail, facilities, beauty
-    │   ├── care.ts             # healthcare and domestic care
-    │   ├── office.ts           # corporate, finance, sales, education, tech
-    │   ├── industrial.ts       # oil, gas & energy, automotive
-    │   ├── creative.ts         # marketing, design, photography
-    │   ├── custom.ts           # the catch-all interview for any job
-    │   └── index.ts            # assembles ROLES, getRole, INDUSTRIES
-    ├── scoring.ts              # types + the deterministic heuristic scorer
-    ├── speech.ts               # Web Speech API dictation wrapper
-    ├── i18n.ts                 # all UI strings, EN + AR
-    └── storage.ts              # localStorage read/write
+│   ├── layout.tsx, page.tsx, globals.css
+│   ├── practice/[roleId]/      # interview
+│   ├── account/                # saved interviews and reports
+│   ├── share/[token]/          # time-limited private report links
+│   ├── sign-in/, auth/confirm/
+│   └── api/
+│       ├── score/              # scoring; requires a stored interview when persistence is on
+│       ├── interviews/         # create, save answers, report, share, delete
+│       ├── interview/          # tailored interview from a job advert
+│       └── auth/               # request, verify, sign-out
+├── components/                 # InterviewFlow, FullReport, EmailSignIn, marketing
+├── lib/
+│   ├── roles/                  # catalogue + custom/tailored interviews
+│   ├── scoring.ts, scoring-provider.ts
+│   ├── interviews.ts, session-draft.ts, storage.ts
+│   ├── supabase/               # server, admin, client, config
+│   └── server/                 # origin checks, interview access, rate limits
+└── supabase/migrations/        # RLS, claims, persistence hardening
 ```
 
-**Stack:** Next.js (App Router) + TypeScript + hand-written CSS (no Tailwind — one less
-build dependency). `@anthropic-ai/sdk` + `zod` for structured scoring output.
+**Stack:** Next.js (App Router) + TypeScript + hand-written CSS. Anthropic/OpenAI/OpenRouter
+for scoring. Zod for structured output. Supabase for auth and interview persistence.
+Upstash Redis for shared rate limits in production.
 
 **Adding a role** is pure data: add an entry to the right file in `lib/roles/`, reusing a
 shared competency set and the shared `opener`/`closer`. Give it three role-specific questions
