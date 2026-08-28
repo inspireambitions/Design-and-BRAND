@@ -35,6 +35,44 @@ export const STRINGS = {
     beforeStart: 'Before we start',
     beforeStartBody:
       'This is private practice. No employer can see it. Your video is never uploaded. We send the text of your answer to our AI service for feedback. We temporarily save progress for up to seven days. Verify your email to continue on another device and choose which reports to keep.',
+    proofBeforeStartShort:
+      'This is a work sample for {workplace}. A person will read what you said. We do not score your face or your accent.',
+    proofBeforeStartBody:
+      'This is not practice. The hiring team that sent you this link will see your written answers and scores. Your video never leaves this device. You can type. You can fix the words before we score. A model will not reject you.',
+    proofWorkplaceFallback: 'this hiring team',
+    proofLinkTitle: 'Work sample',
+    proofLinkReady: 'Send this link on WhatsApp. It works for 14 days.',
+    proofCreateTitle: 'See who can do the job.',
+    proofCreateBody:
+      'No career portal needed. Write the job in a few lines — a WhatsApp message, a LinkedIn post, or an advert if you have one. Get a 12-minute work sample. A person decides. Nothing is auto-rejected.',
+    proofWorkplaceLabel: 'Workplace name (optional)',
+    proofJobTitleLabel: 'Job title',
+    proofAdvertLabel: 'The job',
+    proofCreateAction: 'Create the link',
+    proofCopyLink: 'Copy link',
+    proofCopied: 'Link copied.',
+    proofCreateFailed: 'The work sample could not be created. Write a bit more about the job and try again.',
+    proofHiringKicker: 'For hiring teams',
+    proofPracticeStaysPrivate:
+      'Practice stays private on Muqabala Coach. This link is a separate work sample.',
+    proofCandidatesUseCoach: 'Candidates looking for private practice should use Coach.',
+    proofCreating: 'Creating…',
+    proofWorkplacePlaceholder: 'Nour Clinic',
+    proofJobTitlePlaceholder: 'Receptionist',
+    proofAdvertPlaceholder:
+      'Paste what you would send a candidate. A WhatsApp job post is enough. An advert works too.',
+    proofWhatsApp: 'WhatsApp',
+    proofAdvertTooShort: 'Write a bit more about the job so we can build the work sample.',
+    proofComplete: 'Work sample complete',
+    proofResultsBody: 'Send this to the hiring team. A person decides. Nothing here rejects you.',
+    proofSendWhatsApp: 'Send on WhatsApp',
+    proofStartFailed: 'This work sample could not be started. Ask the hiring team for a new link.',
+    expectProofTime: 'About 12 minutes',
+    expectProofQuestions: '3-question work sample',
+    modeProofExpect:
+      'Questions appear one at a time. No coaching until you send the work sample at the end.',
+    proofHiddenNote:
+      'Questions stay hidden until you answer each one. A person on the hiring team will read what you said.',
     resumeDraftTitle: 'Continue where you stopped?',
     resumeDraftBody: 'Your unfinished answer and progress are saved on this device for up to seven days.',
     resumeDraftLanguageEnglish: 'This interview will resume in English.',
@@ -426,6 +464,44 @@ export const STRINGS = {
     beforeStart: 'قبل أن نبدأ',
     beforeStartBody:
       'هذا تدريب خاص ولا يراه صاحب العمل. لا نرفع الفيديو أبداً. نرسل نص إجابتك إلى خدمة الذكاء الاصطناعي للحصول على ملاحظات. نحفظ التقدم مؤقتاً لمدة تصل إلى سبعة أيام. أكد بريدك للمتابعة على جهاز آخر واختيار التقارير التي تريد الاحتفاظ بها.',
+    proofBeforeStartShort:
+      'هذه عينة عمل لـ {workplace}. سيقرأ شخص ما قلته. لا نقيّم وجهك ولا لهجتك.',
+    proofBeforeStartBody:
+      'هذا ليس تدريباً. فريق التوظيف الذي أرسل هذا الرابط سيرى إجاباتك المكتوبة والدرجات. الفيديو لا يغادر هذا الجهاز. يمكنك الكتابة. يمكنك تصحيح الكلمات قبل التقييم. لن يرفضك نموذج تلقائياً.',
+    proofWorkplaceFallback: 'فريق التوظيف هذا',
+    proofLinkTitle: 'عينة العمل',
+    proofLinkReady: 'أرسل هذا الرابط عبر واتساب. يعمل لمدة 14 يوماً.',
+    proofCreateTitle: 'اعرف من يستطيع أداء الوظيفة.',
+    proofCreateBody:
+      'لا حاجة لبوابة توظيف. اكتب الوظيفة في بضعة أسطر — رسالة واتساب أو منشور لينكدإن أو إعلان إن وُجد. احصل على عينة عمل من 12 دقيقة. يقرر إنسان. لا رفض تلقائي.',
+    proofWorkplaceLabel: 'اسم جهة العمل (اختياري)',
+    proofJobTitleLabel: 'المسمى الوظيفي',
+    proofAdvertLabel: 'الوظيفة',
+    proofCreateAction: 'إنشاء الرابط',
+    proofCopyLink: 'نسخ الرابط',
+    proofCopied: 'تم نسخ الرابط.',
+    proofCreateFailed: 'تعذر إنشاء عينة العمل. اكتب المزيد عن الوظيفة وحاول مرة أخرى.',
+    proofHiringKicker: 'لفرق التوظيف',
+    proofPracticeStaysPrivate:
+      'يبقى التدريب خاصاً في مدرب مقابلة. هذا الرابط عينة عمل منفصلة.',
+    proofCandidatesUseCoach: 'المرشحون الذين يريدون تدريباً خاصاً يستخدمون المدرب.',
+    proofCreating: 'جاري الإنشاء…',
+    proofWorkplacePlaceholder: 'عيادة نور',
+    proofJobTitlePlaceholder: 'موظف استقبال',
+    proofAdvertPlaceholder:
+      'الصق ما سترسله للمرشح. رسالة واتساب تكفي. الإعلان يعمل أيضاً.',
+    proofWhatsApp: 'واتساب',
+    proofAdvertTooShort: 'اكتب المزيد عن الوظيفة حتى نتمكن من بناء عينة العمل.',
+    proofComplete: 'اكتملت عينة العمل',
+    proofResultsBody: 'أرسل هذا إلى فريق التوظيف. يقرر إنسان. لا شيء هنا يرفضك.',
+    proofSendWhatsApp: 'أرسل عبر واتساب',
+    proofStartFailed: 'تعذر بدء عينة العمل. اطلب من فريق التوظيف رابطاً جديداً.',
+    expectProofTime: 'نحو ١٢ دقيقة',
+    expectProofQuestions: 'عينة عمل من ثلاثة أسئلة',
+    modeProofExpect:
+      'تظهر الأسئلة واحداً تلو الآخر. لا تدريب حتى ترسل عينة العمل في النهاية.',
+    proofHiddenNote:
+      'تبقى الأسئلة مخفية حتى تجيب عن كل سؤال. سيقرأ شخص من فريق التوظيف ما قلته.',
     resumeDraftTitle: 'هل تريد المتابعة من حيث توقفت؟',
     resumeDraftBody: 'إجابتك غير المكتملة وتقدمك محفوظان على هذا الجهاز لمدة تصل إلى سبعة أيام.',
     resumeDraftLanguageEnglish: 'ستُستأنف هذه المقابلة باللغة الإنجليزية.',

@@ -73,6 +73,7 @@ export function MarketingFooter() {
         <div className="marketing-footer-links">
           <Link href="/about">{nav.about}</Link>
           <Link href="/blog">{nav.blog}</Link>
+          <Link href="/for-employers">{lang === 'ar' ? 'لفرق التوظيف' : 'Hiring teams'}</Link>
           <Link href="/contact">{lang === 'ar' ? 'تواصل' : 'Contact'}</Link>
           <Link href="/privacy">{lang === 'ar' ? 'الخصوصية' : 'Privacy'}</Link>
           <Link href="/terms">{lang === 'ar' ? 'الشروط' : 'Terms'}</Link>

@@ -12,6 +12,7 @@ const pages = [
   '/terms',
   '/contact',
   '/accessibility',
+  '/for-employers',
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

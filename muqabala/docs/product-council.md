@@ -143,4 +143,5 @@ Not "AI interview practice." Not "video screening tool." Proof — quoted, expla
 
 | Date | Change |
 |---|---|
-| 2026-08-27 | Charter created. Case study #1 (Chef Dil) logged. Mandates A–D assigned. |
+| 2026-08-28 | Creative cut for Proof (Screening V1): three-question work sample, WhatsApp link, no ATS, no auto-reject. Spec in `docs/screening-v1.md`. |
+| 2026-08-28 | SME / startup with no career portal is a first-class hiring-team buyer. Portal optional, never required. |

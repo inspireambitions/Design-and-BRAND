@@ -17,7 +17,7 @@ export const CreateInterviewSchema = z.object({
   roleId: z.string().min(1).max(160),
   roleTitle: z.string().min(1).max(200),
   language: z.enum(['en', 'ar']),
-  mode: z.enum(['guided', 'mock']),
+  mode: z.enum(['guided', 'mock', 'screening']),
   questions: z.array(QuestionSnapshotSchema).min(1).max(20),
   interviewToken: z.string().max(64_000).optional(),
 });
@@ -55,7 +55,7 @@ export type StoredInterview = {
   role_id: string;
   role_title: string;
   language: 'en' | 'ar';
-  mode: 'guided' | 'mock';
+  mode: 'guided' | 'mock' | 'screening';
   status: 'in_progress' | 'completed';
   current_question: number;
   question_snapshot: z.infer<typeof QuestionSnapshotSchema>[];
