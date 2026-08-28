@@ -13,3 +13,5 @@ next-env.d.ts
 !.env.example
 .playwright-cli/
 design-qa-*.png
+.sanity
+dist

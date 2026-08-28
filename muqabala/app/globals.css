@@ -2726,6 +2726,79 @@ body[dir='rtl'] .evidence-demo span {
   color: var(--ink-soft);
 }
 
+.guides-index {
+  padding-bottom: 8rem;
+}
+
+.guides-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.guides-card {
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+}
+
+.guides-card h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.guides-card p {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.guides-index-cta,
+.guide-article-cta {
+  margin-top: 2rem;
+}
+
+.guide-article {
+  max-width: 40rem;
+  padding-bottom: 8rem;
+}
+
+.guide-body {
+  margin-top: 1.5rem;
+}
+
+.guide-body h2 {
+  font-size: 1.35rem;
+  margin: 1.6rem 0 0.7rem;
+}
+
+.guide-body h3 {
+  font-size: 1.15rem;
+  margin: 1.2rem 0 0.5rem;
+}
+
+.guide-body p,
+.guide-body li {
+  font-size: 1.05rem;
+  line-height: 1.65;
+  color: var(--ink);
+}
+
+.guide-body p + p {
+  margin-top: 0.9rem;
+}
+
+.guide-body ul,
+.guide-body ol {
+  padding-inline-start: 1.2rem;
+  margin: 0.7rem 0 0;
+}
+
+.guide-body li + li {
+  margin-top: 0.35rem;
+}
+
 .not-found {
   min-height: 100dvh;
   display: flex;

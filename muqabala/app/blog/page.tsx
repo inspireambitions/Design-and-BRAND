@@ -1,13 +1,5 @@
-import type { Metadata } from 'next';
-import { BlogHoldingPage } from '@/components/MarketingSite';
-
-export const metadata: Metadata = {
-  title: 'Gulf interview guides',
-  description: 'Practical guidance for Gulf job interviews in English and Arabic.',
-  robots: { index: false, follow: true },
-  alternates: { canonical: '/blog' },
-};
+import { redirect } from 'next/navigation';
 
 export default function BlogPage() {
-  return <BlogHoldingPage />;
+  redirect('/guides');
 }
