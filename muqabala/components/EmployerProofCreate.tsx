@@ -3,103 +3,68 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useLang } from './LanguageProvider';
-import { MarketingFooter, MarketingHeader } from './MarketingSite';
+import styles from './EmployerProofCreate.module.css';
 
 const MIN_ADVERT_CHARS = 120;
 
 export function EmployerProofCreate() {
-  const { t } = useLang();
-  const [companyName, setCompanyName] = useState('');
-  const [recruiterName, setRecruiterName] = useState('');
+  const { lang, setLang, t } = useLang();
+  const [workplace, setWorkplace] = useState('');
   const [jobTitle, setJobTitle] = useState('');
   const [jobText, setJobText] = useState('');
   const [creating, setCreating] = useState(false);
-  const [generating, setGenerating] = useState(false);
-  const [generated, setGenerated] = useState(false);
   const [link, setLink] = useState('');
   const [copied, setCopied] = useState(false);
-  const [error, setError] = useState<'generate' | 'create' | null>(null);
+  const [error, setError] = useState(false);
   const [tooShort, setTooShort] = useState(false);
 
-  const companyReady = companyName.trim().length >= 2;
-  const titleReady = jobTitle.trim().length >= 2;
-  const jobReady = jobText.trim().length >= MIN_ADVERT_CHARS;
-
-  async function generateJobDescription() {
-    if (generating || creating || !companyReady || !titleReady) return;
-    setGenerating(true);
-    setGenerated(false);
-    setError(null);
-    setTooShort(false);
-    setLink('');
-    try {
-      const response = await fetch('/api/screening/job-description', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ companyName, jobTitle }),
-      });
-      const body = await response.json().catch(() => ({})) as { jobDescription?: string };
-      if (!response.ok || !body.jobDescription) {
-        setError('generate');
-        return;
-      }
-      setJobText(body.jobDescription);
-      setGenerated(true);
-    } catch {
-      setError('generate');
-    } finally {
-      setGenerating(false);
-    }
-  }
-
   async function createLink() {
-    if (creating || generating || !companyReady || !titleReady) return;
+    if (creating || jobTitle.trim().length < 2) return;
     if (jobText.trim().length < MIN_ADVERT_CHARS) {
       setTooShort(true);
-      setError(null);
+      setError(false);
       return;
     }
+
     setCreating(true);
-    setError(null);
+    setError(false);
     setTooShort(false);
     setCopied(false);
+
     try {
       const generated = await fetch('/api/interview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jobTitle, jobText }),
       });
-      if (generated.status === 429) {
-        setError('create');
-        return;
-      }
       const generatedBody = await generated.json().catch(() => ({})) as {
         tailored?: boolean;
         token?: string;
         role?: { title?: string };
       };
       if (!generated.ok || !generatedBody.tailored || !generatedBody.token) {
-        setError('create');
+        setError(true);
         return;
       }
+
       const pack = await fetch('/api/screening/packs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          companyName,
-          recruiterName,
+          ...(workplace.trim() ? { workplace: workplace.trim() } : {}),
           jobTitle: jobTitle || generatedBody.role?.title,
           interviewToken: generatedBody.token,
         }),
       });
       const packBody = await pack.json().catch(() => ({})) as { url?: string };
       if (!pack.ok || !packBody.url) {
-        setError('create');
+        setError(true);
         return;
       }
+
       setLink(packBody.url);
     } catch {
-      setError('create');
+      setError(true);
     } finally {
       setCreating(false);
     }
@@ -116,172 +81,130 @@ export function EmployerProofCreate() {
   }
 
   return (
-    <div className="marketing-site employer-create-page employer-light-theme">
-      <MarketingHeader />
-      <main className="marketing-main">
-        <section className="marketing-wrap employer-create-shell">
-          <div className="employer-create-intro">
-            <p className="marketing-eyebrow">{t('proofHiringKicker')}</p>
-            <h1>{t('proofCreateTitle')}</h1>
-            <p className="marketing-lede">{t('proofCreateBody')}</p>
-            <ol className="employer-create-steps" aria-label={t('proofCreateStepsLabel')}>
-              <li><span>1</span>{t('proofStepVacancy')}</li>
-              <li><span>2</span>{t('proofStepDescription')}</li>
-              <li><span>3</span>{t('proofStepShare')}</li>
-            </ol>
-            <p className="employer-create-privacy">{t('proofPracticeStaysPrivate')}</p>
-          </div>
+    <div className={[styles.page, 'employer-light-theme'].join(' ')}>
+      <header className={styles.header}>
+        <div className={styles.headerInner}>
+          <Link href="/" className={styles.brand} aria-label="Muqabala home">
+            <span className={styles.brandMark} aria-hidden="true">م</span>
+            <span>Muqabala</span>
+          </Link>
+          <button
+            type="button"
+            className={styles.language}
+            onClick={() => setLang(lang === 'en' ? 'ar' : 'en')}
+            aria-label={lang === 'en' ? 'التبديل إلى العربية' : 'Switch to English'}
+          >
+            {lang === 'en' ? 'العربية' : 'English'}
+          </button>
+        </div>
+      </header>
+
+      <main className={styles.main}>
+        <section aria-labelledby="employer-create-title">
+          <p className={styles.eyebrow}>{t('proofHiringKicker')}</p>
+          <h1 id="employer-create-title" className={styles.title}>{t('proofCreateTitle')}</h1>
+          <p className={styles.lede}>{t('proofCreateBody')}</p>
+
+          <ul className={styles.outcomes} aria-label={t('proofCreateStepsLabel')}>
+            <li>{t('proofOutcomeTime')}</li>
+            <li>{t('proofOutcomeWords')}</li>
+            <li>{t('proofOutcomeHuman')}</li>
+          </ul>
 
           <form
-            className="employer-create-form"
+            className={styles.form}
             onSubmit={(event) => {
               event.preventDefault();
               void createLink();
             }}
           >
-            <section className="employer-create-card" aria-labelledby="vacancy-details-heading">
-              <div className="employer-create-card-heading">
-                <span aria-hidden="true">1</span>
-                <h2 id="vacancy-details-heading">{t('proofStepVacancy')}</h2>
-              </div>
-              <div className="stack">
-                <label className="stack-sm">
-                  <span className="eyebrow">{t('proofCompanyLabel')}</span>
-                  <input
-                    className="answer-box"
-                    dir="auto"
-                    value={companyName}
-                    onChange={(event) => {
-                      setCompanyName(event.target.value);
-                      setLink('');
-                    }}
-                    maxLength={80}
-                    required
-                    autoComplete="organization"
-                    placeholder={t('proofCompanyPlaceholder')}
-                  />
-                </label>
-                <label className="stack-sm">
-                  <span className="eyebrow">{t('proofJobTitleLabel')}</span>
-                  <input
-                    className="answer-box"
-                    dir="auto"
-                    value={jobTitle}
-                    onChange={(event) => {
-                      setJobTitle(event.target.value);
-                      setGenerated(false);
-                      setLink('');
-                    }}
-                    maxLength={120}
-                    required
-                    placeholder={t('proofJobTitlePlaceholder')}
-                  />
-                </label>
-                <details className="employer-recruiter">
-                  <summary>{t('proofRecruiterLabel')}</summary>
-                  <label className="stack-sm">
-                    <span className="sr-only">{t('proofRecruiterLabel')}</span>
-                    <input
-                      className="answer-box"
-                      dir="auto"
-                      value={recruiterName}
-                      onChange={(event) => {
-                        setRecruiterName(event.target.value);
-                        setLink('');
-                      }}
-                      maxLength={80}
-                      autoComplete="name"
-                      placeholder={t('proofRecruiterPlaceholder')}
-                    />
-                  </label>
-                </details>
-              </div>
-            </section>
+            <label className={styles.field}>
+              <span>{t('proofJobTitleLabel')}</span>
+              <input
+                dir="auto"
+                value={jobTitle}
+                onChange={(event) => {
+                  setJobTitle(event.target.value);
+                  setLink('');
+                }}
+                minLength={2}
+                maxLength={120}
+                required
+                autoComplete="off"
+                placeholder={t('proofJobTitlePlaceholder')}
+              />
+            </label>
 
-            <section className="employer-create-card" aria-labelledby="job-description-heading">
-              <div className="employer-create-card-heading">
-                <span aria-hidden="true">2</span>
-                <div>
-                  <h2 id="job-description-heading">{t('proofStepDescription')}</h2>
-                  <p>{t('proofAdvertHelp')}</p>
-                </div>
-              </div>
-              <label className="stack-sm">
-                <span className="sr-only">{t('proofAdvertLabel')}</span>
-                <textarea
-                  className="answer-box employer-job-description"
+            <label className={styles.field}>
+              <span>{t('proofAdvertLabel')}</span>
+              <textarea
+                dir="auto"
+                value={jobText}
+                onChange={(event) => {
+                  setJobText(event.target.value);
+                  setLink('');
+                  if (tooShort && event.target.value.trim().length >= MIN_ADVERT_CHARS) setTooShort(false);
+                }}
+                minLength={MIN_ADVERT_CHARS}
+                maxLength={12_000}
+                rows={5}
+                required
+                placeholder={t('proofAdvertPlaceholder')}
+              />
+            </label>
+
+            <details className={styles.workplace}>
+              <summary>
+                <span className={styles.plus} aria-hidden="true">+</span>
+                {t('proofWorkplaceLabel')}
+              </summary>
+              <label className={styles.workplaceField}>
+                <span className="sr-only">{t('proofWorkplaceLabel')}</span>
+                <input
                   dir="auto"
-                  value={jobText}
+                  value={workplace}
                   onChange={(event) => {
-                    setJobText(event.target.value);
-                    setGenerated(false);
+                    setWorkplace(event.target.value);
                     setLink('');
-                    if (tooShort && event.target.value.trim().length >= MIN_ADVERT_CHARS) setTooShort(false);
                   }}
-                  rows={8}
-                  required
-                  placeholder={t('proofAdvertPlaceholder')}
+                  minLength={2}
+                  maxLength={80}
+                  autoComplete="organization"
+                  placeholder={t('proofCompanyPlaceholder')}
                 />
               </label>
-              <p className="employer-create-next" aria-live="polite">
-                {!companyReady || !titleReady
-                  ? t('proofAddBasicsFirst')
-                  : jobReady
-                    ? t('proofReadyToCreate')
-                    : t('proofAddDescriptionNext')}
-              </p>
-              <div className="proof-create-actions">
-                <button
-                  type="button"
-                  className={`btn ${jobReady ? 'btn-quiet' : 'btn-primary'}`}
-                  disabled={generating || creating || !companyReady || !titleReady}
-                  onClick={() => void generateJobDescription()}
-                >
-                  {generating ? t('proofGeneratingAdvert') : t('proofGenerateAdvert')}
-                </button>
-                <button
-                  type="submit"
-                  className={`btn ${jobReady ? 'btn-primary' : 'btn-quiet'}`}
-                  disabled={creating || generating || !companyReady || !titleReady || !jobReady}
-                >
-                  {creating ? t('proofCreating') : t('proofCreateAction')}
-                </button>
-              </div>
-              <div aria-live="polite">
-                {generated && <p className="notice notice-ok">{t('proofAdvertGenerated')}</p>}
-              </div>
-              {tooShort && <p className="notice notice-warn">{t('proofAdvertTooShort')}</p>}
-              {error === 'generate' && <p className="notice notice-warn">{t('proofGenerateFailed')}</p>}
-              {error === 'create' && <p className="notice notice-warn">{t('proofCreateFailed')}</p>}
-            </section>
+            </details>
+
+            <button type="submit" className={styles.submit} disabled={creating}>
+              {creating ? t('proofCreating') : t('proofCreateAction')}
+            </button>
+
+            <p className={styles.assurance}>{t('proofPracticeStaysPrivate')}</p>
+
+            <div className={styles.messages} aria-live="polite">
+              {tooShort && <p className={styles.warning}>{t('proofAdvertTooShort')}</p>}
+              {error && <p className={styles.warning}>{t('proofCreateFailed')}</p>}
+            </div>
           </form>
 
           {link && (
-            <div className="card stack employer-link-card">
-              <div className="employer-create-card-heading">
-                <span aria-hidden="true">3</span>
-                <h2>{t('proofStepShare')}</h2>
-              </div>
-              <p className="tiny" style={{ overflowWrap: 'anywhere' }}>{link}</p>
-              <p className="tiny">{t('proofLinkReady')}</p>
-              <div className="row">
-                <button type="button" className="btn btn-primary" onClick={() => void copyLink()}>
+            <section className={styles.linkPanel} aria-labelledby="candidate-link-heading">
+              <p className={styles.linkEyebrow}>{t('proofLinkTitle')}</p>
+              <h2 id="candidate-link-heading">{t('proofStepShare')}</h2>
+              <p className={styles.linkText}>{link}</p>
+              <p className={styles.linkNote}>{t('proofLinkReady')}</p>
+              <div className={styles.linkActions}>
+                <button type="button" onClick={() => void copyLink()}>
                   {copied ? t('proofCopied') : t('proofCopyLink')}
                 </button>
-                <a className="btn btn-quiet" href={`https://wa.me/?text=${encodeURIComponent(link)}`} target="_blank" rel="noreferrer">
+                <a href={`https://wa.me/?text=${encodeURIComponent(link)}`} target="_blank" rel="noreferrer">
                   {t('proofWhatsApp')}
                 </a>
               </div>
-            </div>
+            </section>
           )}
-
-          <p className="tiny employer-create-coach-link">
-            {t('proofCandidatesUseCoach')}{' '}
-            <Link href="/practice">{t('startPractice')}</Link>
-          </p>
         </section>
       </main>
-      <MarketingFooter />
     </div>
   );
 }

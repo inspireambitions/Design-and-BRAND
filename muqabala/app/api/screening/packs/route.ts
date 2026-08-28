@@ -1,23 +1,13 @@
 import { randomBytes } from 'node:crypto';
-import { z } from 'zod';
 import { roleFromToken, signProofPack, verifyInterview } from '@/lib/interview-token';
 import { proofQuestions } from '@/lib/proof-questions';
 import { configuredOrigin, hasTrustedOrigin } from '@/lib/server/security';
 import { limitInterviewGeneration } from '@/lib/rate-limit';
+import { ScreeningPackRequestSchema } from '@/lib/screening-pack-request';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-const BodySchema = z.object({
-  companyName: z.string().trim().min(2).max(80).optional(),
-  workplace: z.string().trim().min(2).max(80).optional(),
-  recruiterName: z.string().trim().max(80).optional(),
-  jobTitle: z.string().max(120).optional(),
-  interviewToken: z.string().min(1).max(64_000),
-}).strict().refine((value) => Boolean(value.companyName || value.workplace), {
-  message: 'Company name is required.',
-});
 
 function publicCode(): string {
   return randomBytes(6).toString('base64url');
@@ -36,7 +26,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const parsed = BodySchema.safeParse(await request.json().catch(() => null));
+  const parsed = ScreeningPackRequestSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: 'Invalid work sample.' }, { status: 400 });
 
   const verified = verifyInterview(parsed.data.interviewToken);
