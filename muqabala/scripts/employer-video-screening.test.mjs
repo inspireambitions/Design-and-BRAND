@@ -69,6 +69,20 @@ test('employer dashboard separates recorded evidence from AI analysis', () => {
   assert.match(report, /createSignedUrl/);
 });
 
+test('employer creation form generates the description before unlocking the link action', () => {
+  const form = read('components/EmployerProofCreate.tsx');
+  const styles = read('components/EmployerProofCreate.module.css');
+  const generatePosition = form.indexOf("t('proofGenerateAdvert')");
+  const createPosition = form.indexOf("t('proofCreateAction')");
+
+  assert.match(form, /fetch\('\/api\/screening\/job-description'/);
+  assert.match(form, /const canCreate = companyReady && titleReady && jobReady/);
+  assert.match(form, /type="submit" className=\{styles\.submit\} disabled=\{!canCreate\}/);
+  assert.ok(generatePosition >= 0 && createPosition > generatePosition);
+  assert.match(styles, /\.actions\s*\{[\s\S]*grid-template-columns:/);
+  assert.match(styles, /@media \(max-width: 28rem\)[\s\S]*\.actions\s*\{\s*grid-template-columns: 1fr;/);
+});
+
 test('JobStrike is absent from the complete employer flow', () => {
   const files = [
     'app/for-employers/page.tsx',

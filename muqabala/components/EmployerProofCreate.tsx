@@ -13,22 +13,63 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
   const [companyName, setCompanyName] = useState('');
   const [jobTitle, setJobTitle] = useState('');
   const [jobText, setJobText] = useState('');
+  const [generating, setGenerating] = useState(false);
+  const [generated, setGenerated] = useState(false);
   const [creating, setCreating] = useState(false);
   const [link, setLink] = useState('');
   const [copied, setCopied] = useState(false);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<'generate' | 'create' | null>(null);
   const [tooShort, setTooShort] = useState(false);
 
+  const companyReady = companyName.trim().length >= 2;
+  const titleReady = jobTitle.trim().length >= 2;
+  const jobReady = jobText.trim().length >= MIN_ADVERT_CHARS;
+  const canGenerate = companyReady && titleReady && !generating && !creating;
+  const canCreate = companyReady && titleReady && jobReady && !generating && !creating;
+
+  async function generateJobDescription() {
+    if (!canGenerate) return;
+
+    setGenerating(true);
+    setGenerated(false);
+    setError(null);
+    setTooShort(false);
+    setLink('');
+
+    try {
+      const response = await fetch('/api/screening/job-description', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          companyName: companyName.trim(),
+          jobTitle: jobTitle.trim(),
+        }),
+      });
+      const body = await response.json().catch(() => ({})) as { jobDescription?: string };
+      if (!response.ok || !body.jobDescription) {
+        setError('generate');
+        return;
+      }
+
+      setJobText(body.jobDescription);
+      setGenerated(true);
+    } catch {
+      setError('generate');
+    } finally {
+      setGenerating(false);
+    }
+  }
+
   async function createLink() {
-    if (creating || companyName.trim().length < 2 || jobTitle.trim().length < 2) return;
+    if (!canCreate) return;
     if (jobText.trim().length < MIN_ADVERT_CHARS) {
       setTooShort(true);
-      setError(false);
+      setError(null);
       return;
     }
 
     setCreating(true);
-    setError(false);
+    setError(null);
     setTooShort(false);
     setCopied(false);
 
@@ -44,7 +85,7 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
         role?: { title?: string };
       };
       if (!generated.ok || !generatedBody.tailored || !generatedBody.token) {
-        setError(true);
+        setError('create');
         return;
       }
 
@@ -59,13 +100,13 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
       });
       const packBody = await pack.json().catch(() => ({})) as { url?: string };
       if (!pack.ok || !packBody.url) {
-        setError(true);
+        setError('create');
         return;
       }
 
       setLink(packBody.url);
     } catch {
-      setError(true);
+      setError('create');
     } finally {
       setCreating(false);
     }
@@ -138,6 +179,8 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
                 value={companyName}
                 onChange={(event) => {
                   setCompanyName(event.target.value);
+                  setGenerated(false);
+                  setError(null);
                   setLink('');
                 }}
                 minLength={2}
@@ -155,6 +198,8 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
                 value={jobTitle}
                 onChange={(event) => {
                   setJobTitle(event.target.value);
+                  setGenerated(false);
+                  setError(null);
                   setLink('');
                 }}
                 minLength={2}
@@ -172,6 +217,7 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
                 value={jobText}
                 onChange={(event) => {
                   setJobText(event.target.value);
+                  setError(null);
                   setLink('');
                   if (tooShort && event.target.value.trim().length >= MIN_ADVERT_CHARS) setTooShort(false);
                 }}
@@ -180,18 +226,42 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
                 rows={5}
                 required
                 placeholder={t('proofAdvertPlaceholder')}
+                aria-describedby="job-description-status"
               />
             </label>
 
-            <button type="submit" className={styles.submit} disabled={creating}>
-              {creating ? t('proofCreating') : t('proofCreateAction')}
-            </button>
+            <div className={styles.actions} aria-label={t('proofCreateStepsLabel')}>
+              <button
+                type="button"
+                className={styles.generate}
+                disabled={!canGenerate}
+                onClick={() => void generateJobDescription()}
+              >
+                <span className={styles.actionNumber} aria-hidden="true">1</span>
+                <span>{generating ? t('proofGeneratingAdvert') : t('proofGenerateAdvert')}</span>
+              </button>
+              <button type="submit" className={styles.submit} disabled={!canCreate}>
+                <span className={styles.actionNumber} aria-hidden="true">2</span>
+                <span>{creating ? t('proofCreating') : t('proofCreateAction')}</span>
+              </button>
+            </div>
+
+            <div id="job-description-status" className={styles.status} aria-live="polite">
+              {!companyReady || !titleReady ? (
+                <p>{t('proofAddBasicsFirst')}</p>
+              ) : !jobReady ? (
+                <p>{t('proofAddDescriptionNext')}</p>
+              ) : (
+                <p>{generated ? t('proofAdvertGenerated') : t('proofReadyToCreate')}</p>
+              )}
+            </div>
 
             <p className={styles.assurance}>{t('proofPracticeStaysPrivate')}</p>
 
             <div className={styles.messages} aria-live="polite">
               {tooShort && <p className={styles.warning}>{t('proofAdvertTooShort')}</p>}
-              {error && <p className={styles.warning}>{t('proofCreateFailed')}</p>}
+              {error === 'generate' && <p className={styles.warning}>{t('proofGenerateFailed')}</p>}
+              {error === 'create' && <p className={styles.warning}>{t('proofCreateFailed')}</p>}
             </div>
           </form>}
 
