@@ -53,7 +53,7 @@ export async function POST(request: Request) {
   });
   if (!signedToken) return Response.json({ error: 'The work sample could not be signed.' }, { status: 503 });
 
-  const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+  const expiresAt = new Date(Date.now() + parsed.data.expiryDays * 24 * 60 * 60 * 1000).toISOString();
   let code = publicCode();
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const { error } = await admin.from('screening_packs').insert({
@@ -62,6 +62,7 @@ export async function POST(request: Request) {
       workplace,
       employer_id: employer.id,
       expires_at: expiresAt,
+      max_candidates: parsed.data.maxCandidates,
     });
     if (!error) {
       return Response.json({
@@ -70,6 +71,8 @@ export async function POST(request: Request) {
         workplace,
         recruiterName,
         questionCount: questions.length,
+        expiresAt,
+        maxCandidates: parsed.data.maxCandidates,
       }, { status: 201 });
     }
     code = publicCode();

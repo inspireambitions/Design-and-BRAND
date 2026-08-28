@@ -13,11 +13,15 @@ export const getScreeningPack = cache(async (code: string) => {
   if (!admin) return null;
   const { data } = await admin
     .from('screening_packs')
-    .select('signed_token, workplace, expires_at')
+    .select('signed_token, workplace, expires_at, max_candidates, starts_used')
     .eq('public_code', code)
     .not('employer_id', 'is', null)
     .maybeSingle();
-  if (!data || new Date(data.expires_at).getTime() <= Date.now()) return null;
+  if (
+    !data
+    || new Date(data.expires_at).getTime() <= Date.now()
+    || data.starts_used >= data.max_candidates
+  ) return null;
 
   const payload = verifyInterview(data.signed_token);
   if (!payload || payload.kind !== 'proof' || payload.questions.length !== 3) return null;

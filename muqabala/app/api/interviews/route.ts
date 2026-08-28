@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { cookies } from 'next/headers';
 import { CreateInterviewSchema } from '@/lib/interviews';
 import { trustedInterviewPlan } from '@/lib/interview-plan';
@@ -38,29 +39,51 @@ export async function POST(request: Request) {
   // browser is already signed in to a candidate account.
   const user = parsed.data.mode === 'screening' ? null : await currentUser();
   const rawToken = newOpaqueToken();
-  const { data, error } = await admin
-    .from('interviews')
-    .insert({
-      user_id: user?.id ?? null,
-      anonymous_token_hash: user ? null : tokenHash(rawToken),
-      role_id: plan.role.id,
-      role_title: parsed.data.language === 'ar' ? plan.role.titleAr : plan.role.title,
-      language: parsed.data.language,
-      mode: parsed.data.mode,
-      question_snapshot: plan.questions,
-      role_snapshot: plan.role,
-      screening_pack_id: screeningPack?.data?.id ?? null,
-      candidate_name: parsed.data.mode === 'screening'
-        ? parsed.data.candidateName?.replace(/\s+/g, ' ').trim()
-        : null,
-    })
-    .select('id')
-    .single();
-  if (error) return Response.json({ error: 'Interview could not be started.' }, { status: 500 });
+  let interviewId: string;
+  if (parsed.data.mode === 'screening') {
+    interviewId = randomUUID();
+    const { data: startStatus, error: startError } = await admin.rpc('start_screening_interview', {
+      p_interview_id: interviewId,
+      p_pack_id: screeningPack!.data!.id,
+      p_anonymous_token_hash: tokenHash(rawToken),
+      p_role_id: plan.role.id,
+      p_role_title: parsed.data.language === 'ar' ? plan.role.titleAr : plan.role.title,
+      p_language: parsed.data.language,
+      p_question_snapshot: plan.questions,
+      p_role_snapshot: plan.role,
+      p_candidate_name: parsed.data.candidateName!.replace(/\s+/g, ' ').trim(),
+    });
+    if (startError) return Response.json({ error: 'Interview could not be started.' }, { status: 500 });
+    if (startStatus === 'full') {
+      return Response.json({ error: 'This employer interview link has reached its candidate limit.' }, { status: 409 });
+    }
+    if (startStatus !== 'started') {
+      return Response.json({ error: 'This employer interview link is no longer available.' }, { status: 410 });
+    }
+  } else {
+    const { data, error } = await admin
+      .from('interviews')
+      .insert({
+        user_id: user?.id ?? null,
+        anonymous_token_hash: user ? null : tokenHash(rawToken),
+        role_id: plan.role.id,
+        role_title: parsed.data.language === 'ar' ? plan.role.titleAr : plan.role.title,
+        language: parsed.data.language,
+        mode: parsed.data.mode,
+        question_snapshot: plan.questions,
+        role_snapshot: plan.role,
+        screening_pack_id: null,
+        candidate_name: null,
+      })
+      .select('id')
+      .single();
+    if (error) return Response.json({ error: 'Interview could not be started.' }, { status: 500 });
+    interviewId = data.id;
+  }
 
   if (!user) {
     const cookieStore = await cookies();
-    cookieStore.set(parsed.data.mode === 'screening' ? screeningAttemptCookie(data.id) : ATTEMPT_COOKIE, rawToken, {
+    cookieStore.set(parsed.data.mode === 'screening' ? screeningAttemptCookie(interviewId) : ATTEMPT_COOKIE, rawToken, {
       httpOnly: true,
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
@@ -68,5 +91,5 @@ export async function POST(request: Request) {
       maxAge: 60 * 60 * 24 * 7,
     });
   }
-  return Response.json({ id: data.id, unlocked: Boolean(user) }, { status: 201, headers: privateNoStoreHeaders() });
+  return Response.json({ id: interviewId, unlocked: Boolean(user) }, { status: 201, headers: privateNoStoreHeaders() });
 }

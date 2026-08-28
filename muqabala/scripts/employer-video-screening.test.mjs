@@ -77,13 +77,35 @@ test('employer creation form generates the description before unlocking the link
   const createPosition = form.indexOf("t('proofCreateAction')");
 
   assert.match(form, /fetch\('\/api\/screening\/job-description'/);
-  assert.match(form, /const canCreate = companyReady && titleReady && jobReady/);
+  assert.match(form, /const canCreate = companyReady && titleReady && jobReady && settingsReady/);
   assert.match(form, /type="submit" className=\{styles\.submit\} disabled=\{!canCreate\}/);
   assert.ok(generatePosition >= 0 && createPosition > generatePosition);
   assert.match(styles, /\.actions\s*\{[\s\S]*grid-template-columns:/);
   assert.match(styles, /@media \(max-width: 28rem\)[\s\S]*\.actions\s*\{\s*grid-template-columns: 1fr;/);
   assert.match(form, /t\('proofRecruiterValue'\)/);
   assert.match(copy, /Learn how each candidate would approach the role before you shortlist\./);
+});
+
+test('employer link settings are compact and enforced atomically in the database', () => {
+  const form = read('components/EmployerProofCreate.tsx');
+  const styles = read('components/EmployerProofCreate.module.css');
+  const packRoute = read('app/api/screening/packs/route.ts');
+  const startRoute = read('app/api/interviews/route.ts');
+  const migration = read('supabase/migrations/20260828184014_screening_pack_capacity_expiry.sql');
+
+  assert.match(form, /DEFAULT_MAX_CANDIDATES = 100/);
+  assert.match(form, /DEFAULT_EXPIRY_DAYS = 14/);
+  assert.match(form, /proofLinkSettingsLabel/);
+  assert.match(styles, /\.linkSettingsGrid\s*\{[\s\S]*grid-template-columns: repeat\(2/);
+  assert.match(packRoute, /parsed\.data\.expiryDays/);
+  assert.match(packRoute, /max_candidates: parsed\.data\.maxCandidates/);
+  assert.match(startRoute, /rpc\('start_screening_interview'/);
+  assert.match(startRoute, /startStatus === 'full'/);
+  assert.match(migration, /for update/);
+  assert.match(migration, /starts_used >= pack_row\.max_candidates/);
+  assert.match(migration, /insert into public\.interviews/);
+  assert.match(migration, /set starts_used = starts_used \+ 1/);
+  assert.match(migration, /grant execute on function public\.start_screening_interview[\s\S]*to service_role/);
 });
 
 test('JobStrike is absent from the complete employer flow', () => {

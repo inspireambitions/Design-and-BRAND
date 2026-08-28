@@ -7,16 +7,27 @@ import { EmailSignIn } from './EmailSignIn';
 import styles from './EmployerProofCreate.module.css';
 
 const MIN_ADVERT_CHARS = 120;
+const DEFAULT_MAX_CANDIDATES = 100;
+const DEFAULT_EXPIRY_DAYS = 14;
+const EXPIRY_OPTIONS = [1, 3, 7, 14, 21, 30] as const;
+
+type LinkDetails = {
+  url: string;
+  expiresAt: string;
+  maxCandidates: number;
+};
 
 export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
   const { lang, setLang, t } = useLang();
   const [companyName, setCompanyName] = useState('');
   const [jobTitle, setJobTitle] = useState('');
   const [jobText, setJobText] = useState('');
+  const [maxCandidates, setMaxCandidates] = useState(DEFAULT_MAX_CANDIDATES);
+  const [expiryDays, setExpiryDays] = useState(DEFAULT_EXPIRY_DAYS);
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [link, setLink] = useState('');
+  const [linkDetails, setLinkDetails] = useState<LinkDetails | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<'generate' | 'create' | null>(null);
   const [tooShort, setTooShort] = useState(false);
@@ -24,8 +35,23 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
   const companyReady = companyName.trim().length >= 2;
   const titleReady = jobTitle.trim().length >= 2;
   const jobReady = jobText.trim().length >= MIN_ADVERT_CHARS;
+  const settingsReady = Number.isInteger(maxCandidates) && maxCandidates >= 1 && maxCandidates <= 1000;
   const canGenerate = companyReady && titleReady && !generating && !creating;
-  const canCreate = companyReady && titleReady && jobReady && !generating && !creating;
+  const canCreate = companyReady && titleReady && jobReady && settingsReady && !generating && !creating;
+  const link = linkDetails?.url ?? '';
+
+  function resetLinkSettings() {
+    setMaxCandidates(DEFAULT_MAX_CANDIDATES);
+    setExpiryDays(DEFAULT_EXPIRY_DAYS);
+    setLinkDetails(null);
+  }
+
+  function withValues(template: string, values: Record<string, string | number>) {
+    return Object.entries(values).reduce(
+      (copy, [key, value]) => copy.replace(`{${key}}`, String(value)),
+      template,
+    );
+  }
 
   async function generateJobDescription() {
     if (!canGenerate) return;
@@ -34,7 +60,7 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
     setGenerated(false);
     setError(null);
     setTooShort(false);
-    setLink('');
+    setLinkDetails(null);
 
     try {
       const response = await fetch('/api/screening/job-description', {
@@ -96,15 +122,17 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
           companyName: companyName.trim(),
           jobTitle: jobTitle || generatedBody.role?.title,
           interviewToken: generatedBody.token,
+          maxCandidates,
+          expiryDays,
         }),
       });
-      const packBody = await pack.json().catch(() => ({})) as { url?: string };
-      if (!pack.ok || !packBody.url) {
+      const packBody = await pack.json().catch(() => ({})) as Partial<LinkDetails>;
+      if (!pack.ok || !packBody.url || !packBody.expiresAt || !packBody.maxCandidates) {
         setError('create');
         return;
       }
 
-      setLink(packBody.url);
+      setLinkDetails(packBody as LinkDetails);
     } catch {
       setError('create');
     } finally {
@@ -181,7 +209,7 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
                   setCompanyName(event.target.value);
                   setGenerated(false);
                   setError(null);
-                  setLink('');
+                  setLinkDetails(null);
                 }}
                 minLength={2}
                 maxLength={80}
@@ -200,7 +228,7 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
                   setJobTitle(event.target.value);
                   setGenerated(false);
                   setError(null);
-                  setLink('');
+                  setLinkDetails(null);
                 }}
                 minLength={2}
                 maxLength={120}
@@ -218,7 +246,7 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
                 onChange={(event) => {
                   setJobText(event.target.value);
                   setError(null);
-                  setLink('');
+                  setLinkDetails(null);
                   if (tooShort && event.target.value.trim().length >= MIN_ADVERT_CHARS) setTooShort(false);
                 }}
                 minLength={MIN_ADVERT_CHARS}
@@ -229,6 +257,47 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
                 aria-describedby="job-description-status"
               />
             </label>
+
+            <fieldset className={styles.linkSettings}>
+              <legend>{t('proofLinkSettingsLabel')}</legend>
+              <button className={styles.linkSettingsReset} type="button" onClick={resetLinkSettings}>
+                {t('proofLinkSettingsReset')}
+              </button>
+              <div className={styles.linkSettingsGrid}>
+                <label className={styles.linkSetting}>
+                  <span>{t('proofLinkPlacesLabel')}</span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={1000}
+                    value={maxCandidates}
+                    onChange={(event) => {
+                      setMaxCandidates(Number(event.target.value));
+                      setLinkDetails(null);
+                    }}
+                    onBlur={() => setMaxCandidates((value) => Math.min(1000, Math.max(1, Math.round(value || DEFAULT_MAX_CANDIDATES))))}
+                  />
+                </label>
+                <label className={styles.linkSetting}>
+                  <span>{t('proofLinkOpenForLabel')}</span>
+                  <select
+                    value={expiryDays}
+                    onChange={(event) => {
+                      setExpiryDays(Number(event.target.value));
+                      setLinkDetails(null);
+                    }}
+                  >
+                    {EXPIRY_OPTIONS.map((days) => (
+                      <option key={days} value={days}>
+                        {withValues(t('proofLinkDaysOption'), { days })}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <p>{t('proofLinkSettingsHelp')}</p>
+            </fieldset>
 
             <div className={styles.actions} aria-label={t('proofCreateStepsLabel')}>
               <button
@@ -245,6 +314,10 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
                 <span>{creating ? t('proofCreating') : t('proofCreateAction')}</span>
               </button>
             </div>
+
+            <p className={styles.linkSummary}>
+              {withValues(t('proofLinkSettingsSummary'), { count: maxCandidates, days: expiryDays })}
+            </p>
 
             <div id="job-description-status" className={styles.status} aria-live="polite">
               {!companyReady || !titleReady ? (
@@ -270,7 +343,16 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
               <p className={styles.linkEyebrow}>{t('proofLinkTitle')}</p>
               <h2 id="candidate-link-heading">{t('proofStepShare')}</h2>
               <p className={styles.linkText}>{link}</p>
-              <p className={styles.linkNote}>{t('proofLinkReady')}</p>
+              <p className={styles.linkNote}>
+                {linkDetails && withValues(t('proofLinkReady'), {
+                  count: linkDetails.maxCandidates,
+                  date: new Intl.DateTimeFormat(lang === 'ar' ? 'ar-AE' : 'en-GB', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                  }).format(new Date(linkDetails.expiresAt)),
+                })}
+              </p>
               <div className={styles.linkActions}>
                 <button type="button" onClick={() => void copyLink()}>
                   {copied ? t('proofCopied') : t('proofCopyLink')}

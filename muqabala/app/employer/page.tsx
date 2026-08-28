@@ -14,6 +14,8 @@ type Pack = {
   workplace: string;
   created_at: string;
   expires_at: string;
+  max_candidates: number;
+  starts_used: number;
 };
 
 type Submission = {
@@ -29,7 +31,7 @@ export default async function EmployerDashboardPage() {
   if (!user) redirect('/sign-in?next=/employer');
   const client = await createClient();
   const { data: packRows } = await client!.from('screening_packs')
-    .select('id,public_code,workplace,created_at,expires_at')
+    .select('id,public_code,workplace,created_at,expires_at,max_candidates,starts_used')
     .eq('employer_id', user.id)
     .order('created_at', { ascending: false });
   const packs = (packRows ?? []) as Pack[];
@@ -73,7 +75,11 @@ export default async function EmployerDashboardPage() {
                 <div className={styles.packHead}>
                   <div>
                     <h2>{pack.workplace || 'Employer interview'}</h2>
-                    <p>Created {new Date(pack.created_at).toLocaleDateString('en-GB')}</p>
+                    <p>
+                      Created {new Date(pack.created_at).toLocaleDateString('en-GB')}
+                      {' · '}{pack.starts_used} of {pack.max_candidates} places used
+                      {' · '}closes {new Date(pack.expires_at).toLocaleDateString('en-GB')}
+                    </p>
                   </div>
                   <a className={styles.share} href={`${origin}/s/${pack.public_code}`}>{origin}/s/{pack.public_code}</a>
                 </div>
