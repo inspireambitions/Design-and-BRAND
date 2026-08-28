@@ -7,7 +7,7 @@ export const SESSION_DRAFT_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 export type ResumeStage = 'prep' | 'review' | 'feedback';
 export type AnswerMethod = 'speak' | 'type' | 'video';
-export type InterviewMode = 'guided' | 'mock';
+export type InterviewMode = 'guided' | 'mock' | 'screening';
 
 export type DraftAnswer = {
   questionId: string;
@@ -120,7 +120,7 @@ function parseV2(value: unknown, roleId: string, customTitle: string | undefined
   if (typeof value.tailored !== 'boolean' || typeof value.fellBack !== 'boolean') return null;
   if (value.language !== 'en' && value.language !== 'ar') return null;
   if (value.stage !== 'prep' && value.stage !== 'review' && value.stage !== 'feedback') return null;
-  if (value.mode !== 'guided' && value.mode !== 'mock') return null;
+  if (value.mode !== 'guided' && value.mode !== 'mock' && value.mode !== 'screening') return null;
   if (value.answerMethod !== 'speak' && value.answerMethod !== 'type' && value.answerMethod !== 'video') return null;
   if (!Number.isInteger(value.questionIndex) || (value.questionIndex as number) < 0) return null;
   if (typeof value.transcript !== 'string' || typeof value.transcriptConfirmed !== 'boolean') return null;

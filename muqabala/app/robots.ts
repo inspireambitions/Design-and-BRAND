@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/api/', '/progress'],
+      disallow: ['/api/', '/progress', '/s/'],
     },
     sitemap: 'https://trymuqabala.com/sitemap.xml',
     host: 'https://trymuqabala.com',

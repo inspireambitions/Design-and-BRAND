@@ -14,6 +14,7 @@ import type { Competency, Question, Role } from './roles';
 
 const TOKEN_VERSION = 1;
 const TOKEN_TTL_MS = 3 * 60 * 60 * 1000; // a practice session, not a login
+const PROOF_TTL_MS = 14 * 24 * 60 * 60 * 1000; // a WhatsApp link sitting in an agency chat
 
 export type InterviewTokenPayload = {
   v: number;
@@ -23,6 +24,9 @@ export type InterviewTokenPayload = {
   level: Role['level'];
   competencies: Competency[];
   questions: Question[];
+  /** Workplace name on a proof sitting. Absent for Coach practice. */
+  workplace?: string;
+  kind?: 'practice' | 'proof';
 };
 
 /**
@@ -47,15 +51,32 @@ function fromB64url(input: string): Buffer {
   return Buffer.from(input.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
 }
 
-export function signInterview(
-  payload: Omit<InterviewTokenPayload, 'v' | 'exp'>,
-): string | null {
+function signPayload(payload: InterviewTokenPayload): string | null {
   const key = signingKey();
   if (!key) return null;
-  const body: InterviewTokenPayload = { ...payload, v: TOKEN_VERSION, exp: Date.now() + TOKEN_TTL_MS };
-  const encoded = b64url(Buffer.from(JSON.stringify(body), 'utf8'));
+  const encoded = b64url(Buffer.from(JSON.stringify(payload), 'utf8'));
   const signature = b64url(createHmac('sha256', key).update(encoded).digest());
   return `${encoded}.${signature}`;
+}
+
+export function signInterview(
+  payload: Omit<InterviewTokenPayload, 'v' | 'exp' | 'kind' | 'workplace'>,
+): string | null {
+  return signPayload({ ...payload, v: TOKEN_VERSION, kind: 'practice', exp: Date.now() + TOKEN_TTL_MS });
+}
+
+/** 14-day work-sample pack. Same signature family as practice so scoring can trust it. */
+export function signProofPack(
+  payload: Omit<InterviewTokenPayload, 'v' | 'exp' | 'kind'> & { workplace: string },
+): string | null {
+  const workplace = payload.workplace.trim().slice(0, 80);
+  return signPayload({
+    ...payload,
+    workplace,
+    v: TOKEN_VERSION,
+    kind: 'proof',
+    exp: Date.now() + PROOF_TTL_MS,
+  });
 }
 
 export function verifyInterview(token: unknown): InterviewTokenPayload | null {

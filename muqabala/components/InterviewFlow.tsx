@@ -22,6 +22,7 @@ import {
   type StarElement,
 } from '@/lib/star-probe';
 import { startRecording, startLevelMeter, type AnswerRecorder, type LevelMeter } from '@/lib/media';
+import type { InterviewMode } from '@/lib/interview-plan-policy';
 import {
   defaultAnswerMethod,
   detectDeviceCapabilities,
@@ -107,6 +108,7 @@ export function InterviewFlow({
   interviewToken,
   fellBack = false,
   mockQuestions,
+  proof,
 }: {
   role: Role;
   /** Job title typed by the candidate when practising a role not in the catalogue. */
@@ -119,6 +121,8 @@ export function InterviewFlow({
   fellBack?: boolean;
   /** Eight-question set for Full Mock mode; absent when the role cannot support it. */
   mockQuestions?: Question[];
+  /** Live work sample for a hiring team. Not practice. */
+  proof?: { workplace: string };
 }) {
   const { lang, setLang, t } = useLang();
 
@@ -145,7 +149,7 @@ export function InterviewFlow({
    * Guided: revealed questions, feedback after each answer, retakes.
    * Mock: eight questions one at a time, no interruptions, report at the end.
    */
-  const [mode, setMode] = useState<'guided' | 'mock'>('guided');
+  const [mode, setMode] = useState<InterviewMode>(proof ? 'screening' : 'guided');
   const [recordingLive, setRecordingLive] = useState(false);
   const lastHeardRef = useRef(0);
   const [meterUnavailable, setMeterUnavailable] = useState(false);
@@ -154,6 +158,7 @@ export function InterviewFlow({
   const [saveFailed, setSaveFailed] = useState(false);
   const [localDraftSaveFailed, setLocalDraftSaveFailed] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
+  const [proofStartFailed, setProofStartFailed] = useState(false);
 
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [timerPaused, setTimerPaused] = useState(false);
@@ -212,7 +217,9 @@ export function InterviewFlow({
   const activeQuestions = resumedQuestions ?? (
     mode === 'mock' && mockQuestions && mockQuestions.length > 0
       ? mockQuestions
-      : role.questions.slice(0, 1)
+      : mode === 'screening'
+        ? role.questions
+        : role.questions.slice(0, 1)
   );
   const question = activeQuestions[index];
   // Latched, not instantaneous: ordinary pauses between sentences must not
@@ -296,6 +303,11 @@ export function InterviewFlow({
   // An account resume link is already an explicit choice. A browser-local
   // draft is not: show Resume and Discard instead of silently moving screens.
   useEffect(() => {
+    if (proof) {
+      setReportGateRequired(false);
+      setReportUnlocked(true);
+      return;
+    }
     let cancelled = false;
     const resumeId = new URLSearchParams(window.location.search).get('resume');
     if (resumeId) {
@@ -357,6 +369,7 @@ export function InterviewFlow({
 
   useEffect(() => {
     if (stage === 'check') return;
+    if (proof) return;
     if (stage === 'done') {
       discardInterviewDraft(window.localStorage, role.id, customTitle);
       setLocalDraftSaveFailed(false);
@@ -442,20 +455,26 @@ export function InterviewFlow({
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
+        if (proof) return null;
         // Account storage is part of the report lock. Failure must never turn
         // the paid-in-email gate off and expose Questions 2 onward.
         setReportGateRequired(true);
         return null;
       }
-      setReportGateRequired(true);
       setServerAttemptId(data.id);
-      setReportUnlocked(Boolean(data.unlocked));
+      if (proof) {
+        setReportGateRequired(false);
+        setReportUnlocked(true);
+      } else {
+        setReportGateRequired(true);
+        setReportUnlocked(Boolean(data.unlocked));
+      }
       return data.id as string;
     } catch {
-      setReportGateRequired(true);
+      if (!proof) setReportGateRequired(true);
       return null;
     }
-  }, [activeQuestions, interviewLanguage, interviewToken, mode, reportRoleTitle, role.id, serverAttemptId]);
+  }, [activeQuestions, interviewLanguage, interviewToken, mode, proof, reportRoleTitle, role.id, serverAttemptId]);
 
   useEffect(() => {
     const supported = isSpeechSupported();
@@ -671,8 +690,10 @@ export function InterviewFlow({
     }
   }, [ensureCaptureReady, playbackUrl, question.answerSeconds, startMicMeter, startSpeechCapture, switchToTyping, useVoice]);
 
+  const liveSitting = mode === 'mock' || mode === 'screening';
+
   const toggleMockPause = useCallback(() => {
-    if (mode !== 'mock' || stage !== 'record' || !useVoice) return;
+    if (!liveSitting || stage !== 'record' || !useVoice) return;
     if (!timerPaused) {
       stopDictation();
       meterRef.current?.stop();
@@ -691,7 +712,7 @@ export function InterviewFlow({
     setRecordingLive(true);
     setTimerPaused(false);
     setTimerAnnouncement(t('timerResumedStatus'));
-  }, [mode, stage, startMicMeter, startSpeechCapture, stopDictation, t, timerPaused, transcript, useVoice]);
+  }, [liveSitting, stage, startMicMeter, startSpeechCapture, stopDictation, t, timerPaused, transcript, useVoice]);
 
   const finishAnswer = useCallback(async () => {
     if (finalizingRef.current) return;
@@ -847,10 +868,9 @@ export function InterviewFlow({
       const data = (await response.json()) as { feedback: AnswerFeedback; locked?: boolean };
       scoringSessionRef.current = null;
       automaticRetriesRef.current = 0;
-      if (mode === 'mock' || data.locked) {
-        // The mock does not interrupt: the score is banked and the interview
-        // moves straight on, exactly like a real first round. Everything is
-        // shown together in the final report.
+      if (mode === 'mock' || mode === 'screening' || data.locked) {
+        // Live sittings do not interrupt: the score is banked and the interview
+        // moves straight on. Everything is shown together in the final report.
         await completeAnswerRef.current?.(data.feedback);
       } else {
         if (starProbe) {
@@ -1192,12 +1212,14 @@ export function InterviewFlow({
               </p>
             )}
             <p className="lede" style={{ marginTop: '0.6rem' }}>
-              {t('beforeStartShort')}
+              {proof
+                ? t('proofBeforeStartShort').replace('{workplace}', proof.workplace || t('proofWorkplaceFallback'))
+                : t('beforeStartShort')}
             </p>
             <details className="disclosure" style={{ marginTop: '0.5rem' }}>
               <summary className="tiny">{t('beforeStartMore')}</summary>
               <p className="tiny" style={{ marginTop: '0.4rem' }}>
-                {t('beforeStartBody')}
+                {proof ? t('proofBeforeStartBody') : t('beforeStartBody')}
               </p>
             </details>
           </div>
@@ -1207,7 +1229,7 @@ export function InterviewFlow({
             <p className="tiny" style={{ marginTop: '0.35rem' }}>{t(deviceGuidanceKey)}</p>
           </div>
 
-          {/* ---------- interview format ---------- */}
+          {!proof && (
           <div className="mode-row">
             {mode === 'mock' && mockQuestions && mockQuestions.length > 0 && (
               <button
@@ -1233,8 +1255,9 @@ export function InterviewFlow({
                 <span className="tiny">{t('modeGuidedBody')}</span>
             </button>
           </div>
+          )}
 
-          {mode === 'mock' && (
+          {mode === 'mock' && !proof && (
             <label className="check-row">
               <input
                 type="checkbox"
@@ -1335,7 +1358,7 @@ export function InterviewFlow({
             </div>
           ) : (
             <p className="notice tiny" style={{ margin: 0 }}>
-              {t('mockHiddenNote')}
+              {proof ? t('proofHiddenNote') : t('mockHiddenNote')}
             </p>
           )}
 
@@ -1400,7 +1423,7 @@ export function InterviewFlow({
               <div className="notice">
                 <strong>{t('typingModeTitle')}</strong>
                 <p className="tiny" style={{ marginTop: '0.35rem' }}>
-                  {mode === 'mock' ? t('typingModeBodyMock') : t('typingModeBody')}
+                  {liveSitting ? t('typingModeBodyMock') : t('typingModeBody')}
                 </p>
               </div>
             )}
@@ -1410,23 +1433,28 @@ export function InterviewFlow({
             <p className="eyebrow">{t('whatToExpect')}</p>
             <p className="expectation-keyline">
               <strong>
-                {activeQuestions.length === 1
-                  ? t('expectOneQuestion')
-                  : `${activeQuestions.length} ${t('expect1')}`}
+                {proof
+                  ? t('expectProofQuestions')
+                  : activeQuestions.length === 1
+                    ? t('expectOneQuestion')
+                    : `${activeQuestions.length} ${t('expect1')}`}
               </strong>
               <span aria-hidden="true">·</span>
               <strong>
-                {mode === 'mock' ? t('expectMockTime') : t('expectQuickTime')}
+                {proof ? t('expectProofTime') : mode === 'mock' ? t('expectMockTime') : t('expectQuickTime')}
               </strong>
             </p>
             <p className="tiny">
-              {mode === 'mock' ? t('modeMockExpect') : t('modeGuidedExpect')}
+              {proof ? t('modeProofExpect') : mode === 'mock' ? t('modeMockExpect') : t('modeGuidedExpect')}
             </p>
             <p className="notice tiny" style={{ marginTop: '0.9rem' }}>
               {t('scoringPolicy')}
             </p>
           </div>
 
+          {proofStartFailed && (
+            <p className="notice notice-warn" role="alert">{t('proofStartFailed')}</p>
+          )}
           <div className="row">
             <button
               type="button"
@@ -1439,7 +1467,12 @@ export function InterviewFlow({
                 if (startingQuestions !== activeQuestions) setResumedQuestions(startingQuestions);
                 setSessionLanguage(lang);
                 track('interview_started', { role_id: role.id, lang });
-                await createServerAttempt(startingQuestions);
+                const attemptId = await createServerAttempt(startingQuestions);
+                if (proof && !attemptId) {
+                  setProofStartFailed(true);
+                  return;
+                }
+                setProofStartFailed(false);
                 // Ask here rather than in a separate step: this tap is the user
                 // gesture browsers want, and it comes after the disclosure the
                 // candidate has just read.
@@ -1461,9 +1494,11 @@ export function InterviewFlow({
                     ? t('continueWithSpeaking')
                   : t('continueWithTyping')}
             </button>
-            <Link href="/practice" className="btn btn-ghost" style={{ textDecoration: 'none' }}>
-              {t('back')}
-            </Link>
+            {!proof && (
+              <Link href="/practice" className="btn btn-ghost" style={{ textDecoration: 'none' }}>
+                {t('back')}
+              </Link>
+            )}
           </div>
         </div>
       )}
@@ -1581,7 +1616,7 @@ export function InterviewFlow({
                   />
                 </div>
 
-                {mode === 'mock' && (
+                {liveSitting && (
                   <div className="row timer-controls">
                     <button
                       type="button"
@@ -1779,10 +1814,10 @@ export function InterviewFlow({
                 disabled={isScoring || transcript.trim().length === 0 || !transcriptConfirmed}
               >
                 {isScoring
-                  ? mode === 'mock' ? t('preparingNext') : t('scoring')
+                  ? liveSitting ? t('preparingNext') : t('scoring')
                   : scoringError
                     ? t('retryNow')
-                    : mode === 'mock' ? t('confirmAnswer') : t('getFeedback')}
+                    : liveSitting ? t('confirmAnswer') : t('getFeedback')}
               </button>
               {mode === 'guided' && (
                 <button type="button" className="btn btn-quiet" onClick={retryQuestion}>
@@ -1951,7 +1986,7 @@ export function InterviewFlow({
             </div>
           )}
           <div className="card stack">
-            <p className="eyebrow">{t('interviewComplete')}</p>
+            <p className="eyebrow">{proof ? t('proofComplete') : t('interviewComplete')}</p>
             {overallFromAnswers(answers) !== null ? (
               <div className="score-head">
                 <ScoreRing value={overallFromAnswers(answers) ?? 0} />
@@ -1960,7 +1995,7 @@ export function InterviewFlow({
                     {t('overallScore')}: {overallFromAnswers(answers)}/100
                   </h2>
                   <p className="muted" style={{ marginTop: '0.3rem' }}>
-                    {t('resultsBody')}
+                    {proof ? t('proofResultsBody') : t('resultsBody')}
                   </p>
                 </div>
               </div>
@@ -1968,7 +2003,7 @@ export function InterviewFlow({
               <div>
                 <h2 style={{ fontSize: '1.3rem' }}>{t('noScoreTitle')}</h2>
                 <p className="muted" style={{ marginTop: '0.3rem' }}>
-                  {t('noScoreBody')}
+                  {proof ? t('proofResultsBody') : t('noScoreBody')}
                 </p>
               </div>
             )}
@@ -1984,6 +2019,23 @@ export function InterviewFlow({
             )}
 
             <div className="row no-print">
+              {proof && (
+                <a
+                  className="btn btn-primary"
+                  href={`https://wa.me/?text=${encodeURIComponent(buildReportText(reportRoleTitle, overallFromAnswers(answers), answers, {
+                    report: t('reportTitle'),
+                    score: t('overallScore'),
+                    question: t('question'),
+                    yourAnswer: t('yourAnswer'),
+                    worked: t('whatWorked'),
+                    improve: t('whatToImprove'),
+                  }))}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {t('proofSendWhatsApp')}
+                </a>
+              )}
               {typeof navigator !== 'undefined' && typeof navigator.share === 'function' && (
                 <button
                   type="button"
@@ -2107,13 +2159,13 @@ export function InterviewFlow({
             );
           })()}
 
-          {savedAttempt && (
+          {!proof && savedAttempt && (
             <div className="no-print">
               <RatingCard attempt={savedAttempt} />
             </div>
           )}
 
-          <CoachingCard />
+          {!proof && <CoachingCard />}
 
           {answers.map((answer, i) => (
             <div key={`${answer.questionId}-${i}`} className="stack-sm">
@@ -2133,6 +2185,7 @@ export function InterviewFlow({
             </div>
           ))}
 
+          {!proof && (
           <div className="row no-print">
             <Link
               href={`/practice/${role.id}`}
@@ -2148,6 +2201,7 @@ export function InterviewFlow({
               {t('seeProgress')}
             </Link>
           </div>
+          )}
         </div>
       )}
     </div>

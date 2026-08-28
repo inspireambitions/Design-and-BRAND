@@ -1,15 +1,22 @@
 import { roleFromToken, verifyInterview } from './interview-token';
-import { matchesTrustedQuestionSequence } from './interview-plan-policy';
+import { matchesTrustedQuestionSequence, type InterviewMode } from './interview-plan-policy';
 import { buildCustomRole, CUSTOM_ROLE_ID, getRole, type Question, type Role } from './roles';
 
 export function trustedInterviewPlan(input: {
   roleId: string;
   roleTitle: string;
-  mode: 'guided' | 'mock';
+  mode: InterviewMode;
   questions: Array<{ id: string }>;
   interviewToken?: string;
 }): { role: Role; questions: Question[] } | null {
   const verified = input.interviewToken ? verifyInterview(input.interviewToken) : null;
+  // Practice and proof never mix: a Coach token cannot start a work sample,
+  // and a work-sample pack cannot be scored as practice.
+  if (input.mode === 'screening') {
+    if (!verified || verified.kind !== 'proof' || verified.questions.length !== 3) return null;
+  } else if (verified?.kind === 'proof') {
+    return null;
+  }
   const role = verified
     ? roleFromToken(verified)
     : input.roleId === CUSTOM_ROLE_ID
