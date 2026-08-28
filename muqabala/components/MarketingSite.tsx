@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { blogCopy, homeCopy, marketingNav, type MarketingPageContent, type MarketingRole } from '@/lib/marketing-content';
+import { homeCopy, marketingNav, type MarketingPageContent, type MarketingRole } from '@/lib/marketing-content';
 import { useLang } from './LanguageProvider';
 
 export function MarketingHeader() {
@@ -40,6 +40,7 @@ export function MarketingHeader() {
               <Link href="/interview-roles">{nav.roles}</Link>
               <Link href="/how-feedback-works">{nav.feedback}</Link>
               <Link href="/about">{nav.about}</Link>
+              <Link href="/guides">{nav.blog}</Link>
               <Link href="/faq">{nav.faq}</Link>
             </div>
           </details>
@@ -72,7 +73,7 @@ export function MarketingFooter() {
         </div>
         <div className="marketing-footer-links">
           <Link href="/about">{nav.about}</Link>
-          <Link href="/blog">{nav.blog}</Link>
+          <Link href="/guides">{nav.blog}</Link>
           <Link href="/for-employers">{lang === 'ar' ? 'لفرق التوظيف' : 'Hiring teams'}</Link>
           <Link href="/contact">{lang === 'ar' ? 'تواصل' : 'Contact'}</Link>
           <Link href="/privacy">{lang === 'ar' ? 'الخصوصية' : 'Privacy'}</Link>
@@ -297,25 +298,3 @@ export function InterviewRolesPage({ roles }: { roles: MarketingRole[] }) {
   );
 }
 
-export function BlogHoldingPage() {
-  const { lang } = useLang();
-  const c = blogCopy[lang];
-  return (
-    <div className="marketing-site">
-      <MarketingHeader />
-      <main>
-        <section className="info-hero marketing-wrap">
-          <p className="marketing-eyebrow">{c.eyebrow}</p>
-          <h1>{c.title}</h1>
-          <p className="marketing-lede">{c.intro}</p>
-        </section>
-        <section className="marketing-wrap blog-topics">
-          {[c.topic1, c.topic2, c.topic3].map((topic) => <h2 key={topic}>{topic}</h2>)}
-          <p>{c.note}</p>
-        </section>
-      </main>
-      <MarketingFooter />
-      <Link href="/practice" className="marketing-mobile-cta">{marketingNav[lang].practice}</Link>
-    </div>
-  );
-}
