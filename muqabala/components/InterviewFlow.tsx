@@ -24,6 +24,7 @@ import {
 import { startRecording, startLevelMeter, type AnswerRecorder, type LevelMeter } from '@/lib/media';
 import type { InterviewMode } from '@/lib/interview-plan-policy';
 import {
+  INITIAL_DEVICE_CAPABILITIES,
   defaultAnswerMethod,
   detectDeviceCapabilities,
   type DeviceCapabilities,
@@ -151,12 +152,12 @@ export function InterviewFlow({
   const [micLevel, setMicLevel] = useState(0);
   const [playbackUrl, setPlaybackUrl] = useState<string | null>(null);
   const [reportCopied, setReportCopied] = useState(false);
-  const [speechOk, setSpeechOk] = useState(true);
+  const [speechOk, setSpeechOk] = useState(INITIAL_DEVICE_CAPABILITIES.speechSupported);
   const [onDeviceSpeech, setOnDeviceSpeech] = useState(false);
   const [answerMethod, setAnswerMethod] = useState<'speak' | 'type' | 'video'>(() =>
-    defaultAnswerMethod(detectDeviceCapabilities()),
+    defaultAnswerMethod(INITIAL_DEVICE_CAPABILITIES),
   );
-  const [deviceCaps] = useState<DeviceCapabilities>(() => detectDeviceCapabilities());
+  const [deviceCaps, setDeviceCaps] = useState<DeviceCapabilities>(INITIAL_DEVICE_CAPABILITIES);
   /**
    * Guided: revealed questions, feedback after each answer, retakes.
    * Mock: eight questions one at a time, no interruptions, report at the end.
@@ -216,6 +217,13 @@ export function InterviewFlow({
   const scoringSessionRef = useRef<string | null>(null);
   const automaticRetriesRef = useRef(0);
   const [savedAttempt, setSavedAttempt] = useState<Attempt | null>(null);
+
+  useEffect(() => {
+    const capabilities = detectDeviceCapabilities();
+    setDeviceCaps(capabilities);
+    setSpeechOk(capabilities.speechSupported);
+    setAnswerMethod(defaultAnswerMethod(capabilities));
+  }, []);
 
   const selectedAnswerMethod = speechOk ? answerMethod : 'type';
   const useVoice = selectedAnswerMethod !== 'type';

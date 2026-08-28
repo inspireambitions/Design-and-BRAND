@@ -1,10 +1,19 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  INITIAL_DEVICE_CAPABILITIES,
   buildDeviceCapabilities,
   defaultAnswerMethod,
   videoModeSupported,
 } from '../lib/device-capabilities.ts';
+
+test('initial device capabilities are stable for server and first client render', () => {
+  assert.equal(INITIAL_DEVICE_CAPABILITIES.isMobile, false);
+  assert.equal(INITIAL_DEVICE_CAPABILITIES.speechSupported, false);
+  assert.equal(INITIAL_DEVICE_CAPABILITIES.recordingSupported, false);
+  assert.equal(INITIAL_DEVICE_CAPABILITIES.mediaDevicesSupported, false);
+  assert.equal(defaultAnswerMethod(INITIAL_DEVICE_CAPABILITIES), 'type');
+});
 
 test('defaultAnswerMethod prefers typing when speech is unavailable', () => {
   const capabilities = buildDeviceCapabilities({

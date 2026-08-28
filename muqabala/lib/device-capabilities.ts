@@ -62,6 +62,17 @@ export function buildDeviceCapabilities(input: {
   };
 }
 
+/**
+ * The first client render must match the server render. Browser capabilities
+ * are detected after hydration so React never has to repair different text.
+ */
+export const INITIAL_DEVICE_CAPABILITIES = buildDeviceCapabilities({
+  isMobile: false,
+  speechSupported: false,
+  recordingSupported: false,
+  mediaDevicesSupported: false,
+});
+
 export function detectDeviceCapabilities(): DeviceCapabilities {
   const mediaDevicesSupported =
     typeof navigator !== 'undefined'
