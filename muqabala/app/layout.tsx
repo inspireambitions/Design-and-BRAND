@@ -44,6 +44,9 @@ export const metadata: Metadata = {
     title: 'Muqabala | Interview practice for Gulf jobs',
     description: 'Private Gulf interview practice with clear feedback in English or Arabic.',
   },
+  verification: {
+    google: 'CzEnPDgPrKfnxXMie9ojnjNUOIQbT2P-L-_2SopKSf4',
+  },
 };
 
 export const viewport: Viewport = {
