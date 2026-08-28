@@ -13,6 +13,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const access = await interviewAccess(id);
   if (!access.configured) return Response.json({ configured: false }, { status: 503 });
   if (!access.interview || (!access.owner && !access.anonymous)) return Response.json({ error: 'Not found.' }, { status: 404 });
+  if (access.interview.mode === 'screening') {
+    return Response.json({ error: 'Employer interviews accept saved video responses only.' }, { status: 409 });
+  }
 
   const question = access.interview.question_snapshot[parsed.data.questionIndex];
   if (!question) return Response.json({ error: 'Unknown question.' }, { status: 400 });

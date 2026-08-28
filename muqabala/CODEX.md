@@ -79,11 +79,10 @@ data, and English is often their second or third language.
 The user records answers to real interview questions, gets specific feedback on the
 **content** of what they said, and retries until the score climbs.
 
-**This is product one of two.** The same scoring engine later powers **Muqabala Screening**,
-a B2B employer product built to displace Spark Hire in the Gulf. Coach ships first because
-it has no sales cycle, earns revenue immediately, and calibrates the scoring rubrics on real
-accents and answers before the first employer demo. Do not build employer features into the
-coach unless explicitly asked.
+**This is one of two strictly separated products.** **Muqabala Coach** is private practice.
+**Muqabala Screening** is an employer-issued, video-only work sample reached through a
+short `/s/[code]` link. Never let an employer see Coach practice or let a candidate see
+Screening analysis.
 
 ### The two emotional requirements (these are the product spec, not decoration)
 
@@ -122,13 +121,13 @@ the code works.
 2. **Never penalise a candidate for a bad transcript.** Speech recognition is worse on some
    accents. If a transcript is too short or too garbled to judge, say so honestly and score 0
    with an explanation — never assign a low score to a garbled answer.
-3. **Nothing leaves the device without saying so.** What actually leaves: the **transcript**
-   (to `/api/score`, and onward to the configured AI provider when a key is set), and the **audio** when
-   voice-to-text runs without confirmed on-device recognition — browser speech recognition
-   sends audio to the browser vendor's service by default. The video is never uploaded.
-   The UI states exactly this and offers typing instead. Two earlier versions got this
-   wrong ("nothing leaves your phone", then "your audio never leaves this device") and both
-   were caught in review. If you change what is sent, change the copy in the same commit.
+3. **Nothing leaves the device without saying so.** In Coach, the transcript is sent for
+   scoring and browser speech recognition may send audio to the browser vendor. Coach video
+   remains local. In an employer-issued Screening interview, the candidate's name, video,
+   audio and any browser-generated transcript are uploaded as the candidate progresses.
+   The employer can open them only after the candidate gives final consent and submits.
+   Screening video is the source evidence. The UI states these facts before device access.
+   If you change what is sent, change the copy in the same commit.
 4. **AI recommends, humans decide.** Never build automated rejection.
 5. **Feedback must be actionable and specific.** Every improvement must quote or reference
    what the candidate actually said and be doable on the next attempt. No generic advice.
@@ -140,9 +139,10 @@ the code works.
 ## 4. Architecture
 
 The first version shipped without persistence. The live product now has **accounts,
-Supabase storage, magic-link/OTP sign-in, and private report sharing**. Video still
-never leaves the device. Do not treat older notes in this file as current if they
-say there is no database.
+Supabase storage, magic-link/OTP sign-in, and private report sharing**. Coach video remains
+local. Employer-issued Screening videos are stored in the private `screening-videos` bucket
+and are visible only to the employer that owns the link after final submission. Do not
+treat older notes in this file as current if they say there is no database or no video upload.
 
 **Production identity**
 
@@ -156,13 +156,15 @@ say there is no database.
 - Cursor MCP config: repo-root `.cursor/mcp.json` (Vercel OAuth + read-only Supabase)
 
 **Application tables** (names only): `interviews`, `interview_answers`, `report_shares`,
-`auth_claims`. Schema lives in `supabase/migrations/`.
+`screening_packs`, `auth_claims`. Schema lives in `supabase/migrations/`.
 
 ```
 muqabala/
 ├── app/
 │   ├── layout.tsx, page.tsx, globals.css
 │   ├── practice/[roleId]/      # interview
+│   ├── s/[code]/               # employer-issued, video-only candidate sitting
+│   ├── employer/               # employer-owned submissions and video reports
 │   ├── account/                # saved interviews and reports
 │   ├── share/[token]/          # time-limited private report links
 │   ├── sign-in/, auth/confirm/
@@ -170,6 +172,8 @@ muqabala/
 │       ├── score/              # scoring; requires a stored interview when persistence is on
 │       ├── interviews/         # create, save answers, report, share, delete
 │       ├── interview/          # tailored interview from a job advert
+│       ├── screening/          # pack creation, video upload, consent and submission
+│       ├── cron/               # Storage API cleanup for expired screening videos
 │       └── auth/               # request, verify, sign-out
 ├── components/                 # InterviewFlow, FullReport, EmailSignIn, marketing
 ├── lib/

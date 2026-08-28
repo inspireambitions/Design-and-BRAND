@@ -362,6 +362,18 @@ export async function POST(request: Request) {
   if (stored?.interview && stored.interview.role_id !== roleId) {
     return Response.json({ error: 'Role does not match this interview.' }, { status: 400 });
   }
+  if (stored?.interview?.mode === 'screening') {
+    const { data: recordedAnswer } = await stored.admin!.from('interview_answers')
+      .select('transcript,video_upload_status')
+      .eq('interview_id', interviewId)
+      .eq('question_index', questionIndex)
+      .maybeSingle();
+    if (!recordedAnswer
+      || recordedAnswer.video_upload_status !== 'uploaded'
+      || recordedAnswer.transcript !== transcript) {
+      return Response.json({ error: 'A saved video response is required before analysis.' }, { status: 409 });
+    }
+  }
   const question =
     role?.questions.find((candidate) => candidate.id === questionId) ??
     role?.bank?.find((candidate) => candidate.id === questionId);
@@ -445,6 +457,13 @@ export async function POST(request: Request) {
         .filter((value): value is AnswerFeedback => value?.status === 'scored');
       const overallScore = overallFromAnswers(scores.map((feedback) => ({ feedback })));
       await stored.admin!.from('interviews').update({ overall_score: overallScore }).eq('id', interviewId);
+    }
+
+    // Employer-issued interviews never expose analysis to the candidate. The
+    // same stored feedback is available only through the authenticated
+    // employer report after final consent and submission.
+    if (stored?.interview?.mode === 'screening') {
+      return Response.json({ saved: true }, { headers: privateNoStoreHeaders() });
     }
 
     const locked = Boolean(

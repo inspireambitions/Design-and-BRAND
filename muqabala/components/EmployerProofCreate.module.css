@@ -114,6 +114,36 @@
   white-space: nowrap;
 }
 
+.dashboardLink {
+  margin-top: 1.25rem;
+}
+
+.dashboardLink a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  color: var(--employer-jade-deep);
+  font-weight: 800;
+}
+
+.signInPanel {
+  display: grid;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding: clamp(1.1rem, 4vw, 1.6rem);
+  border: 1px solid rgba(0, 124, 104, 0.22);
+  border-radius: 1rem;
+  background: #fff;
+}
+
+.signInPanel h2 {
+  font-size: 1.35rem;
+}
+
+.signInPanel p {
+  color: var(--employer-muted);
+}
+
 .outcomes li + li {
   display: inline-flex;
   align-items: center;
@@ -310,7 +340,7 @@
 
 .linkActions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.7rem;
   margin-top: 0.25rem;
 }
@@ -363,6 +393,10 @@
 
   .form {
     margin-top: 2.75rem;
+  }
+
+  .linkActions {
+    grid-template-columns: 1fr;
   }
 }
 

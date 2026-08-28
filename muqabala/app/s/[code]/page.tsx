@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { InterviewFlow } from '@/components/InterviewFlow';
+import { EmployerVideoInterview } from '@/components/EmployerVideoInterview';
 import { getScreeningPack } from '@/lib/screening-pack';
 import { screeningPreviewCopy } from '@/lib/screening-preview';
 
@@ -45,15 +45,11 @@ export default async function ProofSittingPage({
 
   return (
     <div className="employer-proof-page employer-light-theme">
-      <InterviewFlow
+      <EmployerVideoInterview
         role={pack.role}
-        customTitle={pack.role.title}
-        tailored
         interviewToken={pack.signedToken}
-        proof={{
-          workplace: pack.workplace,
-          recruiterName: pack.recruiterName,
-        }}
+        companyName={pack.workplace}
+        recruiterName={pack.recruiterName}
       />
     </div>
   );

@@ -5,6 +5,7 @@ import { configuredOrigin, hasTrustedOrigin } from '@/lib/server/security';
 import { limitInterviewGeneration } from '@/lib/rate-limit';
 import { ScreeningPackRequestSchema } from '@/lib/screening-pack-request';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { currentUser } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -17,6 +18,8 @@ export async function POST(request: Request) {
   if (!hasTrustedOrigin(request)) return Response.json({ error: 'Invalid request origin.' }, { status: 403 });
   const admin = createAdminClient();
   if (!admin) return Response.json({ configured: false }, { status: 503 });
+  const employer = await currentUser();
+  if (!employer) return Response.json({ error: 'Sign in before creating an interview link.' }, { status: 401 });
 
   const limited = await limitInterviewGeneration(request);
   if (limited.limited) {
@@ -57,6 +60,7 @@ export async function POST(request: Request) {
       public_code: code,
       signed_token: signedToken,
       workplace,
+      employer_id: employer.id,
       expires_at: expiresAt,
     });
     if (!error) {

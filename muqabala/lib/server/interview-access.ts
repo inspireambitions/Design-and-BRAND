@@ -3,7 +3,7 @@ import 'server-only';
 import { cookies } from 'next/headers';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { currentUser } from '@/lib/supabase/server';
-import { ATTEMPT_COOKIE, tokenHash } from './security';
+import { ATTEMPT_COOKIE, screeningAttemptCookie, tokenHash } from './security';
 import type { StoredInterview } from '@/lib/interviews';
 
 export async function interviewAccess(id: string) {
@@ -19,7 +19,9 @@ export async function interviewAccess(id: string) {
   const activeInterview = interview && (interview.saved || Date.parse(interview.expires_at) > Date.now())
     ? interview
     : null;
-  const raw = cookieStore.get(ATTEMPT_COOKIE)?.value;
+  const raw = interview?.mode === 'screening'
+    ? cookieStore.get(screeningAttemptCookie(id))?.value
+    : cookieStore.get(ATTEMPT_COOKIE)?.value;
   const anonymous = Boolean(
     activeInterview && raw && activeInterview.user_id === null && activeInterview.anonymous_token_hash === tokenHash(raw),
   );

@@ -18,10 +18,30 @@ export const CreateInterviewSchema = z.object({
   roleTitle: z.string().min(1).max(200),
   language: z.enum(['en', 'ar']),
   mode: z.enum(['guided', 'mock', 'screening']),
-    questions: z.array(QuestionSnapshotSchema).min(1).max(20),
-    interviewToken: z.string().max(64_000).optional(),
-    focusQuestionId: z.string().min(1).max(160).optional(),
+  questions: z.array(QuestionSnapshotSchema).min(1).max(20),
+  interviewToken: z.string().max(64_000).optional(),
+  focusQuestionId: z.string().min(1).max(160).optional(),
+  candidateName: z.string().trim().min(2).max(100).optional(),
 });
+
+export const ScreeningUploadRequestSchema = z.object({
+  questionIndex: z.number().int().min(0).max(19),
+  mimeType: z.enum(['video/webm', 'video/mp4', 'video/quicktime']),
+}).strict();
+
+export const ScreeningAnswerSchema = z.object({
+  questionIndex: z.number().int().min(0).max(19),
+  transcript: z.string().max(6000).default(''),
+  videoPath: z.string().min(8).max(500),
+  mimeType: z.enum(['video/webm', 'video/mp4', 'video/quicktime']),
+  sizeBytes: z.number().int().min(1).max(50 * 1024 * 1024),
+  durationSeconds: z.number().int().min(1).max(125),
+}).strict();
+
+export const ScreeningSubmitSchema = z.object({
+  consent: z.literal(true),
+  consentVersion: z.literal('employer-video-v1'),
+}).strict();
 
 export const SaveAnswerSchema = z.object({
   questionIndex: z.number().int().min(0).max(19),
@@ -47,6 +67,12 @@ export type StoredAnswer = {
   transcript: string;
   feedback: AnswerFeedback | null;
   scoring_status: 'pending' | 'scored' | 'unscored' | 'failed';
+  video_path?: string | null;
+  video_mime_type?: string | null;
+  video_size_bytes?: number | null;
+  video_duration_seconds?: number | null;
+  video_upload_status?: 'none' | 'pending' | 'uploaded';
+  response_saved_at?: string | null;
 };
 
 export type StoredInterview = {
@@ -67,6 +93,12 @@ export type StoredInterview = {
   updated_at: string;
   completed_at: string | null;
   expires_at: string;
+  screening_pack_id?: string | null;
+  candidate_name?: string | null;
+  consent_version?: string | null;
+  consented_at?: string | null;
+  submitted_at?: string | null;
+  locked_at?: string | null;
 };
 
 export function reportProjection(

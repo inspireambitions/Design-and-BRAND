@@ -1,0 +1,274 @@
+.page {
+  min-height: 100dvh;
+  background: #f6f4ee;
+  color: #10231d;
+  color-scheme: light;
+}
+
+.header,
+.main {
+  width: min(100% - 2rem, 68rem);
+  margin-inline: auto;
+}
+
+.header {
+  display: flex;
+  min-height: 5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid #d8ddd8;
+}
+
+.brand,
+.header a {
+  color: #10231d;
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.header nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header nav a:first-child {
+  color: #087b68;
+}
+
+.main {
+  padding-block: clamp(2rem, 6vw, 4rem) 4rem;
+}
+
+.intro {
+  display: grid;
+  gap: 0.8rem;
+  margin-bottom: 2rem;
+}
+
+.eyebrow {
+  color: #087b68;
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.intro h1 {
+  font-size: clamp(2rem, 6vw, 3.8rem);
+  letter-spacing: -0.045em;
+}
+
+.intro p:not(.eyebrow) {
+  max-width: 44rem;
+  color: #586860;
+}
+
+.packs {
+  display: grid;
+  gap: 1rem;
+}
+
+.pack,
+.reportCard {
+  overflow: hidden;
+  border: 1px solid #d4ddd7;
+  border-radius: 1rem;
+  background: #fff;
+}
+
+.packHead {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.2rem;
+  border-bottom: 1px solid #e2e7e3;
+}
+
+.packHead h2 {
+  font-size: 1.2rem;
+}
+
+.packHead p,
+.meta,
+.empty {
+  color: #65756e;
+  font-size: 0.86rem;
+}
+
+.share {
+  color: #087b68;
+  font-size: 0.86rem;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+.candidateList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.candidateList li + li {
+  border-top: 1px solid #e7ebe8;
+}
+
+.candidateLink {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.35rem 1rem;
+  min-height: 4.75rem;
+  align-items: center;
+  padding: 1rem 1.2rem;
+  color: #10231d;
+  text-decoration: none;
+}
+
+.candidateLink:hover {
+  background: #f5faf7;
+}
+
+.candidateLink strong {
+  font-size: 1rem;
+}
+
+.status {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  padding: 0.38rem 0.6rem;
+  border-radius: 999px;
+  background: #e4f3ed;
+  color: #096451;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.empty {
+  padding: 1.25rem;
+}
+
+.reportHeader {
+  display: grid;
+  gap: 0.65rem;
+  margin-bottom: 1.5rem;
+}
+
+.reportHeader h1 {
+  font-size: clamp(2rem, 6vw, 3.4rem);
+  letter-spacing: -0.04em;
+}
+
+.reportMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 1rem;
+  color: #5a6b63;
+}
+
+.notice {
+  margin-bottom: 1.25rem;
+  padding: 1rem;
+  border-inline-start: 3px solid #ad751d;
+  border-radius: 0.45rem;
+  background: #fbf0dd;
+  color: #644713;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.answers {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.reportCard {
+  padding: clamp(1rem, 4vw, 1.5rem);
+}
+
+.reportCard h2 {
+  margin-top: 0.45rem;
+  font-size: clamp(1.2rem, 3vw, 1.55rem);
+}
+
+.sectionLabel {
+  margin-top: 1.3rem;
+  color: #087b68;
+  font-size: 0.74rem;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.video {
+  display: block;
+  width: 100%;
+  max-height: 32rem;
+  margin-top: 0.75rem;
+  border-radius: 0.75rem;
+  background: #0e1714;
+}
+
+.transcript,
+.analysis {
+  margin-top: 0.75rem;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  background: #f1f5f2;
+  color: #263c35;
+  line-height: 1.55;
+}
+
+.transcript small,
+.analysis small {
+  display: block;
+  margin-top: 0.5rem;
+  color: #687970;
+}
+
+.score {
+  display: inline-flex;
+  margin-top: 0.75rem;
+  padding: 0.4rem 0.65rem;
+  border-radius: 999px;
+  background: #e1f1eb;
+  color: #08604f;
+  font-weight: 850;
+}
+
+.analysis ul {
+  margin: 0.65rem 0 0;
+  padding-inline-start: 1.25rem;
+}
+
+.back {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  margin-top: 1.5rem;
+  color: #087b68;
+  font-weight: 800;
+}
+
+@media (max-width: 35rem) {
+  .header nav a:first-child {
+    display: none;
+  }
+
+  .packHead {
+    display: grid;
+  }
+
+  .candidateLink {
+    grid-template-columns: 1fr;
+  }
+
+  .status {
+    grid-row: auto;
+    grid-column: auto;
+    justify-self: start;
+  }
+}

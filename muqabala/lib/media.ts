@@ -3,11 +3,9 @@
 /**
  * Recording and microphone-level helpers.
  *
- * Everything here stays on the device. Recordings are held as in-memory blobs
- * for the length of the session so a candidate can watch their own answer back,
- * and are released when they move on. Nothing is uploaded, and nothing is
- * written to disk or storage — which is what lets the UI keep saying the video
- * never leaves the phone.
+ * The private practice flow keeps its recording blobs on the device. The
+ * employer flow uses the blob-returning helper below and uploads only after the
+ * candidate has been shown the employer-specific disclosure.
  */
 
 /** Picks a container the browser can actually record — Safari differs from Chrome. */
@@ -39,6 +37,86 @@ export type AnswerRecorder = {
   /** Resolves with a playable object URL, or null when recording was not possible. */
   stop: () => Promise<string | null>;
 };
+
+export type RecordedVideo = {
+  blob: Blob;
+  mimeType: 'video/webm' | 'video/mp4' | 'video/quicktime';
+  durationSeconds: number;
+};
+
+export type VideoAnswerRecorder = {
+  stop: () => Promise<RecordedVideo | null>;
+};
+
+function baseVideoMimeType(value: string | undefined): RecordedVideo['mimeType'] {
+  const base = (value || '').split(';')[0].trim().toLowerCase();
+  if (base === 'video/mp4') return 'video/mp4';
+  if (base === 'video/quicktime') return 'video/quicktime';
+  return 'video/webm';
+}
+
+/**
+ * Captures a bounded employer response as a Blob. A one-second timeslice makes
+ * the final chunk more reliable on mobile browsers when the timer stops the
+ * recorder automatically.
+ */
+export function startVideoAnswerRecording(stream: MediaStream): VideoAnswerRecorder | null {
+  if (!isRecordingSupported()) return null;
+  const selectedMimeType = pickMimeType();
+  let recorder: MediaRecorder;
+  try {
+    recorder = selectedMimeType
+      ? new MediaRecorder(stream, {
+          mimeType: selectedMimeType,
+          videoBitsPerSecond: 650_000,
+          audioBitsPerSecond: 64_000,
+        })
+      : new MediaRecorder(stream, {
+          videoBitsPerSecond: 650_000,
+          audioBitsPerSecond: 64_000,
+        });
+  } catch {
+    return null;
+  }
+
+  const chunks: BlobPart[] = [];
+  const startedAt = Date.now();
+  recorder.ondataavailable = (event) => {
+    if (event.data?.size) chunks.push(event.data);
+  };
+  try {
+    recorder.start(1000);
+  } catch {
+    return null;
+  }
+
+  return {
+    stop: () => new Promise<RecordedVideo | null>((resolve) => {
+      if (recorder.state === 'inactive') {
+        resolve(null);
+        return;
+      }
+      recorder.onstop = () => {
+        if (chunks.length === 0) {
+          resolve(null);
+          return;
+        }
+        const mimeType = baseVideoMimeType(recorder.mimeType || selectedMimeType);
+        resolve({
+          blob: new Blob(chunks, { type: mimeType }),
+          mimeType,
+          durationSeconds: Math.max(1, Math.min(120, Math.ceil((Date.now() - startedAt) / 1000))),
+        });
+      };
+      try {
+        recorder.requestData();
+        recorder.stop();
+      } catch {
+        resolve(null);
+      }
+    }),
+  };
+}
 
 export function startRecording(stream: MediaStream): AnswerRecorder | null {
   if (!isRecordingSupported()) return null;

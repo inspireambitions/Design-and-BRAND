@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { EmployerProofCreate } from '@/components/EmployerProofCreate';
+import { currentUser } from '@/lib/supabase/server';
 
 export const metadata: Metadata = {
   title: 'Work samples for hiring teams',
@@ -20,6 +21,9 @@ export const metadata: Metadata = {
   },
 };
 
-export default function ForEmployersPage() {
-  return <EmployerProofCreate />;
+export const dynamic = 'force-dynamic';
+
+export default async function ForEmployersPage() {
+  const user = await currentUser();
+  return <EmployerProofCreate signedIn={Boolean(user)} />;
 }

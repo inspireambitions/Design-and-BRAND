@@ -15,6 +15,7 @@ export const getScreeningPack = cache(async (code: string) => {
     .from('screening_packs')
     .select('signed_token, workplace, expires_at')
     .eq('public_code', code)
+    .not('employer_id', 'is', null)
     .maybeSingle();
   if (!data || new Date(data.expires_at).getTime() <= Date.now()) return null;
 

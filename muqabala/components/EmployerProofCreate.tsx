@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useLang } from './LanguageProvider';
+import { EmailSignIn } from './EmailSignIn';
 import styles from './EmployerProofCreate.module.css';
 
 const MIN_ADVERT_CHARS = 120;
 
-export function EmployerProofCreate() {
+export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
   const { lang, setLang, t } = useLang();
   const [companyName, setCompanyName] = useState('');
   const [jobTitle, setJobTitle] = useState('');
@@ -105,13 +106,25 @@ export function EmployerProofCreate() {
           <h1 id="employer-create-title" className={styles.title}>{t('proofCreateTitle')}</h1>
           <p className={styles.lede}>{t('proofCreateBody')}</p>
 
+          {signedIn && (
+            <div className={styles.dashboardLink}>
+              <Link href="/employer">View employer dashboard</Link>
+            </div>
+          )}
+
           <ul className={styles.outcomes} aria-label={t('proofCreateStepsLabel')}>
             <li>{t('proofOutcomeTime')}</li>
             <li>{t('proofOutcomeWords')}</li>
             <li>{t('proofOutcomeHuman')}</li>
           </ul>
 
-          <form
+          {!signedIn ? (
+            <div className={styles.signInPanel}>
+              <h2>Sign in to create private interview links</h2>
+              <p>Only your signed-in employer account can open the submitted videos and reports.</p>
+              <EmailSignIn compact next="/for-employers" />
+            </div>
+          ) : <form
             className={styles.form}
             onSubmit={(event) => {
               event.preventDefault();
@@ -180,7 +193,7 @@ export function EmployerProofCreate() {
               {tooShort && <p className={styles.warning}>{t('proofAdvertTooShort')}</p>}
               {error && <p className={styles.warning}>{t('proofCreateFailed')}</p>}
             </div>
-          </form>
+          </form>}
 
           {link && (
             <section className={styles.linkPanel} aria-labelledby="candidate-link-heading">
@@ -195,6 +208,7 @@ export function EmployerProofCreate() {
                 <a href={`https://wa.me/?text=${encodeURIComponent(link)}`} target="_blank" rel="noreferrer">
                   {t('proofWhatsApp')}
                 </a>
+                <Link href="/employer">Open dashboard</Link>
               </div>
             </section>
           )}

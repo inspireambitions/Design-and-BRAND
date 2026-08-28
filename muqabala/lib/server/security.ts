@@ -5,6 +5,10 @@ import { createHash, randomBytes } from 'node:crypto';
 export const ATTEMPT_COOKIE = 'muqabala_attempt';
 export const AUTH_STATE_COOKIE = 'muqabala_auth_state';
 
+export function screeningAttemptCookie(interviewId: string): string {
+  return `muqabala_screening_${interviewId.replace(/-/g, '')}`;
+}
+
 export function configuredOrigin(): string {
   const deploymentOrigin = process.env.VERCEL_ENV !== 'production' && process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
