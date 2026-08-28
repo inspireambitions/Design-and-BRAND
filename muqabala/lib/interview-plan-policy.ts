@@ -12,3 +12,15 @@ export function matchesTrustedQuestionSequence(
   if ((mode === 'mock' || mode === 'screening') && questionIds.at(-1) !== closerId) return false;
   return true;
 }
+
+export function matchesFocusedQuestionSequence(
+  mode: InterviewMode,
+  questionIds: readonly string[],
+  focusQuestionId: string,
+  allowedQuestionIds: ReadonlySet<string>,
+): boolean {
+  return mode === 'guided'
+    && questionIds.length === 1
+    && questionIds[0] === focusQuestionId
+    && allowedQuestionIds.has(focusQuestionId);
+}

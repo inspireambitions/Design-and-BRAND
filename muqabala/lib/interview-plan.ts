@@ -1,5 +1,5 @@
 import { roleFromToken, verifyInterview } from './interview-token';
-import { matchesTrustedQuestionSequence, type InterviewMode } from './interview-plan-policy';
+import { matchesFocusedQuestionSequence, matchesTrustedQuestionSequence, type InterviewMode } from './interview-plan-policy';
 import { buildCustomRole, CUSTOM_ROLE_ID, getRole, type Question, type Role } from './roles';
 
 export function trustedInterviewPlan(input: {
@@ -8,6 +8,7 @@ export function trustedInterviewPlan(input: {
   mode: InterviewMode;
   questions: Array<{ id: string }>;
   interviewToken?: string;
+  focusQuestionId?: string;
 }): { role: Role; questions: Question[] } | null {
   const verified = input.interviewToken ? verifyInterview(input.interviewToken) : null;
   // Practice and proof never mix: a Coach token cannot start a work sample,
@@ -30,9 +31,13 @@ export function trustedInterviewPlan(input: {
   const closer = role.questions.at(-1);
   if (!opener || !closer) return null;
   const ids = input.questions.map((question) => question.id);
-  if (!matchesTrustedQuestionSequence(input.mode, ids, opener.id, closer.id)) return null;
-
   const allowed = new Map([...role.questions, ...(role.bank ?? [])].map((question) => [question.id, question]));
+  if (input.focusQuestionId) {
+    if (!matchesFocusedQuestionSequence(input.mode, ids, input.focusQuestionId, new Set(allowed.keys()))) return null;
+  } else if (!matchesTrustedQuestionSequence(input.mode, ids, opener.id, closer.id)) {
+    return null;
+  }
+
   if (new Set(ids).size !== ids.length) return null;
   const questions = ids.map((id) => allowed.get(id));
   if (questions.some((question) => !question)) return null;

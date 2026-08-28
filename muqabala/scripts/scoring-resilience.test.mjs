@@ -19,6 +19,7 @@ const validFeedback = {
   improvements: ['Add the exact guest survey result.'],
   coach_tip: 'State the measurable result in your final sentence.',
   unscorable: false,
+  unscorable_reason: 'none',
 };
 
 test('Claude fallback is explicit and OpenRouter is never a third sequential hop', () => {

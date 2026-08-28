@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { AnswerFeedback } from '@/lib/scoring';
+import { isRetryableFeedback } from '@/lib/report-feedback';
 import { t } from '@/lib/i18n';
 
 export function ReportRetryFeedback({
@@ -54,7 +55,7 @@ export function ReportRetryFeedback({
         feedback?: AnswerFeedback;
         error?: { message?: string };
       };
-      if (!response.ok || !data.feedback || isStillRetryable(data.feedback)) {
+      if (!response.ok || !data.feedback || isRetryableFeedback(data.feedback)) {
         setMessage(tr('reportRetryFailed'));
         return;
       }
@@ -77,15 +78,5 @@ export function ReportRetryFeedback({
       )}
       {message && <p className="tiny" role="status">{message}</p>}
     </div>
-  );
-}
-
-function isStillRetryable(feedback: AnswerFeedback): boolean {
-  return (
-    feedback.status === 'unscored'
-    && feedback.improvements.some((item) =>
-      item.includes('Try getting feedback again')
-      || item.includes('حاول الحصول على الملاحظات'),
-    )
   );
 }

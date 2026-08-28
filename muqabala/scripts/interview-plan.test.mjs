@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { matchesTrustedQuestionSequence } from '../lib/interview-plan-policy.ts';
+import { matchesFocusedQuestionSequence, matchesTrustedQuestionSequence } from '../lib/interview-plan-policy.ts';
 import { proofQuestions } from '../lib/proof-questions.ts';
 import { signInterview, signProofPack, verifyInterview } from '../lib/interview-token.ts';
 
@@ -84,4 +84,11 @@ test('Practice tokens and proof packs stay in different families', () => {
   assert.equal(proof?.questions.length, 3);
   assert.equal(proof?.workplace, 'Al Maha Hotel');
   assert.notEqual(practiceToken, proofToken);
+});
+
+test('a report retry may start one exact allowed question without weakening the normal plan', () => {
+  const allowed = new Set(role.questions.map((question) => question.id));
+  assert.equal(matchesFocusedQuestionSequence('guided', ['pressure'], 'pressure', allowed), true);
+  assert.equal(matchesFocusedQuestionSequence('guided', ['unknown'], 'unknown', allowed), false);
+  assert.equal(matchesFocusedQuestionSequence('mock', ['pressure'], 'pressure', allowed), false);
 });

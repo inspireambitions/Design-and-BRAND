@@ -1,6 +1,7 @@
-import type { AnswerFeedback } from '@/lib/scoring';
+import Link from 'next/link';
+import { overallFromAnswers, type AnswerFeedback, type UnscoredReason } from '@/lib/scoring';
 import { t } from '@/lib/i18n';
-import { isPendingFeedback } from '@/lib/report-feedback';
+import { isPendingFeedback, resolveUnscoredReason } from '@/lib/report-feedback';
 import { ScoreRing } from './ScoreRing';
 import { ReportRetryFeedback } from './ReportRetryFeedback';
 
@@ -18,8 +19,32 @@ export type FullReportData = {
     questionText: string;
     transcript: string;
     feedback: AnswerFeedback | null;
+    scoringStatus?: 'pending' | 'scored' | 'unscored' | 'failed';
   }>;
 };
+
+const unscoredCopy: Record<UnscoredReason, {
+  status: Parameters<typeof t>[1];
+  reason: Parameters<typeof t>[1];
+  action: 'answer' | 'feedback' | 'none';
+}> = {
+  answer_too_short: { status: 'reportNotScored', reason: 'reportReasonTooShort', action: 'answer' },
+  transcript_unclear: { status: 'reportNotScored', reason: 'reportReasonTranscriptUnclear', action: 'answer' },
+  feedback_could_not_be_verified: { status: 'reportFeedbackNotReadyBadge', reason: 'reportReasonVerificationFailed', action: 'feedback' },
+  scoring_service_unavailable: { status: 'reportFeedbackNotReadyBadge', reason: 'reportReasonServiceUnavailable', action: 'feedback' },
+  language_scoring_unavailable: { status: 'reportNotScored', reason: 'reportReasonLanguageUnavailable', action: 'none' },
+  question_not_answered: { status: 'reportNotAnswered', reason: 'reportReasonNotAnswered', action: 'answer' },
+  feedback_locked: { status: 'reportFeedbackNotReadyBadge', reason: 'reportReasonFeedbackLocked', action: 'none' },
+  reason_not_recorded: { status: 'reportNotScored', reason: 'reportReasonNotRecorded', action: 'answer' },
+};
+
+function practiceQuestionHref(report: FullReportData, questionId: string): string {
+  const language = `lang=${encodeURIComponent(report.language)}`;
+  if (report.roleId === 'custom') {
+    return `/practice/custom?template=${encodeURIComponent(report.id)}&focus=${encodeURIComponent(questionId)}&${language}`;
+  }
+  return `/practice/${encodeURIComponent(report.roleId)}?focus=${encodeURIComponent(questionId)}&${language}`;
+}
 
 function scoreBand(lang: 'en' | 'ar', score: number): string {
   if (score >= 75) return t(lang, 'reportBandStrong');
@@ -46,6 +71,7 @@ function ReportAnswer({
   questionText,
   transcript,
   feedback,
+  scoringStatus,
 }: {
   language: 'en' | 'ar';
   interviewId: string;
@@ -56,10 +82,13 @@ function ReportAnswer({
   questionText: string;
   transcript: string;
   feedback: AnswerFeedback | null;
+  scoringStatus?: 'pending' | 'scored' | 'unscored' | 'failed';
 }) {
   const tr = (key: Parameters<typeof t>[1]) => t(language, key);
   const scored = feedback?.status === 'scored';
-  const pending = feedback ? isPendingFeedback(feedback) : false;
+  const feedbackRetryable = feedback ? isPendingFeedback(feedback) : false;
+  const scoringPending = scoringStatus === 'pending' && !feedback;
+  const unscoredReason = resolveUnscoredReason(feedback, transcript, scoringStatus);
   const accent = questionAccent(scored ? feedback!.score : null);
 
   return (
@@ -74,7 +103,10 @@ function ReportAnswer({
               {feedback!.headline}
             </p>
           )}
-          {!scored && feedback?.headline && !pending && (
+          {scored && feedback!.source === 'structure' && (
+            <span className="report-score-source">{tr('scoredByStructure')}</span>
+          )}
+          {!scored && feedback?.headline && !feedbackRetryable && !scoringPending && (
             <p className="report-question-headline" dir="auto">{feedback.headline}</p>
           )}
         </div>
@@ -83,7 +115,22 @@ function ReportAnswer({
 
       <h2 className="report-question-text" dir="auto">{questionText}</h2>
 
-      {pending && (
+      {!scored && unscoredReason && !feedbackRetryable && !scoringPending && (
+        <div className={`report-unscored-inline report-unscored-${unscoredReason}`}>
+          <span className="report-unscored-status">{tr(unscoredCopy[unscoredReason].status)}</span>
+          <p>{tr(unscoredCopy[unscoredReason].reason)}</p>
+          <p className="tiny">{tr('reportUnscoredZeroNote')}</p>
+        </div>
+      )}
+
+      {scoringPending && (
+        <div className="report-pending" role="status">
+          <p className="report-pending-title">{tr('reportFeedbackPreparing')}</p>
+          <p className="tiny">{tr('reportFeedbackPreparingBody')}</p>
+        </div>
+      )}
+
+      {feedbackRetryable && (
         <div className="report-pending" role="status">
           <p className="report-pending-title">{tr('reportFeedbackPending')}</p>
           <p className="tiny">{tr('reportFeedbackPendingBody')}</p>
@@ -100,7 +147,7 @@ function ReportAnswer({
         </div>
       )}
 
-      {feedback && !pending && (
+      {feedback && !feedbackRetryable && (
         <div className="report-feedback-grid">
           {feedback.strengths.length > 0 && (
             <div className="report-feedback-block report-feedback-good">
@@ -174,9 +221,14 @@ export function FullReport({ report }: { report: FullReportData }) {
   const tr = (key: Parameters<typeof t>[1]) => t(report.language, key);
   const locale = report.language === 'ar' ? 'ar-AE' : 'en-GB';
   const scoredCount = report.answers.filter((answer) => answer.feedback?.status === 'scored').length;
-  const pendingCount = report.answers.filter(
-    (answer) => answer.feedback && isPendingFeedback(answer.feedback),
-  ).length;
+  const reportScore = overallFromAnswers(
+    report.answers.flatMap((answer) => answer.feedback ? [{ feedback: answer.feedback }] : []),
+  );
+  const pendingCount = report.answers.filter((answer) => answer.scoringStatus === 'pending').length;
+  const unscoredAnswers = report.answers.flatMap((answer) => {
+    const reason = resolveUnscoredReason(answer.feedback, answer.transcript, answer.scoringStatus);
+    return reason ? [{ ...answer, reason }] : [];
+  });
   const formattedDate = new Date(report.startedAt).toLocaleDateString(locale, {
     day: 'numeric',
     month: 'short',
@@ -195,13 +247,20 @@ export function FullReport({ report }: { report: FullReportData }) {
             </div>
             <p className="eyebrow report-eyebrow">{tr('reportEyebrow')}</p>
             <h1 className="report-title" dir="auto">{report.roleTitle}</h1>
-            {report.overallScore !== null && (
-              <p className="report-band">{scoreBand(report.language, report.overallScore)}</p>
+            {reportScore !== null && (
+              <p className="report-band">{scoreBand(report.language, reportScore)}</p>
+            )}
+            {reportScore !== null && (
+              <p className="report-score-basis">
+                {tr('reportScoreBasis')
+                  .replace('{scored}', String(scoredCount))
+                  .replace('{total}', String(report.answers.length))}
+              </p>
             )}
           </div>
-          {report.overallScore !== null && (
+          {reportScore !== null && (
             <div className="report-hero-score">
-              <ScoreRing value={report.overallScore} />
+              <ScoreRing value={reportScore} />
               <span className="report-overall-label">{tr('overall')}</span>
             </div>
           )}
@@ -243,9 +302,51 @@ export function FullReport({ report }: { report: FullReportData }) {
             questionText={answer.questionText}
             transcript={answer.transcript}
             feedback={answer.feedback}
+            scoringStatus={answer.scoringStatus}
           />
         ))}
       </div>
+
+      {unscoredAnswers.length > 0 && (
+        <section className="card report-unscored-summary" aria-labelledby="report-unscored-title">
+          <h2 id="report-unscored-title">
+            {(unscoredAnswers.length === 1 ? tr('reportUnscoredOne') : tr('reportUnscoredMany'))
+              .replace('{count}', String(unscoredAnswers.length))}
+          </h2>
+          <div className="report-unscored-list">
+            {unscoredAnswers.map((answer) => {
+              const copy = unscoredCopy[answer.reason];
+              const canOpenPractice = report.roleId !== 'custom' || Boolean(report.allowRescore);
+              return (
+                <div className="report-unscored-row" key={answer.questionIndex}>
+                  <div className="report-unscored-row-head">
+                    <h3>{tr('question')} {answer.questionIndex + 1}</h3>
+                    <span className={`report-unscored-status report-unscored-status-${copy.action}`}>
+                      {tr(copy.status)}
+                    </span>
+                  </div>
+                  <p>{tr(copy.reason)}</p>
+                  {copy.action === 'feedback' && report.allowRescore && answer.transcript ? (
+                    <ReportRetryFeedback
+                      interviewId={report.id}
+                      roleId={report.roleId}
+                      questionIndex={answer.questionIndex}
+                      questionId={answer.questionId}
+                      transcript={answer.transcript}
+                      language={report.language}
+                    />
+                  ) : (copy.action === 'answer' || copy.action === 'feedback') && canOpenPractice ? (
+                    <Link className="btn btn-quiet report-unscored-action" href={practiceQuestionHref(report, answer.questionId)}>
+                      {tr('reportTryQuestionAgain').replace('{number}', String(answer.questionIndex + 1))}
+                    </Link>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+          <p className="report-unscored-reassurance">{tr('reportUnscoredReassurance')}</p>
+        </section>
+      )}
 
       <footer className="report-footer tiny">
         <p>{tr('reportFooterNote')}</p>

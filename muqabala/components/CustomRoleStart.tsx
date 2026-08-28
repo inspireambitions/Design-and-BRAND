@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { buildCustomRole, type Role } from '@/lib/roles';
 import { takeHeroDraft } from '@/lib/hero-draft';
+import { focusedQuestionFromRole } from '@/lib/focused-question';
 import { loadLatestCustomInterviewDraft } from '@/lib/session-draft';
 import { useLang } from './LanguageProvider';
 import { TopBar } from './TopBar';
@@ -25,8 +26,8 @@ function guidedRole(fullRole: Role): Role {
   };
 }
 
-export function CustomRoleStart() {
-  const { lang, t } = useLang();
+export function CustomRoleStart({ focusQuestionId, initialLanguage }: { focusQuestionId?: string; initialLanguage?: 'en' | 'ar' }) {
+  const { lang, setLang, t } = useLang();
   const [title, setTitle] = useState('');
   const [jobText, setJobText] = useState('');
   const [role, setRole] = useState<Role | null>(null);
@@ -34,7 +35,12 @@ export function CustomRoleStart() {
   const [token, setToken] = useState<string | undefined>(undefined);
   const [fellBack, setFellBack] = useState(false);
   const [building, setBuilding] = useState(false);
+  const [fromTemplate, setFromTemplate] = useState(false);
   const draftHandled = useRef(false);
+
+  useEffect(() => {
+    if (initialLanguage && lang !== initialLanguage) setLang(initialLanguage);
+  }, [initialLanguage, lang, setLang]);
 
   const startWith = async (titleArg: string, jobArg: string) => {
     const usable = !looksLikeUrl(jobArg) && jobArg.length >= 120;
@@ -75,15 +81,23 @@ export function CustomRoleStart() {
   useEffect(() => {
     if (draftHandled.current) return;
     draftHandled.current = true;
-    const resumeId = new URLSearchParams(window.location.search).get('resume');
-    if (resumeId) {
+    const params = new URLSearchParams(window.location.search);
+    const templateId = params.get('template');
+    const resumeId = params.get('resume');
+    const sourceId = templateId || resumeId;
+    if (sourceId) {
+      setFromTemplate(Boolean(templateId));
       setBuilding(true);
-      fetch(`/api/interviews/${encodeURIComponent(resumeId)}/report`, { cache: 'no-store' })
+      fetch(`/api/interviews/${encodeURIComponent(sourceId)}/report`, { cache: 'no-store' })
         .then(async (response) => response.ok ? response.json() : null)
         .then((report) => {
           if (!report || !Array.isArray(report.questionSnapshot) || report.questionSnapshot.length === 0) return;
-          const restored = buildCustomRole(report.roleTitle || t('customTitle'));
+          const restored = report.roleSnapshot && Array.isArray(report.roleSnapshot.questions)
+            ? report.roleSnapshot as Role
+            : buildCustomRole(report.roleTitle || t('customTitle'));
           setTitle(report.roleTitle || '');
+          setTailored(Boolean(report.tailored));
+          setToken(typeof report.interviewToken === 'string' ? report.interviewToken : undefined);
           setRole({ ...restored, questions: report.questionSnapshot });
         })
         .catch(() => {})
@@ -115,6 +129,7 @@ export function CustomRoleStart() {
 
   if (role) {
     const guided = guidedRole(role);
+    const focusedQuestion = focusedQuestionFromRole(role, fromTemplate ? focusQuestionId : undefined);
     return (
       <InterviewFlow
         role={guided}
@@ -123,6 +138,10 @@ export function CustomRoleStart() {
         tailored={tailored}
         fellBack={fellBack}
         interviewToken={token}
+        initialLanguage={initialLanguage}
+        ignoreLocalDraft={fromTemplate}
+        focusQuestionId={fromTemplate ? focusQuestionId : undefined}
+        focusedQuestion={focusedQuestion}
       />
     );
   }

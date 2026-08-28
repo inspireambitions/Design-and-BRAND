@@ -6,6 +6,9 @@ export const metadata: Metadata = {
   robots: { index: false, follow: true },
 };
 
-export default function CustomPracticePage() {
-  return <CustomRoleStart />;
+export default async function CustomPracticePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const query = await searchParams;
+  const focusQuestionId = typeof query.focus === 'string' && query.focus.length <= 160 ? query.focus : undefined;
+  const initialLanguage = query.lang === 'ar' || query.lang === 'en' ? query.lang : undefined;
+  return <CustomRoleStart focusQuestionId={focusQuestionId} initialLanguage={initialLanguage} />;
 }

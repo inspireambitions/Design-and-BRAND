@@ -108,6 +108,10 @@ export function InterviewFlow({
   interviewToken,
   fellBack = false,
   mockQuestions,
+  initialLanguage,
+  ignoreLocalDraft = false,
+  focusQuestionId,
+  focusedQuestion,
   proof,
 }: {
   role: Role;
@@ -121,6 +125,14 @@ export function InterviewFlow({
   fellBack?: boolean;
   /** Eight-question set for Full Mock mode; absent when the role cannot support it. */
   mockQuestions?: Question[];
+  /** Language carried from a report retry. It stays fixed for this interview. */
+  initialLanguage?: 'en' | 'ar';
+  /** Start a new interview from a saved template without reopening another local draft. */
+  ignoreLocalDraft?: boolean;
+  /** Exact trusted question requested from a report retry. */
+  focusQuestionId?: string;
+  /** Question resolved before catalogue rotation or custom-role subsetting. */
+  focusedQuestion?: Question;
   /** Live work sample for a hiring team. Not practice. */
   proof?: { workplace: string };
 }) {
@@ -182,7 +194,7 @@ export function InterviewFlow({
   const [showContinueSignIn, setShowContinueSignIn] = useState(false);
   const [pendingDraft, setPendingDraft] = useState<InterviewSessionDraft | null>(null);
   const [confirmDiscardDraft, setConfirmDiscardDraft] = useState(false);
-  const [sessionLanguage, setSessionLanguage] = useState<'en' | 'ar' | null>(null);
+  const [sessionLanguage, setSessionLanguage] = useState<'en' | 'ar' | null>(initialLanguage ?? null);
   const [starProbe, setStarProbe] = useState<{
     element: StarElement;
     question: string;
@@ -214,12 +226,17 @@ export function InterviewFlow({
       : deviceCaps.guidance === 'desktopLimited'
         ? 'deviceGuidanceDesktopLimited'
         : 'deviceGuidanceDesktopOk' as const;
+  const requestedQuestion = focusedQuestion ?? (focusQuestionId
+    ? [...role.questions, ...(role.bank ?? [])].find((item) => item.id === focusQuestionId)
+    : undefined);
   const activeQuestions = resumedQuestions ?? (
     mode === 'mock' && mockQuestions && mockQuestions.length > 0
       ? mockQuestions
       : mode === 'screening'
         ? role.questions
-        : role.questions.slice(0, 1)
+        : requestedQuestion
+          ? [requestedQuestion]
+          : role.questions.slice(0, 1)
   );
   const question = activeQuestions[index];
   // Latched, not instantaneous: ordinary pauses between sentences must not
@@ -353,7 +370,7 @@ export function InterviewFlow({
           });
         })
         .catch(() => {});
-    } else {
+    } else if (!ignoreLocalDraft) {
       const draft = loadInterviewDraft(window.localStorage, {
         roleId: role.id,
         customTitle,
@@ -361,6 +378,8 @@ export function InterviewFlow({
         fallbackQuestions: activeQuestions,
       });
       if (!cancelled) setPendingDraft(draft);
+    } else if (!cancelled) {
+      setPendingDraft(null);
     }
     return () => { cancelled = true; };
     // Restore exactly once for this role and custom interview.
@@ -451,6 +470,9 @@ export function InterviewFlow({
             id, text, textAr, competencies, hint, hintAr, prepSeconds, answerSeconds,
           })),
           interviewToken,
+          focusQuestionId: mode === 'guided' && (questionsOverride ?? activeQuestions).length === 1
+            ? focusQuestionId
+            : undefined,
         }),
       });
       const data = await response.json().catch(() => ({}));
@@ -474,7 +496,7 @@ export function InterviewFlow({
       if (!proof) setReportGateRequired(true);
       return null;
     }
-  }, [activeQuestions, interviewLanguage, interviewToken, mode, proof, reportRoleTitle, role.id, serverAttemptId]);
+  }, [activeQuestions, focusQuestionId, interviewLanguage, interviewToken, mode, proof, reportRoleTitle, role.id, serverAttemptId]);
 
   useEffect(() => {
     const supported = isSpeechSupported();
@@ -1037,6 +1059,7 @@ export function InterviewFlow({
       questionId: question.id,
       score: 0,
       status: 'unscored',
+      unscoredReason: transcript.trim() ? 'scoring_service_unavailable' : 'question_not_answered',
       headline: t('feedbackSkippedTitle'),
       competencies: [],
       strengths: [],
@@ -1044,7 +1067,7 @@ export function InterviewFlow({
       coachTip: '',
       source: 'none',
     });
-  }, [completeCurrentAnswer, question.id, t]);
+  }, [completeCurrentAnswer, question.id, t, transcript]);
 
   const startFullMock = useCallback(() => {
     if (!mockQuestions || mockQuestions.length < 8) return;
@@ -1465,8 +1488,9 @@ export function InterviewFlow({
                   ? activeQuestions.map((item) => ({ ...item, answerSeconds: item.answerSeconds + 60 }))
                   : activeQuestions;
                 if (startingQuestions !== activeQuestions) setResumedQuestions(startingQuestions);
-                setSessionLanguage(lang);
-                track('interview_started', { role_id: role.id, lang });
+                const startingLanguage = initialLanguage ?? lang;
+                setSessionLanguage(startingLanguage);
+                track('interview_started', { role_id: role.id, lang: startingLanguage });
                 const attemptId = await createServerAttempt(startingQuestions);
                 if (proof && !attemptId) {
                   setProofStartFailed(true);
