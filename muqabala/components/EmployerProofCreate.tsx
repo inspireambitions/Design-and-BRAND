@@ -116,7 +116,7 @@ export function EmployerProofCreate() {
   }
 
   return (
-    <>
+    <div className="marketing-site">
       <MarketingHeader />
       <main className="marketing-main">
         <section className="marketing-wrap" style={{ padding: '3rem 0 4rem', maxWidth: '40rem' }}>
@@ -139,6 +139,7 @@ export function EmployerProofCreate() {
               <span className="eyebrow">{t('proofCompanyLabel')}</span>
               <input
                 className="answer-box"
+                dir="auto"
                 value={companyName}
                 onChange={(event) => {
                   setCompanyName(event.target.value);
@@ -154,6 +155,7 @@ export function EmployerProofCreate() {
               <span className="eyebrow">{t('proofRecruiterLabel')}</span>
               <input
                 className="answer-box"
+                dir="auto"
                 value={recruiterName}
                 onChange={(event) => {
                   setRecruiterName(event.target.value);
@@ -168,6 +170,7 @@ export function EmployerProofCreate() {
               <span className="eyebrow">{t('proofJobTitleLabel')}</span>
               <input
                 className="answer-box"
+                dir="auto"
                 value={jobTitle}
                 onChange={(event) => {
                   setJobTitle(event.target.value);
@@ -183,6 +186,7 @@ export function EmployerProofCreate() {
               <span className="eyebrow">{t('proofAdvertLabel')}</span>
               <textarea
                 className="answer-box"
+                dir="auto"
                 value={jobText}
                 onChange={(event) => {
                   setJobText(event.target.value);
@@ -244,6 +248,6 @@ export function EmployerProofCreate() {
         </section>
       </main>
       <MarketingFooter />
-    </>
+    </div>
   );
 }
