@@ -147,8 +147,9 @@ say there is no database.
 **Production identity**
 
 - Website: `https://trymuqabala.com`
-- Vercel team: `kim-ks-projects`
+- Vercel team: `INSPIRE` (`inspire14`, `team_IlZz8UvetUXPtSvI4hPqy6fn`)
 - Vercel project: `muqabala` (`prj_mLU2A8yiW61V4a4da54GryoIcSXX`)
+- Git: `inspireambitions/Design-and-BRAND`, root directory `muqabala`, production branch `claude/gulf-hospitality-video-interview-m9skfu`
 - Supabase project: `Muqabala` (`hmaxzpgsefzpflrwzopa`)
 - Cursor MCP config: repo-root `.cursor/mcp.json` (Vercel OAuth + read-only Supabase)
 
