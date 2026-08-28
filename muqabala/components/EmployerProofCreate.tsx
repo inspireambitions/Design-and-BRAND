@@ -116,7 +116,7 @@ export function EmployerProofCreate() {
   }
 
   return (
-    <div className="marketing-site employer-create-page">
+    <div className="marketing-site employer-create-page employer-light-theme">
       <MarketingHeader />
       <main className="marketing-main">
         <section className="marketing-wrap employer-create-shell">

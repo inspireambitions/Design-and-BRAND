@@ -123,6 +123,42 @@ body[dir='rtl'] {
   font-family: var(--font-arabic);
 }
 
+/* Hiring teams need a document-like workspace that stays legible in bright
+   offices and inside mobile messaging browsers. Keep the employer journey
+   light without changing the candidate Coach theme. */
+.employer-light-theme {
+  color-scheme: light;
+  --ground: #F2F5F2;
+  --surface: #FFFFFF;
+  --surface-sunk: #E8EDE9;
+  --ink: #16241F;
+  --ink-soft: #536860;
+  --ink-faint: #52675F;
+  --line: #D5DED8;
+  --line-strong: #B9C6BE;
+  --jade: #0B7A6B;
+  --jade-deep: #07564B;
+  --jade-soft: #DEEFEA;
+  --gold: #A8721A;
+  --gold-soft: #F6EBD6;
+  --good: #14795C;
+  --good-soft: #DCEFE6;
+  --warn: #9A6410;
+  --warn-soft: #F7EBD8;
+  --info: #416578;
+  --info-soft: #E4EEF3;
+  --crit: #A33F2C;
+  --crit-soft: #F8E5E0;
+  --shadow: 0 1px 2px rgba(22, 36, 31, 0.06), 0 8px 24px -12px rgba(22, 36, 31, 0.18);
+  --shadow-lift: 0 2px 4px rgba(22, 36, 31, 0.08), 0 16px 36px -16px rgba(22, 36, 31, 0.28);
+}
+
+.employer-proof-page {
+  min-height: 100dvh;
+  background: var(--ground);
+  color: var(--ink);
+}
+
 h1,
 h2,
 h3,

@@ -33,15 +33,17 @@ export default async function ProofSittingPage({
   const role = roleFromToken(payload);
 
   return (
-    <InterviewFlow
-      role={role}
-      customTitle={role.title}
-      tailored
-      interviewToken={data.signed_token}
-      proof={{
-        workplace: payload.workplace || data.workplace || '',
-        recruiterName: payload.recruiterName,
-      }}
-    />
+    <div className="employer-proof-page employer-light-theme">
+      <InterviewFlow
+        role={role}
+        customTitle={role.title}
+        tailored
+        interviewToken={data.signed_token}
+        proof={{
+          workplace: payload.workplace || data.workplace || '',
+          recruiterName: payload.recruiterName,
+        }}
+      />
+    </div>
   );
 }
