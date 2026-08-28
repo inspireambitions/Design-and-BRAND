@@ -39,6 +39,11 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
   const canGenerate = companyReady && titleReady && !generating && !creating;
   const canCreate = companyReady && titleReady && jobReady && settingsReady && !generating && !creating;
   const link = linkDetails?.url ?? '';
+  const plannedExpiryDate = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-AE' : 'en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000));
 
   function resetLinkSettings() {
     setMaxCandidates(DEFAULT_MAX_CANDIDATES);
@@ -258,11 +263,13 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
               />
             </label>
 
-            <fieldset className={styles.linkSettings}>
-              <legend>{t('proofLinkSettingsLabel')}</legend>
-              <button className={styles.linkSettingsReset} type="button" onClick={resetLinkSettings}>
-                {t('proofLinkSettingsReset')}
-              </button>
+            <fieldset className={styles.linkSettings} aria-labelledby="link-settings-label">
+              <div className={styles.linkSettingsHead}>
+                <span id="link-settings-label">{t('proofLinkSettingsLabel')}</span>
+                <button className={styles.linkSettingsReset} type="button" onClick={resetLinkSettings}>
+                  {t('proofLinkSettingsReset')}
+                </button>
+              </div>
               <div className={styles.linkSettingsGrid}>
                 <label className={styles.linkSetting}>
                   <span>{t('proofLinkPlacesLabel')}</span>
@@ -290,7 +297,7 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
                   >
                     {EXPIRY_OPTIONS.map((days) => (
                       <option key={days} value={days}>
-                        {withValues(t('proofLinkDaysOption'), { days })}
+                        {days === 1 ? t('proofLinkDayOption') : withValues(t('proofLinkDaysOption'), { days })}
                       </option>
                     ))}
                   </select>
@@ -315,8 +322,9 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
               </button>
             </div>
 
-            <p className={styles.linkSummary}>
-              {withValues(t('proofLinkSettingsSummary'), { count: maxCandidates, days: expiryDays })}
+            <p className={styles.linkSummary} suppressHydrationWarning>
+              {t('proofLinkSettingsSummaryStart')} <strong>{maxCandidates}</strong>{' '}
+              {t('proofLinkSettingsSummaryMiddle')} <strong>{plannedExpiryDate}</strong>{t('proofLinkSettingsSummaryEnd')}
             </p>
 
             <div id="job-description-status" className={styles.status} aria-live="polite">
