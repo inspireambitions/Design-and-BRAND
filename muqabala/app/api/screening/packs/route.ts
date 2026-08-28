@@ -1,6 +1,5 @@
 import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
-import { buildCustomRole } from '@/lib/roles';
 import { roleFromToken, signProofPack, verifyInterview } from '@/lib/interview-token';
 import { proofQuestions } from '@/lib/proof-questions';
 import { configuredOrigin, hasTrustedOrigin } from '@/lib/server/security';
@@ -11,9 +10,13 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const BodySchema = z.object({
-  workplace: z.string().max(80).optional(),
+  companyName: z.string().trim().min(2).max(80).optional(),
+  workplace: z.string().trim().min(2).max(80).optional(),
+  recruiterName: z.string().trim().max(80).optional(),
   jobTitle: z.string().max(120).optional(),
-  interviewToken: z.string().max(64_000).optional(),
+  interviewToken: z.string().min(1).max(64_000),
+}).strict().refine((value) => Boolean(value.companyName || value.workplace), {
+  message: 'Company name is required.',
 });
 
 function publicCode(): string {
@@ -36,14 +39,16 @@ export async function POST(request: Request) {
   const parsed = BodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: 'Invalid work sample.' }, { status: 400 });
 
-  const verified = parsed.data.interviewToken ? verifyInterview(parsed.data.interviewToken) : null;
-  const role = verified
-    ? roleFromToken(verified)
-    : buildCustomRole((parsed.data.jobTitle || 'this role').trim() || 'this role');
+  const verified = verifyInterview(parsed.data.interviewToken);
+  if (!verified || verified.kind !== 'practice') {
+    return Response.json({ error: 'The tailored interview could not be verified.' }, { status: 400 });
+  }
+  const role = roleFromToken(verified);
   const questions = proofQuestions(role);
   if (!questions) return Response.json({ error: 'That job does not have enough questions for a work sample.' }, { status: 400 });
 
-  const workplace = (parsed.data.workplace || '').trim();
+  const workplace = (parsed.data.companyName || parsed.data.workplace || '').trim();
+  const recruiterName = (parsed.data.recruiterName || '').trim();
   const signedToken = signProofPack({
     title: role.title,
     industry: role.industry,
@@ -51,6 +56,7 @@ export async function POST(request: Request) {
     competencies: role.competencies,
     questions,
     workplace,
+    recruiterName,
   });
   if (!signedToken) return Response.json({ error: 'The work sample could not be signed.' }, { status: 503 });
 
@@ -68,6 +74,7 @@ export async function POST(request: Request) {
         url: `${configuredOrigin()}/s/${code}`,
         title: role.title,
         workplace,
+        recruiterName,
         questionCount: questions.length,
       }, { status: 201 });
     }

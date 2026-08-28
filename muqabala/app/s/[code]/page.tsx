@@ -38,7 +38,10 @@ export default async function ProofSittingPage({
       customTitle={role.title}
       tailored
       interviewToken={data.signed_token}
-      proof={{ workplace: payload.workplace || data.workplace || '' }}
+      proof={{
+        workplace: payload.workplace || data.workplace || '',
+        recruiterName: payload.recruiterName,
+      }}
     />
   );
 }

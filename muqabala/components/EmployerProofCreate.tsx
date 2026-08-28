@@ -9,24 +9,58 @@ const MIN_ADVERT_CHARS = 120;
 
 export function EmployerProofCreate() {
   const { t } = useLang();
-  const [workplace, setWorkplace] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [recruiterName, setRecruiterName] = useState('');
   const [jobTitle, setJobTitle] = useState('');
   const [jobText, setJobText] = useState('');
-  const [busy, setBusy] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [generated, setGenerated] = useState(false);
   const [link, setLink] = useState('');
   const [copied, setCopied] = useState(false);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<'generate' | 'create' | null>(null);
   const [tooShort, setTooShort] = useState(false);
 
+  const companyReady = companyName.trim().length >= 2;
+  const titleReady = jobTitle.trim().length >= 2;
+  const jobReady = jobText.trim().length >= MIN_ADVERT_CHARS;
+
+  async function generateJobDescription() {
+    if (generating || creating || !companyReady || !titleReady) return;
+    setGenerating(true);
+    setGenerated(false);
+    setError(null);
+    setTooShort(false);
+    setLink('');
+    try {
+      const response = await fetch('/api/screening/job-description', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ companyName, jobTitle }),
+      });
+      const body = await response.json().catch(() => ({})) as { jobDescription?: string };
+      if (!response.ok || !body.jobDescription) {
+        setError('generate');
+        return;
+      }
+      setJobText(body.jobDescription);
+      setGenerated(true);
+    } catch {
+      setError('generate');
+    } finally {
+      setGenerating(false);
+    }
+  }
+
   async function createLink() {
-    if (busy) return;
+    if (creating || generating || !companyReady || !titleReady) return;
     if (jobText.trim().length < MIN_ADVERT_CHARS) {
       setTooShort(true);
-      setError(false);
+      setError(null);
       return;
     }
-    setBusy(true);
-    setError(false);
+    setCreating(true);
+    setError(null);
     setTooShort(false);
     setCopied(false);
     try {
@@ -36,29 +70,38 @@ export function EmployerProofCreate() {
         body: JSON.stringify({ jobTitle, jobText }),
       });
       if (generated.status === 429) {
-        setError(true);
+        setError('create');
         return;
       }
-      const generatedBody = await generated.json().catch(() => ({})) as { token?: string; role?: { title?: string } };
+      const generatedBody = await generated.json().catch(() => ({})) as {
+        tailored?: boolean;
+        token?: string;
+        role?: { title?: string };
+      };
+      if (!generated.ok || !generatedBody.tailored || !generatedBody.token) {
+        setError('create');
+        return;
+      }
       const pack = await fetch('/api/screening/packs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          workplace,
+          companyName,
+          recruiterName,
           jobTitle: jobTitle || generatedBody.role?.title,
           interviewToken: generatedBody.token,
         }),
       });
       const packBody = await pack.json().catch(() => ({})) as { url?: string };
       if (!pack.ok || !packBody.url) {
-        setError(true);
+        setError('create');
         return;
       }
       setLink(packBody.url);
     } catch {
-      setError(true);
+      setError('create');
     } finally {
-      setBusy(false);
+      setCreating(false);
     }
   }
 
@@ -93,13 +136,32 @@ export function EmployerProofCreate() {
             }}
           >
             <label className="stack-sm">
-              <span className="eyebrow">{t('proofWorkplaceLabel')}</span>
+              <span className="eyebrow">{t('proofCompanyLabel')}</span>
               <input
                 className="answer-box"
-                value={workplace}
-                onChange={(event) => setWorkplace(event.target.value)}
+                value={companyName}
+                onChange={(event) => {
+                  setCompanyName(event.target.value);
+                  setLink('');
+                }}
                 maxLength={80}
-                placeholder={t('proofWorkplacePlaceholder')}
+                required
+                autoComplete="organization"
+                placeholder={t('proofCompanyPlaceholder')}
+              />
+            </label>
+            <label className="stack-sm">
+              <span className="eyebrow">{t('proofRecruiterLabel')}</span>
+              <input
+                className="answer-box"
+                value={recruiterName}
+                onChange={(event) => {
+                  setRecruiterName(event.target.value);
+                  setLink('');
+                }}
+                maxLength={80}
+                autoComplete="name"
+                placeholder={t('proofRecruiterPlaceholder')}
               />
             </label>
             <label className="stack-sm">
@@ -107,7 +169,11 @@ export function EmployerProofCreate() {
               <input
                 className="answer-box"
                 value={jobTitle}
-                onChange={(event) => setJobTitle(event.target.value)}
+                onChange={(event) => {
+                  setJobTitle(event.target.value);
+                  setGenerated(false);
+                  setLink('');
+                }}
                 maxLength={120}
                 required
                 placeholder={t('proofJobTitlePlaceholder')}
@@ -120,18 +186,39 @@ export function EmployerProofCreate() {
                 value={jobText}
                 onChange={(event) => {
                   setJobText(event.target.value);
+                  setGenerated(false);
+                  setLink('');
                   if (tooShort && event.target.value.trim().length >= MIN_ADVERT_CHARS) setTooShort(false);
                 }}
                 rows={10}
                 required
                 placeholder={t('proofAdvertPlaceholder')}
               />
+              <span className="tiny">{t('proofAdvertHelp')}</span>
             </label>
-            <button type="submit" className="btn btn-primary" disabled={busy || jobTitle.trim().length < 2}>
-              {busy ? t('proofCreating') : t('proofCreateAction')}
-            </button>
+            <div className="proof-create-actions">
+              <button
+                type="button"
+                className="btn btn-quiet"
+                disabled={generating || creating || !companyReady || !titleReady}
+                onClick={() => void generateJobDescription()}
+              >
+                {generating ? t('proofGeneratingAdvert') : t('proofGenerateAdvert')}
+              </button>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={creating || generating || !companyReady || !titleReady || !jobReady}
+              >
+                {creating ? t('proofCreating') : t('proofCreateAction')}
+              </button>
+            </div>
+            <div aria-live="polite">
+              {generated && <p className="notice notice-ok">{t('proofAdvertGenerated')}</p>}
+            </div>
             {tooShort && <p className="notice notice-warn">{t('proofAdvertTooShort')}</p>}
-            {error && <p className="notice notice-warn">{t('proofCreateFailed')}</p>}
+            {error === 'generate' && <p className="notice notice-warn">{t('proofGenerateFailed')}</p>}
+            {error === 'create' && <p className="notice notice-warn">{t('proofCreateFailed')}</p>}
           </form>
 
           {link && (

@@ -74,6 +74,7 @@ test('Practice tokens and proof packs stay in different families', () => {
     competencies: role.competencies,
     questions: three,
     workplace: 'Al Maha Hotel',
+    recruiterName: 'Amina Hassan',
   });
   assert.ok(practiceToken);
   assert.ok(proofToken);
@@ -83,5 +84,7 @@ test('Practice tokens and proof packs stay in different families', () => {
   assert.equal(proof?.kind, 'proof');
   assert.equal(proof?.questions.length, 3);
   assert.equal(proof?.workplace, 'Al Maha Hotel');
+  assert.equal(proof?.recruiterName, 'Amina Hassan');
+  assert.equal(practice?.recruiterName, undefined);
   assert.notEqual(practiceToken, proofToken);
 });

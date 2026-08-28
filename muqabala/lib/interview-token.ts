@@ -26,6 +26,8 @@ export type InterviewTokenPayload = {
   questions: Question[];
   /** Workplace name on a proof sitting. Absent for Coach practice. */
   workplace?: string;
+  /** Optional named recruiter on a proof sitting. Signed so the browser cannot alter it. */
+  recruiterName?: string;
   kind?: 'practice' | 'proof';
 };
 
@@ -60,19 +62,21 @@ function signPayload(payload: InterviewTokenPayload): string | null {
 }
 
 export function signInterview(
-  payload: Omit<InterviewTokenPayload, 'v' | 'exp' | 'kind' | 'workplace'>,
+  payload: Omit<InterviewTokenPayload, 'v' | 'exp' | 'kind' | 'workplace' | 'recruiterName'>,
 ): string | null {
   return signPayload({ ...payload, v: TOKEN_VERSION, kind: 'practice', exp: Date.now() + TOKEN_TTL_MS });
 }
 
 /** 14-day work-sample pack. Same signature family as practice so scoring can trust it. */
 export function signProofPack(
-  payload: Omit<InterviewTokenPayload, 'v' | 'exp' | 'kind'> & { workplace: string },
+  payload: Omit<InterviewTokenPayload, 'v' | 'exp' | 'kind'> & { workplace: string; recruiterName?: string },
 ): string | null {
   const workplace = payload.workplace.trim().slice(0, 80);
+  const recruiterName = payload.recruiterName?.trim().slice(0, 80) || undefined;
   return signPayload({
     ...payload,
     workplace,
+    recruiterName,
     v: TOKEN_VERSION,
     kind: 'proof',
     exp: Date.now() + PROOF_TTL_MS,

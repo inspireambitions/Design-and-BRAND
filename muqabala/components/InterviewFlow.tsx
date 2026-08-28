@@ -122,7 +122,7 @@ export function InterviewFlow({
   /** Eight-question set for Full Mock mode; absent when the role cannot support it. */
   mockQuestions?: Question[];
   /** Live work sample for a hiring team. Not practice. */
-  proof?: { workplace: string };
+  proof?: { workplace: string; recruiterName?: string };
 }) {
   const { lang, setLang, t } = useLang();
 
@@ -1213,7 +1213,12 @@ export function InterviewFlow({
             )}
             <p className="lede" style={{ marginTop: '0.6rem' }}>
               {proof
-                ? t('proofBeforeStartShort').replace('{workplace}', proof.workplace || t('proofWorkplaceFallback'))
+                ? (proof.recruiterName
+                    ? t('proofBeforeStartRecruiter')
+                        .replace('{recruiter}', proof.recruiterName)
+                        .replace('{company}', proof.workplace || t('proofCompanyFallback'))
+                    : t('proofBeforeStartShort')
+                        .replace('{company}', proof.workplace || t('proofCompanyFallback')))
                 : t('beforeStartShort')}
             </p>
             <details className="disclosure" style={{ marginTop: '0.5rem' }}>
