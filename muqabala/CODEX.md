@@ -147,8 +147,11 @@ say there is no database.
 **Production identity**
 
 - Website: `https://trymuqabala.com`
-- Vercel team: `kim-ks-projects`
+- Vercel team: `INSPIRE` (`inspire14`, `team_IlZz8UvetUXPtSvI4hPqy6fn`)
 - Vercel project: `muqabala` (`prj_mLU2A8yiW61V4a4da54GryoIcSXX`)
+- Domains on that project: `trymuqabala.com`, `www.trymuqabala.com`, `muqabala.vercel.app`, plus leftover `muqabala-kim-ks-projects.vercel.app`
+- Git: `inspireambitions/Design-and-BRAND`, root directory `muqabala`, production branch `claude/gulf-hospitality-video-interview-m9skfu`
+- Git auto-deploy: linked. Pushes and pull requests create Preview deployments on INSPIRE. Ignore leftover `kim-ks-projects` names and the extra INSPIRE project `design-and-brand` (`prj_acAWgVwV7sxVymwHdBsFZvh6Xaw8`): it is also Git-linked to this repo with root `muqabala`, so PRs show a second Vercel check. It is not `trymuqabala.com`. Unlink Git on that leftover project in the Vercel UI; do not pause it from here (pause would 503 any leftover alias).
 - Supabase project: `Muqabala` (`hmaxzpgsefzpflrwzopa`)
 - Cursor MCP config: repo-root `.cursor/mcp.json` (Vercel OAuth + read-only Supabase)
 
@@ -239,32 +242,34 @@ all served by the AI path. Strong English mean 100.0 (spread 0), medium 78.0 (sp
 weak 13.2 (spread 5), accented strong 93.0 (spread 0), strong Arabic 94.8 (spread 7).
 Result: PASS. `OPENAI_API_KEY` is configured as a sensitive Vercel variable for Production
 and Preview; local development uses the ignored `.env.local` copy. The generated deployment
-URL is Vercel-protected, so run future public gates against the stable production alias above.
+URL is Vercel-protected, so run future public gates against `https://trymuqabala.com`.
 
 ---
 
 ## 5. Known gaps / roadmap
 
 **Shipped:** 69 roles across 20 industries plus a catch-all interview for any job, bilingual EN/AR with RTL, camera + live transcript,
-unlimited retries, evidence-based feedback, progress tracking, works with or without an API key.
+unlimited retries, evidence-based feedback, progress tracking, accounts + Supabase persistence,
+private report sharing, optional PostHog/Sentry, and a scoring consistency gate
+(`scripts/measure-consistency.mjs`). Works with or without an API key.
 
 **Deliberately not built yet** (in rough priority order):
 
 1. **Arabic heuristic scoring.** The heuristic scorer is English-only. Arabic answers are
    currently *gated*, not scored: `route.ts` detects Arabic (via the `lang` field or Arabic
    script in the transcript) and returns `arabicUnavailable()` — an honest Arabic explanation —
-   rather than a near-floor score. With a key set, Arabic reaches Claude properly. **Next step:**
-   add Arabic-aware heuristics (first-person markers, Arabic-Indic digits ٠-٩, outcome
-   connectives) so demo mode works in Arabic too, then remove the gate. Do not remove the gate
+   rather than a near-floor score. With a key set, Arabic reaches the configured AI provider.
+   **Next step:** add Arabic-aware heuristics (first-person markers, Arabic-Indic digits ٠-٩, outcome
+   connectives) so no-key mode works in Arabic too, then remove the gate. Do not remove the gate
    before the heuristics exist — an unfair score is worse than an honest refusal.
 2. **Payments.** No Stripe/Paddle yet — everything is free. Pricing plan: free first mock,
    AED 29 role pack, AED 79 unlimited 30 days.
 3. **Accent benchmark.** Priya's non-negotiable: measure transcription word-error rate per
    accent group and publish it. Not started.
-4. **Scoring consistency measurement.** Run the same answer N times, publish the variance.
-5. **Analytics** (PostHog), error tracking (Sentry), WhatsApp share links.
-6. **Server-side persistence.** localStorage means history is lost if the user clears their
-   browser. Supabase is the intended destination when accounts are added.
+4. **Published scoring-variance report.** The measurement script and a live acceptance gate exist;
+   a public-facing variance write-up is not shipped.
+5. **Muqabala Screening.** Employer product is phase two. Coach only for now.
+6. **Richer Gulf interview guides.** `/blog` exists as a marketing stub, not a guide library.
 
 ---
 

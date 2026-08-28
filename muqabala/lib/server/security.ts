@@ -19,8 +19,11 @@ export function trustedOrigins(): string[] {
     ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL.replace(/^https?:\/\//, '')}`
     : null;
   if (productionAlias) origins.add(productionAlias.replace(/\/$/, ''));
-  // Stable Vercel production alias used in docs and gates.
+  // Stable Vercel production aliases used in docs and gates.
   origins.add('https://design-and-brand-orpin.vercel.app');
+  origins.add('https://muqabala.vercel.app');
+  origins.add('https://muqabala-inspire14.vercel.app');
+  origins.add('https://muqabala-kim-ks-projects.vercel.app');
   origins.add('https://trymuqabala.com');
   return [...origins];
 }
