@@ -12,6 +12,10 @@ export type GuideDocument = GuideListItem & {
   body: unknown[];
   bodyAr: unknown[];
   practiceHref: string;
+  metaDescription: string;
+  heroImageUrl: string;
+  jsonLdRaw: string;
+  faqJsonLdRaw: string;
 };
 
 export const guidesQuery = groq`*[_type == "guide" && defined(slug.current)] | order(_createdAt desc) {
@@ -30,5 +34,9 @@ export const guideBySlugQuery = groq`*[_type == "guide" && slug.current == $slug
   "excerptAr": coalesce(excerptAr, excerpt, ""),
   "body": coalesce(body, []),
   "bodyAr": coalesce(bodyAr, body, []),
-  "practiceHref": coalesce(practiceHref, "/practice")
+  "practiceHref": coalesce(practiceHref, "/practice"),
+  "metaDescription": coalesce(metaDescription, excerpt, ""),
+  "heroImageUrl": coalesce(heroImageUrl, ""),
+  "jsonLdRaw": coalesce(jsonLdRaw, ""),
+  "faqJsonLdRaw": coalesce(faqJsonLdRaw, "")
 }`;
