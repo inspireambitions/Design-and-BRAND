@@ -2,9 +2,22 @@ import type { Metadata } from 'next';
 import { EmployerProofCreate } from '@/components/EmployerProofCreate';
 
 export const metadata: Metadata = {
-  title: 'Work sample for hiring teams | Muqabala',
-  description: 'No career portal needed. Add a 12-minute work sample. Humans decide. No face scoring. No auto-reject.',
+  title: 'Work samples for hiring teams',
+  description: 'Turn a job description into a focused 12-minute work sample. You review every answer. Nothing is automatically rejected.',
   robots: { index: true, follow: true },
+  alternates: { canonical: '/for-employers' },
+  openGraph: {
+    type: 'website',
+    siteName: 'Muqabala',
+    title: 'See who can do the job.',
+    description: 'Create a focused 12-minute work sample from any job description. You review every answer.',
+    url: '/for-employers',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'See who can do the job.',
+    description: 'Create a focused 12-minute work sample from any job description. You review every answer.',
+  },
 };
 
 export default function ForEmployersPage() {

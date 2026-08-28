@@ -6,6 +6,7 @@ import { compareRetries } from '../lib/retry-comparison.ts';
 import { resolveUnscoredReason } from '../lib/report-feedback.ts';
 import { focusedQuestionFromRole } from '../lib/focused-question.ts';
 import { containsArabicScript, overallFromAnswers } from '../lib/scoring.ts';
+import { screeningPreviewCopy } from '../lib/screening-preview.ts';
 
 const competency = (id, evidence = null) => ({ id, label: id, score: evidence ? 8 : 2, evidence });
 const feedback = (overrides = {}) => ({
@@ -86,4 +87,27 @@ test('report retry resolves the original question before rotation or subsetting'
   assert.equal(focusedQuestionFromRole(catalogue, 'old-core')?.id, 'old-core');
   const custom = { questions: Array.from({ length: 8 }, (_, index) => question(`custom-${index + 1}`)) };
   assert.equal(focusedQuestionFromRole(custom, 'custom-7')?.id, 'custom-7');
+});
+
+test('employer work-sample previews use the sending company and disclose human review', () => {
+  const preview = screeningPreviewCopy({
+    companyName: 'Nour Clinic',
+    jobTitle: 'Receptionist',
+    questionCount: 3,
+  });
+  assert.equal(preview.invitationTitle, 'Nour Clinic invites you to show how you would handle the job.');
+  assert.equal(preview.roleLine, 'Receptionist work sample from Nour Clinic.');
+  assert.match(preview.description, /Three questions\. About 12 minutes\./);
+  assert.match(preview.description, /reviewed by the hiring team/);
+  assert.match(preview.description, /No face scoring\. No automatic rejection\./);
+});
+
+test('work-sample previews normalise unsafe layout characters and never include recruiter details', () => {
+  const preview = screeningPreviewCopy({
+    companyName: '  Nour\nClinic\u0000  ',
+    jobTitle: '  Front\tDesk Agent  ',
+  });
+  assert.equal(preview.companyName, 'Nour Clinic');
+  assert.equal(preview.jobTitle, 'Front Desk Agent');
+  assert.doesNotMatch(JSON.stringify(preview), /recruiter/i);
 });

@@ -1,47 +1,58 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { InterviewFlow } from '@/components/InterviewFlow';
-import { roleFromToken, verifyInterview } from '@/lib/interview-token';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { getScreeningPack } from '@/lib/screening-pack';
+import { screeningPreviewCopy } from '@/lib/screening-preview';
 
-export const metadata: Metadata = {
-  title: 'Work sample | Muqabala',
-  robots: { index: false, follow: false },
-};
+type PageProps = { params: Promise<{ code: string }> };
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { code } = await params;
+  const pack = await getScreeningPack(code);
+  const preview = screeningPreviewCopy({
+    companyName: pack?.workplace,
+    jobTitle: pack?.role.title,
+    questionCount: pack?.role.questions.length,
+  });
+
+  return {
+    title: preview.invitationTitle,
+    description: preview.description,
+    robots: { index: false, follow: false, nocache: true },
+    openGraph: {
+      type: 'website',
+      siteName: 'Muqabala',
+      title: preview.invitationTitle,
+      description: preview.description,
+      url: `/s/${code}`,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: preview.invitationTitle,
+      description: preview.description,
+    },
+  };
+}
 
 export const dynamic = 'force-dynamic';
 
 export default async function ProofSittingPage({
   params,
-}: {
-  params: Promise<{ code: string }>;
-}) {
+}: PageProps) {
   const { code } = await params;
-  if (!/^[A-Za-z0-9_-]{6,16}$/.test(code)) notFound();
-
-  const admin = createAdminClient();
-  if (!admin) notFound();
-  const { data } = await admin
-    .from('screening_packs')
-    .select('signed_token, workplace, expires_at')
-    .eq('public_code', code)
-    .maybeSingle();
-  if (!data || new Date(data.expires_at).getTime() <= Date.now()) notFound();
-
-  const payload = verifyInterview(data.signed_token);
-  if (!payload || payload.kind !== 'proof' || payload.questions.length !== 3) notFound();
-  const role = roleFromToken(payload);
+  const pack = await getScreeningPack(code);
+  if (!pack) notFound();
 
   return (
     <div className="employer-proof-page employer-light-theme">
       <InterviewFlow
-        role={role}
-        customTitle={role.title}
+        role={pack.role}
+        customTitle={pack.role.title}
         tailored
-        interviewToken={data.signed_token}
+        interviewToken={pack.signedToken}
         proof={{
-          workplace: payload.workplace || data.workplace || '',
-          recruiterName: payload.recruiterName,
+          workplace: pack.workplace,
+          recruiterName: pack.recruiterName,
         }}
       />
     </div>
