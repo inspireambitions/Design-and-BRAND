@@ -256,7 +256,7 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
               )}
             </div>
 
-            <p className={styles.assurance}>{t('proofPracticeStaysPrivate')}</p>
+            <p className={styles.assurance}>{t('proofRecruiterValue')}</p>
 
             <div className={styles.messages} aria-live="polite">
               {tooShort && <p className={styles.warning}>{t('proofAdvertTooShort')}</p>}

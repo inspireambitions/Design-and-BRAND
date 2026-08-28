@@ -71,6 +71,8 @@ export const STRINGS = {
     proofHiringKicker: 'For hiring teams',
     proofPracticeStaysPrivate:
       'Nothing is auto-rejected. Practice on Coach stays private.',
+    proofRecruiterValue:
+      'Learn how each candidate would approach the role before you shortlist. Review the same three role-specific answers in one place.',
     proofCandidatesUseCoach: 'Candidates looking for private practice should use Coach.',
     proofCreating: 'Creating…',
     proofCompanyPlaceholder: 'Nour Clinic',
@@ -545,6 +547,8 @@ export const STRINGS = {
     proofHiringKicker: 'لفرق التوظيف',
     proofPracticeStaysPrivate:
       'لا يوجد رفض تلقائي. يبقى التدريب على المدرب خاصاً.',
+    proofRecruiterValue:
+      'تعرّف على كيفية تعامل كل مرشح مع الدور قبل إعداد القائمة المختصرة. راجع الإجابات الثلاث نفسها الخاصة بالدور في مكان واحد.',
     proofCandidatesUseCoach: 'المرشحون الذين يريدون تدريباً خاصاً يستخدمون المدرب.',
     proofCreating: 'جاري الإنشاء…',
     proofCompanyPlaceholder: 'عيادة نور',
