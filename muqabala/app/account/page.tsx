@@ -1,8 +1,6 @@
 import { redirect } from 'next/navigation';
 import { AccountInterviews, type AccountInterview } from '@/components/AccountInterviews';
-import { SignOutButton } from '@/components/SignOutButton';
-import { TopBar } from '@/components/TopBar';
-import { AccountTitle } from '@/components/AccountTitle';
+import { AccountDashboard } from '@/components/AccountDashboard';
 import { createClient, currentUser } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -19,15 +17,9 @@ export default async function AccountPage() {
     .order('updated_at', { ascending: false });
 
   return (
-    <main className="shell shell-narrow">
-      <TopBar showProgressLink={false} />
-      <div className="stack-lg">
-        <div className="row" style={{ justifyContent: 'space-between' }}>
-          <AccountTitle />
-          <SignOutButton />
-        </div>
-        <AccountInterviews interviews={(data ?? []) as AccountInterview[]} />
-      </div>
-    </main>
+    <AccountDashboard
+      email={user.email ?? ''}
+      interviews={(data ?? []) as AccountInterview[]}
+    />
   );
 }

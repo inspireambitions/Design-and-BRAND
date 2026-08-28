@@ -366,24 +366,3 @@ export const infoPages: Record<string, Localised<MarketingPageContent>> = {
     },
   },
 };
-
-export const blogCopy: Localised<Record<string, string>> = {
-  en: {
-    eyebrow: 'Interview guides',
-    title: 'Simple guides for Gulf job interviews.',
-    intro: 'Useful interview guides are coming soon. Each guide will give clear steps and real examples.',
-    topic1: 'Gulf interview questions by role',
-    topic2: 'Stronger answers with real examples',
-    topic3: 'English and Arabic interview preparation',
-    note: 'We will open this page when the first useful guides are ready.',
-  },
-  ar: {
-    eyebrow: 'أدلة المقابلات',
-    title: 'إرشاد عملي لمقابلات العمل في الخليج.',
-    intro: 'ستصبح هذه مكتبة مقالات مقابلة عند اكتمال ربط ووردبريس. سننشر أدلة مفيدة لا صفحات ضعيفة.',
-    topic1: 'أسئلة مقابلات الخليج حسب الوظيفة',
-    topic2: 'إجابات أقوى بأمثلة حقيقية',
-    topic3: 'الاستعداد للمقابلات بالعربية والإنجليزية',
-    note: 'المسار جاهز لكنه سيبقى خارج نتائج البحث حتى يتم ربط مقالات حقيقية.',
-  },
-};
