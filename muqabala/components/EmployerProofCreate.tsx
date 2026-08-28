@@ -9,7 +9,7 @@ const MIN_ADVERT_CHARS = 120;
 
 export function EmployerProofCreate() {
   const { lang, setLang, t } = useLang();
-  const [workplace, setWorkplace] = useState('');
+  const [companyName, setCompanyName] = useState('');
   const [jobTitle, setJobTitle] = useState('');
   const [jobText, setJobText] = useState('');
   const [creating, setCreating] = useState(false);
@@ -19,7 +19,7 @@ export function EmployerProofCreate() {
   const [tooShort, setTooShort] = useState(false);
 
   async function createLink() {
-    if (creating || jobTitle.trim().length < 2) return;
+    if (creating || companyName.trim().length < 2 || jobTitle.trim().length < 2) return;
     if (jobText.trim().length < MIN_ADVERT_CHARS) {
       setTooShort(true);
       setError(false);
@@ -51,7 +51,7 @@ export function EmployerProofCreate() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...(workplace.trim() ? { workplace: workplace.trim() } : {}),
+          companyName: companyName.trim(),
           jobTitle: jobTitle || generatedBody.role?.title,
           interviewToken: generatedBody.token,
         }),
@@ -119,6 +119,23 @@ export function EmployerProofCreate() {
             }}
           >
             <label className={styles.field}>
+              <span>{t('proofCompanyLabel')}</span>
+              <input
+                dir="auto"
+                value={companyName}
+                onChange={(event) => {
+                  setCompanyName(event.target.value);
+                  setLink('');
+                }}
+                minLength={2}
+                maxLength={80}
+                required
+                autoComplete="organization"
+                placeholder={t('proofCompanyPlaceholder')}
+              />
+            </label>
+
+            <label className={styles.field}>
               <span>{t('proofJobTitleLabel')}</span>
               <input
                 dir="auto"
@@ -152,28 +169,6 @@ export function EmployerProofCreate() {
                 placeholder={t('proofAdvertPlaceholder')}
               />
             </label>
-
-            <details className={styles.workplace}>
-              <summary>
-                <span className={styles.plus} aria-hidden="true">+</span>
-                {t('proofWorkplaceLabel')}
-              </summary>
-              <label className={styles.workplaceField}>
-                <span className="sr-only">{t('proofWorkplaceLabel')}</span>
-                <input
-                  dir="auto"
-                  value={workplace}
-                  onChange={(event) => {
-                    setWorkplace(event.target.value);
-                    setLink('');
-                  }}
-                  minLength={2}
-                  maxLength={80}
-                  autoComplete="organization"
-                  placeholder={t('proofCompanyPlaceholder')}
-                />
-              </label>
-            </details>
 
             <button type="submit" className={styles.submit} disabled={creating}>
               {creating ? t('proofCreating') : t('proofCreateAction')}
