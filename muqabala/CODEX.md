@@ -151,7 +151,7 @@ say there is no database.
 - Vercel project: `muqabala` (`prj_mLU2A8yiW61V4a4da54GryoIcSXX`)
 - Domains on that project: `trymuqabala.com`, `www.trymuqabala.com`, `muqabala.vercel.app`, plus leftover `muqabala-kim-ks-projects.vercel.app`
 - Git: `inspireambitions/Design-and-BRAND`, root directory `muqabala`, production branch `claude/gulf-hospitality-video-interview-m9skfu`
-- Git auto-deploy: linked. Pushes and pull requests create Preview deployments on INSPIRE. Ignore leftover `kim-ks-projects` names and the extra INSPIRE project `design-and-brand` (`prj_acAWgVwV7sxVymwHdBsFZvh6Xaw8`): it is also Git-linked to this repo with root `muqabala`, so PRs show a second Vercel check. It is not `trymuqabala.com`. Unlink Git on that leftover project in the Vercel UI; do not pause it from here (pause would 503 any leftover alias).
+- Git auto-deploy: linked on `muqabala` only. Pushes and pull requests create Preview deployments; merges to the production branch create Production. Leftover INSPIRE project `design-and-brand` (`prj_acAWgVwV7sxVymwHdBsFZvh6Xaw8`) still exists with old aliases such as `design-and-brand-orpin.vercel.app`, but **Git is unlinked** — ignore it; it is not `trymuqabala.com`. Do not pause it (pause would 503 leftover aliases).
 - Supabase project: `Muqabala` (`hmaxzpgsefzpflrwzopa`)
 - Cursor MCP config: repo-root `.cursor/mcp.json` (Vercel OAuth + read-only Supabase)
 
