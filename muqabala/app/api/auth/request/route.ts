@@ -69,7 +69,12 @@ export async function POST(request: Request) {
   if (claimState) callback.searchParams.set('claim', claimState);
   const { error } = await client.auth.signInWithOtp({
     email: parsed.data.email,
-    options: { emailRedirectTo: callback.toString() },
+    options: {
+      emailRedirectTo: callback.toString(),
+      data: {
+        muqabala_language: parsed.data.lang,
+      },
+    },
   });
   if (error) {
     if (claimState && admin) {

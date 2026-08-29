@@ -16,14 +16,42 @@ import { useLang } from './LanguageProvider';
 export function AccountDashboard({
   email,
   interviews,
+  marketingOptIn,
 }: {
   email: string;
   interviews: AccountInterview[];
+  marketingOptIn: boolean;
 }) {
   const { lang, setLang, t } = useLang();
   const [accountOpen, setAccountOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const initial = email.trim().charAt(0).toUpperCase() || 'M';
+  const [emailUpdates, setEmailUpdates] = useState(marketingOptIn);
+  const [savingEmailUpdates, setSavingEmailUpdates] = useState(false);
+  const [emailUpdateMessage, setEmailUpdateMessage] = useState('');
+
+  async function saveEmailUpdates() {
+    setSavingEmailUpdates(true);
+    setEmailUpdateMessage('');
+    const nextValue = !emailUpdates;
+    try {
+      const response = await fetch('/api/account/email-preferences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ marketingOptIn: nextValue, lang }),
+      });
+      if (!response.ok) throw new Error();
+      const data = await response.json() as { scheduled?: boolean; suppressed?: boolean };
+      setEmailUpdates(data.suppressed ? false : nextValue);
+      setEmailUpdateMessage(nextValue
+        ? data.suppressed ? t('emailUpdatesSuppressed') : data.scheduled ? t('emailUpdatesSaved') : t('emailUpdatesSubscribed')
+        : t('emailUpdatesStopped'));
+    } catch {
+      setEmailUpdateMessage(t('emailUpdatesFailed'));
+    } finally {
+      setSavingEmailUpdates(false);
+    }
+  }
 
   useEffect(() => {
     if (!accountOpen) return;
@@ -133,6 +161,17 @@ export function AccountDashboard({
           </Link>
 
           <AccountInterviews interviews={interviews} />
+
+          <section className="account-email-preferences" aria-labelledby="email-preferences-heading">
+            <div>
+              <h2 id="email-preferences-heading">{t('emailUpdatesTitle')}</h2>
+              <p>{t('emailMarketingOptIn')}</p>
+            </div>
+            <button className="btn btn-quiet" type="button" onClick={() => void saveEmailUpdates()} disabled={savingEmailUpdates}>
+              {savingEmailUpdates ? t('saving') : emailUpdates ? t('stopEmailUpdates') : t('getEmailUpdates')}
+            </button>
+            {emailUpdateMessage && <p className="tiny" role="status">{emailUpdateMessage}</p>}
+          </section>
         </div>
       </section>
     </main>

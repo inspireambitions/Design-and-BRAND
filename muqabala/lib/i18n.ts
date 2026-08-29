@@ -1,4 +1,5 @@
 export type Lang = 'en' | 'ar';
+import { CAREER_EMAIL_CONSENT } from '@/lib/email/consent';
 
 export const STRINGS = {
   en: {
@@ -391,6 +392,17 @@ export const STRINGS = {
     signInTitle: 'Sign in without a password',
     signInBody: 'We will email a secure link and a six-digit code. No password is needed.',
     emailAddress: 'Email address',
+    emailMarketingOptIn: CAREER_EMAIL_CONSENT.en.copy,
+    emailServiceNotice: 'After you verify a new account, we send one onboarding email. Account and security emails are separate from optional updates.',
+    emailUpdatesTitle: 'Career email updates',
+    getEmailUpdates: 'Get email updates',
+    stopEmailUpdates: 'Stop email updates',
+    saving: 'Saving...',
+    emailUpdatesSaved: 'You are subscribed. Your first career email will arrive in about 24 hours.',
+    emailUpdatesSubscribed: 'You are subscribed to future email updates.',
+    emailUpdatesSuppressed: 'Your choice is saved, but we cannot deliver updates to this address. Contact the Muqabala Team for help.',
+    emailUpdatesStopped: 'Optional email updates are stopped.',
+    emailUpdatesFailed: 'We could not save this choice. Please try again.',
     sendSignInCode: 'Email my sign-in code',
     sendNewCode: 'Send a new code',
     sending: 'Sending…',
@@ -884,6 +896,17 @@ export const STRINGS = {
     signInTitle: 'سجّل الدخول من دون كلمة مرور',
     signInBody: 'سنرسل إليك رابطاً آمناً ورمزاً من ستة أرقام. لا تحتاج إلى كلمة مرور.',
     emailAddress: 'البريد الإلكتروني',
+    emailMarketingOptIn: CAREER_EMAIL_CONSENT.ar.copy,
+    emailServiceNotice: 'بعد تأكيد الحساب الجديد، نرسل رسالة ترحيب واحدة. رسائل الحساب والأمان منفصلة عن التحديثات الاختيارية.',
+    emailUpdatesTitle: 'تحديثات مهنية مفيدة',
+    getEmailUpdates: 'اشترك في التحديثات',
+    stopEmailUpdates: 'أوقف التحديثات',
+    saving: 'جارٍ الحفظ...',
+    emailUpdatesSaved: 'تم الاشتراك. ستصل أول رسالة مهنية خلال نحو 24 ساعة.',
+    emailUpdatesSubscribed: 'أنت مشترك في تحديثات البريد المستقبلية.',
+    emailUpdatesSuppressed: 'تم حفظ اختيارك، لكن لا يمكننا إرسال التحديثات إلى هذا العنوان. تواصل مع فريق مقابلة للمساعدة.',
+    emailUpdatesStopped: 'تم إيقاف تحديثات البريد الاختيارية.',
+    emailUpdatesFailed: 'تعذر حفظ هذا الخيار. حاول مرة أخرى.',
     sendSignInCode: 'أرسل رمز الدخول إلى بريدي',
     sendNewCode: 'أرسل رمزاً جديداً',
     sending: 'جاري الإرسال…',

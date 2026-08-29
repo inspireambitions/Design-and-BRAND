@@ -84,6 +84,7 @@ export function EmailSignIn({ next = '/account', compact = false }: { next?: str
             placeholder="you@example.com"
           />
         </label>
+        <p className="tiny">{t('emailServiceNotice')}</p>
         <button className="btn btn-primary" type="submit" disabled={busy || !email}>
           {busy ? t('sending') : sent ? t('sendNewCode') : t('sendSignInCode')}
         </button>
