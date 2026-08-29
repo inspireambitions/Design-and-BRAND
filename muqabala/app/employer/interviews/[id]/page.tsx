@@ -72,7 +72,7 @@ export default async function EmployerInterviewReportPage({ params }: { params: 
           {answers.map((answer, answerIndex) => {
             const feedback = answer.feedback;
             return (
-              <article className={styles.reportCard} key={answer.question_index}>
+              <article className={styles.reportCard} id={`question-${answer.question_index + 1}`} key={answer.question_index}>
                 <p className={styles.eyebrow}>Question {answer.question_index + 1}</p>
                 <h2>{answer.question_text}</h2>
 
