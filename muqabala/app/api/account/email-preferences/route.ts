@@ -48,7 +48,9 @@ export async function POST(request: Request) {
   if (error) return Response.json({ error: 'We could not save your preference.' }, { status: 503 });
 
   if (parsed.data.marketingOptIn) {
-    const dueAt = new Date(Date.now() + 24 * 60 * 60_000).toISOString();
+    const confirmedAt = user.email_confirmed_at ? new Date(user.email_confirmed_at).getTime() : Date.now();
+    const firstDayDue = confirmedAt + 24 * 60 * 60_000;
+    const dueAt = new Date(firstDayDue > Date.now() ? firstDayDue : Date.now() + 24 * 60 * 60_000).toISOString();
     const { data: existingJob, error: lookupError } = await admin.from('lifecycle_email_jobs')
       .select('id,status,resend_email_id').eq('user_id', user.id).eq('email_type', 'career_tools_24h').maybeSingle();
     if (lookupError) return Response.json({ error: 'Your choice was saved, but the email schedule could not be checked.' }, { status: 503 });
