@@ -42,6 +42,7 @@ test('candidate consent and receipt match the approved wording', () => {
   assert.match(flow, /I agree to submit my interview responses and video recordings to the employer who invited me\. I understand that the employer will use them to review my application\./);
   assert.match(flow, /Your interview has been submitted successfully\./);
   assert.match(flow, /The employer will review your responses and contact you directly if there is a next step\./);
+  assert.match(flow, /kept for up to 90 days/);
 });
 
 test('candidate APIs do not expose employer analysis or reports', () => {
@@ -63,10 +64,25 @@ test('employer ownership, final consent and private video storage are enforced i
 
 test('employer dashboard separates recorded evidence from AI analysis', () => {
   const report = read('app/employer/interviews/[id]/page.tsx');
+  const deleteControl = read('components/EmployerDeleteInterview.tsx');
+  const deleteRoute = read('app/api/employer/interviews/[id]/route.ts');
   assert.match(report, /Candidate’s recorded evidence/);
   assert.match(report, /AI-generated analysis/);
   assert.match(report, /not a verified fact or an automatic decision/);
   assert.match(report, /createSignedUrl/);
+  assert.match(report, /Kept for up to 90 days/);
+  assert.match(deleteControl, /Delete this interview and all three recordings/);
+  assert.match(deleteRoute, /currentUser/);
+  assert.match(deleteRoute, /not\('submitted_at', 'is', null\)/);
+  assert.match(deleteRoute, /storage\.from\('screening-videos'\)\.remove/);
+  assert.match(deleteRoute, /\.eq\('screening_pack_id', interview\.screening_pack_id\)/);
+});
+
+test('private playback cache is shorter than the signed employer link', () => {
+  const upload = read('lib/screening-video-upload.ts');
+  const report = read('app/employer/interviews/[id]/page.tsx');
+  assert.match(upload, /cacheControl: '60'/);
+  assert.match(report, /createSignedUrl\(answer\.video_path, 15 \* 60\)/);
 });
 
 test('employer creation form generates the description before unlocking the link action', () => {

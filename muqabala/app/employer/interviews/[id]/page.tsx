@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import type { AnswerFeedback } from '@/lib/scoring';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient, currentUser } from '@/lib/supabase/server';
+import { EmployerDeleteInterview } from '@/components/EmployerDeleteInterview';
 import styles from '../../EmployerDashboard.module.css';
 
 export const dynamic = 'force-dynamic';
@@ -112,6 +113,13 @@ export default async function EmployerInterviewReportPage({ params }: { params: 
               </article>
             );
           })}
+        </div>
+        <div className={styles.reportControls}>
+          <div className={styles.retentionCopy}>
+            <strong>Kept for up to 90 days</strong>
+            <span>Delete this interview sooner when you no longer need the recordings.</span>
+          </div>
+          <EmployerDeleteInterview interviewId={interview.id} />
         </div>
         <Link className={styles.back} href="/employer">Back to submitted interviews</Link>
       </main>

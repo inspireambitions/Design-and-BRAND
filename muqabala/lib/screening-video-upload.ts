@@ -28,7 +28,7 @@ export function uploadScreeningVideo(
         bucketName: grant.bucket,
         objectName: grant.path,
         contentType: mimeType,
-        cacheControl: '3600',
+        cacheControl: '60',
       },
       onError: reject,
       onProgress: (uploaded, total) => {

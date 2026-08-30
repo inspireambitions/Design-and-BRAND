@@ -676,6 +676,81 @@
   font-weight: 800;
 }
 
+.reportControls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border: 1px solid #dce5df;
+  border-radius: 0.8rem;
+  background: #f7faf8;
+}
+
+.retentionCopy {
+  display: grid;
+  gap: 0.2rem;
+  color: #52655c;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.retentionCopy strong {
+  color: #20372f;
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+}
+
+.deleteControl {
+  display: grid;
+  justify-items: end;
+  gap: 0.35rem;
+}
+
+.deleteInterview {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid #cda9a2;
+  border-radius: 0.7rem;
+  background: #fff;
+  color: #8b3026;
+  font-family: var(--font-display);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.deleteInterview:hover {
+  border-color: #a74236;
+  background: #fff5f3;
+}
+
+.deleteInterview:focus-visible {
+  outline: 3px solid #68cbbd;
+  outline-offset: 2px;
+}
+
+.deleteInterview:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.deleteInterview svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.deleteError {
+  max-width: 18rem;
+  color: #8b3026;
+  font-size: 0.78rem;
+  text-align: end;
+}
+
 @media (max-width: 60rem) {
   .candidateCard {
     grid-template-columns: minmax(0, 1fr) minmax(15rem, 1fr) auto;
@@ -754,6 +829,24 @@
     display: flex;
     width: 100%;
     margin: -1rem 0 2.5rem;
+  }
+
+  .reportControls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .deleteControl {
+    justify-items: stretch;
+  }
+
+  .deleteInterview {
+    width: 100%;
+  }
+
+  .deleteError {
+    max-width: none;
+    text-align: start;
   }
 }
 
