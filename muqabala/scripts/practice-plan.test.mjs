@@ -16,12 +16,29 @@ const { practicePlanEmail } = await import('../lib/practice-plan/email-template.
 const { MemoryEmailProvider, FailureInjectionEmailProvider, EmailProviderError } = await import('../lib/practice-plan/email-provider.ts');
 const { statusAfterEvent } = await import('../lib/practice-plan/delivery-events.ts');
 const { retryBackoffMs } = await import('../lib/practice-plan/worker.ts');
+const { configuredOrigin } = await import('../lib/server/security.ts');
 
 const feedback = {
   questionId: 'q1', score: 62, status: 'scored', headline: 'Needs a clearer result',
   competencies: [], strengths: ['You explained your own action.'],
   improvements: ['Add a verifiable result.'], coachTip: 'Finish with what changed.', source: 'ai',
 };
+
+test('preview deployments trust their own Vercel origin without changing production', () => {
+  const previous = {
+    VERCEL_ENV: process.env.VERCEL_ENV,
+    VERCEL_URL: process.env.VERCEL_URL,
+    APP_ORIGIN: process.env.APP_ORIGIN,
+  };
+  process.env.VERCEL_ENV = 'preview';
+  process.env.VERCEL_URL = 'muqabala-preview.example.vercel.app';
+  process.env.APP_ORIGIN = 'https://trymuqabala.com';
+  assert.equal(configuredOrigin(), 'https://muqabala-preview.example.vercel.app');
+  Object.entries(previous).forEach(([key, value]) => {
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  });
+});
 
 test('request validation is strict and accepts only the delivery consent', () => {
   const valid = {

@@ -13,7 +13,7 @@ export function configuredOrigin(): string {
   const deploymentOrigin = process.env.VERCEL_ENV !== 'production' && process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
     : null;
-  return (process.env.APP_ORIGIN || deploymentOrigin || 'https://trymuqabala.com').replace(/\/$/, '');
+  return (deploymentOrigin || process.env.APP_ORIGIN || 'https://trymuqabala.com').replace(/\/$/, '');
 }
 
 /** Origins allowed to mutate interview state (create attempt, share, save). */
