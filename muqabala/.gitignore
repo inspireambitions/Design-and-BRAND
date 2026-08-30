@@ -12,6 +12,8 @@ next-env.d.ts
 .env*
 !.env.example
 .playwright-cli/
+playwright-report/
+test-results/
 design-qa-*.png
 .sanity
 dist

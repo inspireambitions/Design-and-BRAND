@@ -1,6 +1,7 @@
 import { SaveAnswerSchema } from '@/lib/interviews';
 import { interviewAccess } from '@/lib/server/interview-access';
 import { hasTrustedOrigin, privateNoStoreHeaders } from '@/lib/server/security';
+import { issueCompletionProof, practicePlanSecretsConfigured } from '@/lib/practice-plan/crypto';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -33,7 +34,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     p_expires_at: refreshedExpiry,
   });
   if (error || saved !== true) return Response.json({ error: 'Progress could not be saved.' }, { status: 503 });
-  return Response.json({ saved: true }, { headers: privateNoStoreHeaders() });
+  return Response.json({
+    saved: true,
+    ...(parsed.data.status === 'completed'
+      && process.env.PRACTICE_PLAN_EMAIL_ENABLED === 'true'
+      && practicePlanSecretsConfigured()
+      ? { completionProof: issueCompletionProof(id) }
+      : {}),
+  }, { headers: privateNoStoreHeaders() });
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {

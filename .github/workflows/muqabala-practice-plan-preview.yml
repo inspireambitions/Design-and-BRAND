@@ -1,0 +1,57 @@
+name: Muqabala practice-plan preview gate
+
+on:
+  push:
+    branches:
+      - codex/practice-plan-preview-20260830
+  pull_request:
+    branches:
+      - claude/gulf-hospitality-video-interview-m9skfu
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: muqabala-practice-plan-preview
+  cancel-in-progress: true
+
+jobs:
+  preview-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: muqabala
+    env:
+      PLAYWRIGHT_BASE_URL: https://muqabala-git-codex-practice-plan-preview-20260830-inspire14.vercel.app
+      PRACTICE_PLAN_EMAIL_ENABLED: "false"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: muqabala/package-lock.json
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run typecheck
+      - run: npm run test:practice-plan
+      - run: npm run test:contact
+      - run: npm run test:practice-plan-load
+      - run: npm run build
+      - name: Wait for the Vercel preview
+        run: curl --fail --silent --show-error --retry 20 --retry-delay 6 --retry-all-errors "$PLAYWRIGHT_BASE_URL/contact" > /dev/null
+      - run: npx playwright test tests/browser/contact.spec.ts tests/browser/practice-plan.spec.ts
+
+      - name: Upload browser diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: muqabala-browser-diagnostics
+          path: muqabala/test-results
+          if-no-files-found: ignore
+          retention-days: 7

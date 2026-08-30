@@ -3,6 +3,14 @@
     {
       "path": "/api/cron/screening-cleanup",
       "schedule": "23 2 * * *"
+    },
+    {
+      "path": "/api/cron/practice-plan-worker",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/practice-plan-retention",
+      "schedule": "43 3 * * *"
     }
   ]
 }
