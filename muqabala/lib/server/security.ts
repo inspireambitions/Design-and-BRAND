@@ -39,6 +39,14 @@ export function trustedOrigins(): string[] {
 export function hasTrustedOrigin(request: Request): boolean {
   const origin = request.headers.get('origin');
   if (!origin) return false;
+  // Branch previews use an alias that differs from VERCEL_URL. The browser's
+  // exact request origin is still a strict same-origin check and does not trust
+  // arbitrary Vercel sites.
+  try {
+    if (origin === new URL(request.url).origin) return true;
+  } catch {
+    return false;
+  }
   if (trustedOrigins().includes(origin)) return true;
   return process.env.NODE_ENV !== 'production' && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
 }

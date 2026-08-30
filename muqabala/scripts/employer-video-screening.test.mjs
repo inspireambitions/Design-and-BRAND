@@ -159,11 +159,14 @@ test('employer interviews resume without consuming a second place', () => {
 test('employer generation is authenticated and security headers include CSP', () => {
   const generator = read('app/api/screening/job-description/route.ts');
   const config = read('next.config.ts');
+  const security = read('lib/server/security.ts');
   assert.match(generator, /const employer = await currentUser\(\)/);
   assert.match(generator, /if \(!employer\)[\s\S]*status: 401/);
   assert.match(config, /Content-Security-Policy/);
   assert.match(config, /script-src-attr 'none'/);
   assert.match(config, /frame-ancestors 'none'/);
+  assert.match(security, /origin === new URL\(request\.url\)\.origin/);
+  assert.doesNotMatch(security, /\*\.vercel\.app/);
 });
 
 test('employer sign-in and unavailable-link copy have Arabic parity', () => {
