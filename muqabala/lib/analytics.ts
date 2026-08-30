@@ -30,7 +30,7 @@ export function initAnalytics(): void {
   ready = true;
 }
 
-type EventName = 'interview_started' | 'interview_completed' | 'rating_submitted';
+type EventName = 'interview_started' | 'interview_completed' | 'rating_submitted' | 'practice_plan_requested';
 
 /** Allowed property keys, as a second line of defence against accidental leaks. */
 type EventProps = Partial<{

@@ -56,6 +56,26 @@ const shareLimiter = redis
     })
   : null;
 
+const practicePlanIpLimiter = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(5, '10 m'),
+      prefix: 'muqabala:limit:practice-plan-ip',
+      analytics: false,
+      timeout: 1_000,
+    })
+  : null;
+
+const practicePlanEmailLimiter = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(3, '24 h'),
+      prefix: 'muqabala:limit:practice-plan-email',
+      analytics: false,
+      timeout: 1_000,
+    })
+  : null;
+
 const configuredDailyLimit = Number(process.env.INTERVIEW_DAILY_LIMIT ?? 400);
 const interviewDailyLimit = Number.isFinite(configuredDailyLimit)
   ? Math.max(1, Math.floor(configuredDailyLimit))
@@ -203,6 +223,27 @@ export function limitShare(request: Request, userId: string): Promise<LimitDecis
     localLimit: 10,
     localWindowMs: 10 * 60 * 1_000,
   });
+}
+
+export async function limitPracticePlan(request: Request, keyedEmailHash: string): Promise<LimitDecision> {
+  const [ip, email] = await Promise.all([
+    sharedLimit({
+      bucketName: 'practice-plan-ip',
+      identifier: `ip:${requestAddress(request)}`,
+      limiter: practicePlanIpLimiter,
+      localLimit: 5,
+      localWindowMs: 10 * 60 * 1_000,
+    }),
+    sharedLimit({
+      bucketName: 'practice-plan-email',
+      identifier: `email:${keyedEmailHash}`,
+      limiter: practicePlanEmailLimiter,
+      localLimit: 3,
+      localWindowMs: 24 * 60 * 60 * 1_000,
+    }),
+  ]);
+  if (ip.limited && email.limited) return { limited: true, retryAfterSeconds: Math.max(ip.retryAfterSeconds, email.retryAfterSeconds) };
+  return ip.limited ? ip : email;
 }
 
 export function sharedRateLimitsConfigured(): boolean {

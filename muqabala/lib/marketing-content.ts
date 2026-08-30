@@ -320,13 +320,13 @@ export const infoPages: Record<string, Localised<MarketingPageContent>> = {
   contact: {
     en: {
       eyebrow: 'Support and feedback',
-      title: 'Tell us what went wrong.',
-      intro: 'Your message helps us make Muqabala easier and more useful.',
+      title: 'How can we help?',
+      intro: 'Questions about Muqabala, technical support, feedback and other enquiries all go to the same team.',
       sections: [
         { title: 'Report a problem', body: 'Tell us your phone or device, browser and language. Say where the problem happened. Do not send private answer details.' },
         { title: 'Share your opinion', body: 'Tell us if the feedback was clear and useful. Tell us what would make you practise again.' },
-        { title: 'Personal interview coaching', body: 'Human coaching is separate from the app and may be offered through Inspire Ambitions. It is preparation only and does not guarantee a job.' },
-        { title: 'Contact us', body: 'Send your message through the Inspire Ambitions contact page.', href: 'https://inspireambitions.com/contact/', linkLabel: 'Open the contact page' },
+        { title: 'Coaching, employer and partnership enquiries', body: 'Ask about personal interview coaching, hiring-team tools or working with Muqabala. Coaching is preparation only and does not guarantee a job.' },
+        { title: 'Protect your privacy', body: 'Do not email passwords, access codes, identity documents or private interview-answer details.' },
       ],
     },
     ar: {
@@ -336,8 +336,8 @@ export const infoPages: Record<string, Localised<MarketingPageContent>> = {
       sections: [
         { title: 'الإبلاغ عن مشكلة تقنية', body: 'اذكر الجهاز والمتصفح واللغة والمرحلة التي حدثت فيها المشكلة والرسالة التي رأيتها. لا ترسل محتوى سرياً.' },
         { title: 'مشاركة رأيك في المنتج', body: 'أخبرنا هل كانت الملاحظات محددة وهل وثقت بها وما الذي سيجعلك تتدرب مرة أخرى.' },
-        { title: 'تدريب شخصي للمقابلات', body: 'التدريب البشري منفصل عن التطبيق وقد يتوفر عبر إنسباير أمبيشنز. هو للاستعداد فقط ولا يضمن وظيفة.' },
-        { title: 'طريقة التواصل', body: 'استخدم صفحة تواصل إنسباير أمبيشنز إلى أن تصبح قناة دعم مقابلة المخصصة جاهزة.', href: 'https://inspireambitions.com/contact/', linkLabel: 'افتح صفحة التواصل' },
+        { title: 'التدريب وفرق التوظيف والشراكات', body: 'يمكنك الاستفسار عن التدريب الشخصي أو أدوات فرق التوظيف أو التعاون مع مقابلة. التدريب للاستعداد فقط ولا يضمن وظيفة.' },
+        { title: 'حماية خصوصيتك', body: 'لا ترسل كلمات المرور أو رموز الدخول أو وثائق الهوية أو تفاصيل خاصة من إجابات المقابلة.' },
       ],
     },
   },

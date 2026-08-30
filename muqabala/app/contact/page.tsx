@@ -1,13 +1,22 @@
 import type { Metadata } from 'next';
-import { MarketingInfoPage } from '@/components/MarketingSite';
-import { infoPages } from '@/lib/marketing-content';
+import { ContactPageContent } from '@/components/ContactPage';
 
 export const metadata: Metadata = {
-  title: 'Contact and support',
-  description: 'Report a Muqabala problem, share interview-practice feedback or learn about personal coaching.',
+  title: 'Contact Muqabala',
+  description: 'Contact Muqabala for product enquiries, technical support, feedback, coaching and partnerships.',
   alternates: { canonical: '/contact' },
+  openGraph: {
+    title: 'Contact Muqabala',
+    description: 'Product enquiries, technical support, feedback, coaching and partnerships.',
+    url: '/contact',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Contact Muqabala',
+    description: 'Product enquiries, technical support, feedback, coaching and partnerships.',
+  },
 };
 
 export default function ContactPage() {
-  return <MarketingInfoPage content={infoPages.contact} />;
+  return <ContactPageContent />;
 }

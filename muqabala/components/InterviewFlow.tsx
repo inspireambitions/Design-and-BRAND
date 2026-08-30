@@ -42,6 +42,7 @@ import { FeedbackCard } from './FeedbackCard';
 import { ScoreRing } from './ScoreRing';
 import { RatingCard } from './RatingCard';
 import { CoachingCard } from './CoachingCard';
+import { PracticePlanCapture } from './PracticePlanCapture';
 import { EmailSignIn } from './EmailSignIn';
 
 type Stage = 'check' | 'prep' | 'record' | 'review' | 'feedback' | 'done';
@@ -188,6 +189,7 @@ export function InterviewFlow({
   const [answers, setAnswers] = useState<CompletedAnswer[]>([]);
   const [previousTry, setPreviousTry] = useState<PreviousTry | null>(null);
   const [serverAttemptId, setServerAttemptId] = useState<string | null>(null);
+  const [sessionProof, setSessionProof] = useState<string | null>(null);
   const [reportUnlocked, setReportUnlocked] = useState(false);
   const [reportGateRequired, setReportGateRequired] = useState(false);
   const [resumedQuestions, setResumedQuestions] = useState<Question[] | null>(null);
@@ -284,6 +286,8 @@ export function InterviewFlow({
           body: JSON.stringify(payload),
         });
         if (response.ok) {
+          const result = await response.json().catch(() => ({}));
+          if (typeof result.completionProof === 'string') setSessionProof(result.completionProof);
           setSyncState('saved');
           return true;
         }
@@ -486,9 +490,7 @@ export function InterviewFlow({
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         if (proof) return null;
-        // Account storage is part of the report lock. Failure must never turn
-        // the paid-in-email gate off and expose Questions 2 onward.
-        setReportGateRequired(true);
+        setReportGateRequired(false);
         return null;
       }
       setServerAttemptId(data.id);
@@ -496,12 +498,12 @@ export function InterviewFlow({
         setReportGateRequired(false);
         setReportUnlocked(true);
       } else {
-        setReportGateRequired(true);
-        setReportUnlocked(Boolean(data.unlocked));
+        setReportGateRequired(false);
+        setReportUnlocked(true);
       }
       return data.id as string;
     } catch {
-      if (!proof) setReportGateRequired(true);
+      if (!proof) setReportGateRequired(false);
       return null;
     }
   }, [activeQuestions, focusQuestionId, interviewLanguage, interviewToken, mode, proof, reportRoleTitle, role.id, serverAttemptId]);
@@ -1973,45 +1975,7 @@ export function InterviewFlow({
       )}
 
       {/* ---------- results ---------- */}
-      {stage === 'done' && reportGateRequired && !reportUnlocked && (
-        <div className="stack-lg">
-          <div className="card stack">
-            <p className="eyebrow">{t('firstResult')}</p>
-            <h2>{t('firstFeedbackReady')}</h2>
-            <p className="muted">{t('unlockSummary')}</p>
-          </div>
-          {answers[0] && <div className="stack-sm">
-            <p className="eyebrow">{t('question')} 1</p>
-            <h3 dir="auto">{answers[0].questionText}</h3>
-            <div className="answer-recap"><span className="rate-label">{t('yourAnswer')}</span><p dir="auto">{answers[0].transcript}</p></div>
-            <FeedbackCard feedback={answers[0].feedback} />
-          </div>}
-          {mode === 'guided' && mockQuestions && mockQuestions.length >= 8 && (
-            <div className="card stack-sm">
-              <h2 style={{ fontSize: '1.3rem' }}>{t('readyForFullMock')}</h2>
-              <p className="muted">{t('readyForFullMockBody')}</p>
-              <button type="button" className="btn btn-primary" onClick={startFullMock}>
-                {t('startFullMock')}
-              </button>
-            </div>
-          )}
-          <div className="card stack">
-            <h2 style={{ fontSize: '1.3rem' }}>{t('unlockFullReport')}</h2>
-            <p className="muted">{t('unlockBody')}</p>
-            {serverAttemptId ? (
-              <EmailSignIn compact next={`/account/reports/${serverAttemptId}`} />
-            ) : (
-              <div className="notice notice-warn stack-sm">
-                <strong>{t('firstFeedbackReady')}</strong>
-                <p className="tiny">{t('accountStorageUnavailable')}</p>
-                <button type="button" className="btn btn-quiet" onClick={() => void createServerAttempt()}>{t('retryAccountStorage')}</button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {stage === 'done' && reportUnlocked && (
+      {stage === 'done' && (
         <div className="stack-lg">
           {mode === 'guided' && mockQuestions && mockQuestions.length >= 8 && (
             <div className="card stack-sm">
@@ -2221,6 +2185,14 @@ export function InterviewFlow({
               <FeedbackCard feedback={answer.feedback} />
             </div>
           ))}
+
+          {!proof && serverAttemptId && sessionProof && (
+            <PracticePlanCapture
+              sessionId={serverAttemptId}
+              sessionProof={sessionProof}
+              locale={interviewLanguage}
+            />
+          )}
 
           {!proof && (
           <div className="row no-print">

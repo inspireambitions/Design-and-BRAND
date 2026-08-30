@@ -20,6 +20,15 @@ const nextConfig: NextConfig = {
           { key: 'Cache-Control', value: 'private, no-store, max-age=0' },
         ],
       },
+      {
+        source: '/practice-plan/:path*',
+        headers: [
+          ...baseline.filter((header) => header.key !== 'Referrer-Policy'),
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' },
+          { key: 'Cache-Control', value: 'private, no-store, max-age=0' },
+        ],
+      },
     ];
   },
   async redirects() {
