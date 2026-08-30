@@ -6,6 +6,7 @@ export type GuideListItem = {
   slug: string;
   excerpt: string;
   excerptAr: string;
+  updatedAt: string;
 };
 
 export type GuideDocument = GuideListItem & {
@@ -23,7 +24,8 @@ export const guidesQuery = groq`*[_type == "guide" && defined(slug.current)] | o
   "titleAr": coalesce(titleAr, title),
   "slug": slug.current,
   "excerpt": coalesce(excerpt, ""),
-  "excerptAr": coalesce(excerptAr, excerpt, "")
+  "excerptAr": coalesce(excerptAr, excerpt, ""),
+  "updatedAt": _updatedAt
 }`;
 
 export const guideBySlugQuery = groq`*[_type == "guide" && slug.current == $slug][0] {
@@ -32,6 +34,7 @@ export const guideBySlugQuery = groq`*[_type == "guide" && slug.current == $slug
   "slug": slug.current,
   "excerpt": coalesce(excerpt, ""),
   "excerptAr": coalesce(excerptAr, excerpt, ""),
+  "updatedAt": _updatedAt,
   "body": coalesce(body, []),
   "bodyAr": coalesce(bodyAr, body, []),
   "practiceHref": coalesce(practiceHref, "/practice"),
