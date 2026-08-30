@@ -2714,6 +2714,11 @@ body[dir='rtl'] .report-unscored-status {
 /* ---------- marketing site: Quiet Evidence ---------- */
 
 .marketing-site {
+  --ground: #FAF8F3;
+  --ink: #17211E;
+  --jade: #147D6C;
+  --jade-deep: #0E3B36;
+  --gold: #B9892E;
   --marketing-max: 74rem;
   --marketing-ink: var(--ink);
   --marketing-paper: var(--ground);
@@ -2757,18 +2762,11 @@ body[dir='rtl'] .report-unscored-status {
   text-decoration: none;
 }
 
-.marketing-brand-mark {
+.marketing-brand > svg {
   width: 2rem;
   height: 2rem;
-  display: inline-grid;
-  place-items: center;
+  display: block;
   flex: 0 0 auto;
-  border-radius: 0.55rem;
-  background: var(--jade);
-  color: white;
-  font-family: var(--font-arabic);
-  font-size: 0.95rem;
-  line-height: 1;
 }
 
 .marketing-links {
@@ -3517,11 +3515,6 @@ body[dir='rtl'] .evidence-demo span {
 
   .marketing-brand {
     font-size: 1rem;
-  }
-
-  .marketing-brand-mark {
-    width: 1.8rem;
-    height: 1.8rem;
   }
 
   .marketing-actions .marketing-button {

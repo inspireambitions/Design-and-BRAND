@@ -29,25 +29,25 @@ export const metadata: Metadata = {
     template: '%s | Muqabala',
   },
   description:
-    'Practise Gulf job interviews in English or Arabic. See what worked, what is missing and what to add next.',
+    'Practice real Gulf interview questions out loud — in English or Arabic — and get honest feedback. Free, no account. We score your answer. Not your accent. Not your face.',
   applicationName: 'Muqabala',
   category: 'career',
   openGraph: {
     type: 'website',
     siteName: 'Muqabala',
     title: 'Muqabala | Interview practice for Gulf jobs',
-    description: 'Private Gulf interview practice with clear feedback in English or Arabic.',
+    description: 'Practice real Gulf interview questions out loud — in English or Arabic — and get honest feedback. Free, no account. We score your answer. Not your accent. Not your face.',
     url: '/',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Muqabala | Interview practice for Gulf jobs',
-    description: 'Private Gulf interview practice with clear feedback in English or Arabic.',
+    description: 'Practice real Gulf interview questions out loud — in English or Arabic — and get honest feedback. Free, no account. We score your answer. Not your accent. Not your face.',
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: '#0B7A6B',
+  themeColor: '#0E3B36',
   width: 'device-width',
   initialScale: 1,
 };

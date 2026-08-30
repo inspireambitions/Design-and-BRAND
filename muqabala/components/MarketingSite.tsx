@@ -4,6 +4,16 @@ import Link from 'next/link';
 import { homeCopy, marketingNav, type MarketingPageContent, type MarketingRole } from '@/lib/marketing-content';
 import { useLang } from './LanguageProvider';
 
+export function MuqabalaMark() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="32" height="32" aria-hidden="true" focusable="false">
+      <path d="M 26 36 A 27 27 0 1 0 70 36" fill="none" stroke="#0E3B36" strokeWidth="11" strokeLinecap="round" />
+      <circle cx="35" cy="17" r="7.5" fill="#0E3B36" />
+      <circle cx="61" cy="17" r="7.5" fill="#B9892E" />
+    </svg>
+  );
+}
+
 export function MarketingHeader() {
   const { lang, setLang } = useLang();
   const nav = marketingNav[lang];
@@ -12,7 +22,7 @@ export function MarketingHeader() {
     <header className="marketing-header">
       <div className="marketing-wrap marketing-nav">
         <Link href="/" className="marketing-brand" aria-label="Muqabala home">
-          <span className="marketing-brand-mark" aria-hidden="true">م</span>
+          <MuqabalaMark />
           <span>Muqabala</span>
         </Link>
         <nav className="marketing-links" aria-label={lang === 'ar' ? 'التنقل الرئيسي' : 'Main navigation'}>
@@ -57,7 +67,7 @@ export function MarketingFooter() {
       <div className="marketing-wrap marketing-footer-grid">
         <div>
           <div className="marketing-brand marketing-brand-footer">
-            <span className="marketing-brand-mark" aria-hidden="true">م</span>
+            <MuqabalaMark />
             <span>Muqabala</span>
           </div>
           <p>{lang === 'ar' ? 'تدريب خاص لمقابلات العمل في الخليج.' : 'Private practice for Gulf job interviews.'}</p>
@@ -295,4 +305,3 @@ export function InterviewRolesPage({ roles }: { roles: MarketingRole[] }) {
     </div>
   );
 }
-

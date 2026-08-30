@@ -36,7 +36,7 @@ export const marketingNav: Localised<Record<string, string>> = {
     about: 'About',
     faq: 'FAQ',
     blog: 'Guides',
-    practice: 'Start practising free',
+    practice: 'Practice one answer — free, no account',
     progress: 'My progress',
   },
   ar: {
@@ -46,7 +46,7 @@ export const marketingNav: Localised<Record<string, string>> = {
     about: 'من نحن',
     faq: 'الأسئلة الشائعة',
     blog: 'الأدلة',
-    practice: 'ابدأ التدريب مجاناً',
+    practice: 'جرّب إجابة واحدة — مجانًا، بلا حساب',
     progress: 'تقدمي',
   },
 };
@@ -54,10 +54,10 @@ export const marketingNav: Localised<Record<string, string>> = {
 export const homeCopy: Localised<Record<string, string>> = {
   en: {
     eyebrow: 'Private practice for Gulf job interviews',
-    title: 'Practise for your Gulf job interview.',
+    title: 'Proof, not performance.',
     intro:
       'Choose your job. Answer in English or Arabic. Muqabala shows what you did well, what is missing and what to add next.',
-    primary: 'Start practising free',
+    primary: 'Practice one answer — free, no account',
     secondary: 'See an example',
     trust: 'Free. No sign-up. We never score your face, accent or personality.',
     questionLabel: 'Practice question',
@@ -106,12 +106,12 @@ export const homeCopy: Localised<Record<string, string>> = {
   },
   ar: {
     eyebrow: 'تدريب خاص لمقابلات العمل في الخليج',
-    title: 'تدرّب على مقابلة عملك في الخليج.',
+    title: 'إجابة تُثبِت، لا تُمثِّل',
     intro:
       'اختر الوظيفة. أجب بالعربية أو الإنجليزية. يوضح لك مقابلة ما فعلته جيداً وما ينقص إجابتك وما تضيفه بعد ذلك.',
-    primary: 'ابدأ التدريب مجاناً',
+    primary: 'جرّب إجابة واحدة — مجانًا، بلا حساب',
     secondary: 'شاهد مثالاً',
-    trust: 'مجاني وبدون تسجيل. لا نقيّم وجهك أو لهجتك أو شخصيتك.',
+    trust: 'مجاني وبلا حساب. لا نقيّم وجهك أو لهجتك أو شخصيتك.',
     questionLabel: 'سؤال تدريبي',
     question: 'حدثني عن موقف تعاملت فيه مع عميل غير راضٍ.',
     answerLabel: 'إجابتك',
@@ -133,7 +133,7 @@ export const homeCopy: Localised<Record<string, string>> = {
     step2Body: 'تحدث أو اكتب. راجع الكلمات قبل طلب الملاحظات.',
     step3Title: '٣. اقرأ ملاحظاتك',
     step3Body: 'شاهد ما نجح وما يجب إضافته. ثم حاول مرة أخرى.',
-    proofTitle: 'الدليل، لا المظهر.',
+    proofTitle: 'إجابة تُثبِت، لا تُمثِّل',
     methodEyebrow: 'منهج مقابلة',
     proofBody:
       'يستخدم مقابلة كلمات إجابتك. لا يحكم على وجهك أو لهجتك أو شخصيتك.',
@@ -154,7 +154,7 @@ export const homeCopy: Localised<Record<string, string>> = {
     rolesBody: 'ابدأ بوظيفة خليجية شائعة أو تصفح الدليل الكامل.',
     allRoles: 'تصفح جميع وظائف المقابلات',
     finalTitle: 'يمكن أن تكون إجابتك التالية أقوى.',
-    finalBody: 'تدرّب بخصوصية وراجع الدليل ثم حاول مرة أخرى عندما تكون جاهزاً.',
+    finalBody: 'تدرّب بخصوصية وراجع ما يثبت إجابتك ثم حاول مرة أخرى عندما تكون جاهزاً.',
   },
 };
 
@@ -205,7 +205,7 @@ export const infoPages: Record<string, Localised<MarketingPageContent>> = {
       sections: [
         { title: 'ما الذي نبحث عنه', body: 'نبحث عن مثال حقيقي وما فعلته ولماذا فعلته وما حدث في النهاية.' },
         { title: 'ما الذي لا نقيّمه', body: 'لا نقيّم وجهك أو مظهرك أو نظرك أو مشاعرك أو لهجتك أو قواعد اللغة أو شخصيتك.' },
-        { title: 'نوضح الدليل', body: 'تشير الملاحظات إلى كلمات من إجابتك. إذا كان شيء ناقصاً، نخبرك ولا نخترعه.' },
+        { title: 'نوضح ما يثبت إجابتك', body: 'تشير الملاحظات إلى كلمات من إجابتك. إذا كان شيء ناقصاً، نخبرك ولا نخترعه.' },
         { title: 'أحياناً لا توجد درجة', body: 'قد لا نقيّم الإجابة إذا كانت قصيرة أو غير واضحة. هذا يحميك من درجة خاطئة.' },
         { title: 'راجع الملاحظات', body: 'قد يخطئ الذكاء الاصطناعي. اقرأ الملاحظات واستخدم حكمك. لا يتخذ مقابلة قرار التوظيف.' },
       ],
@@ -228,7 +228,7 @@ export const infoPages: Record<string, Localised<MarketingPageContent>> = {
       title: 'يجب أن يبني تدريب المقابلات الثقة، لا الخوف.',
       intro: 'مقابلة مشروع من إنسباير أمبيشنز للأشخاص المتقدمين لوظائف خليجية من المنطقة ومن أنحاء العالم.',
       sections: [
-        { title: 'لماذا وُجد مقابلة', body: 'قد يجد المرشح الجيد صعوبة في شرح خبرته تحت الضغط. يساعد التدريب الخاص والمتكرر على تحويل العمل الحقيقي إلى دليل واضح.' },
+        { title: 'لماذا وُجد مقابلة', body: 'قد يجد المرشح الجيد صعوبة في شرح خبرته تحت الضغط. يساعد التدريب الخاص والمتكرر على تحويل العمل الحقيقي إلى إجابة واضحة تثبت خبرته.' },
         { title: 'خبرة الخليج في المركز', body: 'يعكس المنتج الوظائف وظروف العمل والتوقعات في الإمارات والسعودية وقطر وعمان والبحرين والكويت.' },
         { title: 'الحكم البشري مهم', body: 'يدعم مقابلة الاستعداد ولا يقرر من يجب توظيفه ولا يضمن عرض عمل.' },
         { title: 'موجّه بخبرة الموارد البشرية', body: 'يقود المشروع عبر إنسباير أمبيشنز أخصائي مسار مهني في الموارد البشرية بخبرة تتجاوز 20 عاماً في الخليج وأفريقيا.' },
@@ -282,7 +282,7 @@ export const infoPages: Record<string, Localised<MarketingPageContent>> = {
       intro: 'باستخدام مقابلة، توافق على استخدامه للاستعداد للمقابلات وعلى تطبيق حكمك على ملاحظاته.',
       sections: [
         { title: 'للتدريب فقط', body: 'لا يمثل مقابلة صاحب عمل أو وكالة توظيف أو عرض عمل ولا يضمن مقابلة أو وظيفة أو نتيجة محددة.' },
-        { title: 'حدود الذكاء الاصطناعي', body: 'قد تحتوي الأسئلة والنصوص والملاحظات والدرجات على أخطاء. راجع النص والدليل قبل الاعتماد على أي اقتراح.' },
+        { title: 'حدود الذكاء الاصطناعي', body: 'قد تحتوي الأسئلة والنصوص والملاحظات والدرجات على أخطاء. راجع النص وما يثبت إجابتك قبل الاعتماد على أي اقتراح.' },
         { title: 'محتواك', body: 'أرسل فقط إعلانات الوظائف والمحتوى الذي يحق لك استخدامه ولا تدرج معلومات سرية عن صاحب عمل أو عميل أو شخص.' },
         { title: 'الاستخدام المقبول', body: 'لا تسئ استخدام الخدمة أو تحاول تعطيلها أو هندسة الأنظمة المحمية عكسياً أو استخدامها لاتخاذ قرارات توظيف آلية.' },
         { title: 'التغييرات والتوفر', body: 'قد تتغير الميزات أثناء التطوير وقد تحدث انقطاعات مؤقتة. قد يؤدي تعطل خدمة التقييم إلى ترك الإجابة دون درجة.' },

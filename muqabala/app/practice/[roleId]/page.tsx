@@ -16,7 +16,8 @@ export async function generateMetadata({
   const role = getRole(roleId);
   return {
     title: role ? `${role.title} interview practice` : 'Interview practice',
-    robots: { index: false, follow: true },
+    robots: { index: true, follow: true },
+    alternates: { canonical: `/practice/${roleId}` },
   };
 }
 
