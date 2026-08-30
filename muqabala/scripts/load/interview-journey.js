@@ -17,8 +17,8 @@ const profiles = {
   ],
   capacity: [
     { duration: '2m', target: 50 },
-    { duration: '3m', target: 150 },
-    { duration: '5m', target: 300 },
+    { duration: '3m', target: 100 },
+    { duration: '5m', target: 250 },
     { duration: '10m', target: 500 },
     { duration: '15m', target: 1000 },
     { duration: '5m', target: 0 },

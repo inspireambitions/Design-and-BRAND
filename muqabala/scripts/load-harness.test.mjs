@@ -16,6 +16,9 @@ test('capacity testing is distributed, staging-only and blocked from production'
   assert.match(source, /amazon:in:mumbai/);
   assert.match(source, /amazon:sg:singapore/);
   assert.match(source, /amazon:de:frankfurt/);
+  for (const target of [50, 100, 250, 500, 1000]) {
+    assert.match(source, new RegExp(`target: ${target}\\b`));
+  }
 });
 
 test('load results separate connection failures from application 5xx responses', () => {

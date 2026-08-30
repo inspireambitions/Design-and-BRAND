@@ -47,7 +47,7 @@ Provide `VERCEL_AUTOMATION_BYPASS_SECRET` through the platform's protected secre
 Run the profiles in this order:
 
 1. `smoke`: verify the deployment, application headers and result classification.
-2. `capacity`: ramp through 50, 150, 300, 500 and 1,000 virtual users from three regions.
+2. `capacity`: ramp through 50, 100, 250, 500 and 1,000 virtual users from three regions.
 3. `soak`: hold 150 virtual users for 30 minutes after the capacity run is understood.
 
 The default workload is 80% read journeys and 20% full eight-answer persistence journeys. Change `JOURNEY_PERCENT` only when the intended traffic model is written into the result.
