@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - codex/practice-plan-preview-20260830
+  pull_request:
+    branches:
+      - claude/gulf-hospitality-video-interview-m9skfu
   workflow_dispatch:
 
 permissions:
