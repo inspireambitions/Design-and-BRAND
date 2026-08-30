@@ -4,7 +4,9 @@ Date: 23 August 2026
 
 ## Executive verdict
 
-GO for a controlled Preview and final inbox testing. Security and candidate-journey reviewers found no remaining source-level deployment blocker after remediation. Reliability approves controlled staging, but does not approve a claim of 1,000 concurrent users or zero outage until the planned load, soak and failure tests have passed against configured production infrastructure.
+GO for a controlled Preview and final inbox testing. Security and candidate-journey reviewers found no remaining source-level deployment blocker after remediation. Reliability approves controlled staging, but does not approve a claim of 1,000 concurrent users or zero outage until the planned load, soak and failure tests have passed against production-shaped staging infrastructure.
+
+Update, 30 August 2026: single-machine production GET bursts returned 49/50 and 44/50 successes at 50 concurrent requests, then 115/150 at 150 concurrent requests. The failures were connection timeouts, not confirmed application 5xx responses. Protected Preview requests hit Vercel authentication and did not test Muqabala. These are warning signals only. The distributed staging gate and correlated Vercel/Supabase logs in `docs/staging-load-test-runbook.md` are required before any 1,000-user statement.
 
 ## High-severity findings resolved before Preview
 
