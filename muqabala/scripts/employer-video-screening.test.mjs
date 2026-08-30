@@ -99,7 +99,22 @@ test('employer creation form generates the description before unlocking the link
   assert.match(styles, /\.actions\s*\{[\s\S]*grid-template-columns:/);
   assert.match(styles, /@media \(max-width: 28rem\)[\s\S]*\.actions\s*\{\s*grid-template-columns: 1fr;/);
   assert.match(form, /t\('proofRecruiterValue'\)/);
+  assert.match(form, /const \[recruiterName, setRecruiterName\] = useState\(''\)/);
+  assert.match(form, /recruiterName: recruiterName\.trim\(\) \|\| undefined/);
+  assert.match(form, /t\('proofRecruiterLabel'\)/);
   assert.match(copy, /Learn how each candidate would approach the role before you shortlist\./);
+});
+
+test('current screening documentation cannot restore the old typed-answer flow', () => {
+  const spec = read('docs/screening-v1.md');
+  const handover = read('CODEX.md');
+  assert.match(spec, /uses video and audio only/);
+  assert.match(spec, /does not offer typing, audio-only answers/);
+  assert.match(spec, /Employer Evidence Desk/);
+  assert.match(spec, /private Supabase Storage bucket `screening-videos`/);
+  assert.doesNotMatch(spec, /candidate speaks or types|video never leaves the phone|no employer dashboard/i);
+  assert.match(handover, /employer-issued video work samples with an owner-only Evidence Desk/);
+  assert.doesNotMatch(handover, /Employer product is phase two\. Coach only for now/);
 });
 
 test('employer link settings are compact and enforced atomically in the database', () => {

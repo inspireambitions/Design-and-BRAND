@@ -20,6 +20,7 @@ type LinkDetails = {
 export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
   const { lang, setLang, t } = useLang();
   const [companyName, setCompanyName] = useState('');
+  const [recruiterName, setRecruiterName] = useState('');
   const [jobTitle, setJobTitle] = useState('');
   const [jobText, setJobText] = useState('');
   const [maxCandidates, setMaxCandidates] = useState(DEFAULT_MAX_CANDIDATES);
@@ -125,6 +126,7 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           companyName: companyName.trim(),
+          recruiterName: recruiterName.trim() || undefined,
           jobTitle: jobTitle || generatedBody.role?.title,
           interviewToken: generatedBody.token,
           maxCandidates,
@@ -223,6 +225,28 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
                 placeholder={t('proofCompanyPlaceholder')}
               />
             </label>
+
+            <details className={styles.workplace}>
+              <summary>
+                <span className={styles.plus} aria-hidden="true">+</span>
+                {t('proofRecruiterLabel')}
+              </summary>
+              <label className={styles.workplaceField}>
+                <input
+                  dir="auto"
+                  value={recruiterName}
+                  onChange={(event) => {
+                    setRecruiterName(event.target.value);
+                    setError(null);
+                    setLinkDetails(null);
+                  }}
+                  maxLength={80}
+                  autoComplete="name"
+                  aria-label={t('proofRecruiterLabel')}
+                  placeholder={t('proofRecruiterPlaceholder')}
+                />
+              </label>
+            </details>
 
             <label className={styles.field}>
               <span>{t('proofJobTitleLabel')}</span>

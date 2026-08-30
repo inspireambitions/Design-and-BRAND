@@ -44,6 +44,8 @@ as its entry point.
 | `NEXT_PUBLIC_POSTHOG_KEY` | No | Enables anonymous usage analytics (PostHog EU). Events are only the explicit calls in `lib/analytics.ts` — role ids, language, scores, ratings. Never transcripts, typed job titles, video, audio, or personal data. Autocapture, pageviews and session recording are disabled. The pre-interview disclosure covers this collection. |
 | `NEXT_PUBLIC_POSTHOG_HOST` | No | PostHog host; defaults to `https://eu.i.posthog.com`. |
 | `SENTRY_DSN` | No | Enables server-only technical error reporting. `lib/sentry-server.ts` strips requests, users, breadcrumbs, contexts and extras. Scoring events contain only route, provider, model, status and failure code. |
+| `RESEND_FEEDBACK_API_KEY` | Production | Sending-only Resend key restricted to `auth.trymuqabala.com`. Sends anonymous ratings and private written suggestions only to `hello@trymuqabala.com`. |
+| `FEEDBACK_SHARE_SECRET` | No | Optional dedicated signing key for downloadable anonymous testimonial cards. Falls back to the domain-separated `INTERVIEW_SECRET`. |
 
 With no key at all, the offline **structure checker** runs (English only, labelled as such in
 the UI) and Arabic answers are declined with an explanation. The interview flow works end to
@@ -254,7 +256,8 @@ URL is Vercel-protected, so run future public gates against `https://trymuqabala
 
 **Shipped:** 69 roles across 20 industries plus a catch-all interview for any job, bilingual EN/AR with RTL, camera + live transcript,
 unlimited retries, evidence-based feedback, progress tracking, accounts + Supabase persistence,
-private report sharing, optional PostHog/Sentry, and a scoring consistency gate
+private report sharing, employer-issued video work samples with an owner-only Evidence Desk,
+optional PostHog/Sentry, and a scoring consistency gate
 (`scripts/measure-consistency.mjs`). Works with or without an API key.
 
 **Deliberately not built yet** (in rough priority order):
@@ -272,8 +275,7 @@ private report sharing, optional PostHog/Sentry, and a scoring consistency gate
    accent group and publish it. Not started.
 4. **Published scoring-variance report.** The measurement script and a live acceptance gate exist;
    a public-facing variance write-up is not shipped.
-5. **Muqabala Screening.** Employer product is phase two. Coach only for now.
-6. **Richer Gulf interview guides.** `/blog` exists as a marketing stub, not a guide library.
+5. **Richer Gulf interview guides.** `/blog` exists as a marketing stub, not a guide library.
 
 ---
 

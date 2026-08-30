@@ -1930,6 +1930,16 @@ body[dir='rtl'] .account-intro h1 {
   color: var(--gold);
 }
 
+.rating-suggestion {
+  margin-top: 0.4rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+.rating-actions .btn {
+  min-height: 44px;
+}
+
 /* ---------- microphone level + playback ---------- */
 
 .mic-row {
@@ -2567,6 +2577,22 @@ body[dir='rtl'] .report-unscored-status {
   .report-management .row {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .rating-actions {
+    align-items: stretch;
+  }
+
+  .rating-actions .btn {
+    flex: 1 1 9rem;
+    min-width: 0;
+    white-space: normal;
+    line-height: 1.25;
+    text-align: center;
+  }
+
+  .rating-choice-row .filter-btn {
+    min-height: 44px;
   }
 }
 

@@ -19,6 +19,10 @@ export function configuredOrigin(): string {
 /** Origins allowed to mutate interview state (create attempt, share, save). */
 export function trustedOrigins(): string[] {
   const origins = new Set<string>([configuredOrigin()]);
+  const currentDeployment = process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL.replace(/^https?:\/\//, '')}`
+    : null;
+  if (currentDeployment) origins.add(currentDeployment.replace(/\/$/, ''));
   const productionAlias = process.env.VERCEL_PROJECT_PRODUCTION_URL
     ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL.replace(/^https?:\/\//, '')}`
     : null;

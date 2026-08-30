@@ -1,83 +1,135 @@
-# Muqabala Proof (Screening V1) — locked spec
+# Muqabala employer work samples
 
-Creative review, 28 August 2026. This is the object we are allowed to build.
-Anything not in this file is a later version.
+Current production specification, 30 August 2026.
 
-## Who it is for
+## Purpose
 
-Gulf volume hiring **and** small teams with no career portal.
+Muqabala helps a hiring team see how a candidate would approach a role before shortlisting. The employer sends one secure link. Each candidate records the same three role-specific answers. A person reviews the evidence and makes the decision.
 
-- Hotel / hospital / agency TA who already posted an advert
-- Clinic, shop, startup, or family business that only has a WhatsApp job post or a few lines in English or Arabic
+This flow stays separate from Muqabala Coach. Private practice answers never appear in the employer dashboard.
 
-They do not need Workday, a careers page, or an employer account. They need a job title, a short description of the work, and WhatsApp.
+## Employer journey
 
-## The review (Jobs / Ive / copy)
+The employer must sign in before creating a link.
 
-**The feeling they kept**
+The creation form asks for:
 
-Hiring manager: *"I can see who can do the job."*
-Candidate: *"A person will read what I said."*
+- Company name, required
+- Recruiter name, optional
+- Job title, required
+- A pasted job description or an AI-generated draft
+- Candidate capacity from 1 to 1,000
+- Link expiry from 1 to 30 days
 
-Not: AI hiring. Not: video screening. Not: a better career portal.
+The employer can edit a generated description before creating the link. The link stays disabled until the company, title and job description meet the validation rules.
 
-**What they killed**
+The invitation uses the company name and optional recruiter name stored in the signed work-sample token. The candidate cannot alter either value.
 
-- The name **Screening** on the product. It sounds like a filter, not proof. Internal code may say screening. The human words are **work sample** and **proof**.
-- **Eight questions.** Coach already learned that finishing matters. V1 is **three questions**: opener, one job question from their job text, closer. About twelve minutes on a phone.
-- **Shortlist / Hold / Not this role.** That is an ATS. V1 has no decision taxonomy.
-- **Employer dashboard.** They live in WhatsApp. The report is sent there. A list of candidates in our UI is V2.
-- **Employer login to create a link.** Three minutes, no SSO. The link is the product. Rate-limit creation.
-- **STAR probes.** Coach only. A live work sample is not a coaching trap.
-- **Putting this on the Coach homepage.** Coach’s promise is still: no employer sees practice. Proof is a **separate door**. Quiet footer link only.
-- **ATS / Workday / careers-page rebuild.** Out. A portal is optional, never required.
+## Candidate journey
 
-**What they said yes to**
+An employer work sample uses video and audio only. It does not offer typing, audio-only answers or a choice of answer method.
 
-One demo:
+Before question one:
 
-1. A hiring lead pastes the job they would send a candidate (WhatsApp message, LinkedIn post, or advert if they have one).
-2. They get one link.
-3. They WhatsApp it.
-4. The candidate speaks or types three answers on a phone. They can edit the words. Video never leaves the phone.
-5. They send the proof (quoted answers, scores only where scored) to the hiring lead.
-6. A human decides. The product never rejects anyone.
+1. The candidate sees the company, role, question count, timing and privacy information.
+2. The candidate enters their name.
+3. The candidate tests the camera and microphone.
+4. The timed question stays locked until both devices work.
 
-If that loop is not love, more features will not help.
+Each work sample contains three questions. The candidate gets two minutes per question. The page shows the question number, progress, recording state, time remaining and save state.
 
-## Rules that do not move
+At zero, the recorder stops and keeps everything captured up to that point. The app uploads the answer and moves on only after the server confirms the save. Failed uploads keep the recorded blob in the page and show a retry action.
 
-Same scoring engine as Coach. Content only. Unscored ≠ zero. No face, accent, fluency. No auto-reject. Say what leaves the device. Typing is equal.
+The page warns the candidate before they refresh, close or leave an active interview.
 
-Practice interviews and proof sittings never mix. A Coach attempt must not appear as employer proof.
+## Consent and submission
 
-## V1 object
+The final button says **Submit to employer**. It stays disabled until the candidate accepts this text:
 
-| Surface | What it is |
+> I agree to submit my interview responses and video recordings to the employer who invited me. I understand that the employer will use them to review my application.
+
+Final submission records consent and submission time. It locks the interview against changes.
+
+The completion message says:
+
+> Your interview has been submitted successfully. The employer will review your responses and contact you directly if there is a next step.
+
+The page does not promise an outcome or response date.
+
+## Candidate visibility
+
+Candidates do not see:
+
+- Answer analysis
+- Scores
+- Recommendations
+- Strengths or concerns
+- The employer report
+
+The candidate sees only recording, save and final-submission confirmation.
+
+## Employer Evidence Desk
+
+Only the signed-in employer who owns the link can open its submissions.
+
+The dashboard shows:
+
+- Active links and link health
+- Capacity used and places remaining
+- Expiry date
+- Candidate list
+- Interview status
+- Submission date and time
+- Completion rate
+- A report link for each submitted interview
+
+Each report shows the candidate's recorded evidence separately from AI-generated analysis. The report labels AI analysis as unverified and tells the recruiter to check it against the recording.
+
+The employer can play every submitted video with audio and delete an interview.
+
+## Storage and retention
+
+The browser uploads employer-work-sample recordings to the private Supabase Storage bucket `screening-videos`. Vercel and Postgres do not store the video binary.
+
+Postgres stores the private object path, upload status, duration and submission metadata.
+
+Employer playback uses a server-generated signed URL that expires after 15 minutes. Playback responses use a 60-second cache period.
+
+Submitted videos are scheduled for deletion after 90 days. The cleanup process removes Storage objects before deleting the database record. An employer can delete an interview earlier.
+
+## Rules
+
+- A human makes every hiring decision.
+- Muqabala never auto-rejects a candidate.
+- Muqabala does not score faces, appearance, accent, voice or emotion.
+- Employer evidence and private Coach practice never mix.
+- One candidate cannot access another candidate's interview.
+- The system must not expose private Storage URLs.
+- Missing or failed AI analysis must not block recorded evidence.
+- AI analysis must never appear as verified fact.
+
+## Routes
+
+| Route | Purpose |
 |---|---|
-| `/for-employers` | Job title + the job in their own words. Optional workplace name. Get a link. No account. No portal. |
-| `/s/[code]` | Candidate work sample. Short WhatsApp code, not a fat token. Three questions. Mock-style: no coaching between questions. |
-| End of sitting | Unlocked proof the candidate can send on WhatsApp / copy. |
+| `/for-employers` | Create a work sample and secure candidate link |
+| `/s/[code]` | Candidate camera test, three recordings, consent and submission |
+| `/employer` | Employer Evidence Desk |
+| `/employer/interviews/[id]` | Employer-owned report and signed video playback |
 
-Token lifetime: 14 days. Generation is rate-limited like advert tailoring.
+## Release gate
 
-Three questions, in order: shared opener, one role question from the tailored (or catalogue) set, shared closer.
+Before a production change to this flow, run one complete interview on a physical phone:
 
-## Explicitly not V1
+1. Create a link with a set capacity and expiry.
+2. Open it outside the employer session.
+3. Test camera and microphone.
+4. Record three answers.
+5. Let one answer reach the two-minute limit.
+6. Submit consent.
+7. Confirm the Evidence Desk receives the interview.
+8. Play every video with sound.
+9. Confirm the capacity decreases once.
+10. Delete the interview and confirm playback stops.
 
-Employer accounts, candidate inbox, auto-shortlist, score thresholds, SPARK/HireVue video, portal widget, CSV to Workday, STAR in the live sitting, charging the candidate, a careers-page rebuild.
-
-## Build-now plan (do not decorate past this)
-
-The product code for this object is on `cursor/screening-v1-demo-d043` (PR #6). Remaining work is go-live, not new features.
-
-1. **Codex — apply SQL on Muqabala Supabase** (`hmaxzpgsefzpflrwzopa`): `supabase/migrations/20260828120000_allow_screening_mode.sql`. This creates `screening_packs` and allows `interviews.mode = screening`.
-2. **Codex — merge PR #6** into `claude/gulf-hospitality-video-interview-m9skfu` so `https://trymuqabala.com/for-employers` exists. Do not turn off Vercel production SSO policy; custom domain is already reachable.
-3. **Live loop on trymuqabala.com** (the Jobs yes):
-   - SME path: workplace `Nour Clinic`, title `Receptionist`, paste a WhatsApp-length job post → copy `/s/{code}`
-   - Hotel path (optional): paste a real advert → same loop
-   - Candidate: three answers on typing → send proof on WhatsApp
-   - Coach `/practice` still says no employer sees practice
-4. **Stop.** Do not add dashboards, logins, or ATS until a real SME or hotel TA uses the link.
-
-The live loop needs the migration **before** production traffic hits pack create.
+Keep production unchanged until this loop passes on the preview deployment.
