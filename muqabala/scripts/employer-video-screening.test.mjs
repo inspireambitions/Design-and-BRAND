@@ -108,6 +108,7 @@ test('employer link settings are compact and enforced atomically in the database
   const packRoute = read('app/api/screening/packs/route.ts');
   const startRoute = read('app/api/interviews/route.ts');
   const migration = read('supabase/migrations/20260828184014_screening_pack_capacity_expiry.sql');
+  const resumeMigration = read('supabase/migrations/20260830100000_screening_resume_and_shared_limits.sql');
 
   assert.match(form, /DEFAULT_MAX_CANDIDATES = 100/);
   assert.match(form, /DEFAULT_EXPIRY_DAYS = 14/);
@@ -116,12 +117,17 @@ test('employer link settings are compact and enforced atomically in the database
   assert.match(packRoute, /parsed\.data\.expiryDays/);
   assert.match(packRoute, /max_candidates: parsed\.data\.maxCandidates/);
   assert.match(startRoute, /rpc\('start_screening_interview'/);
-  assert.match(startRoute, /startStatus === 'full'/);
+  assert.match(startRoute, /result\?\.status === 'full'/);
+  assert.match(startRoute, /limitScreeningStart/);
+  assert.match(startRoute, /Idempotency-Key/i);
   assert.match(migration, /for update/);
   assert.match(migration, /starts_used >= pack_row\.max_candidates/);
   assert.match(migration, /insert into public\.interviews/);
   assert.match(migration, /set starts_used = starts_used \+ 1/);
   assert.match(migration, /grant execute on function public\.start_screening_interview[\s\S]*to service_role/);
+  assert.match(resumeMigration, /start_idempotency_hash/);
+  assert.match(resumeMigration, /updated_at <= now\(\) - interval '48 hours'/);
+  assert.match(resumeMigration, /starts_used = greatest\(0, starts_used - abandoned_count\)/);
 });
 
 test('JobStrike is absent from the complete employer flow', () => {
@@ -134,4 +140,38 @@ test('JobStrike is absent from the complete employer flow', () => {
     'components/EmployerVideoInterview.tsx',
   ];
   assert.doesNotMatch(files.map(read).join('\n'), /jobstrike/i);
+});
+
+test('employer interviews resume without consuming a second place', () => {
+  const flow = read('components/EmployerVideoInterview.tsx');
+  const resumeRoute = read('app/api/screening/resume/route.ts');
+  const access = read('lib/server/interview-access.ts');
+  const draft = read('lib/screening-recording-draft.ts');
+  assert.match(flow, /fetch\('\/api\/screening\/resume'/);
+  assert.match(flow, /Idempotency-Key/);
+  assert.match(flow, /saveScreeningRecordingDraft/);
+  assert.match(resumeRoute, /screeningPackAttemptCookie/);
+  assert.match(resumeRoute, /anonymous_token_hash/);
+  assert.match(access, /screeningPackAttemptCookie/);
+  assert.match(draft, /indexedDB\.open/);
+});
+
+test('employer generation is authenticated and security headers include CSP', () => {
+  const generator = read('app/api/screening/job-description/route.ts');
+  const config = read('next.config.ts');
+  assert.match(generator, /const employer = await currentUser\(\)/);
+  assert.match(generator, /if \(!employer\)[\s\S]*status: 401/);
+  assert.match(config, /Content-Security-Policy/);
+  assert.match(config, /script-src-attr 'none'/);
+  assert.match(config, /frame-ancestors 'none'/);
+});
+
+test('employer sign-in and unavailable-link copy have Arabic parity', () => {
+  const form = read('components/EmployerProofCreate.tsx');
+  const copy = read('lib/i18n.ts');
+  const unavailable = read('components/EmployerLinkUnavailable.tsx');
+  assert.match(form, /t\('proofSignInTitle'\)/);
+  assert.match(copy, /proofSignInTitle: 'سجّل الدخول/);
+  assert.match(unavailable, /انتهت صلاحية رابط المقابلة/);
+  assert.match(unavailable, /الحد الأقصى للمرشحين/);
 });

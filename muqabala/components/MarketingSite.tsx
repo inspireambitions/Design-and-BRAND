@@ -19,6 +19,10 @@ export function MarketingHeader() {
   const nav = marketingNav[lang];
 
   return (
+    <>
+    <a className="marketing-skip-link" href="#main-content">
+      {lang === 'ar' ? 'تخطَّ إلى المحتوى الرئيسي' : 'Skip to main content'}
+    </a>
     <header className="marketing-header">
       <div className="marketing-wrap marketing-nav">
         <Link href="/" className="marketing-brand" aria-label="Muqabala home">
@@ -57,6 +61,7 @@ export function MarketingHeader() {
         </div>
       </div>
     </header>
+    </>
   );
 }
 export function MarketingFooter() {
@@ -129,7 +134,7 @@ export function MarketingHome({ roles }: { roles: MarketingRole[] }) {
   return (
     <div className="marketing-site">
       <MarketingHeader />
-      <main>
+      <main id="main-content" tabIndex={-1}>
         <section className="marketing-hero marketing-wrap">
           <div className="marketing-hero-copy">
             <p className="marketing-eyebrow">{c.eyebrow}</p>
@@ -247,7 +252,7 @@ export function MarketingInfoPage({ content }: { content: Record<'en' | 'ar', Ma
   return (
     <div className="marketing-site">
       <MarketingHeader />
-      <main>
+      <main id="main-content" tabIndex={-1}>
         <section className="info-hero marketing-wrap">
           <p className="marketing-eyebrow">{c.eyebrow}</p>
           <h1>{c.title}</h1>
@@ -283,7 +288,7 @@ export function InterviewRolesPage({ roles }: { roles: MarketingRole[] }) {
   return (
     <div className="marketing-site">
       <MarketingHeader />
-      <main>
+      <main id="main-content" tabIndex={-1}>
         <section className="info-hero marketing-wrap">
           <p className="marketing-eyebrow">{lang === 'ar' ? 'دليل المقابلات' : 'Interview directory'}</p>
           <h1>{lang === 'ar' ? 'تدرّب للوظيفة التي تريدها.' : 'Practise for the job you want.'}</h1>

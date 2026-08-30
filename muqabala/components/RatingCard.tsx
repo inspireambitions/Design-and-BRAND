@@ -111,7 +111,7 @@ export function RatingCard({ attempt }: { attempt: Attempt }) {
 
       <div className="stack-sm">
         <span className="rate-label">{t('rateConfidence')}</span>
-        <div className="row" style={{ gap: '0.4rem' }}>
+        <div className="row" style={{ gap: '0.4rem' }} role="group" aria-label={t('rateConfidence')}>
           {(
             [
               ['more', t('rateMore')],

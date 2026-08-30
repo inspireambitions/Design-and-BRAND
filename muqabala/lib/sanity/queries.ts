@@ -1,5 +1,3 @@
-import { groq } from 'next-sanity';
-
 export type GuideListItem = {
   title: string;
   titleAr: string;
@@ -19,7 +17,7 @@ export type GuideDocument = GuideListItem & {
   faqJsonLdRaw: string;
 };
 
-export const guidesQuery = groq`*[_type == "guide" && defined(slug.current)] | order(_createdAt desc) {
+export const guidesQuery = `*[_type == "guide" && defined(slug.current)] | order(_createdAt desc) {
   title,
   "titleAr": coalesce(titleAr, title),
   "slug": slug.current,
@@ -28,7 +26,7 @@ export const guidesQuery = groq`*[_type == "guide" && defined(slug.current)] | o
   "updatedAt": _updatedAt
 }`;
 
-export const guideBySlugQuery = groq`*[_type == "guide" && slug.current == $slug][0] {
+export const guideBySlugQuery = `*[_type == "guide" && slug.current == $slug][0] {
   title,
   "titleAr": coalesce(titleAr, title),
   "slug": slug.current,

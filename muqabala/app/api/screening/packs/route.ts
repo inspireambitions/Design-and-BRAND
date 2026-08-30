@@ -21,7 +21,7 @@ export async function POST(request: Request) {
   const employer = await currentUser();
   if (!employer) return Response.json({ error: 'Sign in before creating an interview link.' }, { status: 401 });
 
-  const limited = await limitInterviewGeneration(request);
+  const limited = await limitInterviewGeneration(request, employer.id);
   if (limited.limited) {
     return Response.json(
       { error: 'Too many work samples requested. Please wait and try again.' },

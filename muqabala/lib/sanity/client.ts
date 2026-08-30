@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { createClient } from 'next-sanity';
+import { createClient } from '@sanity/client';
 import { sanityApiVersion, sanityDataset, sanityProjectId } from './env';
 
 export const sanityClient = createClient({

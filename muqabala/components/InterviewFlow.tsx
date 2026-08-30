@@ -1977,7 +1977,7 @@ export function InterviewFlow({
         <div className="stack-lg">
           <div className="card stack">
             <p className="eyebrow">{t('firstResult')}</p>
-            <h2>{t('firstFeedbackReady')}</h2>
+            <h2>{answers[0]?.feedback.source === 'none' ? t('firstFeedbackUnavailable') : t('firstFeedbackReady')}</h2>
             <p className="muted">{t('unlockSummary')}</p>
           </div>
           {answers[0] && <div className="stack-sm">
@@ -2002,7 +2002,7 @@ export function InterviewFlow({
               <EmailSignIn compact next={`/account/reports/${serverAttemptId}`} />
             ) : (
               <div className="notice notice-warn stack-sm">
-                <strong>{t('firstFeedbackReady')}</strong>
+                <strong>{answers[0]?.feedback.source === 'none' ? t('firstFeedbackUnavailable') : t('firstFeedbackReady')}</strong>
                 <p className="tiny">{t('accountStorageUnavailable')}</p>
                 <button type="button" className="btn btn-quiet" onClick={() => void createServerAttempt()}>{t('retryAccountStorage')}</button>
               </div>

@@ -13,7 +13,7 @@ export function GuidesIndex({ guides }: { guides: GuideListItem[] }) {
   return (
     <div className="marketing-site">
       <MarketingHeader />
-      <main>
+      <main id="main-content" tabIndex={-1}>
         <section className="info-hero marketing-wrap">
           <p className="marketing-eyebrow">{lang === 'ar' ? 'أدلة المقابلات' : 'Interview guides'}</p>
           <h1>{lang === 'ar' ? 'إرشاد عملي لمقابلات العمل في الخليج.' : 'Simple guides for Gulf job interviews.'}</h1>

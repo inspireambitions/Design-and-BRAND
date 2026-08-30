@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 // These tests deliberately run without Upstash credentials. They verify the
-// local safety brake used in development and during a brief Redis outage.
+// local safety brake used in development.
 delete process.env.UPSTASH_REDIS_REST_URL;
 delete process.env.UPSTASH_REDIS_REST_TOKEN;
 
@@ -10,6 +11,7 @@ const {
   limitInterviewGeneration,
   limitInterviewGenerationDaily,
   limitScoring,
+  DEFAULT_DAILY_GENERATION_LIMIT,
   sharedRateLimitsConfigured,
 } = await import('../lib/rate-limit.ts');
 
@@ -49,7 +51,7 @@ test('two candidates behind one shared IP receive separate interview limits', as
 });
 
 test('local daily generation ceiling is deployment-shaped and deterministic', async () => {
-  const configuredLimit = Number(process.env.INTERVIEW_DAILY_LIMIT ?? 400);
+  const configuredLimit = Number(process.env.INTERVIEW_DAILY_LIMIT ?? DEFAULT_DAILY_GENERATION_LIMIT);
   for (let index = 0; index < configuredLimit; index += 1) {
     assert.equal((await limitInterviewGenerationDaily()).limited, false);
   }
@@ -58,4 +60,11 @@ test('local daily generation ceiling is deployment-shaped and deterministic', as
 
 test('tests do not accidentally connect to a live Redis database', () => {
   assert.equal(sharedRateLimitsConfigured(), false);
+});
+
+test('production Redis timeouts use the deployment-wide database fallback', () => {
+  const source = readFileSync(new URL('../lib/rate-limit.ts', import.meta.url), 'utf8');
+  assert.match(source, /result\.reason !== 'timeout'/);
+  assert.match(source, /consumeDatabaseRateLimit/);
+  assert.match(source, /return \{ limited: true, retryAfterSeconds: 60 \}/);
 });

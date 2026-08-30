@@ -8,6 +8,7 @@ import {
 } from '@/lib/job-description';
 import { limitInterviewGeneration, limitInterviewGenerationDaily } from '@/lib/rate-limit';
 import { hasTrustedOrigin } from '@/lib/server/security';
+import { currentUser } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -34,11 +35,13 @@ function tooLarge(request: Request): boolean {
 export async function POST(request: Request) {
   if (!hasTrustedOrigin(request)) return Response.json({ error: 'Invalid request origin.' }, { status: 403 });
   if (tooLarge(request)) return Response.json({ error: 'Request is too large.' }, { status: 413 });
+  const employer = await currentUser();
+  if (!employer) return Response.json({ error: 'Sign in before generating a job description.' }, { status: 401 });
 
   const parsed = JobDescriptionRequestSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: 'Enter a valid company name and job title.' }, { status: 400 });
 
-  const rateLimit = await limitInterviewGeneration(request);
+  const rateLimit = await limitInterviewGeneration(request, employer.id);
   if (rateLimit.limited) {
     return Response.json(
       { error: 'Too many job descriptions requested. Please wait and try again.' },

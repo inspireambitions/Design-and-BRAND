@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
 
 import { rubricForQuestion } from '../lib/question-rubric.ts';
 import { compareRetries } from '../lib/retry-comparison.ts';
@@ -7,6 +8,8 @@ import { resolveUnscoredReason } from '../lib/report-feedback.ts';
 import { focusedQuestionFromRole } from '../lib/focused-question.ts';
 import { containsArabicScript, overallFromAnswers } from '../lib/scoring.ts';
 import { screeningPreviewCopy } from '../lib/screening-preview.ts';
+
+const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
 const competency = (id, evidence = null) => ({ id, label: id, score: evidence ? 8 : 2, evidence });
 const feedback = (overrides = {}) => ({
@@ -110,4 +113,20 @@ test('work-sample previews normalise unsafe layout characters and never include 
   assert.equal(preview.companyName, 'Nour Clinic');
   assert.equal(preview.jobTitle, 'Front Desk Agent');
   assert.doesNotMatch(JSON.stringify(preview), /recruiter/i);
+});
+
+test('marketing pages expose a keyboard skip link and rating choices have a labelled group', () => {
+  const marketing = read('components/MarketingSite.tsx');
+  const rating = read('components/RatingCard.tsx');
+  assert.match(marketing, /href="#main-content"/);
+  assert.match(marketing, /id="main-content"/);
+  assert.match(rating, /role="group" aria-label=\{t\('rateConfidence'\)\}/);
+});
+
+test('failed scoring is not announced as ready feedback and verification copy matches the enabled journey', () => {
+  const flow = read('components/InterviewFlow.tsx');
+  const copy = read('lib/i18n.ts');
+  assert.match(flow, /feedback\.source === 'none' \? t\('firstFeedbackUnavailable'\)/);
+  assert.doesNotMatch(copy, /Verify your email to unlock the remaining questions/);
+  assert.match(copy, /firstFeedbackUnavailable: 'Question 1 feedback is not available yet'/);
 });

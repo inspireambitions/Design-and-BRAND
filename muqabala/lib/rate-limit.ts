@@ -13,9 +13,8 @@ const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
 const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
 const redis = redisUrl && redisToken ? new Redis({ url: redisUrl, token: redisToken }) : null;
 
-// A short timeout keeps an Upstash incident from stopping an interview. The
-// SDK allows the request when the timeout is reached, while local limits still
-// protect development and deployments whose Redis credentials are not set.
+// A short timeout keeps an Upstash incident from holding an interview request.
+// Production falls through to the shared database counter on timeout.
 const scoreLimiter = redis
   ? new Ratelimit({
       redis,
@@ -56,10 +55,22 @@ const shareLimiter = redis
     })
   : null;
 
-const configuredDailyLimit = Number(process.env.INTERVIEW_DAILY_LIMIT ?? 400);
+const screeningStartLimiter = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(5, '30 m'),
+      prefix: 'muqabala:limit:screening-start',
+      analytics: false,
+      timeout: 1_000,
+    })
+  : null;
+
+export const DEFAULT_DAILY_GENERATION_LIMIT = 1_000;
+
+const configuredDailyLimit = Number(process.env.INTERVIEW_DAILY_LIMIT ?? DEFAULT_DAILY_GENERATION_LIMIT);
 const interviewDailyLimit = Number.isFinite(configuredDailyLimit)
   ? Math.max(1, Math.floor(configuredDailyLimit))
-  : 400;
+  : DEFAULT_DAILY_GENERATION_LIMIT;
 
 const dailyLimiter = redis
   ? new Ratelimit({
@@ -120,7 +131,7 @@ async function sharedLimit(options: {
   localWindowMs: number;
 }): Promise<LimitDecision> {
   const identifier = privateIdentifier(options.identifier);
-  if (!options.limiter) {
+  if (!options.limiter && process.env.NODE_ENV !== 'production') {
     return localLimit(
       options.bucketName,
       identifier,
@@ -129,28 +140,50 @@ async function sharedLimit(options: {
     );
   }
 
-  try {
-    const result = await options.limiter.limit(identifier);
-    return {
-      limited: !result.success,
-      retryAfterSeconds: result.success
-        ? 0
-        : Math.max(1, Math.ceil((result.reset - Date.now()) / 1_000)),
-    };
-  } catch (error) {
-    // Availability wins over a perfect limit. Do not log request data or the
-    // Redis token. A local brake still applies while Upstash is unreachable.
+  if (options.limiter) {
+    try {
+      const result = await options.limiter.limit(identifier);
+      if (result.reason !== 'timeout') {
+        return {
+          limited: !result.success,
+          retryAfterSeconds: result.success
+            ? 0
+            : Math.max(1, Math.ceil((result.reset - Date.now()) / 1_000)),
+        };
+      }
+      console.error('shared_rate_limit_primary_unavailable', {
+        bucket: options.bucketName,
+        error: 'timeout',
+      });
+    } catch (error) {
+      // Continue to the database fallback. Never put a raw IP or token in logs.
+      console.error('shared_rate_limit_primary_unavailable', {
+        bucket: options.bucketName,
+        error: error instanceof Error ? error.name : 'unknown',
+      });
+    }
+  }
+
+  const { consumeDatabaseRateLimit } = await import('./server/shared-rate-limit-fallback');
+  const fallback = await consumeDatabaseRateLimit({
+    bucketName: options.bucketName,
+    identifierHash: identifier,
+    limit: options.localLimit,
+    windowSeconds: Math.max(1, Math.ceil(options.localWindowMs / 1_000)),
+  });
+  if (fallback) return fallback;
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SECRET_KEY) {
     console.error('shared_rate_limit_unavailable', {
       bucket: options.bucketName,
-      error: error instanceof Error ? error.name : 'unknown',
+      error: 'database_fallback_failed',
     });
-    return localLimit(
-      options.bucketName,
-      identifier,
-      options.localLimit,
-      options.localWindowMs,
-    );
+  } else {
+    console.error('shared_rate_limit_unavailable', { bucket: options.bucketName, error: 'storage_unconfigured' });
   }
+
+  // Production must not turn a deployment-wide limit into one limit per
+  // server when both shared stores fail. Retry soon instead of spending cost.
+  return { limited: true, retryAfterSeconds: 60 };
 }
 
 export function limitScoring(request: Request, candidateIdentity?: string): Promise<LimitDecision> {
@@ -202,6 +235,16 @@ export function limitShare(request: Request, userId: string): Promise<LimitDecis
     limiter: shareLimiter,
     localLimit: 10,
     localWindowMs: 10 * 60 * 1_000,
+  });
+}
+
+export function limitScreeningStart(request: Request, packId: string): Promise<LimitDecision> {
+  return sharedLimit({
+    bucketName: 'screening-start',
+    identifier: `${packId}:${requestAddress(request)}`,
+    limiter: screeningStartLimiter,
+    localLimit: 5,
+    localWindowMs: 30 * 60 * 1_000,
   });
 }
 

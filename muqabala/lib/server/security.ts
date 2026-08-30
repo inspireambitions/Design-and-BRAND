@@ -9,6 +9,10 @@ export function screeningAttemptCookie(interviewId: string): string {
   return `muqabala_screening_${interviewId.replace(/-/g, '')}`;
 }
 
+export function screeningPackAttemptCookie(packId: string): string {
+  return `muqabala_screening_pack_${packId.replace(/-/g, '')}`;
+}
+
 export function configuredOrigin(): string {
   const deploymentOrigin = process.env.VERCEL_ENV !== 'production' && process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`

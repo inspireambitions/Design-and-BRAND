@@ -21,7 +21,7 @@ export function GuidePage({ guide }: { guide: GuideDocument }) {
   return (
     <div className="marketing-site">
       <MarketingHeader />
-      <main>
+      <main id="main-content" tabIndex={-1}>
         <article className="info-hero marketing-wrap guide-article">
           <p className="marketing-eyebrow">
             <Link href="/guides">{lang === 'ar' ? 'الأدلة' : 'Guides'}</Link>

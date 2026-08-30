@@ -5,10 +5,16 @@ import type { Role } from '@/lib/roles';
 import { startLevelMeter, startVideoAnswerRecording, type RecordedVideo, type VideoAnswerRecorder } from '@/lib/media';
 import { startDictation, type SpeechSession } from '@/lib/speech';
 import { uploadScreeningVideo, type ScreeningUploadGrant } from '@/lib/screening-video-upload';
+import {
+  deleteScreeningRecordingDraft,
+  loadScreeningRecordingDraft,
+  saveScreeningRecordingDraft,
+} from '@/lib/screening-recording-draft';
 import { useLang } from './LanguageProvider';
+import { EmployerLinkUnavailable } from './EmployerLinkUnavailable';
 import styles from './EmployerVideoInterview.module.css';
 
-type Stage = 'intro' | 'device' | 'ready' | 'recording' | 'saving' | 'consent' | 'submitting' | 'complete';
+type Stage = 'resuming' | 'unavailable' | 'intro' | 'device' | 'ready' | 'recording' | 'saving' | 'consent' | 'submitting' | 'complete';
 
 const ANSWER_SECONDS = 120;
 const CONSENT_VERSION = 'employer-video-v1' as const;
@@ -58,6 +64,9 @@ const COPY = {
     genericError: 'Something went wrong. Please try again.',
     unsupported: 'This browser cannot record video and audio. Open the link in Chrome on Android or Safari on iPhone.',
     employerReview: 'The hiring team will review your recordings. You will not see scores or analysis in this interview.',
+    checkingProgress: 'Checking for a saved interview…',
+    resumeFound: 'Your saved progress is ready. Test your camera and microphone to continue.',
+    recoveredRecording: 'We recovered a response that had not finished uploading. Retry saving it now.',
   },
   ar: {
     invited: 'مقابلة من جهة العمل',
@@ -103,6 +112,9 @@ const COPY = {
     genericError: 'حدث خطأ. حاول مرة أخرى.',
     unsupported: 'هذا المتصفح لا يستطيع تسجيل الفيديو والصوت. افتح الرابط في Chrome على Android أو Safari على iPhone.',
     employerReview: 'سيراجع فريق التوظيف تسجيلاتك. لن تظهر لك درجات أو تحليلات في هذه المقابلة.',
+    checkingProgress: 'جارٍ البحث عن مقابلة محفوظة…',
+    resumeFound: 'تم العثور على تقدمك المحفوظ. اختبر الكاميرا والميكروفون للمتابعة.',
+    recoveredRecording: 'استعدنا إجابة لم يكتمل رفعها. أعد محاولة حفظها الآن.',
   },
 } as const;
 
@@ -111,6 +123,8 @@ type Props = {
   interviewToken: string;
   companyName: string;
   recruiterName?: string;
+  publicCode: string;
+  availability?: 'active' | 'full';
 };
 
 function formatTime(value: number): string {
@@ -129,10 +143,31 @@ function permissionHelp(error: unknown, fallback: string, noDevice: string, devi
   return fallback;
 }
 
-export function EmployerVideoInterview({ role, interviewToken, companyName, recruiterName }: Props) {
+function browserStartKey(publicCode: string): string | null {
+  try {
+    const storageKey = `muqabala.screening.start.${publicCode}`;
+    const existing = window.localStorage.getItem(storageKey);
+    if (existing && /^[A-Za-z0-9_-]{40,60}$/.test(existing)) return existing;
+    const bytes = crypto.getRandomValues(new Uint8Array(32));
+    const created = btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    window.localStorage.setItem(storageKey, created);
+    return created;
+  } catch {
+    return null;
+  }
+}
+
+export function EmployerVideoInterview({
+  role,
+  interviewToken,
+  companyName,
+  recruiterName,
+  publicCode,
+  availability = 'active',
+}: Props) {
   const { lang, setLang, dir } = useLang();
   const c = COPY[lang];
-  const [stage, setStage] = useState<Stage>('intro');
+  const [stage, setStage] = useState<Stage>('resuming');
   const [candidateName, setCandidateName] = useState('');
   const [interviewId, setInterviewId] = useState<string | null>(null);
   const [index, setIndex] = useState(0);
@@ -141,7 +176,7 @@ export function EmployerVideoInterview({ role, interviewToken, companyName, recr
   const [devicesReady, setDevicesReady] = useState(false);
   const [error, setError] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [pending, setPending] = useState<{ recording: RecordedVideo; transcript: string } | null>(null);
+  const [pending, setPending] = useState<{ recording: RecordedVideo; transcript: string; questionIndex: number } | null>(null);
   const [consent, setConsent] = useState(false);
   const [savedCount, setSavedCount] = useState(0);
 
@@ -152,11 +187,67 @@ export function EmployerVideoInterview({ role, interviewToken, companyName, recr
   const speechRef = useRef<SpeechSession | null>(null);
   const transcriptRef = useRef('');
   const finishingRef = useRef(false);
+  const startKeyRef = useRef<string | null>(null);
 
   const questions = role.questions;
   const question = questions[index];
   const questionText = lang === 'ar' ? question?.textAr : question?.text;
   const progress = questions.length ? Math.round((savedCount / questions.length) * 100) : 0;
+
+  useEffect(() => {
+    let cancelled = false;
+    const startKey = browserStartKey(publicCode);
+    startKeyRef.current = startKey;
+    void fetch('/api/screening/resume', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(startKey ? { 'Idempotency-Key': startKey } : {}),
+      },
+      body: JSON.stringify({ publicCode }),
+    })
+      .then(async (response) => response.ok ? response.json() : null)
+      .then(async (body) => {
+        if (cancelled) return;
+        const resumed = body?.resume as {
+          id?: string;
+          candidateName?: string;
+          currentQuestion?: number;
+          complete?: boolean;
+        } | null | undefined;
+        if (!resumed?.id) {
+          setStage(availability === 'full' ? 'unavailable' : 'intro');
+          return;
+        }
+        setInterviewId(resumed.id);
+        setCandidateName(resumed.candidateName || '');
+        const nextIndex = Math.max(0, Math.min(questions.length - 1, resumed.currentQuestion ?? 0));
+        setIndex(nextIndex);
+        setSavedCount(Math.max(0, Math.min(questions.length, resumed.currentQuestion ?? 0)));
+        if (resumed.complete) {
+          await deleteScreeningRecordingDraft(resumed.id);
+          setStage('complete');
+          return;
+        }
+        const recovered = await loadScreeningRecordingDraft(resumed.id);
+        if (recovered && recovered.questionIndex === nextIndex) {
+          setPending({
+            recording: recovered.recording,
+            transcript: recovered.transcript,
+            questionIndex: recovered.questionIndex,
+          });
+          setError(c.recoveredRecording);
+          setStage('saving');
+          return;
+        }
+        setError(c.resumeFound);
+        setStage(resumed.currentQuestion && resumed.currentQuestion >= questions.length ? 'consent' : 'intro');
+      })
+      .catch(() => {
+        if (!cancelled) setStage(availability === 'full' ? 'unavailable' : 'intro');
+      });
+    return () => { cancelled = true; };
+  }, [availability, c.recoveredRecording, c.resumeFound, publicCode, questions.length]);
 
   const attachPreview = useCallback(async () => {
     if (!videoRef.current || !streamRef.current) return;
@@ -228,11 +319,19 @@ export function EmployerVideoInterview({ role, interviewToken, companyName, recr
 
   const createInterview = useCallback(async () => {
     if (!candidateName.trim() || !streamRef.current) return;
+    if (interviewId) {
+      setError('');
+      setStage('ready');
+      return;
+    }
     setError('');
     try {
       const response = await fetch('/api/interviews', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(startKeyRef.current ? { 'Idempotency-Key': startKeyRef.current } : {}),
+        },
         body: JSON.stringify({
           roleId: role.id,
           roleTitle: role.title,
@@ -259,7 +358,7 @@ export function EmployerVideoInterview({ role, interviewToken, companyName, recr
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : c.genericError);
     }
-  }, [c.genericError, candidateName, interviewToken, lang, questions, role.id, role.title]);
+  }, [c.genericError, candidateName, interviewId, interviewToken, lang, questions, role.id, role.title]);
 
   const startRecording = useCallback(() => {
     const stream = streamRef.current;
@@ -313,7 +412,7 @@ export function EmployerVideoInterview({ role, interviewToken, companyName, recr
     }).catch(() => {});
   }, [interviewId, interviewToken, lang, questions, role.id, role.title]);
 
-  const savePending = useCallback(async (toSave: { recording: RecordedVideo; transcript: string }) => {
+  const savePending = useCallback(async (toSave: { recording: RecordedVideo; transcript: string; questionIndex: number }) => {
     if (!interviewId) return;
     setStage('saving');
     setError('');
@@ -325,7 +424,7 @@ export function EmployerVideoInterview({ role, interviewToken, companyName, recr
       const grantResponse = await fetch(`/api/screening/interviews/${interviewId}/upload-url`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questionIndex: index, mimeType: toSave.recording.mimeType }),
+        body: JSON.stringify({ questionIndex: toSave.questionIndex, mimeType: toSave.recording.mimeType }),
       });
       const grantBody = await grantResponse.json().catch(() => ({})) as ScreeningUploadGrant & { error?: string };
       if (!grantResponse.ok || !grantBody.path || !grantBody.token) {
@@ -337,7 +436,7 @@ export function EmployerVideoInterview({ role, interviewToken, companyName, recr
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          questionIndex: index,
+          questionIndex: toSave.questionIndex,
           transcript: toSave.transcript,
           videoPath: grantBody.path,
           mimeType: toSave.recording.mimeType,
@@ -348,8 +447,9 @@ export function EmployerVideoInterview({ role, interviewToken, companyName, recr
       const savedBody = await saveResponse.json().catch(() => ({})) as { error?: string };
       if (!saveResponse.ok) throw new Error(savedBody.error || c.genericError);
 
-      const savedIndex = index;
+      const savedIndex = toSave.questionIndex;
       scoreInBackground(savedIndex, toSave.transcript);
+      await deleteScreeningRecordingDraft(interviewId);
       setPending(null);
       setSavedCount(savedIndex + 1);
       setUploadProgress(100);
@@ -365,7 +465,7 @@ export function EmployerVideoInterview({ role, interviewToken, companyName, recr
       setPending(toSave);
       setError(caught instanceof Error ? caught.message : c.genericError);
     }
-  }, [c.genericError, index, interviewId, questions.length, scoreInBackground]);
+  }, [c.genericError, interviewId, questions.length, scoreInBackground]);
 
   const finishRecording = useCallback(async () => {
     if (finishingRef.current || stage !== 'recording') return;
@@ -378,15 +478,16 @@ export function EmployerVideoInterview({ role, interviewToken, companyName, recr
     try {
       const recording = await recorder?.stop();
       if (!recording) throw new Error(c.genericError);
-      const captured = { recording, transcript: transcriptRef.current.trim() };
+      const captured = { recording, transcript: transcriptRef.current.trim(), questionIndex: index };
       setPending(captured);
+      await saveScreeningRecordingDraft({ interviewId: interviewId!, ...captured });
       await savePending(captured);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : c.genericError);
     } finally {
       finishingRef.current = false;
     }
-  }, [c.genericError, savePending, stage]);
+  }, [c.genericError, index, interviewId, savePending, stage]);
 
   useEffect(() => {
     if (stage !== 'recording') return;
@@ -420,12 +521,15 @@ export function EmployerVideoInterview({ role, interviewToken, companyName, recr
       const body = await response.json().catch(() => ({})) as { error?: string };
       if (!response.ok) throw new Error(body.error || c.submitFailed);
       stopDevices();
+      await deleteScreeningRecordingDraft(interviewId);
       setStage('complete');
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : c.submitFailed);
       setStage('consent');
     }
   }, [c.submitFailed, consent, interviewId, stopDevices]);
+
+  if (stage === 'unavailable') return <EmployerLinkUnavailable reason="full" />;
 
   return (
     <main className={styles.page} dir={dir}>
@@ -447,6 +551,13 @@ export function EmployerVideoInterview({ role, interviewToken, companyName, recr
           <strong dir="auto">{lang === 'ar' ? role.titleAr : role.title}</strong>
         </div>
 
+        {stage === 'resuming' && (
+          <section className={styles.card} aria-live="polite">
+            <p className={styles.eyebrow}>{c.invited}</p>
+            <h1>{c.checkingProgress}</h1>
+          </section>
+        )}
+
         {interviewId && stage !== 'complete' && (
           <div className={styles.progressWrap}>
             <div className={styles.progressMeta}>
@@ -462,6 +573,7 @@ export function EmployerVideoInterview({ role, interviewToken, companyName, recr
             <p className={styles.eyebrow}>{recruiterName ? `${recruiterName} · ${companyName}` : companyName}</p>
             <h1 id="video-interview-title">{c.title}</h1>
             <p className={styles.lede}>{c.intro}</p>
+            {error && <div className={styles.savedBanner} role="status">{error}</div>}
             <div className={styles.assurance}>{c.privacy}</div>
             <p className={styles.footnote}>{c.uploadDisclosure}</p>
             <p className={styles.footnote}>{c.transcriptDisclosure}</p>

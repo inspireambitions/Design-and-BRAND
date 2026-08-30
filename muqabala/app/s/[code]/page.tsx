@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
 import { EmployerVideoInterview } from '@/components/EmployerVideoInterview';
+import { EmployerLinkUnavailable } from '@/components/EmployerLinkUnavailable';
 import { getScreeningPack } from '@/lib/screening-pack';
 import { screeningPreviewCopy } from '@/lib/screening-preview';
 
@@ -10,9 +10,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { code } = await params;
   const pack = await getScreeningPack(code);
   const preview = screeningPreviewCopy({
-    companyName: pack?.workplace,
-    jobTitle: pack?.role.title,
-    questionCount: pack?.role.questions.length,
+    companyName: pack.status === 'active' || pack.status === 'full' ? pack.workplace : undefined,
+    jobTitle: pack.status === 'active' || pack.status === 'full' ? pack.role.title : undefined,
+    questionCount: pack.status === 'active' || pack.status === 'full' ? pack.role.questions.length : undefined,
   });
 
   return {
@@ -41,7 +41,9 @@ export default async function ProofSittingPage({
 }: PageProps) {
   const { code } = await params;
   const pack = await getScreeningPack(code);
-  if (!pack) notFound();
+  if (pack.status !== 'active' && pack.status !== 'full') {
+    return <EmployerLinkUnavailable reason={pack.status} />;
+  }
 
   return (
     <div className="employer-proof-page employer-light-theme">
@@ -50,6 +52,8 @@ export default async function ProofSittingPage({
         interviewToken={pack.signedToken}
         companyName={pack.workplace}
         recruiterName={pack.recruiterName}
+        publicCode={code}
+        availability={pack.status}
       />
     </div>
   );
