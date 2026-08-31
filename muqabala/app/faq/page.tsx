@@ -9,5 +9,22 @@ export const metadata: Metadata = {
 };
 
 export default function FaqPage() {
-  return <MarketingInfoPage content={infoPages.faq} />;
+  const faqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: infoPages.faq.en.sections.map((section) => ({
+      '@type': 'Question',
+      name: section.title,
+      acceptedAnswer: { '@type': 'Answer', text: section.body },
+    })),
+  };
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema).replace(/</g, '\\u003c') }}
+      />
+      <MarketingInfoPage content={infoPages.faq} />
+    </>
+  );
 }
