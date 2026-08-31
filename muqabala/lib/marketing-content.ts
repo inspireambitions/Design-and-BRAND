@@ -246,7 +246,7 @@ export const infoPages: Record<string, Localised<MarketingPageContent>> = {
         { title: 'Your written answer', body: 'We send your written answer to our AI service for feedback. If you paste a job advert, we send its text and job title to make your questions.' },
         { title: 'Your practice history', body: 'We autosave unfinished progress. Before email verification, temporary records expire after seven days. After verification, reports you choose to keep stay private in your account until you delete them.' },
         { title: 'Report sharing', body: 'A WhatsApp share creates a private link that expires after seven days. The link can be revoked. Anyone who has an active link can read that report.' },
-        { title: 'Basic website data', body: 'We may collect data without your name about website use and errors. We do not include your video, voice, answers or job advert.' },
+        { title: 'Basic website data', body: 'We use Google Analytics and may use privacy-limited PostHog to understand page use and technical errors. We do not send your name, email, video, voice, answers or job advert. Private link identifiers are replaced with generic route labels.' },
       ],
     },
     ar: {
@@ -259,7 +259,7 @@ export const infoPages: Record<string, Localised<MarketingPageContent>> = {
         { title: 'النص وإعلان الوظيفة', body: 'يُرسل نص إجابتك إلى مسار التقييم ثم إلى مزود الذكاء الاصطناعي. يُرسل إعلان الوظيفة والمسمى لإنشاء أسئلة مخصصة.' },
         { title: 'سجل التدريب', body: 'نحفظ التقدم غير المكتمل تلقائياً. تنتهي السجلات المؤقتة بعد سبعة أيام قبل تأكيد البريد. بعد التأكيد، تبقى التقارير التي تختارها خاصة في حسابك حتى تحذفها.' },
         { title: 'مشاركة التقرير', body: 'تنشئ المشاركة عبر واتساب رابطاً خاصاً ينتهي بعد سبعة أيام ويمكن إلغاؤه. أي شخص لديه رابط نشط يمكنه قراءة التقرير.' },
-        { title: 'التحليلات والأخطاء التقنية', body: 'قد يجمع مقابلة أحداث استخدام مجهولة وعلامات أعطال تقنية دون فيديو أو صوت أو نصوص أو كلمات إعلان الوظيفة.' },
+        { title: 'التحليلات والأخطاء التقنية', body: 'يستخدم مقابلة Google Analytics وقد يستخدم PostHog بإعدادات محدودة لفهم استخدام الصفحات والأخطاء التقنية. لا نرسل اسمك أو بريدك الإلكتروني أو الفيديو أو الصوت أو الإجابات أو إعلان الوظيفة. نستبدل رموز الروابط الخاصة بتسميات عامة للمسارات.' },
       ],
     },
   },
