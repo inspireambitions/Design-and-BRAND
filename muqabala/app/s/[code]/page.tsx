@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
+import { after } from 'next/server';
 import { notFound } from 'next/navigation';
 import { EmployerVideoInterview } from '@/components/EmployerVideoInterview';
 import { ScreeningEmailVerification } from '@/components/ScreeningEmailVerification';
 import { getScreeningPack } from '@/lib/screening-pack';
 import { screeningPreviewCopy } from '@/lib/screening-preview';
 import { currentUser } from '@/lib/supabase/server';
+import { processScreeningNotifications } from '@/lib/server/screening-notifications';
 
 type PageProps = { params: Promise<{ code: string }>; searchParams?: Promise<{ verification?: string }> };
 
@@ -48,6 +50,7 @@ export default async function ProofSittingPage({
   const pack = await getScreeningPack(code);
   if (pack.status !== 'active' && pack.status !== 'full') notFound();
   const candidate = await currentUser();
+  after(async () => { await processScreeningNotifications({ limit: 5 }); });
 
   if (!candidate?.email || !candidate.email_confirmed_at) {
     return (

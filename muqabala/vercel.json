@@ -6,7 +6,7 @@
     },
     {
       "path": "/api/cron/screening-notifications",
-      "schedule": "*/10 * * * *"
+      "schedule": "41 2 * * *"
     }
   ]
 }
