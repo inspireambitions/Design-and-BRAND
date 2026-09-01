@@ -59,6 +59,9 @@ type EventName =
   | 'interview_completed'
   | 'rating_submitted'
   | 'web_vital'
+  | 'email_submitted'
+  | 'plan_link_clicked'
+  | 'second_session'
   | TimingEventName;
 
 /** Performance timings, one event per measurement, all in milliseconds. */
@@ -91,6 +94,10 @@ type EventProps = Partial<{
   path: string;
   streamed: boolean;
   outcome: string;
+  /** Where an email was captured: feedback_card or advert_pack. Never the address. */
+  source: string;
+  /** Day of the seven-day plan a link belonged to, 1 to 7. */
+  day: number;
 }>;
 
 export function track(event: EventName, props: EventProps = {}): void {
