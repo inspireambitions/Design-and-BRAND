@@ -40,6 +40,32 @@ export async function reviewInterview(formData: FormData) {
   redirect(`/employer/interviews/${owned.interviewId}`);
 }
 
+/**
+ * Signs one recording only when the employer taps play. The report page
+ * renders transcript and AI notes without any media request; this keeps the
+ * 15 minute signed link out of the initial HTML and off the network until
+ * it is wanted.
+ */
+export async function signEmployerVideo(interviewId: string, questionIndex: number): Promise<{ url: string } | { error: string }> {
+  if (!Number.isInteger(questionIndex) || questionIndex < 0 || questionIndex > 50) return { error: 'This recording is not available.' };
+  const owned = await ownedSubmittedInterview(interviewId);
+  if (!owned) return { error: 'This recording is not available.' };
+
+  const admin = createAdminClient();
+  if (!admin) return { error: 'Employer video storage is not configured.' };
+  const { data: answer } = await admin
+    .from('interview_answers')
+    .select('video_path')
+    .eq('interview_id', owned.interviewId)
+    .eq('question_index', questionIndex)
+    .maybeSingle();
+  if (!answer?.video_path) return { error: 'This recording is not available.' };
+
+  const { data } = await admin.storage.from('screening-videos').createSignedUrl(answer.video_path, 15 * 60);
+  if (!data?.signedUrl) return { error: 'The recording could not be opened. Try again.' };
+  return { url: data.signedUrl };
+}
+
 export async function setEmployerDecision(formData: FormData) {
   const interviewId = String(formData.get('interviewId') ?? '');
   const decision = String(formData.get('decision') ?? '');
