@@ -3,7 +3,9 @@ import { GuidesIndex } from '@/components/GuidesIndex';
 import { sanityClient } from '@/lib/sanity/client';
 import { guidesQuery, type GuideListItem } from '@/lib/sanity/queries';
 
-export const revalidate = 60;
+// Static between edits. Sanity calls /api/revalidate when a guide changes;
+// the daily revalidation is only a safety net if a webhook is ever missed.
+export const revalidate = 86400;
 
 export const metadata: Metadata = {
   title: 'Gulf interview guides',
