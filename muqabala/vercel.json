@@ -1,5 +1,4 @@
 {
-  "regions": ["dxb1"],
   "crons": [
     {
       "path": "/api/cron/screening-cleanup",

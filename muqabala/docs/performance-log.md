@@ -85,14 +85,14 @@ Region and caching (Section 2), page weight and rendering (Section 5). Measured 
 | `/practice` Lighthouse mobile: Performance, Accessibility, CLS | 98, 93, 0 | 98, 93, 0 | Lighthouse, local |
 | `/practice/front-office-agent` Lighthouse mobile: Performance, Accessibility, CLS | 97, 94, 0.011 | 98, 94, 0.011 | Lighthouse, local |
 | `/practice/front-office-agent` Total Blocking Time | 150 ms | 100 ms | Lighthouse, local |
-| Functions region | Vercel project default (`iad1`, US East, unless changed in the dashboard) | `dxb1` (Dubai) | `vercel.json` |
+| Functions region | `iad1` (US East) | unchanged: Vercel refused to create the deployment with `"regions": ["dxb1"]` in `vercel.json` on the current plan | Vercel Git check on PR #13 |
 | `/_next/static/*` Cache-Control | `public, max-age=31536000, immutable` | unchanged | `curl -I` on `next start` |
 | `/icon.svg`, `/opengraph-image`, `/twitter-image` Cache-Control | `public, max-age=0, must-revalidate` | `public, max-age=31536000, immutable` | `curl -I` on `next start` |
 | CI | none | typecheck, tests, build, bundle budget on PRs and the main branch | `.github/workflows/ci.yml` |
 
 What changed:
 
-- `vercel.json` sets `"regions": ["dxb1"]` so serverless functions run in Dubai. The Supabase project region could not be confirmed from code and must be checked in the Supabase dashboard (Project settings, General). If Supabase is in the US, every database round trip from `dxb1` gets longer than it is today from US East, and this decision should be revisited before it is relied on. Nothing was migrated.
+- A Dubai (`dxb1`) function region was tried in `vercel.json` and Vercel rejected the deployment outright (the check linked to the function region documentation). Choosing a region other than the default needs the Pro plan and is then set in Vercel project settings, Functions, Region. The setting was removed so the branch deploys. The Supabase project region could not be confirmed from code and must be checked in the Supabase dashboard (Project settings, General); the functions should sit in the same region as the database, so decide both together. Nothing was migrated.
 - Static asset caching. `/_next/static` chunks already had immutable headers (verified). `next.config.ts` now adds a one year immutable `Cache-Control` for `/icon.svg`, `/opengraph-image`, `/twitter-image` and the `/for-employers` pair. This is safe because the HTML links to them with a content hash in the query string, so a changed image gets a new URL. There is no `public/` folder, so nothing else needed a header. `/share/*` keeps `no-store`.
 - `posthog-js` was the single largest item on every page (79.7 KB gzipped) because `WebVitals` in the root layout imported `lib/analytics` statically. `lib/analytics.ts` now imports `posthog-js` itself with `import()` inside `initAnalytics`, which `LanguageProvider` already ran on idle. Events fired before it loads still queue and flush; nothing else changed.
 - `components/InterviewFlow.tsx`: `lib/speech` and `lib/media` are fetched together the first time the candidate speaks (or, on browsers with speech, when the on-device disclosure is checked at the device stage) and never on browsers without speech recognition. `ScoreRing`, `RatingCard`, `CoachingCard`, `EmailSignIn`, the retry comparison (new `components/RetryComparison.tsx`) and the share, print and copy block (new `components/ReportShareActions.tsx`, `lib/report-text.ts`) load with `next/dynamic`. The results-screen chunks are prefetched while the first feedback is on screen. Behaviour is unchanged; `startSpeechCapture` and the mock pause toggle became async to await the module load, and a failed download falls back to typing exactly like a browser without speech.
@@ -231,7 +231,7 @@ All eight sections have code in place. These steps cannot be done from a build e
 
 - Baseline: run one day with `NEXT_PUBLIC_FEEDBACK_STREAMING=off`, record p75 figures above, then switch on.
 - PostHog: create the dashboard from the event table at the top of this file.
-- Section 2: confirm the Supabase project region in the dashboard. If it is in the US, revisit `dxb1` for the functions.
+- Section 2: confirm the Supabase project region in the dashboard. Moving functions to Dubai needs the Vercel Pro plan and the project settings page; keep functions and database in the same region.
 - Section 2: measure TTFB from Dubai, Riyadh and Doha on WebPageTest after the region change is live.
 - Section 3: check the Firefox fallback on a preview as described in the Section 3 entry.
 - Section 4: create the Sanity webhook to `/api/revalidate` and set `SANITY_REVALIDATE_SECRET` in Vercel.
