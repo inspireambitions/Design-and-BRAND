@@ -46,7 +46,7 @@ export function StreamingFeedbackCard({
         </div>
       </div>
 
-      <div>
+      <div className="stream-block">
         <p className="eyebrow" style={{ marginBottom: 0 }}>{t('whatWorked')}</p>
         {partial.strengths ? (
           partial.strengths.length > 0 ? (
@@ -55,11 +55,11 @@ export function StreamingFeedbackCard({
             </ul>
           ) : null
         ) : (
-          <SkeletonLines lines={2} />
+          <SkeletonLines lines={3} />
         )}
       </div>
 
-      <div>
+      <div className="stream-block">
         <p className="eyebrow" style={{ marginBottom: 0, color: 'var(--gold)' }}>{t('whatToImprove')}</p>
         {partial.improvements ? (
           partial.improvements.length > 0 ? (
@@ -68,7 +68,7 @@ export function StreamingFeedbackCard({
             </ul>
           ) : null
         ) : (
-          <SkeletonLines lines={2} />
+          <SkeletonLines lines={3} />
         )}
       </div>
 

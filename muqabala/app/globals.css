@@ -1862,6 +1862,16 @@ body[dir='rtl'] .account-intro h1 {
   width: 62%;
 }
 
+/* Each block reserves the height of a typical three-bullet answer so text
+   landing over a skeleton does not push the rest of the card down. */
+.feedback-streaming .stream-block {
+  min-height: 6.4rem;
+}
+
+.feedback-streaming .coach-tip {
+  min-height: 5.2rem;
+}
+
 .coach-tip .skeleton-block {
   padding-block: 0.25rem 0;
 }
