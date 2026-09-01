@@ -38,11 +38,31 @@ test('dashboard pulse reports real capacity and completed submissions', () => {
     { screening_pack_id: 'closing', submitted_at: '2026-08-21T10:00:00.000Z' },
   ];
   assert.deepEqual(dashboardSummary(packs, submissions, now), {
+    openedLinks: 74,
+    startedInterviews: 74,
     submittedThisWeek: 1,
+    submittedTotal: 2,
+    reviewedTotal: 0,
+    waitingForReview: 2,
+    shortlistedTotal: 0,
+    notProceedingTotal: 0,
     activeLinks: 2,
     placesRemaining: 86,
     submissionRate: 3,
   });
+});
+
+test('dashboard journey uses employer decisions only when a person records them', () => {
+  const submissions = [
+    { screening_pack_id: 'active', submitted_at: '2026-08-29T10:00:00.000Z', employer_reviewed_at: '2026-08-29T11:00:00.000Z', employer_decision: 'shortlisted' },
+    { screening_pack_id: 'active', submitted_at: '2026-08-29T10:30:00.000Z', employer_reviewed_at: '2026-08-29T11:30:00.000Z', employer_decision: 'not_proceeding' },
+    { screening_pack_id: 'active', submitted_at: '2026-08-29T11:00:00.000Z', employer_reviewed_at: null, employer_decision: null },
+  ];
+  const summary = dashboardSummary([pack({ id: 'active', starts_used: 3 })], submissions, now);
+  assert.equal(summary.reviewedTotal, 2);
+  assert.equal(summary.waitingForReview, 1);
+  assert.equal(summary.shortlistedTotal, 1);
+  assert.equal(summary.notProceedingTotal, 1);
 });
 
 test('candidate evidence is ordered and never invents a recording', () => {
@@ -66,4 +86,7 @@ test('dashboard source keeps employer ownership and consent boundaries', async (
   assert.doesNotMatch(source, /overall_score/);
   assert.doesNotMatch(source, /EmployerLinkActions[^\n]+signed_token/);
   assert.match(source, /verifyInterview\(pack\.signed_token\)/);
+  assert.match(source, /Invite candidates/);
+  assert.match(source, /Create interview link/);
+  assert.match(source, /Recordings first\. AI notes are a second view\. You make the decision\./);
 });

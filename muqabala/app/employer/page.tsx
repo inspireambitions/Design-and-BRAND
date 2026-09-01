@@ -3,28 +3,25 @@ import { after } from 'next/server';
 import { redirect } from 'next/navigation';
 import {
   ArrowRight,
-  CheckCircle,
-  ClockCountdown,
+  Check,
+  Clock,
+  EnvelopeSimple,
   LinkSimple,
-  PlayCircle,
+  Play,
   Plus,
-  UsersThree,
   VideoCamera,
+  Warning,
+  X,
 } from '@phosphor-icons/react/dist/ssr';
 import { EmployerLinkActions } from '@/components/EmployerLinkActions';
 import { SignOutButton } from '@/components/SignOutButton';
-import {
-  candidateEvidence,
-  dashboardSummary,
-  formatDuration,
-  packHealth,
-  type DashboardAnswer,
-} from '@/lib/employer-dashboard';
+import { dashboardSummary, packHealth, type DashboardAnswer } from '@/lib/employer-dashboard';
 import { verifyInterview } from '@/lib/interview-token';
 import { configuredOrigin } from '@/lib/server/security';
 import { processScreeningNotifications } from '@/lib/server/screening-notifications';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient, currentUser } from '@/lib/supabase/server';
+import { reviewInterview, setEmployerDecision } from './actions';
 import styles from './EmployerDashboard.module.css';
 
 export const dynamic = 'force-dynamic';
@@ -47,15 +44,16 @@ type Submission = {
   candidate_name: string | null;
   role_title: string;
   submitted_at: string;
+  employer_reviewed_at: string | null;
+  employer_decision: 'shortlisted' | 'not_proceeding' | null;
 };
 
-type Answer = DashboardAnswer & {
-  interview_id: string;
-};
+type Answer = DashboardAnswer & { interview_id: string };
 
 type TechnicalAttempt = {
   id: string;
   screening_pack_id: string;
+  started_at: string;
   submitted_at: string | null;
 };
 
@@ -68,7 +66,7 @@ type TechnicalAnswer = {
 const packStatusCopy = {
   active: 'Active',
   closing: 'Closing soon',
-  full: 'All places used',
+  full: 'Full',
   closed: 'Closed',
 } as const;
 
@@ -76,14 +74,40 @@ function statusClass(status: keyof typeof packStatusCopy) {
   return {
     active: styles.statusActive,
     closing: styles.statusClosing,
-    full: styles.statusFull,
+    full: styles.statusClosed,
     closed: styles.statusClosed,
   }[status];
 }
 
-function firstName(value: string | null) {
-  const name = value?.trim();
-  return name ? name.split(/\s+/)[0] : 'Candidate';
+function initials(value: string | null | undefined) {
+  const words = value?.trim().split(/\s+/).filter(Boolean) ?? [];
+  if (words.length > 1) return `${words[0]?.[0] || ''}${words.at(-1)?.[0] || ''}`.toUpperCase();
+  return (words[0]?.slice(0, 2) || 'HR').toUpperCase();
+}
+
+function relativeTime(value: string, now = Date.now()) {
+  const elapsed = Math.max(0, now - Date.parse(value));
+  const minutes = Math.floor(elapsed / 60_000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return days === 1 ? 'yesterday' : `${days} days ago`;
+}
+
+function daysUntil(value: string) {
+  return Math.max(0, Math.ceil((Date.parse(value) - Date.now()) / 86_400_000));
+}
+
+function formatCloseDate(value: string) {
+  return new Date(value).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'Asia/Dubai' });
+}
+
+function currentDate() {
+  return new Date().toLocaleDateString('en-GB', {
+    weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Dubai',
+  });
 }
 
 export default async function EmployerDashboardPage() {
@@ -101,9 +125,7 @@ export default async function EmployerDashboardPage() {
 
   const admin = createAdminClient();
   const { data: technicalInterviewRows } = admin && packIds.length
-    ? await admin.from('interviews')
-        .select('id,screening_pack_id,submitted_at')
-        .in('screening_pack_id', packIds)
+    ? await admin.from('interviews').select('id,screening_pack_id,started_at,submitted_at').in('screening_pack_id', packIds)
     : { data: [] };
   const technicalAttempts = (technicalInterviewRows ?? []) as TechnicalAttempt[];
   const incompleteIds = technicalAttempts.filter((attempt) => !attempt.submitted_at).map((attempt) => attempt.id);
@@ -115,22 +137,19 @@ export default async function EmployerDashboardPage() {
     : { data: [] };
   const technicalAnswers = (technicalAnswerRows ?? []) as TechnicalAnswer[];
   const staleBefore = Date.now() - 10 * 60 * 1_000;
-  const interruptedInterviewIds = new Set(
-    technicalAnswers
-      .filter((answer) => Date.parse(answer.updated_at) <= staleBefore)
-      .map((answer) => answer.interview_id),
-  );
+  const interruptedInterviewIds = new Set(technicalAnswers
+    .filter((answer) => Date.parse(answer.updated_at) <= staleBefore)
+    .map((answer) => answer.interview_id));
 
   const { data: interviewRows } = packIds.length
     ? await client!.from('interviews')
-        .select('id,screening_pack_id,candidate_name,role_title,submitted_at')
+        .select('id,screening_pack_id,candidate_name,role_title,submitted_at,employer_reviewed_at,employer_decision')
         .in('screening_pack_id', packIds)
         .not('submitted_at', 'is', null)
         .order('submitted_at', { ascending: false })
     : { data: [] };
   const submissions = (interviewRows ?? []) as Submission[];
   const submissionIds = submissions.map((submission) => submission.id);
-
   const { data: answerRows } = submissionIds.length
     ? await client!.from('interview_answers')
         .select('interview_id,question_index,scoring_status,video_upload_status,video_duration_seconds')
@@ -138,190 +157,143 @@ export default async function EmployerDashboardPage() {
         .order('question_index')
     : { data: [] };
   const answers = (answerRows ?? []) as Answer[];
+
   const summary = dashboardSummary(packs, submissions);
   const origin = configuredOrigin();
-  const latestSubmissions = submissions.slice(0, 6);
+  const readyToReview = submissions.filter((submission) => !submission.employer_reviewed_at);
+  const queue = readyToReview.slice(0, 3);
+  const startedLastDay = technicalAttempts.filter((attempt) => Date.parse(attempt.started_at) >= Date.now() - 86_400_000).length;
+  const unfinished = Math.max(0, technicalAttempts.length - submissions.length);
+  const interrupted = interruptedInterviewIds.size;
+  const closingWithoutCandidates = packs.find((pack) => packHealth(pack) === 'closing'
+    && !submissions.some((submission) => submission.screening_pack_id === pack.id));
+  const needsTodayCount = Number(Boolean(closingWithoutCandidates)) + Number(readyToReview.length > 0) + Number(interrupted > 0);
+  const displayName = String(user.user_metadata?.full_name || user.email?.split('@')[0] || 'HR');
 
   return (
     <div className={styles.page}>
       <header className={styles.header}>
         <Link href="/" className={styles.brand} aria-label="Muqabala home">
-          <span className={styles.brandMark} aria-hidden="true">م</span>
+          <span className={styles.brandMark} aria-hidden="true"><VideoCamera weight="fill" /></span>
           <span>Muqabala</span>
           <span className={styles.workspaceName}>Evidence Desk</span>
         </Link>
         <nav aria-label="Employer navigation">
-          <Link href="/for-employers" className={styles.createLink}>
-            <Plus aria-hidden="true" weight="bold" />
-            Create work sample
-          </Link>
-          <SignOutButton />
+          <Link href="/for-employers" className={styles.createLink}><Plus aria-hidden="true" weight="bold" />Create interview link</Link>
+          <SignOutButton className={styles.avatarButton}>{initials(displayName)}</SignOutButton>
         </nav>
       </header>
 
       <main className={styles.main}>
         <section className={styles.intro}>
-          <p className={styles.eyebrow}>Employer dashboard</p>
-          <h1>Review real answers.</h1>
-          <p>Start with the recordings. Use AI notes as a second view. You make the decision.</p>
+          <div><h1>Your hiring, this week.</h1><p>Every role, from shared link to decision, in one glance.</p></div>
+          <time>{currentDate()}</time>
         </section>
 
-        <section className={styles.pulse} aria-label="Hiring pulse">
-          <article>
-            <span><VideoCamera aria-hidden="true" />Recent submissions</span>
-            <strong>{summary.submittedThisWeek}</strong>
-            <small>Ready in the last seven days</small>
-          </article>
-          <article>
-            <span><LinkSimple aria-hidden="true" />Active work samples</span>
-            <strong>{summary.activeLinks}</strong>
-            <small>Still accepting candidates</small>
-          </article>
-          <article>
-            <span><UsersThree aria-hidden="true" />Places remaining</span>
-            <strong>{summary.placesRemaining}</strong>
-            <small>Across active links</small>
-          </article>
-          <article>
-            <span><CheckCircle aria-hidden="true" />Completion rate</span>
-            <strong>{summary.submissionRate}%</strong>
-            <small>Started interviews submitted</small>
-          </article>
-        </section>
-
-        <Link href="/for-employers" className={styles.mobileCreate}>
-          <Plus aria-hidden="true" weight="bold" /> Create work sample
-        </Link>
-
-        <section className={styles.section} aria-labelledby="latest-submissions">
-          <div className={styles.sectionHead}>
-            <div>
-              <p className={styles.eyebrow}>Candidate evidence</p>
-              <h2 id="latest-submissions">Latest submissions</h2>
-            </div>
-            <p>Three answers. One clear place to review them.</p>
+        <section className={styles.journeyCard} aria-labelledby="journey-heading">
+          <div className={styles.cardHeading}><p id="journey-heading">The journey</p><span>This week · all roles</span></div>
+          <div className={styles.journey}>
+            <article><strong>{summary.openedLinks}</strong><h2>Opened the link</h2><p>From {packs.length} shared {packs.length === 1 ? 'link' : 'links'}</p></article>
+            <ArrowRight aria-hidden="true" />
+            <article><strong>{technicalAttempts.length}</strong><h2>Started answering</h2><p>{startedLastDay} in the last 24 hours</p></article>
+            <ArrowRight aria-hidden="true" />
+            <article className={styles.journeyAccent}><strong>{summary.submittedTotal}</strong><h2>Submitted</h2><p>{unfinished} started but did not finish</p></article>
+            <ArrowRight aria-hidden="true" />
+            <article><strong>{summary.reviewedTotal}</strong><h2>Reviewed by you</h2><p className={styles.attention}>{summary.waitingForReview} waiting for review</p></article>
+            <ArrowRight aria-hidden="true" />
+            <article><strong>{summary.shortlistedTotal}</strong><h2>Shortlisted</h2><p>{summary.notProceedingTotal} not proceeding</p></article>
           </div>
+        </section>
 
-          {latestSubmissions.length === 0 ? (
-            <div className={styles.emptyState}>
-              <VideoCamera aria-hidden="true" />
-              <div>
-                <h3>No submitted interviews yet</h3>
-                <p>When a candidate submits with consent, their recordings will appear here.</p>
-              </div>
-              <Link href="/for-employers">Create a work sample <ArrowRight aria-hidden="true" /></Link>
+        <div className={styles.dashboardGrid}>
+          <section className={styles.panel} aria-labelledby="needs-heading">
+            <div className={styles.panelHeading}><h2 id="needs-heading">What needs you today</h2><span>{needsTodayCount} {needsTodayCount === 1 ? 'item' : 'items'}</span></div>
+            <div className={styles.taskList}>
+              {closingWithoutCandidates && (() => {
+                const role = verifyInterview(closingWithoutCandidates.signed_token)?.title || 'Work sample';
+                const url = `${origin}/s/${closingWithoutCandidates.public_code}`;
+                return (
+                  <article className={styles.taskWarning}>
+                    <Clock aria-hidden="true" /><div><strong>{role} closes {daysUntil(closingWithoutCandidates.expires_at) <= 1 ? 'tomorrow' : 'soon'}</strong><p>No candidates yet. Invite candidates before the link expires.</p></div>
+                    <a href={`mailto:?subject=${encodeURIComponent(`${role} interview invitation`)}&body=${encodeURIComponent(url)}`}><EnvelopeSimple aria-hidden="true" /> Invite candidates</a>
+                  </article>
+                );
+              })()}
+              {readyToReview.length > 0 && (
+                <article className={styles.taskPrimary}>
+                  <VideoCamera aria-hidden="true" /><div><strong>{readyToReview.length} new {readyToReview.length === 1 ? 'interview is' : 'interviews are'} ready to review</strong><p>Oldest has been waiting {relativeTime(readyToReview[readyToReview.length - 1].submitted_at)}.</p></div>
+                  <form action={reviewInterview}><input type="hidden" name="interviewId" value={readyToReview[0].id} /><button type="submit">Start reviewing</button></form>
+                </article>
+              )}
+              {interrupted > 0 && (
+                <article className={styles.taskNeutral}>
+                  <Warning aria-hidden="true" /><div><strong>Upload interrupted</strong><p>{interrupted} {interrupted === 1 ? 'candidate lost' : 'candidates lost'} connection during an answer.</p></div><Link href="/for-employers">Invite to retry</Link>
+                </article>
+              )}
+              {needsTodayCount === 0 && <div className={styles.calmState}><Check aria-hidden="true" weight="bold" /><span><strong>You are up to date</strong><small>There is nothing waiting for action.</small></span></div>}
             </div>
-          ) : (
-            <div className={styles.reviewQueue}>
-              {latestSubmissions.map((submission) => {
+          </section>
+
+          <section className={styles.panel} aria-labelledby="ready-heading">
+            <div className={styles.panelHeading}><h2 id="ready-heading">Ready to review</h2><a href="#roles">View all {readyToReview.length}</a></div>
+            <div className={styles.candidateList}>
+              {queue.map((submission) => {
                 const pack = packs.find((item) => item.id === submission.screening_pack_id);
-                const evidence = candidateEvidence(answers.filter((answer) => answer.interview_id === submission.id));
-                const candidate = firstName(submission.candidate_name);
+                const candidateAnswers = answers.filter((answer) => answer.interview_id === submission.id && answer.video_upload_status === 'uploaded');
+                const duration = Math.max(1, Math.ceil(candidateAnswers.reduce((total, answer) => total + (answer.video_duration_seconds || 0), 0) / 60));
                 return (
-                  <article className={styles.candidateCard} key={submission.id}>
-                    <div className={styles.candidateIdentity}>
-                      <span className={styles.avatar} aria-hidden="true">{candidate.slice(0, 1).toUpperCase()}</span>
-                      <div>
-                        <h3>{candidate}</h3>
-                        <p>{submission.role_title} · {pack?.workplace || 'Employer'}</p>
-                        <small>Submitted {new Date(submission.submitted_at).toLocaleString('en-GB')}</small>
-                      </div>
+                  <article className={styles.candidateRow} key={submission.id}>
+                    <span className={styles.avatar} aria-hidden="true">{initials(submission.candidate_name)}</span>
+                    <div><h3>{submission.candidate_name || 'Candidate'} · {submission.role_title}</h3><p>{pack?.workplace || 'Employer'} · submitted {relativeTime(submission.submitted_at)} · {candidateAnswers.length} answers, {duration} min</p></div>
+                    <form action={reviewInterview}><input type="hidden" name="interviewId" value={submission.id} /><button className={styles.watchButton} type="submit"><Play aria-hidden="true" weight="fill" /> Watch</button></form>
+                    <div className={styles.decisionActions}>
+                      <form action={setEmployerDecision}><input type="hidden" name="interviewId" value={submission.id} /><input type="hidden" name="decision" value="shortlisted" /><button type="submit" aria-label={`Shortlist ${submission.candidate_name || 'candidate'}`}><Check aria-hidden="true" /></button></form>
+                      <form action={setEmployerDecision}><input type="hidden" name="interviewId" value={submission.id} /><input type="hidden" name="decision" value="not_proceeding" /><button type="submit" aria-label={`Mark ${submission.candidate_name || 'candidate'} as not proceeding`}><X aria-hidden="true" /></button></form>
                     </div>
-
-                    <div className={styles.evidenceStrip} aria-label={`${evidence.recordingsReady} of 3 recorded answers ready`}>
-                      {[0, 1, 2].map((questionIndex) => {
-                        const answer = evidence.answers.find((item) => item.question_index === questionIndex);
-                        const isReady = answer?.video_upload_status === 'uploaded';
-                        return (
-                          <span className={isReady ? styles.evidenceReady : styles.evidenceMissing} key={questionIndex}>
-                            {isReady ? <PlayCircle aria-hidden="true" weight="fill" /> : <ClockCountdown aria-hidden="true" />}
-                            Q{questionIndex + 1}
-                            <small>{isReady ? formatDuration(answer.video_duration_seconds) : 'Missing'}</small>
-                          </span>
-                        );
-                      })}
-                    </div>
-
-                    <div className={styles.analysisStatus}>
-                      <span className={evidence.notesReady === 3 ? styles.analysisReady : styles.analysisWaiting}>
-                        {evidence.notesReady === 3 ? 'AI notes ready' : evidence.notesPending ? 'AI notes processing' : 'AI notes incomplete'}
-                      </span>
-                      <small>Check every note against the recording.</small>
-                    </div>
-
-                    <Link className={styles.candidateAction} href={`/employer/interviews/${submission.id}`}>
-                      Review evidence <ArrowRight aria-hidden="true" />
-                    </Link>
                   </article>
                 );
               })}
+              {queue.length === 0 && <div className={styles.calmState}><Check aria-hidden="true" weight="bold" /><span><strong>No interviews are waiting</strong><small>New submissions will appear here.</small></span></div>}
             </div>
-          )}
-        </section>
+            <p className={styles.evidenceNote}>Recordings first. AI notes are a second view. You make the decision.</p>
+          </section>
+        </div>
 
-        <section className={styles.section} aria-labelledby="work-samples">
-          <div className={styles.sectionHead}>
-            <div>
-              <p className={styles.eyebrow}>Link health</p>
-              <h2 id="work-samples">Your work samples</h2>
-            </div>
-            <p>See what is active, filling up or closing soon.</p>
+        <section className={styles.rolesPanel} id="roles" aria-labelledby="roles-heading">
+          <div className={styles.rolesHeading}>
+            <h2 id="roles-heading">Your roles</h2>
+            <div className={styles.roleFilters} aria-label="Role counts"><span className={styles.filterActive}>Active · {packs.filter((pack) => ['active', 'closing'].includes(packHealth(pack))).length}</span><span>Closed · {packs.filter((pack) => ['closed', 'full'].includes(packHealth(pack))).length}</span><span>All · {packs.length}</span></div>
           </div>
-
-          {packs.length === 0 ? (
-            <div className={styles.emptyState}>
-              <LinkSimple aria-hidden="true" />
-              <div>
-                <h3>No work samples yet</h3>
-                <p>Create one secure link and send it to the candidates you choose.</p>
-              </div>
-              <Link href="/for-employers">Create a work sample <ArrowRight aria-hidden="true" /></Link>
-            </div>
-          ) : (
-            <div className={styles.packGrid}>
-              {packs.map((pack) => {
-                const status = packHealth(pack);
-                const packSubmissions = submissions.filter((item) => item.screening_pack_id === pack.id);
-                const verified = verifyInterview(pack.signed_token);
-                const roleTitle = verified?.title || packSubmissions[0]?.role_title || 'Role work sample';
-                const completionRate = pack.starts_used > 0 ? Math.round((packSubmissions.length / pack.starts_used) * 100) : 0;
-                const interrupted = technicalAttempts.filter(
-                  (attempt) => attempt.screening_pack_id === pack.id && interruptedInterviewIds.has(attempt.id),
-                ).length;
-                const url = `${origin}/s/${pack.public_code}`;
-                return (
-                  <article className={styles.packCard} key={pack.id}>
-                    <div className={styles.packTitle}>
-                      <div>
-                        <h3>{roleTitle}</h3>
-                        <p>{pack.workplace || 'Employer work sample'}</p>
-                      </div>
-                      <span className={`${styles.packStatus} ${statusClass(status)}`}>{packStatusCopy[status]}</span>
-                    </div>
-                    <dl className={styles.packFacts}>
-                      <div><dt>Started</dt><dd>{pack.starts_used}</dd></div>
-                      <div><dt>Submitted</dt><dd>{packSubmissions.length}</dd></div>
-                      <div><dt>Upload interrupted</dt><dd>{interrupted}</dd></div>
-                      <div><dt>Completion</dt><dd>{completionRate}%</dd></div>
-                    </dl>
-                    <p className={styles.expiry}>
-                      <ClockCountdown aria-hidden="true" />
-                      {status === 'closed'
-                        ? `Closed ${new Date(pack.expires_at).toLocaleDateString('en-GB')}`
-                        : `Closes ${new Date(pack.expires_at).toLocaleDateString('en-GB')}`}
-                    </p>
-                    {status === 'closed' || status === 'full' ? (
-                      <p className={styles.closedNote}>This link no longer accepts new candidates.</p>
-                    ) : (
-                      <EmployerLinkActions url={url} />
-                    )}
-                  </article>
-                );
-              })}
-            </div>
-          )}
+          <div className={styles.roleTable} role="table" aria-label="Employer work samples">
+            <div className={styles.roleTableHead} role="row"><span role="columnheader">Role</span><span role="columnheader">Journey</span><span role="columnheader">Status</span><span role="columnheader">Closes</span><span role="columnheader">Next step</span></div>
+            {packs.slice(0, 4).map((pack) => {
+              const status = packHealth(pack);
+              const packSubmissions = submissions.filter((submission) => submission.screening_pack_id === pack.id);
+              const role = verifyInterview(pack.signed_token)?.title || packSubmissions[0]?.role_title || 'Role work sample';
+              const shortlisted = packSubmissions.filter((submission) => submission.employer_decision === 'shortlisted').length;
+              const unreviewed = packSubmissions.filter((submission) => !submission.employer_reviewed_at).length;
+              const url = `${origin}/s/${pack.public_code}`;
+              const nextInterview = packSubmissions.find((item) => !item.employer_reviewed_at);
+              return (
+                <article className={styles.roleRow} role="row" key={pack.id}>
+                  <div role="cell"><strong>{role}</strong><small>{pack.workplace || 'Employer'}</small></div>
+                  <div role="cell" className={styles.roleJourney}><progress max={Math.max(1, pack.starts_used)} value={packSubmissions.length} aria-label={`${packSubmissions.length} of ${pack.starts_used} started interviews submitted`} /><small>{pack.starts_used} started · {packSubmissions.length} submitted{shortlisted ? ` · ${shortlisted} shortlisted` : ''}</small></div>
+                  <div role="cell"><span className={`${styles.packStatus} ${statusClass(status)}`}>{packStatusCopy[status]}</span></div>
+                  <div role="cell" className={status === 'closing' ? styles.closingDate : undefined}>{status === 'closing' && daysUntil(pack.expires_at) <= 1 ? 'Tomorrow' : formatCloseDate(pack.expires_at)}</div>
+                  <div role="cell" className={styles.roleActions}>
+                    {unreviewed > 0 && nextInterview ? (
+                      <form action={reviewInterview}><input type="hidden" name="interviewId" value={nextInterview.id} /><button type="submit">Review {unreviewed} new</button></form>
+                    ) : ['active', 'closing'].includes(status) && packSubmissions.length === 0 ? (
+                      <><a href={`mailto:?subject=${encodeURIComponent(`${role} interview invitation`)}&body=${encodeURIComponent(url)}`}><EnvelopeSimple aria-hidden="true" /> Invite candidates</a><EmployerLinkActions url={url} /></>
+                    ) : packSubmissions.length > 0 ? <span className={styles.allReviewed}>All reviewed</span> : <span className={styles.allReviewed}>Link closed</span>}
+                  </div>
+                </article>
+              );
+            })}
+            {packs.length === 0 && <div className={styles.emptyRoles}><LinkSimple aria-hidden="true" /><span><strong>No roles yet</strong><small>Create your first interview link to begin.</small></span><Link href="/for-employers">Create interview link</Link></div>}
+          </div>
+          {packs.length > 4 && <p className={styles.moreRoles}>{packs.length - 4} more {packs.length - 4 === 1 ? 'role' : 'roles'} <a href="#roles">Show all</a></p>}
         </section>
-
       </main>
     </div>
   );
