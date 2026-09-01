@@ -2245,11 +2245,6 @@ export function InterviewFlow({
                     ? scoringError.timedOut ? t('retry') : t('retryNow')
                     : liveSitting ? t('confirmAnswer') : t('getFeedback')}
               </button>
-              {mode === 'guided' && (
-                <button type="button" className="btn btn-quiet" onClick={retryQuestion}>
-                  {t('tryAgain')}
-                </button>
-              )}
               {scoringError && (
                 <button type="button" className="btn btn-ghost" onClick={continueWithoutFeedback}>
                   {t('continueWithoutFeedback')}
@@ -2270,6 +2265,13 @@ export function InterviewFlow({
       {/* ---------- feedback ---------- */}
       {stage === 'feedback' && feedback && (
         <div className="stack">
+          {practiceSitting && (
+            <ReadinessSlot
+              roleId={role.id}
+              roleTitle={reportRoleTitle}
+              answers={[...answers, { questionId: question.id, questionText, transcript, feedback }]}
+            />
+          )}
           <FeedbackCard feedback={feedback} attempt={attemptCount} />
           {answers.length === 0 && attemptCount === 1 && practiceSitting && (
             <KeepFeedbackSlot
@@ -2339,6 +2341,7 @@ export function InterviewFlow({
             <div className="answer-recap"><span className="rate-label">{t('yourAnswer')}</span><p dir="auto">{answers[0].transcript}</p></div>
             <FeedbackCard feedback={answers[0].feedback} />
           </div>}
+          {!proof && <ReadinessSlot roleId={role.id} roleTitle={reportRoleTitle} answers={answers} share />}
           {mode === 'guided' && mockQuestions && mockQuestions.length >= 8 && (
             <div className="card stack-sm">
               <h2 style={{ fontSize: '1.3rem' }}>{t('readyForFullMock')}</h2>
@@ -2418,13 +2421,7 @@ export function InterviewFlow({
           </div>
 
           {!proof && (
-            <ReadinessSlot
-              roleId={role.id}
-              feedback={answers.map((answer) => answer.feedback)}
-              answers={answers}
-              roleTitle={reportRoleTitle}
-              lang={interviewLanguage}
-            />
+            <ReadinessSlot roleId={role.id} roleTitle={reportRoleTitle} answers={answers} share />
           )}
 
           {(() => {

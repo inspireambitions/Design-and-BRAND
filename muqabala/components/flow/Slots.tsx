@@ -6,64 +6,31 @@
  * card under the first feedback, and the Gulf question tags under the question.
  */
 import dynamic from 'next/dynamic';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import type { AnswerFeedback, Attempt } from '@/lib/scoring';
-import { overallFromAnswers } from '@/lib/scoring';
+import type { Attempt } from '@/lib/scoring';
 import type { Question } from '@/lib/roles';
 import type { AnswerMode } from '@/lib/flow/answer-mode';
 import { QuestionTags } from '../QuestionTags';
 
-const ReadinessScore = dynamic(() => import('../ReadinessScore').then((m) => m.ReadinessScore), { ssr: false });
-const ShareProgressCard = dynamic(() => import('../ShareProgressCard').then((m) => m.ShareProgressCard), { ssr: false });
 const KeepFeedbackCard = dynamic(() => import('../KeepFeedbackCard').then((m) => m.KeepFeedbackCard), { ssr: false });
 
 export type ReadinessSlotProps = {
   roleId: string;
-  /** Feedback for every completed question so far, in order. */
-  feedback: AnswerFeedback[];
-  /** Transcripts and question ids matching `feedback`, so the sitting counts before it is saved. */
-  answers?: Attempt['answers'];
-  roleTitle?: string;
-  lang: 'en' | 'ar';
+  roleTitle: string;
+  /** Answers from the sitting so far, including the one just scored. */
+  answers: Attempt['answers'];
+  /** Show the share card under the score. Results screens only. */
+  share?: boolean;
 };
 
+const ReadinessPanel = dynamic(() => import('../ReadinessPanel').then((m) => m.ReadinessPanel), { ssr: false });
+
 /**
- * Readiness after this sitting, counted up from the value the candidate had
- * before it, then the share card for the new number.
+ * Readiness for this role, counted up from the number the candidate last saw.
+ * At the top of every feedback screen, and with the share card on the results.
  */
-export function ReadinessSlot({ roleId, answers = [], roleTitle }: ReadinessSlotProps) {
-  const sitting = useMemo<Attempt[]>(() => {
-    if (!answers.length) return [];
-    return [{
-      id: `${roleId}-sitting`,
-      roleId,
-      roleTitle: roleTitle ?? roleId,
-      startedAt: new Date().toISOString(),
-      overallScore: overallFromAnswers(answers),
-      answers,
-    }];
-  }, [answers, roleId, roleTitle]);
-  // The value before this sitting is read once, so the count-up starts there
-  // even after local history has been updated. The readiness maths lives in
-  // the lazily loaded module so the role catalogue stays out of the practice bundle.
-  const previousRef = useRef<number | undefined>(undefined);
-  const [ready, setReady] = useState(false);
-  useEffect(() => {
-    let cancelled = false;
-    void import('../ReadinessScore').then((m) => {
-      if (cancelled) return;
-      previousRef.current = m.readinessBeforeSitting(roleId);
-      setReady(true);
-    });
-    return () => { cancelled = true; };
-  }, [roleId]);
-  if (!answers.length || !ready) return null;
-  return (
-    <div className="stack">
-      <ReadinessScore roleId={roleId} size="compact" previous={previousRef.current} extraAttempts={sitting} />
-      <ShareProgressCard roleId={roleId} />
-    </div>
-  );
+export function ReadinessSlot({ roleId, roleTitle, answers, share = false }: ReadinessSlotProps) {
+  if (!answers.length) return null;
+  return <ReadinessPanel roleId={roleId} roleTitle={roleTitle} answers={answers} share={share} />;
 }
 
 export type KeepFeedbackSlotProps = {

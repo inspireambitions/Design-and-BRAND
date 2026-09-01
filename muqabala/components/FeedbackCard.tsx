@@ -44,7 +44,7 @@ function FeedbackBlock({
   }
   return (
     <div className="feedback-block">
-      <p className="eyebrow" style={{ marginBottom: '0.25rem', ...(tone === 'gold' ? { color: 'var(--gold)' } : {}) }}>
+      <p className={`feedback-heading${tone === 'gold' ? ' feedback-heading-gold' : ''}`}>
         {heading}
       </p>
       {loading ? (
