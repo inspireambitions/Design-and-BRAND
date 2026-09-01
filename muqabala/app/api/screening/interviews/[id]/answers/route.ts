@@ -39,7 +39,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return Response.json({ error: 'The video upload has not finished.' }, { status: 409 });
   }
   const storedSize = Number(uploaded.metadata?.size ?? 0);
-  if (storedSize > 0 && storedSize !== parsed.data.sizeBytes) {
+  if (storedSize <= 0 || storedSize !== parsed.data.sizeBytes) {
     return Response.json({ error: 'The uploaded video could not be verified.' }, { status: 409 });
   }
 
@@ -57,5 +57,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     p_video_duration_seconds: parsed.data.durationSeconds,
   });
   if (error || saved !== true) return Response.json({ error: 'The response could not be saved.' }, { status: 503 });
-  return Response.json({ saved: true }, { headers: privateNoStoreHeaders() });
+  const { data: confirmed } = await access.admin!.from('interview_answers')
+    .select('response_saved_at')
+    .eq('interview_id', id)
+    .eq('question_index', parsed.data.questionIndex)
+    .maybeSingle();
+  if (!confirmed?.response_saved_at) {
+    return Response.json({ error: 'The response could not be confirmed.' }, { status: 503 });
+  }
+  return Response.json({ saved: true, receivedAt: confirmed.response_saved_at }, { headers: privateNoStoreHeaders() });
 }

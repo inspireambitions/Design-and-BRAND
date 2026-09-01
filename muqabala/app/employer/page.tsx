@@ -21,6 +21,7 @@ import {
 } from '@/lib/employer-dashboard';
 import { verifyInterview } from '@/lib/interview-token';
 import { configuredOrigin } from '@/lib/server/security';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient, currentUser } from '@/lib/supabase/server';
 import styles from './EmployerDashboard.module.css';
 
@@ -48,6 +49,18 @@ type Submission = {
 
 type Answer = DashboardAnswer & {
   interview_id: string;
+};
+
+type TechnicalAttempt = {
+  id: string;
+  screening_pack_id: string;
+  submitted_at: string | null;
+};
+
+type TechnicalAnswer = {
+  interview_id: string;
+  video_upload_status: string;
+  updated_at: string;
 };
 
 const packStatusCopy = {
@@ -82,6 +95,28 @@ export default async function EmployerDashboardPage() {
     .order('created_at', { ascending: false });
   const packs = (packRows ?? []) as Pack[];
   const packIds = packs.map((pack) => pack.id);
+
+  const admin = createAdminClient();
+  const { data: technicalInterviewRows } = admin && packIds.length
+    ? await admin.from('interviews')
+        .select('id,screening_pack_id,submitted_at')
+        .in('screening_pack_id', packIds)
+    : { data: [] };
+  const technicalAttempts = (technicalInterviewRows ?? []) as TechnicalAttempt[];
+  const incompleteIds = technicalAttempts.filter((attempt) => !attempt.submitted_at).map((attempt) => attempt.id);
+  const { data: technicalAnswerRows } = admin && incompleteIds.length
+    ? await admin.from('interview_answers')
+        .select('interview_id,video_upload_status,updated_at')
+        .in('interview_id', incompleteIds)
+        .eq('video_upload_status', 'pending')
+    : { data: [] };
+  const technicalAnswers = (technicalAnswerRows ?? []) as TechnicalAnswer[];
+  const staleBefore = Date.now() - 10 * 60 * 1_000;
+  const interruptedInterviewIds = new Set(
+    technicalAnswers
+      .filter((answer) => Date.parse(answer.updated_at) <= staleBefore)
+      .map((answer) => answer.interview_id),
+  );
 
   const { data: interviewRows } = packIds.length
     ? await client!.from('interviews')
@@ -246,8 +281,10 @@ export default async function EmployerDashboardPage() {
                 const packSubmissions = submissions.filter((item) => item.screening_pack_id === pack.id);
                 const verified = verifyInterview(pack.signed_token);
                 const roleTitle = verified?.title || packSubmissions[0]?.role_title || 'Role work sample';
-                const placesLeft = Math.max(0, pack.max_candidates - pack.starts_used);
                 const completionRate = pack.starts_used > 0 ? Math.round((packSubmissions.length / pack.starts_used) * 100) : 0;
+                const interrupted = technicalAttempts.filter(
+                  (attempt) => attempt.screening_pack_id === pack.id && interruptedInterviewIds.has(attempt.id),
+                ).length;
                 const url = `${origin}/s/${pack.public_code}`;
                 return (
                   <article className={styles.packCard} key={pack.id}>
@@ -261,7 +298,7 @@ export default async function EmployerDashboardPage() {
                     <dl className={styles.packFacts}>
                       <div><dt>Started</dt><dd>{pack.starts_used}</dd></div>
                       <div><dt>Submitted</dt><dd>{packSubmissions.length}</dd></div>
-                      <div><dt>Places left</dt><dd>{placesLeft}</dd></div>
+                      <div><dt>Upload interrupted</dt><dd>{interrupted}</dd></div>
                       <div><dt>Completion</dt><dd>{completionRate}%</dd></div>
                     </dl>
                     <p className={styles.expiry}>

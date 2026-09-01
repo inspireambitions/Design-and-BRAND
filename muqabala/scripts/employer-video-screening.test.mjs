@@ -131,12 +131,54 @@ test('employer link settings are compact and enforced atomically in the database
   assert.match(packRoute, /parsed\.data\.expiryDays/);
   assert.match(packRoute, /max_candidates: parsed\.data\.maxCandidates/);
   assert.match(startRoute, /rpc\('start_screening_interview'/);
-  assert.match(startRoute, /startStatus === 'full'/);
+  assert.match(startRoute, /result\?\.status === 'full'/);
   assert.match(migration, /for update/);
   assert.match(migration, /starts_used >= pack_row\.max_candidates/);
   assert.match(migration, /insert into public\.interviews/);
   assert.match(migration, /set starts_used = starts_used \+ 1/);
   assert.match(migration, /grant execute on function public\.start_screening_interview[\s\S]*to service_role/);
+});
+
+test('completed recordings survive interruption and only advance after server readback', () => {
+  const flow = read('components/EmployerVideoInterview.tsx');
+  const draftStore = read('lib/screening-draft-store.ts');
+  const statusRoute = read('app/api/screening/interviews/[id]/status/route.ts');
+  const uploadRoute = read('app/api/screening/interviews/[id]/upload-url/route.ts');
+
+  assert.match(draftStore, /indexedDB\.open/);
+  assert.match(draftStore, /probeScreeningRecordingStore/);
+  assert.match(draftStore, /blob: Blob/);
+  assert.match(flow, /await saveScreeningRecordingDraft/);
+  assert.match(flow, /await readStatus\(interviewId\)/);
+  assert.match(flow, /await deleteScreeningRecordingDraft/);
+  assert.match(flow, /Recorded on this device/);
+  assert.match(flow, /Received by Muqabala/);
+  assert.match(statusRoute, /question_index,video_upload_status,response_saved_at/);
+  assert.doesNotMatch(statusRoute, /transcript|video_path|feedback/);
+  assert.match(uploadRoute, /state: 'received'/);
+});
+
+test('screening retries keep one capacity place and return a durable receipt', () => {
+  const startRoute = read('app/api/interviews/route.ts');
+  const resumeRoute = read('app/api/screening/resume/route.ts');
+  const submitRoute = read('app/api/screening/interviews/[id]/submit/route.ts');
+  const migration = read('supabase/migrations/20260901120000_screening_upload_recovery.sql');
+
+  assert.match(startRoute, /idempotency-key/);
+  assert.match(startRoute, /p_start_idempotency_hash/);
+  assert.match(resumeRoute, /screeningPackAttemptCookie/);
+  assert.match(migration, /start_idempotency_hash = null/);
+  assert.match(migration, /interviews_screening_start_idempotency_idx/);
+  assert.match(submitRoute, /screeningReceiptReference/);
+  assert.match(submitRoute, /interview\.locked_at && interview\.submitted_at/);
+});
+
+test('employer sees aggregate interrupted uploads without pre-consent identity', () => {
+  const dashboard = read('app/employer/page.tsx');
+  assert.match(dashboard, /Upload interrupted/);
+  assert.match(dashboard, /Date\.parse\(answer\.updated_at\) <= staleBefore/);
+  assert.match(dashboard, /select\('id,screening_pack_id,submitted_at'\)/);
+  assert.doesNotMatch(dashboard, /technicalInterviewRows[\s\S]{0,400}candidate_name/);
 });
 
 test('JobStrike is absent from the complete employer flow', () => {

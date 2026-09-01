@@ -9,6 +9,10 @@ export function screeningAttemptCookie(interviewId: string): string {
   return `muqabala_screening_${interviewId.replace(/-/g, '')}`;
 }
 
+export function screeningPackAttemptCookie(packId: string): string {
+  return `muqabala_screening_pack_${packId.replace(/-/g, '')}`;
+}
+
 export function configuredOrigin(): string {
   const deploymentOrigin = process.env.VERCEL_ENV !== 'production' && process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
@@ -39,6 +43,11 @@ export function trustedOrigins(): string[] {
 export function hasTrustedOrigin(request: Request): boolean {
   const origin = request.headers.get('origin');
   if (!origin) return false;
+  try {
+    if (origin === new URL(request.url).origin) return true;
+  } catch {
+    return false;
+  }
   if (trustedOrigins().includes(origin)) return true;
   return process.env.NODE_ENV !== 'production' && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
 }
@@ -56,12 +65,16 @@ export function tokenHash(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
 
-export function emailHash(email: string): string {
-  return tokenHash(email.trim().toLowerCase());
+export function screeningReceiptReference(interviewId: string): string {
+  return `MQ-${createHash('sha256').update(`receipt:${interviewId}`).digest('hex').slice(0, 6).toUpperCase()}`;
 }
 
 export function isOpaqueToken(value: string | null | undefined): value is string {
   return Boolean(value && /^[A-Za-z0-9_-]{40,60}$/.test(value));
+}
+
+export function emailHash(email: string): string {
+  return tokenHash(email.trim().toLowerCase());
 }
 
 export function privateNoStoreHeaders(): HeadersInit {
