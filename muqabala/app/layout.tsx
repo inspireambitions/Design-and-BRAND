@@ -21,6 +21,8 @@ const arabicFont = IBM_Plex_Sans_Arabic({
   weight: ['400', '500', '600', '700'],
   variable: '--font-plex-arabic',
   display: 'swap',
+  // Fetched only when Arabic text renders, so English pages keep it off the critical path.
+  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -30,20 +32,20 @@ export const metadata: Metadata = {
     template: '%s | Muqabala',
   },
   description:
-    'Practice real Gulf interview questions out loud — in English or Arabic — and get honest feedback. Free, no account. We score your answer. Not your accent. Not your face.',
+    'Practise real Gulf interview questions out loud, in English or Arabic, and get honest feedback. Free, no account. We score your answer. Not your accent. Not your face.',
   applicationName: 'Muqabala',
   category: 'career',
   openGraph: {
     type: 'website',
     siteName: 'Muqabala',
     title: 'Muqabala | Interview practice for Gulf jobs',
-    description: 'Practice real Gulf interview questions out loud — in English or Arabic — and get honest feedback. Free, no account. We score your answer. Not your accent. Not your face.',
+    description: 'Practise real Gulf interview questions out loud, in English or Arabic, and get honest feedback. Free, no account. We score your answer. Not your accent. Not your face.',
     url: '/',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Muqabala | Interview practice for Gulf jobs',
-    description: 'Practice real Gulf interview questions out loud — in English or Arabic — and get honest feedback. Free, no account. We score your answer. Not your accent. Not your face.',
+    description: 'Practise real Gulf interview questions out loud, in English or Arabic, and get honest feedback. Free, no account. We score your answer. Not your accent. Not your face.',
   },
 };
 

@@ -33,11 +33,11 @@ export function GoogleAnalytics() {
     <>
       <Script
         src={`https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ANALYTICS_ID}`}
-        strategy="afterInteractive"
+        strategy="lazyOnload"
       />
       <Script
         id="muqabala-google-analytics"
-        strategy="afterInteractive"
+        strategy="lazyOnload"
         onReady={() => setConfigured(true)}
       >
         {`

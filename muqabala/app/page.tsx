@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { POPULAR_ROLE_IDS, ROLES, type Role } from '@/lib/roles';
+import { catalogueStats } from '@/lib/catalogue-stats';
 import type { MarketingRole } from '@/lib/marketing-content';
 import { MarketingHome } from '@/components/MarketingSite';
 
@@ -23,5 +24,5 @@ export default function HomePage() {
         ? 8
         : role.questions.length,
     }));
-  return <MarketingHome roles={popularRoles} />;
+  return <MarketingHome roles={popularRoles} stats={catalogueStats()} />;
 }

@@ -1,8 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { homeCopy, marketingNav, type MarketingPageContent, type MarketingRole } from '@/lib/marketing-content';
+import { founderLine, homeCopy, marketingNav, type MarketingPageContent, type MarketingRole } from '@/lib/marketing-content';
+import type { CatalogueStats as MarketingStats } from '@/lib/catalogue-stats';
 import { useLang } from './LanguageProvider';
+
+export type { MarketingStats };
 
 export function MuqabalaMark() {
   return (
@@ -24,12 +28,14 @@ export function MarketingHeader() {
         <Link href="/" className="marketing-brand" aria-label="Muqabala home">
           <MuqabalaMark />
           <span>Muqabala</span>
+          <small className="marketing-brand-owner">{nav.owner}</small>
         </Link>
         <nav className="marketing-links" aria-label={lang === 'ar' ? 'التنقل الرئيسي' : 'Main navigation'}>
           <Link href="/how-it-works">{nav.how}</Link>
           <Link href="/interview-roles">{nav.roles}</Link>
           <Link href="/how-feedback-works">{nav.feedback}</Link>
           <Link href="/about">{nav.about}</Link>
+          <Link href="/for-employers" className="marketing-links-hiring">{nav.hiring}</Link>
         </nav>
         <div className="marketing-actions">
           <button
@@ -52,6 +58,7 @@ export function MarketingHeader() {
               <Link href="/about">{nav.about}</Link>
               <Link href="/guides">{nav.blog}</Link>
               <Link href="/faq">{nav.faq}</Link>
+              <Link href="/for-employers">{nav.hiring}</Link>
             </div>
           </details>
         </div>
@@ -83,7 +90,7 @@ export function MarketingFooter() {
         <div className="marketing-footer-links">
           <Link href="/about">{nav.about}</Link>
           <Link href="/guides">{nav.blog}</Link>
-          <Link href="/for-employers">{lang === 'ar' ? 'لفرق التوظيف' : 'Hiring teams'}</Link>
+          <Link href="/for-employers">{nav.hiring}</Link>
           <Link href="/contact">{lang === 'ar' ? 'تواصل' : 'Contact'}</Link>
           <Link href="/privacy">{lang === 'ar' ? 'الخصوصية' : 'Privacy'}</Link>
           <Link href="/terms">{lang === 'ar' ? 'الشروط' : 'Terms'}</Link>
@@ -93,38 +100,85 @@ export function MarketingFooter() {
     </footer>
   );
 }
-function EvidenceDemo() {
+type ExampleRole = 'front-office' | 'nurse';
+
+function EvidenceDemo({ role = 'front-office' }: { role?: ExampleRole }) {
   const { lang } = useLang();
   const c = homeCopy[lang];
+  const nurse = role === 'nurse';
   return (
     <div className="evidence-demo" aria-label={lang === 'ar' ? 'مثال على الملاحظات' : 'Example feedback'}>
       <div className="evidence-question">
         <span>{c.questionLabel}</span>
-        <strong>{c.question}</strong>
+        <strong>{nurse ? c.nurseQuestion : c.question}</strong>
       </div>
       <div className="evidence-answer">
         <span>{c.answerLabel}</span>
-        <p>{c.answerBefore}<mark>{c.answerEvidence}</mark>{c.answerAfter}</p>
+        <p>
+          {nurse ? c.nurseAnswerBefore : c.answerBefore}
+          <mark>{nurse ? c.nurseAnswerEvidence : c.answerEvidence}</mark>
+          {nurse ? c.nurseAnswerAfter : c.answerAfter}
+        </p>
       </div>
       <div className="evidence-thread" aria-hidden="true" />
       <div className="evidence-result">
         <span>{c.evidenceLabel}</span>
-        <strong>{c.evidenceTitle}</strong>
-        <p>{c.evidenceBody}</p>
+        <strong>{nurse ? c.nurseEvidenceTitle : c.evidenceTitle}</strong>
+        <p>{nurse ? c.nurseEvidenceBody : c.evidenceBody}</p>
       </div>
       <div className="evidence-improve">
         <span>{c.improveLabel}</span>
-        <p>{c.improveBody}</p>
+        <p>{nurse ? c.nurseImproveBody : c.improveBody}</p>
       </div>
     </div>
   );
 }
 
-export function MarketingHome({ roles }: { roles: MarketingRole[] }) {
+function MethodExample() {
+  const { lang } = useLang();
+  const c = homeCopy[lang];
+  const [role, setRole] = useState<ExampleRole>('nurse');
+  const options: { id: ExampleRole; label: string }[] = [
+    { id: 'nurse', label: c.exampleNurse },
+    { id: 'front-office', label: c.exampleFrontOffice },
+  ];
+  return (
+    <div className="marketing-method-example">
+      <div className="marketing-example-switch" role="tablist" aria-label={c.exampleSwitchLabel}>
+        {options.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            role="tab"
+            aria-selected={role === option.id}
+            className={role === option.id ? 'is-active' : undefined}
+            onMouseEnter={() => setRole(option.id)}
+            onFocus={() => setRole(option.id)}
+            onClick={() => setRole(option.id)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+      <EvidenceDemo role={role} />
+    </div>
+  );
+}
+
+function formatCount(value: number, lang: 'en' | 'ar') {
+  return new Intl.NumberFormat(lang === 'ar' ? 'ar-EG' : 'en-GB').format(value);
+}
+
+export function MarketingHome({ roles, stats }: { roles: MarketingRole[]; stats: MarketingStats }) {
   const { lang } = useLang();
   const c = homeCopy[lang];
   const popular = roles;
   const never = [c.never1, c.never2, c.never3, c.never4, c.never5, c.never6];
+  const facts = [
+    [c.statsRoles, stats.roles],
+    [c.statsQuestions, stats.questions],
+    [c.statsIndustries, stats.industries],
+  ] as const;
 
   return (
     <div className="marketing-site">
@@ -140,18 +194,18 @@ export function MarketingHome({ roles }: { roles: MarketingRole[] }) {
               <Link href="/how-feedback-works" className="marketing-text-link">{c.secondary}</Link>
             </div>
             <p className="marketing-trust-line">{c.trust}</p>
+            <p className="marketing-founder-line">{founderLine[lang]}</p>
           </div>
           <EvidenceDemo />
         </section>
 
-        <section className="marketing-job-band">
-          <div className="marketing-wrap marketing-job-inner">
-            <div>
-              <h2>{c.jobTitle}</h2>
-              <p>{c.jobBody}</p>
+        <section className="marketing-wrap marketing-stats" aria-label={lang === 'ar' ? 'أرقام حقيقية' : 'Real figures'}>
+          {facts.map(([label, value]) => (
+            <div key={label}>
+              <strong>{formatCount(value, lang)}</strong>
+              <span>{label}</span>
             </div>
-            <Link href="/practice#job-ad" className="marketing-button marketing-button-light">{c.jobCta}</Link>
-          </div>
+          ))}
         </section>
 
         <section className="marketing-section marketing-wrap">
@@ -173,15 +227,47 @@ export function MarketingHome({ roles }: { roles: MarketingRole[] }) {
           </div>
         </section>
 
+        <section className="marketing-job-band">
+          <div className="marketing-wrap marketing-job-inner">
+            <div>
+              <h2>{c.jobTitle}</h2>
+              <p>{c.jobBody}</p>
+            </div>
+            <Link href="/practice#job-ad" className="marketing-button marketing-button-light">{c.jobCta}</Link>
+          </div>
+        </section>
+
+        <section className="marketing-section marketing-wrap">
+          <div className="marketing-section-heading">
+            <p className="marketing-eyebrow">{c.actEyebrow}</p>
+            <h2>{c.actTitle}</h2>
+          </div>
+          <div className="marketing-steps">
+            {[
+              [c.act1Title, c.act1Body],
+              [c.act2Title, c.act2Body],
+              [c.act3Title, c.act3Body],
+            ].map(([title, body]) => (
+              <article className="marketing-step marketing-step-plain" key={title}>
+                <h3>{title}</h3>
+                <p>{body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
         <section className="marketing-section marketing-proof">
           <div className="marketing-wrap marketing-proof-grid">
             <div className="marketing-proof-copy">
               <p className="marketing-eyebrow">{c.methodEyebrow}</p>
               <h2>{c.proofTitle}</h2>
               <p>{c.proofBody}</p>
-              <Link href="/how-feedback-works" className="marketing-text-link">{c.secondary}</Link>
+              <div className="marketing-cta-row">
+                <Link href="/practice/front-office-agent" className="marketing-button">{c.methodCta}</Link>
+                <Link href="/how-feedback-works" className="marketing-text-link">{c.secondary}</Link>
+              </div>
             </div>
-            <EvidenceDemo />
+            <MethodExample />
           </div>
         </section>
 
@@ -189,6 +275,7 @@ export function MarketingHome({ roles }: { roles: MarketingRole[] }) {
           <div>
             <p className="marketing-eyebrow">{c.trustEyebrow}</p>
             <h2>{c.neverTitle}</h2>
+            <Link href="/practice" className="marketing-button marketing-never-cta">{c.trustCta}</Link>
           </div>
           <ul>
             {never.map((item) => <li key={item}>{item}</li>)}
@@ -202,6 +289,8 @@ export function MarketingHome({ roles }: { roles: MarketingRole[] }) {
               <p className="marketing-lede-small">{c.privacyBody}</p>
             </div>
             <div className="marketing-control-detail">
+              <p><strong>{c.privacyStaysLabel}</strong> {c.privacyStaysBody}</p>
+              <p><strong>{c.privacySentLabel}</strong> {c.privacySentBody}</p>
               <p>{c.privacyDetail}</p>
               <Link href="/privacy" className="marketing-text-link">{lang === 'ar' ? 'اقرأ سياسة الخصوصية' : 'Read the privacy explanation'}</Link>
             </div>
@@ -227,16 +316,24 @@ export function MarketingHome({ roles }: { roles: MarketingRole[] }) {
           </div>
         </section>
 
+        <section className="marketing-wrap marketing-hiring-strip">
+          <div>
+            <h2>{c.hiringTitle}</h2>
+            <p>{c.hiringBody}</p>
+          </div>
+          <Link href="/for-employers" className="marketing-text-link">{c.hiringCta}</Link>
+        </section>
+
         <section className="marketing-final">
           <div className="marketing-wrap">
             <h2>{c.finalTitle}</h2>
             <p>{c.finalBody}</p>
-            <Link href="/practice" className="marketing-button marketing-button-light">{c.primary}</Link>
+            <Link href="/practice" className="marketing-button marketing-button-light">{c.finalCta}</Link>
           </div>
         </section>
       </main>
       <MarketingFooter />
-      <Link href="/practice" className="marketing-mobile-cta">{c.primary}</Link>
+      <Link href="/practice" className="marketing-mobile-cta">{marketingNav[lang].practice}</Link>
     </div>
   );
 }

@@ -3341,6 +3341,123 @@ body[dir='rtl'] .evidence-demo span {
   display: none;
 }
 
+.marketing-brand-owner {
+  align-self: end;
+  margin-inline-start: 0.1rem;
+  padding-bottom: 0.15rem;
+  color: var(--ink-faint);
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.marketing-links-hiring {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--ink) !important;
+}
+
+.marketing-founder-line {
+  max-width: 35rem;
+  margin-top: 0.7rem;
+  color: var(--ink-faint);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.marketing-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: -1.5rem;
+  padding: 1.5rem 0 0;
+  border-top: 1px solid var(--line-strong);
+}
+
+.marketing-stats div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.marketing-stats strong {
+  font-family: var(--font-display);
+  font-size: clamp(1.7rem, 3vw, 2.4rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.marketing-stats span {
+  color: var(--ink-soft);
+  font-size: 0.86rem;
+  font-weight: 650;
+}
+
+.marketing-step-plain {
+  border-top-color: var(--line);
+}
+
+.marketing-step-plain h3 {
+  margin-top: 0.4rem;
+}
+
+.marketing-method-example {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.marketing-example-switch {
+  display: inline-flex;
+  gap: 0.4rem;
+}
+
+.marketing-example-switch button {
+  min-height: 2.5rem;
+  padding: 0.45rem 0.95rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-family: var(--font-body);
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.marketing-example-switch button.is-active {
+  border-color: var(--jade);
+  background: var(--jade);
+  color: white;
+}
+
+.marketing-never-cta {
+  margin-top: 1.5rem;
+}
+
+.marketing-hiring-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: clamp(3rem, 6vw, 5rem);
+  padding: clamp(1.25rem, 3vw, 1.75rem) clamp(1.25rem, 3vw, 2rem);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.marketing-hiring-strip h2 {
+  font-size: clamp(1.15rem, 2vw, 1.5rem);
+}
+
+.marketing-hiring-strip p {
+  margin-top: 0.35rem;
+  color: var(--ink-soft);
+}
+
 .info-hero {
   padding-block: clamp(5rem, 11vw, 9rem) clamp(4rem, 8vw, 7rem);
 }
@@ -3543,6 +3660,20 @@ body[dir='rtl'] .evidence-demo span {
     font-size: 1rem;
   }
 
+  .marketing-brand-owner {
+    display: none;
+  }
+
+  .marketing-stats {
+    grid-template-columns: 1fr 1fr;
+    margin-top: 0;
+  }
+
+  .marketing-hiring-strip {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   .marketing-actions .marketing-button {
     display: none;
   }
@@ -3615,6 +3746,10 @@ body[dir='rtl'] .evidence-demo span {
 
   .marketing-step p {
     grid-column: 2;
+  }
+
+  .marketing-step-plain {
+    display: block;
   }
 
   .marketing-never ul {

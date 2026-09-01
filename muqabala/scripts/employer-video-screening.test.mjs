@@ -97,12 +97,20 @@ test('employer creation form generates the description before unlocking the link
   assert.match(form, /type="submit" className=\{styles\.submit\} disabled=\{!canCreate\}/);
   assert.ok(generatePosition >= 0 && createPosition > generatePosition);
   assert.match(styles, /\.actions\s*\{[\s\S]*grid-template-columns:/);
-  assert.match(styles, /@media \(max-width: 28rem\)[\s\S]*\.actions\s*\{\s*grid-template-columns: 1fr;/);
+  assert.match(styles, /@media \(max-width: 40rem\)[\s\S]*\.heroActions,\s*\.actions,\s*\.linkActions\s*\{[\s\S]*grid-template-columns: 1fr;/);
   assert.match(form, /t\('proofRecruiterValue'\)/);
   assert.match(form, /const \[recruiterName, setRecruiterName\] = useState\(''\)/);
   assert.match(form, /recruiterName: recruiterName\.trim\(\) \|\| undefined/);
   assert.match(form, /t\('proofRecruiterLabel'\)/);
+  assert.match(form, /proofCandidateInvite/);
+  assert.match(form, /proofRecommendMessage/);
+  assert.match(form, /proofEmailSubject/);
+  assert.match(form, /mailto:\?subject=/);
   assert.match(copy, /Learn how each candidate would approach the role before you shortlist\./);
+  assert.match(copy, /I used Muqabala for \{title\} at \{company\}\./);
+  assert.match(form, /showDeliveryHelp=\{false\}/);
+  assert.match(form, /\{hasReportShot && \(/);
+  assert.match(form, /\{hasCandidateShot && \(/);
 });
 
 test('current screening documentation cannot restore the old typed-answer flow', () => {

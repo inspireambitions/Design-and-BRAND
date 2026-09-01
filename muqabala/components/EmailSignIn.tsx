@@ -4,7 +4,16 @@ import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLang } from './LanguageProvider';
 
-export function EmailSignIn({ next = '/account', compact = false }: { next?: string; compact?: boolean }) {
+export function EmailSignIn({
+  next = '/account',
+  compact = false,
+  showDeliveryHelp = true,
+}: {
+  next?: string;
+  compact?: boolean;
+  /** Public marketing pages hide the Promotions/Spam hint once deliverability is confirmed. */
+  showDeliveryHelp?: boolean;
+}) {
   const router = useRouter();
   const { lang, t } = useLang();
   const codeRef = useRef<HTMLInputElement | null>(null);
@@ -109,7 +118,7 @@ export function EmailSignIn({ next = '/account', compact = false }: { next?: str
         </form>
       )}
       {message && <p className="notice tiny" role={hasError ? 'alert' : 'status'}>{message}</p>}
-      <p className="tiny">{t('emailDeliveryHelp')}</p>
+      {showDeliveryHelp && <p className="tiny">{t('emailDeliveryHelp')}</p>}
     </div>
   );
 }
