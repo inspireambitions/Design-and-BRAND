@@ -1,25 +1,17 @@
 import Link from 'next/link';
+import { after } from 'next/server';
 import { notFound, redirect } from 'next/navigation';
-import type { AnswerFeedback } from '@/lib/scoring';
+import { buildReportSummary, usableReportSummary, type ReportAnswer } from '@/lib/report-summary';
+import { REPORT_ANSWER_COLUMNS, refreshReportSummary } from '@/lib/server/report-summary';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient, currentUser } from '@/lib/supabase/server';
 import { EmployerDeleteInterview } from '@/components/EmployerDeleteInterview';
+import { EmployerReportVideo } from '@/components/EmployerReportVideo';
 import { LoadTiming } from '@/components/LoadTiming';
 import styles from '../../EmployerDashboard.module.css';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
-
-type Answer = {
-  question_index: number;
-  question_text: string;
-  transcript: string;
-  feedback: AnswerFeedback | null;
-  scoring_status: 'pending' | 'scored' | 'unscored' | 'failed';
-  video_path: string | null;
-  video_duration_seconds: number | null;
-  response_saved_at: string | null;
-};
 
 export default async function EmployerInterviewReportPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await currentUser();
@@ -30,25 +22,32 @@ export default async function EmployerInterviewReportPage({ params }: { params: 
   const packIds = (packs ?? []).map((pack) => pack.id as string);
   if (packIds.length === 0) notFound();
 
+  // One row carries the header and, for submissions since report_summary was
+  // introduced, every answer card. RLS still limits this to the employer's packs.
   const { data: interview } = await client!.from('interviews')
-    .select('id,screening_pack_id,candidate_name,role_title,language,submitted_at,consented_at,overall_score')
+    .select('id,screening_pack_id,candidate_name,role_title,language,submitted_at,consented_at,report_summary')
     .eq('id', id)
     .in('screening_pack_id', packIds)
     .not('submitted_at', 'is', null)
     .maybeSingle();
   if (!interview) notFound();
-  const { data: answerRows } = await client!.from('interview_answers')
-    .select('question_index,question_text,transcript,feedback,scoring_status,video_path,video_duration_seconds,response_saved_at')
-    .eq('interview_id', id)
-    .order('question_index');
-  const answers = (answerRows ?? []) as Answer[];
-  const admin = createAdminClient();
-  if (!admin) throw new Error('Employer video storage is not configured.');
-  const videoUrls = await Promise.all(answers.map(async (answer) => {
-    if (!answer.video_path) return null;
-    const { data } = await admin.storage.from('screening-videos').createSignedUrl(answer.video_path, 15 * 60);
-    return data?.signedUrl ?? null;
-  }));
+
+  let answers: ReportAnswer[];
+  const summary = usableReportSummary(interview.report_summary);
+  if (summary) {
+    answers = summary.answers;
+  } else {
+    // Older submissions, or AI notes that were still pending at submission.
+    const { data: answerRows } = await client!.from('interview_answers')
+      .select(REPORT_ANSWER_COLUMNS)
+      .eq('interview_id', id)
+      .order('question_index');
+    answers = (answerRows ?? []) as unknown as ReportAnswer[];
+    const admin = createAdminClient();
+    if (admin && buildReportSummary(answers).scoring_settled) {
+      after(async () => { await refreshReportSummary(admin, id); });
+    }
+  }
   const workplace = (packs ?? []).find((pack) => pack.id === interview.screening_pack_id)?.workplace || 'Employer';
 
   return (
@@ -72,7 +71,7 @@ export default async function EmployerInterviewReportPage({ params }: { params: 
           AI-generated analysis is a screening aid, not a verified fact or an automatic decision. Review the candidate’s recorded evidence yourself.
         </div>
         <div className={styles.answers}>
-          {answers.map((answer, answerIndex) => {
+          {answers.map((answer) => {
             const feedback = answer.feedback;
             return (
               <article className={styles.reportCard} id={`question-${answer.question_index + 1}`} key={answer.question_index}>
@@ -80,10 +79,13 @@ export default async function EmployerInterviewReportPage({ params }: { params: 
                 <h2>{answer.question_text}</h2>
 
                 <p className={styles.sectionLabel}>Candidate’s recorded evidence</p>
-                {videoUrls[answerIndex] ? (
-                  <video className={styles.video} controls playsInline preload="metadata" src={videoUrls[answerIndex] ?? undefined}>
-                    Your browser cannot play this video.
-                  </video>
+                {answer.video_path ? (
+                  <EmployerReportVideo
+                    interviewId={interview.id}
+                    questionIndex={answer.question_index}
+                    durationSeconds={answer.video_duration_seconds}
+                    label={`question ${answer.question_index + 1}`}
+                  />
                 ) : (
                   <div className={styles.transcript}>The video is not available.</div>
                 )}
