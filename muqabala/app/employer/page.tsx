@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { after } from 'next/server';
 import { redirect } from 'next/navigation';
 import {
   ArrowRight,
@@ -21,6 +22,7 @@ import {
 } from '@/lib/employer-dashboard';
 import { verifyInterview } from '@/lib/interview-token';
 import { configuredOrigin } from '@/lib/server/security';
+import { processScreeningNotifications } from '@/lib/server/screening-notifications';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient, currentUser } from '@/lib/supabase/server';
 import styles from './EmployerDashboard.module.css';
@@ -87,6 +89,7 @@ function firstName(value: string | null) {
 export default async function EmployerDashboardPage() {
   const user = await currentUser();
   if (!user) redirect('/sign-in?next=/employer');
+  after(async () => { await processScreeningNotifications({ limit: 5 }); });
 
   const client = await createClient();
   const { data: packRows } = await client!.from('screening_packs')
