@@ -4,6 +4,7 @@ import type { AnswerFeedback } from '@/lib/scoring';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient, currentUser } from '@/lib/supabase/server';
 import { EmployerDeleteInterview } from '@/components/EmployerDeleteInterview';
+import { LoadTiming } from '@/components/LoadTiming';
 import styles from '../../EmployerDashboard.module.css';
 
 export const dynamic = 'force-dynamic';
@@ -52,6 +53,7 @@ export default async function EmployerInterviewReportPage({ params }: { params: 
 
   return (
     <div className={styles.page}>
+      <LoadTiming event="report_load_ms" />
       <header className={styles.header}>
         <Link href="/" className={styles.brand}>Muqabala</Link>
         <nav aria-label="Employer navigation"><Link href="/employer">All interviews</Link></nav>

@@ -12,7 +12,7 @@ import {
   saveInterviewDraft,
   type InterviewSessionDraft,
 } from '@/lib/session-draft';
-import { track } from '@/lib/analytics';
+import { track, trackTiming } from '@/lib/analytics';
 import { rubricForQuestion } from '@/lib/question-rubric';
 import { compareRetries } from '@/lib/retry-comparison';
 import {
@@ -757,6 +757,7 @@ export function InterviewFlow({
     if (finalizingRef.current) return;
     finalizingRef.current = true;
     setIsFinalizing(true);
+    const stoppedAt = performance.now();
     try {
       stopDictation();
       meterRef.current?.stop();
@@ -764,6 +765,9 @@ export function InterviewFlow({
       setMicLevel(0);
       setTranscriptConfirmed(false);
       setStage('review');
+      if (useVoice) {
+        trackTiming('transcript_ready_ms', performance.now() - stoppedAt, { lang: interviewLanguage });
+      }
 
       const recorder = recorderRef.current;
       recorderRef.current = null;
@@ -775,7 +779,7 @@ export function InterviewFlow({
       finalizingRef.current = false;
       setIsFinalizing(false);
     }
-  }, [stopDictation]);
+  }, [interviewLanguage, stopDictation, useVoice]);
 
   // The OS kills camera and microphone on a phone call or an app switch, and
   // nothing tells the page. Watch the tracks themselves, and when the page
