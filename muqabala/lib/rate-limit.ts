@@ -230,6 +230,30 @@ export function limitShare(request: Request, userId: string): Promise<LimitDecis
   });
 }
 
+const interviewPackLimiter = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(5, '10 m'),
+      prefix: 'muqabala:limit:interview-pack',
+      analytics: false,
+      timeout: 1_000,
+    })
+  : null;
+
+/**
+ * Interview pack email requests from the advert path. One per candidate is
+ * normal; five in ten minutes stops a script from filling the delivery queue.
+ */
+export function limitInterviewPack(request: Request): Promise<LimitDecision> {
+  return sharedLimit({
+    bucketName: 'interview-pack',
+    identifier: `ip:${requestAddress(request)}`,
+    limiter: interviewPackLimiter,
+    localLimit: 5,
+    localWindowMs: 10 * 60 * 1_000,
+  });
+}
+
 export function sharedRateLimitsConfigured(): boolean {
   return Boolean(redis);
 }

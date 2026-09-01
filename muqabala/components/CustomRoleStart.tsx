@@ -7,15 +7,12 @@ import { takeHeroDraft } from '@/lib/hero-draft';
 import { focusedQuestionFromRole } from '@/lib/focused-question';
 import { loadLatestCustomInterviewDraft } from '@/lib/session-draft';
 import { trackTiming } from '@/lib/analytics';
+import { advertUsable, looksLikeUrl } from '@/lib/landing/advert-text';
+import { browserStores, shouldAskForEmail } from '@/lib/landing/email-consent';
 import { useLang } from './LanguageProvider';
 import { TopBar } from './TopBar';
 import { InterviewFlow } from './InterviewFlow';
-
-/** Someone pasted a link instead of the advert text. */
-function looksLikeUrl(value: string): boolean {
-  const trimmed = value.trim();
-  return /^https?:\/\/\S+$/i.test(trimmed) || (/^www\.\S+$/i.test(trimmed) && !trimmed.includes(' '));
-}
+import { InterviewPackAsk } from './landing/InterviewPackAsk';
 
 /** Use a representative five-question subset for guided practice. */
 function guidedRole(fullRole: Role): Role {
@@ -37,6 +34,7 @@ export function CustomRoleStart({ focusQuestionId, initialLanguage }: { focusQue
   const [fellBack, setFellBack] = useState(false);
   const [building, setBuilding] = useState(false);
   const [fromTemplate, setFromTemplate] = useState(false);
+  const [askingForEmail, setAskingForEmail] = useState(false);
   const draftHandled = useRef(false);
 
   useEffect(() => {
@@ -44,7 +42,7 @@ export function CustomRoleStart({ focusQuestionId, initialLanguage }: { focusQue
   }, [initialLanguage, lang, setLang]);
 
   const startWith = async (titleArg: string, jobArg: string) => {
-    const usable = !looksLikeUrl(jobArg) && jobArg.length >= 120;
+    const usable = advertUsable(jobArg);
     setBuilding(true);
     const startedAt = performance.now();
     try {
@@ -67,6 +65,10 @@ export function CustomRoleStart({ focusQuestionId, initialLanguage }: { focusQue
       setToken(data.token);
       // They pasted an advert but we could not build from it — say so.
       setFellBack(usable && !data.tailored);
+      // The role name read from the advert becomes the interview's title, so
+      // the saved draft and history are filed under it rather than a generic
+      // "custom" label.
+      if (data.tailored && data.role.title) setTitle(data.role.title);
       setRole(data.role);
       if (usable) {
         trackTiming('advert_to_first_question_ms', performance.now() - startedAt, {
@@ -128,7 +130,7 @@ export function CustomRoleStart({ focusQuestionId, initialLanguage }: { focusQue
     setTitle(draft.jobTitle);
     setJobText(draft.jobText);
     const job = draft.jobText.trim();
-    if (!looksLikeUrl(job) && job.length >= 120) {
+    if (advertUsable(job)) {
       void startWith(draft.jobTitle.trim(), job);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -156,10 +158,39 @@ export function CustomRoleStart({ focusQuestionId, initialLanguage }: { focusQue
   const trimmedTitle = title.trim();
   const trimmedJob = jobText.trim();
   const pastedLink = looksLikeUrl(trimmedJob);
-  const usableJob = !pastedLink && trimmedJob.length >= 120;
+  const usableJob = advertUsable(trimmedJob);
   const canStart = trimmedTitle.length >= 2 || usableJob;
 
-  const start = () => startWith(trimmedTitle, trimmedJob);
+  const start = () => {
+    // Pasting an advert here, rather than on /practice, gets the same single
+    // email ask before anything is generated.
+    if (usableJob && shouldAskForEmail(browserStores())) {
+      setAskingForEmail(true);
+      return;
+    }
+    void startWith(trimmedTitle, trimmedJob);
+  };
+
+  // A tailored build in progress: the page is headed by the job, not the form.
+  if (building && usableJob) {
+    return (
+      <div className="shell shell-narrow">
+        <TopBar showProgressLink={false} />
+        <div className="stack">
+          <div>
+            <p className="eyebrow">{t('landingBuildingEyebrow')}</p>
+            <h1 style={{ fontSize: '1.75rem' }}>
+              {trimmedTitle.length >= 2 ? trimmedTitle : t('landingBuildingTitle')}
+            </h1>
+            <p className="lede" style={{ marginTop: '0.6rem' }} role="status" aria-live="polite">
+              {t('jdBuilding')}
+            </p>
+          </div>
+          <p className="notice tiny" style={{ margin: 0 }}>{t('jdBuildingHint')}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="shell shell-narrow">
@@ -174,6 +205,14 @@ export function CustomRoleStart({ focusQuestionId, initialLanguage }: { focusQue
           </p>
         </div>
 
+        {askingForEmail ? (
+          <InterviewPackAsk
+            onContinue={() => {
+              setAskingForEmail(false);
+              void startWith(trimmedTitle, trimmedJob);
+            }}
+          />
+        ) : (
         <div className="card stack">
           <label className="stack-sm" htmlFor="job-title">
             <span className="eyebrow" style={{ marginBottom: 0 }}>
@@ -233,6 +272,7 @@ export function CustomRoleStart({ focusQuestionId, initialLanguage }: { focusQue
 
           {building && <p className="tiny">{t('jdBuildingHint')}</p>}
         </div>
+        )}
 
         <p className="notice tiny" style={{ margin: 0 }}>
           {t('scoringPolicy')}

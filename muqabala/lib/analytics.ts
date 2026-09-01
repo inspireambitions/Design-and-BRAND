@@ -58,6 +58,7 @@ type EventName =
   | 'interview_started'
   | 'interview_completed'
   | 'rating_submitted'
+  | 'email_submitted'
   | 'web_vital'
   | PracticeFlowEventName
   | TimingEventName;
@@ -103,6 +104,8 @@ type EventProps = Partial<{
   outcome: string;
   /** How the candidate answered: type, speak or video. Never the words. */
   mode: 'type' | 'speak' | 'video';
+  /** Where an email ask was shown, e.g. 'advert_pack'. Never the address itself. */
+  source: string;
 }>;
 
 export function track(event: EventName, props: EventProps = {}): void {
