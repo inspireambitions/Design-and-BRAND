@@ -13,6 +13,19 @@ import { acquireAiCapacity, providerCircuitOpen, recordProviderResult, releaseAi
 import { newOpaqueToken, privateNoStoreHeaders, tokenHash } from '@/lib/server/security';
 import { isSupabaseConfigured } from '@/lib/supabase/config';
 import {
+  FEEDBACK_STREAM_CONTENT_TYPE,
+  FEEDBACK_STREAM_TIMEOUT_MS,
+  extractPartialFeedback,
+  partialFeedbackChanged,
+  type PartialFeedback,
+} from '@/lib/feedback-stream';
+import {
+  jsonResponse,
+  streamResponse,
+  type PartialEmitter,
+  type ScoreOutcome,
+} from '@/lib/server/feedback-stream-response';
+import {
   FEEDBACK_JSON_SCHEMA,
   FeedbackSchema,
   ScoreRequestSchema,
@@ -43,11 +56,22 @@ class ProviderUnavailableError extends Error {
   constructor(
     readonly provider: 'openai' | 'openrouter' | 'anthropic',
     readonly status: number,
-    readonly code: 'busy' | 'credits' | 'invalid_output' | 'failed',
+    readonly code: 'busy' | 'credits' | 'invalid_output' | 'failed' | 'timeout',
     readonly retryAfterSeconds: number,
   ) {
     super(`${provider} scoring unavailable (${status}, ${code})`);
   }
+}
+
+function isAbortError(error: unknown): boolean {
+  return Boolean(
+    error
+    && typeof error === 'object'
+    && ('name' in error)
+    && ((error as { name?: string }).name === 'AbortError'
+      || (error as { name?: string }).name === 'APIUserAbortError'
+      || (error as { name?: string }).name === 'TimeoutError'),
+  );
 }
 
 function reserveOpenRouterCapacity(): number {
@@ -62,11 +86,26 @@ function reserveOpenRouterCapacity(): number {
   return 0;
 }
 
-function unavailableResponse(error: ProviderUnavailableError): Response {
+function unavailableOutcome(error: ProviderUnavailableError): ScoreOutcome {
+  if (error.code === 'timeout') {
+    // The candidate retries by hand with a fresh stream. No automatic countdown.
+    return {
+      status: 504,
+      body: {
+        error: {
+          code: 'scoring_timeout',
+          message: 'Feedback is taking longer than usual.',
+          retryable: true,
+          retryAfterSeconds: 0,
+        },
+      },
+    };
+  }
   const retryable = error.code !== 'credits';
   const retryAfterSeconds = retryable ? Math.max(2, error.retryAfterSeconds || 20) : 0;
-  return Response.json(
-    {
+  return {
+    status: 503,
+    body: {
       error: {
         code: error.code === 'credits' ? 'credits_exhausted' : 'scoring_temporarily_unavailable',
         message: 'AI scoring is temporarily unavailable. No score was produced.',
@@ -74,12 +113,10 @@ function unavailableResponse(error: ProviderUnavailableError): Response {
         retryAfterSeconds,
       },
     },
-    {
-      status: 503,
-      headers: retryable ? { 'Retry-After': String(retryAfterSeconds) } : undefined,
-    },
-  );
+    headers: retryable ? { 'Retry-After': String(retryAfterSeconds) } : undefined,
+  };
 }
+
 
 function recordProviderFailure(error: ProviderUnavailableError): void {
   // Technical metadata only. Never include the prompt, transcript, job title or candidate data.
@@ -102,32 +139,48 @@ function recordProviderFailure(error: ProviderUnavailableError): void {
   });
 }
 
-/** Direct OpenAI is the production-primary path. */
-async function scoreViaOpenAI(userPrompt: string): Promise<ParsedFeedback> {
+/**
+ * Direct OpenAI is the production-primary path. When a delta listener is given
+ * the response is streamed and readable blocks are surfaced as they complete.
+ */
+async function scoreViaOpenAI(userPrompt: string, onDelta?: (text: string) => void): Promise<ParsedFeedback> {
   const model = process.env.OPENAI_SCORING_MODEL || 'gpt-5.6-sol';
   const rawEffort = process.env.SCORING_REASONING || 'medium';
   const effort = ['low', 'medium', 'high'].includes(rawEffort)
     ? (rawEffort as 'low' | 'medium' | 'high')
     : 'medium';
   // Fail quickly enough to leave room for the approved fallback provider.
-  const client = new OpenAI({ timeout: 15_000, maxRetries: 0 });
+  const client = new OpenAI({ timeout: FEEDBACK_STREAM_TIMEOUT_MS, maxRetries: 0 });
+  const request = {
+    model,
+    instructions: SYSTEM_PROMPT,
+    input: userPrompt,
+    reasoning: { effort },
+    text: { format: zodTextFormat(FeedbackSchema, 'interview_feedback') },
+    max_output_tokens: 4000,
+    store: false,
+  } as const;
 
   try {
-    const response = await client.responses.parse({
-      model,
-      instructions: SYSTEM_PROMPT,
-      input: userPrompt,
-      reasoning: { effort },
-      text: { format: zodTextFormat(FeedbackSchema, 'interview_feedback') },
-      max_output_tokens: 4000,
-      store: false,
-    });
+    if (onDelta) {
+      const stream = client.responses.stream(request, { signal: AbortSignal.timeout(FEEDBACK_STREAM_TIMEOUT_MS) });
+      stream.on('response.output_text.delta', (event) => onDelta(event.delta));
+      const response = await stream.finalResponse();
+      if (!response.output_parsed) {
+        throw new ProviderUnavailableError('openai', 502, 'invalid_output', 20);
+      }
+      return response.output_parsed;
+    }
+    const response = await client.responses.parse(request);
     if (!response.output_parsed) {
       throw new ProviderUnavailableError('openai', 502, 'invalid_output', 20);
     }
     return response.output_parsed;
   } catch (error) {
     if (error instanceof ProviderUnavailableError) throw error;
+    if (isAbortError(error) || error instanceof OpenAI.APIConnectionTimeoutError) {
+      throw new ProviderUnavailableError('openai', 504, 'timeout', 0);
+    }
     if (error instanceof OpenAI.APIError) {
       const errorCode = String(error.code || '').toLowerCase();
       const credits = /quota|billing|credit/.test(errorCode);
@@ -380,6 +433,9 @@ export async function POST(request: Request) {
   if (!role || !question) {
     return Response.json({ error: 'Unknown role or question.' }, { status: 404 });
   }
+  // Free practice shows feedback for the first answer only until the candidate
+  // verifies their email. Everything else is saved and unlocked later.
+  const feedbackLocked = Boolean(!stored?.owner && questionIndex !== undefined && questionIndex > 0);
   let replayedFeedback: AnswerFeedback | null = null;
   let scoringClaimHash: string | null = null;
   if (stored?.interview) {
@@ -430,7 +486,7 @@ export async function POST(request: Request) {
     }
   }
 
-  const deliver = async (answerFeedback: AnswerFeedback): Promise<Response> => {
+  const deliver = async (answerFeedback: AnswerFeedback): Promise<ScoreOutcome> => {
     if (stored?.interview && interviewId && questionIndex !== undefined) {
       let feedbackUpdate = stored.admin!.from('interview_answers').update({
         feedback: answerFeedback,
@@ -443,10 +499,11 @@ export async function POST(request: Request) {
       if (scoringClaimHash) feedbackUpdate = feedbackUpdate.eq('scoring_claim_hash', scoringClaimHash);
       const { data: storedFeedback, error: feedbackError } = await feedbackUpdate.select('id').maybeSingle();
       if (feedbackError || !storedFeedback) {
-        return Response.json(
-          { error: { code: 'feedback_storage_failed', message: 'Your feedback could not be stored safely.', retryable: true, retryAfterSeconds: 20 } },
-          { status: 503, headers: { 'Retry-After': '20' } },
-        );
+        return {
+          status: 503,
+          body: { error: { code: 'feedback_storage_failed', message: 'Your feedback could not be stored safely.', retryable: true, retryAfterSeconds: 20 } },
+          headers: { 'Retry-After': '20' },
+        };
       }
 
       const { data: rows } = await stored.admin!.from('interview_answers')
@@ -463,17 +520,14 @@ export async function POST(request: Request) {
     // same stored feedback is available only through the authenticated
     // employer report after final consent and submission.
     if (stored?.interview?.mode === 'screening') {
-      return Response.json({ saved: true }, { headers: privateNoStoreHeaders() });
+      return { status: 200, body: { saved: true }, headers: privateNoStoreHeaders() };
     }
 
-    const locked = Boolean(
-      !stored?.owner
-      && questionIndex !== undefined
-      && questionIndex > 0,
-    );
-    if (locked) {
-      return Response.json(
-        {
+    if (feedbackLocked) {
+      return {
+        status: 200,
+        headers: privateNoStoreHeaders(),
+        body: {
           locked: true,
           feedback: {
             questionId,
@@ -488,12 +542,17 @@ export async function POST(request: Request) {
             source: 'none',
           } satisfies AnswerFeedback,
         },
-        { headers: privateNoStoreHeaders() },
-      );
+      };
     }
-    return Response.json({ feedback: answerFeedback }, { headers: privateNoStoreHeaders() });
+    return { status: 200, body: { feedback: answerFeedback }, headers: privateNoStoreHeaders() };
   };
 
+  // Readable blocks are streamed only where the candidate will actually see
+  // them. Employer sittings and locked answers reveal nothing mid flight.
+  const wantsStream = (request.headers.get('accept') ?? '').includes(FEEDBACK_STREAM_CONTENT_TYPE);
+  const streamBlocks = wantsStream && stored?.interview?.mode !== 'screening' && !feedbackLocked;
+
+  const run = async (emit?: PartialEmitter): Promise<ScoreOutcome> => {
   if (replayedFeedback) return deliver(replayedFeedback);
 
   // The structure checker is English-only. Rather than hand an Arabic answer a
@@ -525,18 +584,34 @@ export async function POST(request: Request) {
       if (scoringClaimHash) releaseClaim = releaseClaim.eq('scoring_claim_hash', scoringClaimHash);
       await releaseClaim;
     }
-    return Response.json(
-      { error: { code: 'scoring_capacity_busy', message: 'Scoring is busy. Your answer is saved.', retryable: true, retryAfterSeconds: 5 } },
-      { status: 503, headers: { 'Retry-After': '5' } },
-    );
+    return {
+      status: 503,
+      body: { error: { code: 'scoring_capacity_busy', message: 'Scoring is busy. Your answer is saved.', retryable: true, retryAfterSeconds: 5 } },
+      headers: { 'Retry-After': '5' },
+    };
   }
 
   try {
     const jobTitle = roleTitle?.trim() || role.title;
     const userPrompt = buildUserPrompt({ role, question, transcript, jobTitle, feedbackInArabic });
 
+    // Deltas are parsed as they arrive. A block is emitted once, the moment it
+    // is complete, so the candidate reads whole sentences rather than fragments.
+    let generated = '';
+    let lastPartial: PartialFeedback = {};
+    const onDelta = emit
+      ? (text: string) => {
+          generated += text;
+          const next = extractPartialFeedback(generated);
+          if (partialFeedbackChanged(lastPartial, next)) {
+            lastPartial = next;
+            emit(next);
+          }
+        }
+      : undefined;
+
     const providers = [
-      ...(useOpenAI ? [{ name: 'openai' as const, score: scoreViaOpenAI }] : []),
+      ...(useOpenAI ? [{ name: 'openai' as const, score: (prompt: string) => scoreViaOpenAI(prompt, onDelta) }] : []),
       ...(useAnthropic ? [{ name: 'anthropic' as const, score: scoreViaAnthropic }] : []),
       ...(useOpenRouter ? [{ name: 'openrouter' as const, score: scoreViaOpenRouter }] : []),
     ];
@@ -658,8 +733,14 @@ export async function POST(request: Request) {
       if (scoringClaimHash) failureUpdate = failureUpdate.eq('scoring_claim_hash', scoringClaimHash);
       await failureUpdate;
     }
-    return unavailableResponse(unavailable);
+    return unavailableOutcome(unavailable);
   } finally {
     await releaseAiCapacity();
   }
+  };
+
+  if (wantsStream) {
+    return streamResponse((emit) => run(streamBlocks ? emit : undefined), privateNoStoreHeaders());
+  }
+  return jsonResponse(await run());
 }

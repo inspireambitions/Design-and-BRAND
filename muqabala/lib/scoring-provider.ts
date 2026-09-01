@@ -17,8 +17,20 @@ export const ScoreRequestSchema = z
   })
   .strict();
 
+/**
+ * Field order matters. Structured-output models emit keys in schema order, and
+ * the streaming route shows readable blocks as they land. Scores and evidence
+ * come last so nothing numeric is visible before the integrity gate has run.
+ */
 export const FeedbackSchema = z.object({
+  /** Set when the transcript is too garbled or too short to judge fairly. */
+  unscorable: z.boolean(),
+  /** Explicit cause. Use none whenever unscorable is false. */
+  unscorable_reason: z.enum(['too_short', 'unclear', 'none']),
   headline: z.string().max(160),
+  strengths: z.array(z.string().max(400)).max(3),
+  improvements: z.array(z.string().max(400)).max(3),
+  coach_tip: z.string().max(600),
   competencies: z
     .array(
       z.object({
@@ -28,13 +40,6 @@ export const FeedbackSchema = z.object({
       }),
     )
     .max(10),
-  strengths: z.array(z.string().max(400)).max(3),
-  improvements: z.array(z.string().max(400)).max(3),
-  coach_tip: z.string().max(600),
-  /** Set when the transcript is too garbled or too short to judge fairly. */
-  unscorable: z.boolean(),
-  /** Explicit cause. Use none whenever unscorable is false. */
-  unscorable_reason: z.enum(['too_short', 'unclear', 'none']),
 });
 
 export type ParsedFeedback = z.infer<typeof FeedbackSchema>;
@@ -154,9 +159,14 @@ export function scoringProviderOrder(env: {
 export const FEEDBACK_JSON_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['headline', 'competencies', 'strengths', 'improvements', 'coach_tip', 'unscorable', 'unscorable_reason'],
+  required: ['unscorable', 'unscorable_reason', 'headline', 'strengths', 'improvements', 'coach_tip', 'competencies'],
   properties: {
+    unscorable: { type: 'boolean' },
+    unscorable_reason: { type: 'string', enum: ['too_short', 'unclear', 'none'] },
     headline: { type: 'string', maxLength: 160 },
+    strengths: { type: 'array', maxItems: 3, items: { type: 'string', maxLength: 400 } },
+    improvements: { type: 'array', maxItems: 3, items: { type: 'string', maxLength: 400 } },
+    coach_tip: { type: 'string', maxLength: 600 },
     competencies: {
       type: 'array',
       maxItems: 10,
@@ -171,11 +181,6 @@ export const FEEDBACK_JSON_SCHEMA = {
         },
       },
     },
-    strengths: { type: 'array', maxItems: 3, items: { type: 'string', maxLength: 400 } },
-    improvements: { type: 'array', maxItems: 3, items: { type: 'string', maxLength: 400 } },
-    coach_tip: { type: 'string', maxLength: 600 },
-    unscorable: { type: 'boolean' },
-    unscorable_reason: { type: 'string', enum: ['too_short', 'unclear', 'none'] },
   },
 } as const;
 

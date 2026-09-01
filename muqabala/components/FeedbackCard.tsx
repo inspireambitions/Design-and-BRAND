@@ -1,8 +1,92 @@
 'use client';
 
 import type { AnswerFeedback } from '@/lib/scoring';
+import type { PartialFeedback } from '@/lib/feedback-stream';
 import { useLang } from './LanguageProvider';
 import { ScoreRing } from './ScoreRing';
+
+function SkeletonLines({ lines }: { lines: number }) {
+  return (
+    <div className="skeleton-block" aria-hidden="true">
+      {Array.from({ length: lines }, (_, index) => (
+        <span key={index} className={`skeleton-line${index === lines - 1 ? ' skeleton-line-short' : ''}`} />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * While feedback streams, each block shows as soon as it is complete. Blocks
+ * still generating show a skeleton, never a spinner, so the layout does not
+ * jump when text lands.
+ */
+export function StreamingFeedbackCard({
+  partial,
+  attempt,
+}: {
+  partial: PartialFeedback;
+  attempt?: number;
+}) {
+  const { t } = useLang();
+  return (
+    <div className="card stack feedback-streaming" aria-busy="true" aria-live="polite">
+      <div>
+        {partial.headline ? (
+          <h3 style={{ fontSize: '1.2rem' }} dir="auto">{partial.headline}</h3>
+        ) : (
+          <SkeletonLines lines={1} />
+        )}
+        <div className="row" style={{ marginTop: '0.45rem', gap: '0.4rem' }}>
+          {attempt && attempt > 1 && (
+            <span className="chip chip-gold">
+              {t('attemptNumber')} {attempt}
+            </span>
+          )}
+          <span className="chip">{t('feedbackArriving')}</span>
+        </div>
+      </div>
+
+      <div>
+        <p className="eyebrow" style={{ marginBottom: 0 }}>{t('whatWorked')}</p>
+        {partial.strengths ? (
+          partial.strengths.length > 0 ? (
+            <ul className="feedback-list">
+              {partial.strengths.map((strength) => <li key={strength} dir="auto">{strength}</li>)}
+            </ul>
+          ) : null
+        ) : (
+          <SkeletonLines lines={2} />
+        )}
+      </div>
+
+      <div>
+        <p className="eyebrow" style={{ marginBottom: 0, color: 'var(--gold)' }}>{t('whatToImprove')}</p>
+        {partial.improvements ? (
+          partial.improvements.length > 0 ? (
+            <ul className="feedback-list">
+              {partial.improvements.map((improvement) => <li key={improvement} dir="auto">{improvement}</li>)}
+            </ul>
+          ) : null
+        ) : (
+          <SkeletonLines lines={2} />
+        )}
+      </div>
+
+      {partial.coachTip ? (
+        <div className="coach-tip" dir="auto">
+          <strong>{t('biggestWin')}</strong>
+          {partial.coachTip}
+        </div>
+      ) : (
+        <div className="coach-tip">
+          <strong>{t('biggestWin')}</strong>
+          <SkeletonLines lines={2} />
+        </div>
+      )}
+      <p className="tiny">{t('scoreStillChecking')}</p>
+    </div>
+  );
+}
 
 export function FeedbackCard({
   feedback,
