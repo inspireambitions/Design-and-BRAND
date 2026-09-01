@@ -104,6 +104,7 @@ test('employer creation form generates the description before unlocking the link
   assert.match(form, /t\('proofRecruiterLabel'\)/);
   assert.match(form, /proofCandidateInvite/);
   assert.match(form, /proofRecommendMessage/);
+  assert.match(form, /proofSampleInviteLabel/);
   assert.match(copy, /Learn how each candidate would approach the role before you shortlist\./);
   assert.match(copy, /I used Muqabala for \{title\} at \{company\}\./);
 });

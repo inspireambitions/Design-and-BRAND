@@ -98,6 +98,8 @@ export const STRINGS = {
     proofPreviewMinutes: '2 min',
     proofPreviewEmpty: 'Answers appear here after a candidate submits.',
     proofPreviewDecide: 'You decide. Nothing is auto-rejected.',
+    proofSampleInviteLabel: 'What you send on WhatsApp',
+    proofSampleLink: 'trymuqabala.com/s/••••',
     proofShareKitTitle: 'Ready to send on WhatsApp',
     proofShareKitBody: 'Copy the candidate message. Forward it as it is.',
     proofCandidateInvite:
@@ -646,6 +648,8 @@ export const STRINGS = {
     proofPreviewMinutes: 'دقيقتان',
     proofPreviewEmpty: 'تظهر الإجابات هنا بعد أن يرسل المرشح المقابلة.',
     proofPreviewDecide: 'أنت تقرر. لا يوجد رفض تلقائي.',
+    proofSampleInviteLabel: 'ما ترسله على واتساب',
+    proofSampleLink: 'trymuqabala.com/s/••••',
     proofShareKitTitle: 'جاهز للإرسال على واتساب',
     proofShareKitBody: 'انسخ رسالة المرشح. أرسلها كما هي.',
     proofCandidateInvite:

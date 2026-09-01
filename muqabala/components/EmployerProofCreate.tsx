@@ -436,6 +436,10 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
             </ol>
             <p className={styles.folioEmpty}>{t('proofPreviewEmpty')}</p>
             <p className={styles.folioStamp}>{t('proofPreviewDecide')}</p>
+            <div className={styles.folioInviteWrap}>
+              <p className={styles.folioInviteLabel}>{t('proofSampleInviteLabel')}</p>
+              <pre className={styles.folioInvite}>{candidateInvite(t('proofSampleLink'))}</pre>
+            </div>
           </aside>
         </div>
 

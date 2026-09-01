@@ -639,6 +639,35 @@
   line-height: 1.4;
 }
 
+.folioInviteWrap {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.25rem;
+}
+
+.folioInviteLabel {
+  margin: 0;
+  color: #7fd4c4;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.folioInvite {
+  margin: 0;
+  padding: 0.85rem 0.9rem;
+  overflow-x: auto;
+  border-radius: 0.85rem;
+  background: rgba(255, 252, 246, 0.06);
+  color: #e7efe9;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 450;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
 .linkPanel {
   display: grid;
   gap: 0.85rem;
