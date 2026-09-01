@@ -21,6 +21,8 @@ const arabicFont = IBM_Plex_Sans_Arabic({
   weight: ['400', '500', '600', '700'],
   variable: '--font-plex-arabic',
   display: 'swap',
+  // Fetched only when Arabic text renders, so English pages keep it off the critical path.
+  preload: false,
 });
 
 export const metadata: Metadata = {
