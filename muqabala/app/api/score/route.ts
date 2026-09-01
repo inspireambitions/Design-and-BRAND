@@ -334,7 +334,7 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  if (stored && (!stored.interview || (!stored.owner && !stored.anonymous))) {
+  if (stored && (!stored.interview || (!stored.owner && !stored.anonymous && !stored.candidate))) {
     return Response.json({ error: 'Interview not found.' }, { status: 404 });
   }
 

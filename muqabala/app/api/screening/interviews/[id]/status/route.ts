@@ -9,7 +9,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const access = await interviewAccess(id);
   const interview = access.interview;
   if (!access.configured) return Response.json({ configured: false }, { status: 503 });
-  if (!interview || !access.anonymous || interview.mode !== 'screening') {
+  if (!access.user) return Response.json({ error: 'Verify your email to continue.' }, { status: 401 });
+  if (!interview || !access.candidate || interview.mode !== 'screening') {
     return Response.json({ error: 'Interview not found.' }, { status: 404 });
   }
 
@@ -33,4 +34,3 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     reference: interview.submitted_at ? screeningReceiptReference(id) : null,
   }, { headers: privateNoStoreHeaders() });
 }
-

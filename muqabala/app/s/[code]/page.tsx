@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { EmployerVideoInterview } from '@/components/EmployerVideoInterview';
+import { ScreeningEmailVerification } from '@/components/ScreeningEmailVerification';
 import { getScreeningPack } from '@/lib/screening-pack';
 import { screeningPreviewCopy } from '@/lib/screening-preview';
+import { currentUser } from '@/lib/supabase/server';
 
-type PageProps = { params: Promise<{ code: string }> };
+type PageProps = { params: Promise<{ code: string }>; searchParams?: Promise<{ verification?: string }> };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { code } = await params;
@@ -39,10 +41,28 @@ export const dynamic = 'force-dynamic';
 
 export default async function ProofSittingPage({
   params,
+  searchParams,
 }: PageProps) {
   const { code } = await params;
+  const query = await searchParams;
   const pack = await getScreeningPack(code);
   if (pack.status !== 'active' && pack.status !== 'full') notFound();
+  const candidate = await currentUser();
+
+  if (!candidate?.email || !candidate.email_confirmed_at) {
+    return (
+      <div className="employer-proof-page employer-light-theme">
+        <ScreeningEmailVerification
+          publicCode={code}
+          companyName={pack.workplace}
+          roleTitle={pack.role.title}
+          roleTitleAr={pack.role.titleAr}
+          availability={pack.status}
+          initialError={query?.verification === 'expired' ? 'That sign-in link has expired. Request a new six-digit code below.' : undefined}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="employer-proof-page employer-light-theme">
@@ -53,8 +73,8 @@ export default async function ProofSittingPage({
         recruiterName={pack.recruiterName}
         publicCode={code}
         availability={pack.status}
+        candidateEmail={candidate.email}
       />
     </div>
   );
 }
-

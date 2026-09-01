@@ -73,6 +73,8 @@ const COPY = {
     received: 'Received by Muqabala',
     receiptSubmitted: 'Submitted to',
     receiptReference: 'Reference',
+    emailReceipt: 'Your email receipt will be sent to',
+    useAnotherEmail: 'Use another email',
   },
   ar: {
     invited: 'مقابلة من جهة العمل',
@@ -127,6 +129,8 @@ const COPY = {
     received: 'استلمت مقابلة التسجيل',
     receiptSubmitted: 'تم الإرسال إلى',
     receiptReference: 'المرجع',
+    emailReceipt: 'سيتم إرسال إيصال المقابلة إلى',
+    useAnotherEmail: 'استخدام بريد إلكتروني آخر',
   },
 } as const;
 
@@ -137,6 +141,7 @@ type Props = {
   recruiterName?: string;
   publicCode: string;
   availability?: 'active' | 'full';
+  candidateEmail: string;
 };
 
 type ScreeningStatus = {
@@ -148,24 +153,14 @@ type ScreeningStatus = {
   reference: string | null;
 };
 
-function browserStartKey(publicCode: string): string | null {
-  try {
-    const storageKey = `muqabala.screening.start.${publicCode}`;
-    const existing = window.localStorage.getItem(storageKey);
-    if (existing && /^[A-Za-z0-9_-]{40,60}$/.test(existing)) return existing;
-    const bytes = crypto.getRandomValues(new Uint8Array(32));
-    const created = btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    window.localStorage.setItem(storageKey, created);
-    return created;
-  } catch {
-    return null;
-  }
-}
-
 function formatTime(value: number): string {
   const minutes = Math.floor(value / 60);
   const seconds = String(value % 60).padStart(2, '0');
   return `${minutes}:${seconds}`;
+}
+
+function maskEmail(value: string): string {
+  return value.replace(/(^.).*(@.*$)/, '$1•••$2');
 }
 
 function permissionHelp(error: unknown, fallback: string, noDevice: string, deviceBusy: string): string {
@@ -185,6 +180,7 @@ export function EmployerVideoInterview({
   recruiterName,
   publicCode,
   availability = 'active',
+  candidateEmail,
 }: Props) {
   const { lang, setLang, dir } = useLang();
   const c = COPY[lang];
@@ -210,7 +206,6 @@ export function EmployerVideoInterview({
   const speechRef = useRef<SpeechSession | null>(null);
   const transcriptRef = useRef('');
   const finishingRef = useRef(false);
-  const startKeyRef = useRef<string | null>(null);
   const copyRef = useRef(c);
 
   useEffect(() => {
@@ -231,14 +226,9 @@ export function EmployerVideoInterview({
 
   useEffect(() => {
     let cancelled = false;
-    const startKey = browserStartKey(publicCode);
-    startKeyRef.current = startKey;
     void fetch('/api/screening/resume', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(startKey ? { 'Idempotency-Key': startKey } : {}),
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ publicCode }),
     })
       .then(async (response) => response.ok ? response.json() : null)
@@ -381,7 +371,6 @@ export function EmployerVideoInterview({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(startKeyRef.current ? { 'Idempotency-Key': startKeyRef.current } : {}),
         },
         body: JSON.stringify({
           roleId: role.id,
@@ -711,6 +700,11 @@ export function EmployerVideoInterview({
             <div className={styles.assurance}>{c.privacy}</div>
             <p className={styles.footnote}>{c.uploadDisclosure}</p>
             <p className={styles.footnote}>{c.transcriptDisclosure}</p>
+            <div className={styles.savedBanner} role="status">✓ {c.emailReceipt} {maskEmail(candidateEmail)}</div>
+            <button type="button" className={styles.secondary} onClick={async () => {
+              await fetch('/api/auth/sign-out', { method: 'POST' });
+              window.location.assign(`/s/${publicCode}`);
+            }}>{c.useAnotherEmail}</button>
             <label className={styles.field}>
               <span>{c.name}</span>
               <input

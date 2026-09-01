@@ -95,6 +95,7 @@ export type StoredInterview = {
   expires_at: string;
   screening_pack_id?: string | null;
   candidate_name?: string | null;
+  candidate_user_id?: string | null;
   consent_version?: string | null;
   consented_at?: string | null;
   submitted_at?: string | null;

@@ -7,7 +7,6 @@ import { currentUser } from '@/lib/supabase/server';
 import {
   ATTEMPT_COOKIE,
   hasTrustedOrigin,
-  isOpaqueToken,
   newOpaqueToken,
   privateNoStoreHeaders,
   screeningAttemptCookie,
@@ -44,21 +43,12 @@ export async function POST(request: Request) {
     return Response.json({ error: 'This employer interview link is no longer available.' }, { status: 410 });
   }
 
-  // Employer interviews stay separate from private practice even if this
-  // browser is already signed in to a candidate account.
-  const user = parsed.data.mode === 'screening' ? null : await currentUser();
+  const user = await currentUser();
+  if (parsed.data.mode === 'screening' && (!user?.email || !user.email_confirmed_at)) {
+    return Response.json({ error: 'Verify your email before starting this employer interview.' }, { status: 401 });
+  }
   const cookieStore = await cookies();
-  const suppliedStartKey = request.headers.get('idempotency-key');
-  const existingPackToken = screeningPack?.data?.id
-    ? cookieStore.get(screeningPackAttemptCookie(screeningPack.data.id))?.value
-    : null;
-  const rawToken = parsed.data.mode === 'screening'
-    ? isOpaqueToken(suppliedStartKey)
-      ? suppliedStartKey
-      : isOpaqueToken(existingPackToken)
-        ? existingPackToken
-        : newOpaqueToken()
-    : newOpaqueToken();
+  const rawToken = newOpaqueToken();
   let interviewId: string;
   let resumed = false;
   if (parsed.data.mode === 'screening') {
@@ -68,6 +58,7 @@ export async function POST(request: Request) {
       p_pack_id: screeningPack!.data!.id,
       p_anonymous_token_hash: tokenHash(rawToken),
       p_start_idempotency_hash: tokenHash(rawToken),
+      p_candidate_user_id: user!.id,
       p_role_id: plan.role.id,
       p_role_title: parsed.data.language === 'ar' ? plan.role.titleAr : plan.role.title,
       p_language: parsed.data.language,
@@ -106,7 +97,7 @@ export async function POST(request: Request) {
     interviewId = data.id;
   }
 
-  if (!user) {
+  if (parsed.data.mode === 'screening' || !user) {
     const cookieOptions = {
       httpOnly: true,
       sameSite: 'lax',
@@ -120,8 +111,7 @@ export async function POST(request: Request) {
     }
   }
   return Response.json(
-    { id: interviewId, unlocked: Boolean(user), resumed },
+    { id: interviewId, unlocked: parsed.data.mode === 'screening' ? false : Boolean(user), resumed },
     { status: resumed ? 200 : 201, headers: privateNoStoreHeaders() },
   );
 }
-

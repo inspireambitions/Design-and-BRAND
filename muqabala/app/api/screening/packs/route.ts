@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   const admin = createAdminClient();
   if (!admin) return Response.json({ configured: false }, { status: 503 });
   const employer = await currentUser();
-  if (!employer) return Response.json({ error: 'Sign in before creating an interview link.' }, { status: 401 });
+  if (!employer?.email || !employer.email_confirmed_at) return Response.json({ error: 'Verify your employer email before creating an interview link.' }, { status: 401 });
 
   const limited = await limitInterviewGeneration(request);
   if (limited.limited) {

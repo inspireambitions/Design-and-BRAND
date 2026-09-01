@@ -27,6 +27,10 @@ export async function interviewAccess(id: string) {
     activeInterview && raw && activeInterview.user_id === null && activeInterview.anonymous_token_hash === tokenHash(raw),
   );
   const owner = Boolean(activeInterview && user && activeInterview.user_id === user.id);
-  return { configured: true as const, admin, interview: activeInterview, user, anonymous, owner };
+  const candidate = Boolean(
+    activeInterview?.mode === 'screening'
+      && user?.email_confirmed_at
+      && activeInterview.candidate_user_id === user.id,
+  );
+  return { configured: true as const, admin, interview: activeInterview, user, anonymous, owner, candidate };
 }
-

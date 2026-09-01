@@ -165,15 +165,19 @@ test('screening retries keep one capacity place and return a durable receipt', (
   const startRoute = read('app/api/interviews/route.ts');
   const resumeRoute = read('app/api/screening/resume/route.ts');
   const submitRoute = read('app/api/screening/interviews/[id]/submit/route.ts');
-  const migration = read('supabase/migrations/20260901120000_screening_upload_recovery.sql');
+  const recoveryMigration = read('supabase/migrations/20260901120000_screening_upload_recovery.sql');
+  const notificationMigration = read('supabase/migrations/20260901040619_screening_submission_notifications.sql');
 
-  assert.match(startRoute, /idempotency-key/);
+  assert.match(startRoute, /email_confirmed_at/);
+  assert.match(startRoute, /p_candidate_user_id: user!\.id/);
   assert.match(startRoute, /p_start_idempotency_hash/);
-  assert.match(resumeRoute, /screeningPackAttemptCookie/);
-  assert.match(migration, /start_idempotency_hash = null/);
-  assert.match(migration, /interviews_screening_start_idempotency_idx/);
+  assert.match(resumeRoute, /eq\('candidate_user_id', candidate\.id\)/);
+  assert.match(notificationMigration, /interviews_screening_candidate_pack_idx/);
+  assert.match(notificationMigration, /for update/);
+  assert.match(recoveryMigration, /start_idempotency_hash = null/);
   assert.match(submitRoute, /screeningReceiptReference/);
-  assert.match(submitRoute, /interview\.locked_at && interview\.submitted_at/);
+  assert.match(notificationMigration, /interview_row\.submitted_at is not null and interview_row\.locked_at is not null/);
+  assert.match(submitRoute, /notificationsQueued: true/);
 });
 
 test('employer sees aggregate interrupted uploads without pre-consent identity', () => {
@@ -194,4 +198,18 @@ test('JobStrike is absent from the complete employer flow', () => {
     'components/EmployerVideoInterview.tsx',
   ];
   assert.doesNotMatch(files.map(read).join('\n'), /jobstrike/i);
+});
+
+test('candidate email verification keeps employer context and avoids full-link friction', () => {
+  const page = read('app/s/[code]/page.tsx');
+  const verification = read('components/ScreeningEmailVerification.tsx');
+  const callback = read('app/auth/screening-confirm/route.ts');
+  const flow = read('components/EmployerVideoInterview.tsx');
+  assert.match(page, /availability=\{pack\.status\}/);
+  assert.match(verification, /availability === 'active' \|\| resumingFullLink/);
+  assert.match(verification, /I already started this interview/);
+  assert.match(verification, /Change email/);
+  assert.match(callback, /verification=expired/);
+  assert.match(flow, /Use another email/);
+  assert.match(flow, /maskEmail\(candidateEmail\)/);
 });
