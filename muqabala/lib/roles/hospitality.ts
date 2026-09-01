@@ -1,5 +1,6 @@
 import {
   q,
+  qt,
   opener,
   closer,
   serviceCompetencies,
@@ -20,13 +21,13 @@ export const hospitalityRoles: Role[] = [
     competencies: serviceCompetencies,
     questions: [
       opener,
-      q(
+      qt(['uae_hotel', 'gulf_general'],
         'angry_guest',
         'Tell me about a time an angry guest complained directly to you. What happened?',
         'حدثني عن موقف اشتكى فيه نزيل غاضب لك مباشرة. ماذا حدث؟',
         ['customer_focus', 'ownership', 'problem_solving', 'evidence'],
       ),
-      q(
+      qt(['uae_hotel'],
         'overbooking',
         'A guest arrives at 11pm and their room is not ready. Walk me through exactly what you do.',
         'يصل نزيل الساعة ١١ مساءً وغرفته غير جاهزة. اشرح لي بالضبط ماذا ستفعل.',
@@ -34,7 +35,7 @@ export const hospitalityRoles: Role[] = [
         'Walk through your steps in order. Say what you would decide yourself and when you would escalate.',
         'اشرح خطواتك بالترتيب. وضّح ما ستقرره بنفسك ومتى ستصعّد الأمر.',
       ),
-      q(
+      qt(['uae_hotel', 'saudi_agency'],
         'systems',
         'Which hotel systems have you used, and what did you do in them day to day?',
         'ما أنظمة الفنادق التي استخدمتها، وماذا كنت تفعل بها يومياً؟',
@@ -59,19 +60,19 @@ export const hospitalityRoles: Role[] = [
     competencies: serviceCompetencies,
     questions: [
       opener,
-      q(
+      qt(['uae_hotel'],
         'wrong_order',
         'A guest says their food is wrong and they are already upset. What do you do?',
         'يقول أحد الضيوف إن طلبه خاطئ وهو منزعج بالفعل. ماذا تفعل؟',
         ['customer_focus', 'ownership', 'problem_solving'],
       ),
-      q(
+      qt(['uae_hotel', 'saudi_agency'],
         'upselling',
         'Tell me about a time you successfully recommended something extra to a guest.',
         'حدثني عن مرة نجحت فيها في اقتراح شيء إضافي على أحد الضيوف.',
         ['customer_focus', 'evidence', 'communication'],
       ),
-      q(
+      qt(['gulf_general'],
         'busy_shift',
         'You have six tables seated at once and you are alone on the floor. How do you handle it?',
         'لديك ست طاولات في وقت واحد وأنت وحدك في الصالة. كيف تتعامل مع ذلك؟',
@@ -94,7 +95,7 @@ export const hospitalityRoles: Role[] = [
     competencies: serviceCompetencies,
     questions: [
       opener,
-      q(
+      qt(['uae_hotel', 'saudi_agency'],
         'room_standard',
         'Walk me through how you clean a guest room from the moment you knock on the door.',
         'اشرح لي كيف تنظّف غرفة نزيل من لحظة طرقك على الباب.',
@@ -102,7 +103,7 @@ export const hospitalityRoles: Role[] = [
         'Give the real order of your steps. Interviewers are listening for method, not speed.',
         'اذكر ترتيب خطواتك الحقيقي. المُحاور يستمع للمنهجية وليس للسرعة.',
       ),
-      q(
+      qt(['uae_hotel'],
         'guest_belongings',
         'You find money and jewellery left in a room. What do you do?',
         'تجد نقوداً ومجوهرات متروكة في غرفة. ماذا تفعل؟',
@@ -112,7 +113,7 @@ export const hospitalityRoles: Role[] = [
         20,
         90,
       ),
-      q(
+      qt(['gulf_general'],
         'time_pressure',
         'You have 15 rooms to finish and a guest asks you to clean theirs immediately. What do you do?',
         'لديك ١٥ غرفة لإنهائها ويطلب منك نزيل تنظيف غرفته فوراً. ماذا تفعل؟',
@@ -281,13 +282,13 @@ export const hospitalityRoles: Role[] = [
     competencies: serviceCompetencies,
     questions: [
       opener,
-      q(
+      qt(['uae_hotel'],
         'impossible_request',
         'A guest asks you for something that seems impossible to arrange. What do you do?',
         'يطلب منك نزيل شيئاً يبدو من المستحيل ترتيبه. ماذا تفعل؟',
         ['customer_focus', 'problem_solving', 'ownership', 'evidence'],
       ),
-      q(
+      qt(['uae_hotel'],
         'local_knowledge',
         'A guest asks you where to go tonight. How do you answer?',
         'يسألك نزيل عن مكان يذهب إليه الليلة. كيف تجيب؟',
@@ -323,7 +324,7 @@ export const aviationRoles: Role[] = [
     competencies: serviceCompetencies,
     questions: [
       opener,
-      q(
+      qt(['gulf_general'],
         'difficult_passenger',
         'A passenger refuses to follow a safety instruction during boarding. What do you do?',
         'يرفض أحد الركاب اتباع تعليمات السلامة أثناء الصعود. ماذا تفعل؟',

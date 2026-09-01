@@ -1,3 +1,7 @@
+import { MAX_TAGS_PER_QUESTION, type QuestionTagId } from './question-tags';
+
+export type { QuestionTagId } from './question-tags';
+
 export type Competency = {
   id: string;
   label: string;
@@ -19,6 +23,12 @@ export type Question = {
   /** Shown to the candidate before they answer — coaching, not a trick. */
   hint: string;
   hintAr: string;
+  /**
+   * Gulf-specific context, zero to two ids from lib/roles/question-tags.ts.
+   * Editorial: set where a question is known to recur in a market, never
+   * inferred.
+   */
+  tags?: QuestionTagId[];
 };
 
 export type Role = {
@@ -176,8 +186,21 @@ export function q(
   return { id, text, textAr, competencies, hint, hintAr, prepSeconds, answerSeconds };
 }
 
+/** Attach Gulf-specific tags to a question. Throws at module load if the list is too long. */
+export function tagged(question: Question, tags: QuestionTagId[]): Question {
+  if (tags.length > MAX_TAGS_PER_QUESTION) {
+    throw new Error(`Question ${question.id} has more than ${MAX_TAGS_PER_QUESTION} tags.`);
+  }
+  return { ...question, tags };
+}
+
+/** `q` with tags first, so a tagged question reads as one call in the catalogue. */
+export function qt(tags: QuestionTagId[], ...args: Parameters<typeof q>): Question {
+  return tagged(q(...args), tags);
+}
+
 /** Every interview opens with this. */
-export const opener = q(
+export const opener = tagged(q(
   'intro',
   'Tell me about yourself and why you are applying for this role.',
   'حدثني عن نفسك ولماذا تتقدم لهذه الوظيفة.',
@@ -186,10 +209,10 @@ export const opener = q(
   'ركّز على خبرتك العملية ونقاط قوتك وسبب اهتمامك بهذه الوظيفة تحديداً. حوالي ٩٠ ثانية.',
   30,
   120,
-);
+), ['gulf_general']);
 
 /** Every interview closes with this. */
-export const closer = q(
+export const closer = tagged(q(
   'why_gulf',
   'Why do you want to work in the Gulf, and what do you know about working here?',
   'لماذا ترغب في العمل في الخليج، وماذا تعرف عن العمل هنا؟',
@@ -198,10 +221,10 @@ export const closer = q(
   'أظهر أنك فكرت جدياً في هذه الخطوة — وتيرة العمل والتنوع والتوقعات.',
   30,
   90,
-);
+), ['gulf_general', 'saudi_agency']);
 
 /** Closer for trades and safety-critical roles, which scores compliance instead. */
-export const closerTechnical = q(
+export const closerTechnical = tagged(q(
   'why_gulf_tech',
   'Why do you want to work in the Gulf, and what do you know about site standards here?',
   'لماذا ترغب في العمل في الخليج، وماذا تعرف عن معايير العمل هنا؟',
@@ -210,4 +233,4 @@ export const closerTechnical = q(
   'أظهر أنك فكرت جدياً في هذه الخطوة، بما في ذلك الحرارة وساعات العمل وقواعد السلامة.',
   30,
   90,
-);
+), ['gulf_general']);
