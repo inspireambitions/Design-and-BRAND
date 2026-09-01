@@ -4177,6 +4177,89 @@ textarea.answer-box-compact {
 }
 
 .capture-indicators {
+/* ---------- readiness score (per role) ---------- */
+
+.readiness {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.readiness-head {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.readiness-ring {
+  --ring-color: var(--jade);
+}
+
+.readiness-ring-lg {
+  width: 6.5rem;
+  height: 6.5rem;
+}
+
+.readiness-ring-lg .score-ring-inner {
+  width: 5.2rem;
+  height: 5.2rem;
+  font-size: 1.85rem;
+}
+
+.readiness-text {
+  min-width: 0;
+}
+
+.readiness-label {
+  font-family: var(--font-display);
+  font-weight: 750;
+  font-size: 1.05rem;
+  color: var(--ink);
+  margin: 0;
+}
+
+body[dir='rtl'] .readiness-label {
+  font-family: var(--font-arabic);
+}
+
+.readiness-meta {
+  margin: 0.25rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.readiness-compact .readiness-label {
+  font-size: 0.98rem;
+}
+
+.readiness-coverage {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--line);
+}
+
+.readiness-coverage-title {
+  margin: 0 0 0.4rem;
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+body[dir='rtl'] .readiness-coverage-title {
+  font-family: var(--font-arabic);
+  letter-spacing: 0;
+}
+
+.readiness-chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
@@ -4493,5 +4576,74 @@ textarea.landing-advert-box {
   .landing-advert .btn-primary {
     width: 100%;
     min-height: 44px;
+.readiness-how {
+  margin: 0;
+}
+
+/* ---------- shareable progress card ---------- */
+
+.share-card {
+  display: grid;
+  grid-template-columns: minmax(0, 9rem) 1fr;
+  gap: 1rem;
+  align-items: start;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-sunk);
+}
+
+.share-card-preview {
+  aspect-ratio: 4 / 5;
+  width: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  display: grid;
+  place-items: center;
+}
+
+.share-card-preview img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.share-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.share-card-body h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.share-card-body p {
+  margin: 0;
+}
+
+.share-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.2rem;
+}
+
+.share-card-status {
+  min-height: 1.2em;
+}
+
+@media (max-width: 520px) {
+  .share-card {
+    grid-template-columns: 1fr;
+  }
+
+  .share-card-preview {
+    max-width: 12rem;
   }
 }

@@ -59,6 +59,7 @@ type EventName =
   | 'interview_completed'
   | 'rating_submitted'
   | 'email_submitted'
+  | 'share_card_created'
   | 'web_vital'
   | PracticeFlowEventName
   | TimingEventName;
