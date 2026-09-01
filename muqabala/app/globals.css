@@ -4106,3 +4106,130 @@ textarea.answer-box-compact {
 .summary-item p {
   font-size: 0.95rem;
 }
+
+/* ---------- /practice landing: advert first, then role cards ---------- */
+
+.hero-compact {
+  padding-bottom: 1.4rem;
+}
+
+.landing-advert {
+  margin-bottom: 2.4rem;
+  scroll-margin-top: 1rem;
+}
+
+.landing-advert-card {
+  border-color: color-mix(in srgb, var(--gold) 55%, var(--line));
+  box-shadow: var(--shadow);
+}
+
+.landing-advert-heading {
+  font-size: clamp(1.25rem, 3.2vw, 1.55rem);
+  line-height: 1.25;
+}
+
+.landing-advert-subline {
+  color: var(--ink-soft);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--ink-soft) 40%, transparent);
+}
+
+.landing-advert-subline:hover,
+.landing-advert-subline:focus-visible {
+  color: var(--jade);
+  text-decoration-color: currentColor;
+}
+
+textarea.landing-advert-box {
+  min-height: 9.5rem;
+}
+
+.landing-pack-heading {
+  font-size: clamp(1.2rem, 3vw, 1.45rem);
+  line-height: 1.25;
+}
+
+.landing-pack-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.landing-pack-field {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.landing-pack-send {
+  flex: 0 0 auto;
+  min-height: 2.9rem;
+  white-space: nowrap;
+}
+
+.landing-link-btn {
+  align-self: flex-start;
+  padding: 0.25rem 0;
+  border: 0;
+  background: none;
+  color: var(--jade);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.landing-link-btn:disabled {
+  color: var(--ink-faint);
+  cursor: default;
+}
+
+.landing-role-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.landing-role-list > li {
+  display: flex;
+}
+
+.landing-role-card {
+  flex: 1 1 auto;
+  gap: 0.4rem;
+  align-items: flex-start;
+}
+
+.landing-role-card:focus-visible {
+  border-color: var(--jade);
+  box-shadow: var(--shadow-lift);
+}
+
+.landing-role-line {
+  margin: 0;
+  font-size: 0.88rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+@media (max-width: 600px) {
+  .landing-pack-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .landing-pack-send {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .landing-advert .btn-primary {
+    width: 100%;
+    min-height: 44px;
+  }
+}
