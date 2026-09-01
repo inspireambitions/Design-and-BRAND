@@ -164,7 +164,7 @@ test('model answers exist for every front office and waiter question in both lan
         const text = [answer.relevance, answer.evidence, answer.structure, answer.clarity].join(' ');
         const words = text.split(/\s+/).filter(Boolean).length;
         assert.ok(words >= 80 && words <= 120, `${roleId}/${id}/${lang} has ${words} words`);
-        assert.doesNotMatch(text, /—/);
+        assert.doesNotMatch(text, /\u2014/);
       }
     }
   }

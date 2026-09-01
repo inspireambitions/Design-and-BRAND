@@ -4365,3 +4365,7 @@ body[dir='rtl'] .model-answer-label {
   font-family: var(--font-arabic);
   letter-spacing: 0;
 }
+
+.answer-box-wrap .transcript {
+  min-height: 8rem;
+}

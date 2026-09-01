@@ -239,6 +239,17 @@ Verified here: `tsc --noEmit`, the full test suite, `next build`, `/practice/[ro
 
 Open from this QA: the cold advert generation needs a faster generation model or lower reasoning effort to reach 6 s; trial `INTERVIEW_REASONING=low` first and keep the change only if the generated sets still pass review. The Firefox audio fallback still needs a manual check (the QA browser had no microphone).
 
+### Practice Flow, sections 1, 2, 3.1 to 3.3
+
+| Metric | Before | After | Source |
+| --- | --- | --- | --- |
+| `/practice` first-load JS, gzipped | 193.1 KB | 195.0 KB | `npm run check:bundle` |
+| `/practice/[roleId]` first-load JS, gzipped | 176.8 KB | 183.8 KB | `npm run check:bundle` |
+| Model answer text (10 answers, two languages) | n/a | 7.1 KB gzipped, own chunk, fetched only when a second attempt is scored | build output |
+| Side by side comparison | on demand (`RetryComparison`) | on demand (`components/flow/AnswerComparison`, word diff included) | build output |
+
+The first-load growth is the answer mode step (three cards with three Phosphor icons imported by path, not from the package index), the STAR guide, the transcript check and the new strings in both languages. Everything a candidate meets only after a second attempt is behind `next/dynamic`: the comparison view with the word level diff and the model answer with its text. Nothing in the practice flow is fetched before the candidate taps a mode; camera and microphone are requested inside that tap.
+
 ## Open items that need production access
 
 All eight sections have code in place. These steps cannot be done from a build environment.
