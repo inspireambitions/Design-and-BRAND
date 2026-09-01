@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import {
+  CANDIDATE_PAGE_SIZE,
   candidateEvidence,
+  candidatePage,
   dashboardSummary,
   formatDuration,
   packHealth,
@@ -77,6 +79,30 @@ test('candidate evidence is ordered and never invents a recording', () => {
   assert.equal(result.notesPending, true);
   assert.equal(formatDuration(89), '1:29');
   assert.equal(formatDuration(null), 'Saved');
+});
+
+test('candidate list pages at twenty and clamps bad page values', () => {
+  assert.equal(CANDIDATE_PAGE_SIZE, 20);
+  assert.deepEqual(candidatePage(undefined, 45), { page: 1, from: 0, to: 19, hasPrevious: false, hasNext: true, lastPage: 3 });
+  assert.deepEqual(candidatePage('2', 45), { page: 2, from: 20, to: 39, hasPrevious: true, hasNext: true, lastPage: 3 });
+  assert.deepEqual(candidatePage('3', 45), { page: 3, from: 40, to: 59, hasPrevious: true, hasNext: false, lastPage: 3 });
+  assert.equal(candidatePage('9', 45).page, 3);
+  assert.equal(candidatePage('0', 45).page, 1);
+  assert.equal(candidatePage('-4', 45).page, 1);
+  assert.equal(candidatePage('abc', 45).page, 1);
+  assert.equal(candidatePage(['2', '3'], 45).page, 2);
+  assert.deepEqual(candidatePage('1', 0), { page: 1, from: 0, to: 19, hasPrevious: false, hasNext: false, lastPage: 1 });
+});
+
+test('dashboard paginates submissions and shows no video elements in the list', async () => {
+  const source = await readFile(new URL('../app/employer/page.tsx', import.meta.url), 'utf8');
+  assert.match(source, /searchParams: Promise<\{ page\?: string \| string\[\] \}>/);
+  assert.match(source, /candidatePage\(page, submissions\.length\)/);
+  assert.match(source, /\.order\('submitted_at', \{ ascending: false \}\)\s*\.range\(paging\.from, paging\.to\)/);
+  assert.match(source, /\.in\('interview_id', detailIds\)/);
+  assert.match(source, /href=\{`\/employer\?page=\$\{paging\.page \+ 1\}#candidates`\}/);
+  assert.doesNotMatch(source, /<video/);
+  assert.doesNotMatch(source, /createSignedUrl/);
 });
 
 test('dashboard source keeps employer ownership and consent boundaries', async () => {

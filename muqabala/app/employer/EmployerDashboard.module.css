@@ -702,6 +702,32 @@
   font-size: 0.7rem;
 }
 
+.rolesPanel .candidateList {
+  padding: 0 1.5rem 1.2rem;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1.5rem;
+  border-top: 1px solid #e8e5df;
+  color: #8c948f;
+  font-size: 0.72rem;
+}
+
+.pagination a {
+  color: #087662;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.pagination span[aria-disabled="true"] {
+  color: #c2c7c3;
+  font-weight: 800;
+}
+
 .srOnly {
   position: absolute;
   overflow: hidden;

@@ -15,7 +15,7 @@ import {
 } from '@phosphor-icons/react/dist/ssr';
 import { EmployerLinkActions } from '@/components/EmployerLinkActions';
 import { SignOutButton } from '@/components/SignOutButton';
-import { dashboardSummary, packHealth, type DashboardAnswer } from '@/lib/employer-dashboard';
+import { candidatePage, dashboardSummary, packHealth, type DashboardAnswer } from '@/lib/employer-dashboard';
 import { verifyInterview } from '@/lib/interview-token';
 import { configuredOrigin } from '@/lib/server/security';
 import { processScreeningNotifications } from '@/lib/server/screening-notifications';
@@ -38,15 +38,23 @@ type Pack = {
   starts_used: number;
 };
 
-type Submission = {
+// Every submission, light columns only: drives the counts and the queue order.
+type SubmissionIndex = {
   id: string;
   screening_pack_id: string;
-  candidate_name: string | null;
-  role_title: string;
   submitted_at: string;
   employer_reviewed_at: string | null;
   employer_decision: 'shortlisted' | 'not_proceeding' | null;
 };
+
+// One page of submissions with the columns a candidate row needs.
+type Submission = SubmissionIndex & {
+  candidate_name: string | null;
+  role_title: string;
+};
+
+const SUBMISSION_INDEX_COLUMNS = 'id,screening_pack_id,submitted_at,employer_reviewed_at,employer_decision';
+const SUBMISSION_ROW_COLUMNS = `${SUBMISSION_INDEX_COLUMNS},candidate_name,role_title`;
 
 type Answer = DashboardAnswer & { interview_id: string };
 
@@ -110,7 +118,13 @@ function currentDate() {
   });
 }
 
-export default async function EmployerDashboardPage() {
+function decisionCopy(submission: SubmissionIndex) {
+  if (submission.employer_decision === 'shortlisted') return 'Shortlisted';
+  if (submission.employer_decision === 'not_proceeding') return 'Not proceeding';
+  return submission.employer_reviewed_at ? 'Reviewed' : 'Waiting for review';
+}
+
+export default async function EmployerDashboardPage({ searchParams }: { searchParams: Promise<{ page?: string | string[] }> }) {
   const user = await currentUser();
   if (!user) redirect('/sign-in?next=/employer');
   after(async () => { await processScreeningNotifications({ limit: 5 }); });
@@ -143,25 +157,45 @@ export default async function EmployerDashboardPage() {
 
   const { data: interviewRows } = packIds.length
     ? await client!.from('interviews')
-        .select('id,screening_pack_id,candidate_name,role_title,submitted_at,employer_reviewed_at,employer_decision')
+        .select(SUBMISSION_INDEX_COLUMNS)
         .in('screening_pack_id', packIds)
         .not('submitted_at', 'is', null)
         .order('submitted_at', { ascending: false })
     : { data: [] };
-  const submissions = (interviewRows ?? []) as Submission[];
-  const submissionIds = submissions.map((submission) => submission.id);
-  const { data: answerRows } = submissionIds.length
+  const submissions = (interviewRows ?? []) as SubmissionIndex[];
+  const { page } = await searchParams;
+  const paging = candidatePage(page, submissions.length);
+  const { data: pageRows } = packIds.length && submissions.length
+    ? await client!.from('interviews')
+        .select(SUBMISSION_ROW_COLUMNS)
+        .in('screening_pack_id', packIds)
+        .not('submitted_at', 'is', null)
+        .order('submitted_at', { ascending: false })
+        .range(paging.from, paging.to)
+    : { data: [] };
+  const pageSubmissions = (pageRows ?? []) as Submission[];
+
+  const readyToReview = submissions.filter((submission) => !submission.employer_reviewed_at);
+  const queueIds = readyToReview.slice(0, 3).map((submission) => submission.id);
+  const missingQueueIds = queueIds.filter((queueId) => !pageSubmissions.some((submission) => submission.id === queueId));
+  const { data: queueRows } = missingQueueIds.length
+    ? await client!.from('interviews').select(SUBMISSION_ROW_COLUMNS).in('id', missingQueueIds)
+    : { data: [] };
+  const detailRows = [...pageSubmissions, ...((queueRows ?? []) as Submission[])];
+  const queue = queueIds.flatMap((queueId) => detailRows.filter((submission) => submission.id === queueId));
+
+  // Answers are only fetched for the rows on screen, never for every submission.
+  const detailIds = [...new Set(detailRows.map((submission) => submission.id))];
+  const { data: answerRows } = detailIds.length
     ? await client!.from('interview_answers')
         .select('interview_id,question_index,scoring_status,video_upload_status,video_duration_seconds')
-        .in('interview_id', submissionIds)
+        .in('interview_id', detailIds)
         .order('question_index')
     : { data: [] };
   const answers = (answerRows ?? []) as Answer[];
 
   const summary = dashboardSummary(packs, submissions);
   const origin = configuredOrigin();
-  const readyToReview = submissions.filter((submission) => !submission.employer_reviewed_at);
-  const queue = readyToReview.slice(0, 3);
   const startedLastDay = technicalAttempts.filter((attempt) => Date.parse(attempt.started_at) >= Date.now() - 86_400_000).length;
   const unfinished = Math.max(0, technicalAttempts.length - submissions.length);
   const interrupted = interruptedInterviewIds.size;
@@ -235,7 +269,7 @@ export default async function EmployerDashboardPage() {
           </section>
 
           <section className={styles.panel} aria-labelledby="ready-heading">
-            <div className={styles.panelHeading}><h2 id="ready-heading">Ready to review</h2><a href="#roles">View all {readyToReview.length}</a></div>
+            <div className={styles.panelHeading}><h2 id="ready-heading">Ready to review</h2><a href="#candidates">View all {readyToReview.length}</a></div>
             <div className={styles.candidateList}>
               {queue.map((submission) => {
                 const pack = packs.find((item) => item.id === submission.screening_pack_id);
@@ -269,7 +303,9 @@ export default async function EmployerDashboardPage() {
             {packs.slice(0, 4).map((pack) => {
               const status = packHealth(pack);
               const packSubmissions = submissions.filter((submission) => submission.screening_pack_id === pack.id);
-              const role = verifyInterview(pack.signed_token)?.title || packSubmissions[0]?.role_title || 'Role work sample';
+              const role = verifyInterview(pack.signed_token)?.title
+                || detailRows.find((submission) => submission.screening_pack_id === pack.id)?.role_title
+                || 'Role work sample';
               const shortlisted = packSubmissions.filter((submission) => submission.employer_decision === 'shortlisted').length;
               const unreviewed = packSubmissions.filter((submission) => !submission.employer_reviewed_at).length;
               const url = `${origin}/s/${pack.public_code}`;
@@ -293,6 +329,46 @@ export default async function EmployerDashboardPage() {
             {packs.length === 0 && <div className={styles.emptyRoles}><LinkSimple aria-hidden="true" /><span><strong>No roles yet</strong><small>Create your first interview link to begin.</small></span><Link href="/for-employers">Create interview link</Link></div>}
           </div>
           {packs.length > 4 && <p className={styles.moreRoles}>{packs.length - 4} more {packs.length - 4 === 1 ? 'role' : 'roles'} <a href="#roles">Show all</a></p>}
+        </section>
+
+        <section className={styles.rolesPanel} id="candidates" aria-labelledby="candidates-heading">
+          <div className={styles.rolesHeading}>
+            <h2 id="candidates-heading">All candidates</h2>
+            <div className={styles.roleFilters} aria-label="Candidate counts">
+              <span className={styles.filterActive}>Submitted · {submissions.length}</span>
+              <span>Waiting · {readyToReview.length}</span>
+              {paging.lastPage && paging.lastPage > 1 && <span>Page {paging.page} of {paging.lastPage}</span>}
+            </div>
+          </div>
+          <div className={styles.candidateList}>
+            {pageSubmissions.map((submission) => {
+              const pack = packs.find((item) => item.id === submission.screening_pack_id);
+              const candidateAnswers = answers.filter((answer) => answer.interview_id === submission.id && answer.video_upload_status === 'uploaded');
+              const duration = Math.max(1, Math.ceil(candidateAnswers.reduce((total, answer) => total + (answer.video_duration_seconds || 0), 0) / 60));
+              return (
+                <article className={styles.candidateRow} key={submission.id}>
+                  <span className={styles.avatar} aria-hidden="true">{initials(submission.candidate_name)}</span>
+                  <div>
+                    <h3>{submission.candidate_name || 'Candidate'} · {submission.role_title}</h3>
+                    <p>{pack?.workplace || 'Employer'} · submitted {relativeTime(submission.submitted_at)} · {candidateAnswers.length} answers, {duration} min · {decisionCopy(submission)}</p>
+                  </div>
+                  <form action={reviewInterview}><input type="hidden" name="interviewId" value={submission.id} /><button className={styles.watchButton} type="submit"><Play aria-hidden="true" weight="fill" /> {submission.employer_reviewed_at ? 'Open' : 'Watch'}</button></form>
+                  <div className={styles.decisionActions}>
+                    <form action={setEmployerDecision}><input type="hidden" name="interviewId" value={submission.id} /><input type="hidden" name="decision" value="shortlisted" /><button type="submit" aria-label={`Shortlist ${submission.candidate_name || 'candidate'}`}><Check aria-hidden="true" /></button></form>
+                    <form action={setEmployerDecision}><input type="hidden" name="interviewId" value={submission.id} /><input type="hidden" name="decision" value="not_proceeding" /><button type="submit" aria-label={`Mark ${submission.candidate_name || 'candidate'} as not proceeding`}><X aria-hidden="true" /></button></form>
+                  </div>
+                </article>
+              );
+            })}
+            {pageSubmissions.length === 0 && <div className={styles.calmState}><Check aria-hidden="true" weight="bold" /><span><strong>No submitted interviews yet</strong><small>Candidates appear here once they submit and consent.</small></span></div>}
+          </div>
+          {(paging.hasPrevious || paging.hasNext) && (
+            <nav className={styles.pagination} aria-label="Candidate pages">
+              {paging.hasPrevious ? <Link href={`/employer?page=${paging.page - 1}#candidates`}>Newer</Link> : <span aria-disabled="true">Newer</span>}
+              <span>Page {paging.page} of {paging.lastPage}</span>
+              {paging.hasNext ? <Link href={`/employer?page=${paging.page + 1}#candidates`}>Older</Link> : <span aria-disabled="true">Older</span>}
+            </nav>
+          )}
         </section>
       </main>
     </div>
