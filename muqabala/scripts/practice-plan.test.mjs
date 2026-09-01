@@ -63,7 +63,7 @@ test('plan is seven distinct role questions that skip the one already answered',
   assert.deepEqual(plan.report.improvements, ['Add a verifiable result.']);
   assert.ok(plan.sampleAnswer.length >= 4);
   assert.ok(plan.days.every((day) => day.tags.length <= 2));
-  assert.doesNotMatch(JSON.stringify(plan), /—/);
+  assert.doesNotMatch(JSON.stringify(plan), /\u2014/);
 });
 
 test('plan without readable feedback still ships and never invents a report', () => {
@@ -116,8 +116,8 @@ test('day one email carries report, sample answer, all seven links and the Whats
   assert.throws(() => practicePlanEmail(plan, 8, links));
   for (const day of [1, 2, 3, 4, 5, 6, 7]) {
     const rendered = practicePlanEmail(plan, day, links);
-    assert.doesNotMatch(rendered.html, /—/, `day ${day} html has no em dash`);
-    assert.doesNotMatch(rendered.text, /—/, `day ${day} text has no em dash`);
+    assert.doesNotMatch(rendered.html, /\u2014/, `day ${day} html has no em dash`);
+    assert.doesNotMatch(rendered.text, /\u2014/, `day ${day} text has no em dash`);
   }
 });
 
@@ -136,9 +136,9 @@ test('Arabic plan and emails are real RTL documents with Arabic copy throughout'
 });
 
 test('catalogue dashes are rewritten before they reach an email', () => {
-  assert.equal(plainDash('Gives concrete details — numbers, systems, outcomes.'), 'Gives concrete details: numbers, systems, outcomes.');
-  assert.equal(plainDash('Show the move — the pace, the diversity.'), 'Show the move: the pace, the diversity.');
-  assert.equal(plainDash('One — Two'), 'One, Two');
+  assert.equal(plainDash('Gives concrete details \u2014 numbers, systems, outcomes.'), 'Gives concrete details: numbers, systems, outcomes.');
+  assert.equal(plainDash('Show the move \u2014 the pace, the diversity.'), 'Show the move: the pace, the diversity.');
+  assert.equal(plainDash('One \u2014 Two'), 'One, Two');
 });
 
 test('encryption, keyed hashing and scoped tokens round-trip without exposing payloads', () => {

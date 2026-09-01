@@ -15,6 +15,9 @@
     "test:resilience": "node --experimental-strip-types --test --test-isolation=none scripts/*.test.mjs",
     "test:feedback-stream": "node --experimental-strip-types --test scripts/feedback-stream.test.mjs scripts/feedback-stream-response.test.mjs",
     "gate:feedback-quality": "EXPECT_AI=1 node scripts/measure-consistency.mjs",
+    "gate:arabic-parity": "node scripts/feedback-parity.mjs",
+    "test:copy-quality": "node --experimental-strip-types --test scripts/copy-quality.test.mjs scripts/arabic-parity.test.mjs",
+    "test:practice-plan": "node --experimental-strip-types --test scripts/practice-plan.test.mjs scripts/email-ask-policy.test.mjs scripts/question-tags.test.mjs",
     "load:test": "k6 run scripts/load/interview-journey.js",
     "studio": "sanity dev --port 3333",
     "guides:seed": "node --env-file=.env.local scripts/seed-first-guide.mjs"

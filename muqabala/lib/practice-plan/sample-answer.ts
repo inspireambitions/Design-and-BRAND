@@ -52,8 +52,8 @@ function lowerFirst(value: string): string {
  */
 export function plainDash(value: string): string {
   return value
-    .replace(/\s*[—–]\s*(?=[a-z\u0600-\u06FF])/g, ': ')
-    .replace(/\s*[—–]\s*/g, ', ')
+    .replace(/\s*[\u2014\u2013]\s*(?=[a-z\u0600-\u06FF])/g, ': ')
+    .replace(/\s*[\u2014\u2013]\s*/g, ', ')
     .replace(/\s+/g, ' ')
     .trim();
 }

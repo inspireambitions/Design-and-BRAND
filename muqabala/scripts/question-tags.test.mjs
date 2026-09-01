@@ -17,7 +17,7 @@ test('the tag list is controlled, unique and bilingual', () => {
     assert.ok(tag.label.trim().length > 0, `${tag.id} has an English label`);
     assert.ok(tag.labelAr.trim().length > 0, `${tag.id} has an Arabic label`);
     assert.match(tag.labelAr, /[\u0600-\u06FF]/, `${tag.id} Arabic label is Arabic`);
-    assert.doesNotMatch(`${tag.label}${tag.labelAr}`, /—/);
+    assert.doesNotMatch(`${tag.label}${tag.labelAr}`, /\u2014/);
   }
   for (const id of ['uae_hotel', 'saudi_agency', 'qatar_healthcare', 'oman_bahrain_kuwait_retail', 'gulf_general']) {
     assert.ok(isQuestionTagId(id), `${id} is in the list`);

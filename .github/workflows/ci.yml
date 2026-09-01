@@ -36,6 +36,14 @@ jobs:
       - name: Unit tests
         run: node --experimental-strip-types --test scripts/*.test.mjs
 
+      # Named separately so a copy regression is visible at a glance in the
+      # run summary: em dashes, "practice" as a verb, readability grade.
+      - name: Copy quality
+        run: node --experimental-strip-types --test scripts/copy-quality.test.mjs
+
+      - name: Arabic parity
+        run: node --experimental-strip-types --test scripts/arabic-parity.test.mjs
+
       # No secrets are provided here on purpose: the production build must
       # succeed without them, so a missing variable cannot break a deploy.
       - name: Build
