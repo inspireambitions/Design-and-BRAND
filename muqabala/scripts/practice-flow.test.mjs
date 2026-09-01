@@ -96,6 +96,10 @@ test('limitSentences keeps at most two sentences in English and Arabic', () => {
   assert.equal(limitSentences('Rated 4.5 out of 5. Then a second one. Third!', 2), 'Rated 4.5 out of 5. Then a second one.');
   assert.equal(limitSentences('ذكرت اسم النزيل. حددت الوقت؟ ثم قلت النتيجة.', 2), 'ذكرت اسم النزيل. حددت الوقت؟');
   assert.equal(limitSentences('No closing mark at all', 2), 'No closing mark at all');
+  assert.equal(
+    limitSentences('Say: "I fixed it in eight minutes." Then stop. And another.', 2),
+    'Say: "I fixed it in eight minutes." Then stop.',
+  );
   assert.equal(limitSentences('   ', 2), '');
   assert.equal(limitSentences('One. Two.', 0), '');
 });

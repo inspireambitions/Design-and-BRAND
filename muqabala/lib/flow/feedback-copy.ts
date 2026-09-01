@@ -4,8 +4,11 @@
  * three block card into an essay.
  */
 
-/** End of sentence marks in English and Arabic, when followed by space or end. */
-const SENTENCE_END = /[.!?؟۔]+(?=\s|$)/g;
+/**
+ * End of sentence marks in English and Arabic, with any closing quote or
+ * bracket that follows, when followed by a space or the end of the text.
+ */
+const SENTENCE_END = /[.!?؟۔]+["'”’»)\]]*(?=\s|$)/g;
 
 export function splitSentences(text: string): string[] {
   const trimmed = text.trim();

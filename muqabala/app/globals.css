@@ -4311,8 +4311,8 @@ body[dir='rtl'] .star-toggle.on .star-toggle-thumb {
 mark.diff-added {
   background: var(--gold-soft);
   color: inherit;
-  border-radius: 4px;
-  padding: 0.05em 0.2em;
+  border-radius: 3px;
+  padding: 0.05em 0.08em;
   box-shadow: inset 0 -2px 0 var(--gold);
 }
 
