@@ -111,10 +111,57 @@ Still on the table:
 - `react-dom` and the Next client runtime are 111 KB gzipped of the remaining 177 KB; that is the floor without changing frameworks.
 - Lighthouse Accessibility is held at 93 and 94 by two audits on both pages: a colour contrast warning and a missing `<main>` landmark. Neither is a performance item; both are quick fixes.
 - Section 2 acceptance (TTFB from a Gulf node before and after `dxb1`) can only be measured on production, with WebPageTest from Dubai or Riyadh, once this branch is deployed.
+### 2026-09-01, Section 4, build-time generation
+
+| Metric | Before | After | Source |
+| --- | --- | --- | --- |
+| `/practice/[roleId]` route type | ƒ dynamic, rendered on every request | ● SSG, 69 role pages prerendered | `next build` |
+| `/practice/custom` route type | ƒ dynamic | ○ static | `next build` |
+| `/guides` and `/guides/[slug]` revalidation | every 60 s, a Sanity fetch per minute per page | on demand from a signed Sanity webhook, 1 d safety net | `next build`, `app/api/revalidate/route.ts` |
+| Tailored interview, same advert pasted again | full model call every time (20 to 50 s) | Upstash hit, sign and return (tens of ms) | `lib/advert-cache.ts` |
+| `advert_to_first_question_ms` p75 | to capture | to capture, split by `outcome` | PostHog |
+
+Build output before:
+
+```text
+├ ○ /guides                                            1m      1y
+├   /guides/[slug]
+│ ├ ● /guides/phone-interview-practice                 1m      1y
+├ ƒ /practice/[roleId]
+├ ƒ /practice/custom
+```
+
+Build output after:
+
+```text
+├ ○ /guides                                            1d      1y
+├   /guides/[slug]
+│ ├ ● /guides/phone-interview-practice                 1d      1y
+├ ○ /practice
+├   /practice/[roleId]
+│ ├ ● /practice/front-office-agent
+│ ├ ● /practice/waiter
+│ ├ ● /practice/housekeeping-attendant
+│ └ ● [+66 more paths]
+├ ○ /practice/custom
+├ ○ /sitemap.xml
+├ ƒ /api/revalidate
+```
+
+What changed:
+
+- Role pages. `app/practice/[roleId]/page.tsx` awaited `searchParams` for `focus` and `lang`, which made every role page render on demand even though `generateStaticParams` was present. The page no longer reads the query string. `components/PracticeInterviewFromSearch.tsx` reads `focus` and `lang` with `useSearchParams()` inside a `Suspense` boundary and applies the same rules as before (`focus` at most 160 characters, `lang` only `en` or `ar`, a repeated parameter ignored). The Suspense fallback is the same interview without the two parameters, so the static HTML still contains the full page; the browser applies the parameters on hydration. `/practice/custom` had the same pattern and now uses `CustomRoleStartFromSearch`. `/practice` was already static.
+- Guides. `revalidate = 60` is replaced by `revalidate = 86400` as a safety net, with `dynamicParams = true` so a guide published after the build renders on first request and is then cached. `app/api/revalidate/route.ts` verifies the Sanity webhook signature with `@sanity/webhook` (now a direct dependency; `next-sanity/webhook` exports only `parseBody`) against `SANITY_REVALIDATE_SECRET`, then revalidates `/guides`, `/guides/<slug>` and `/sitemap.xml`. Without a slug in the payload it revalidates every guide page. The webhook settings are documented in `.env.example`. Manual step: create the webhook in Sanity and set the secret in Vercel.
+- Advert cache. `lib/advert-cache.ts` normalises the pasted advert (lower case, whitespace collapsed, punctuation and symbols removed, trimmed; letters in any script untouched) and hashes it with SHA-256 together with the generation model and `ADVERT_CACHE_VERSION` into `advert:v1:<hash>`. The job title is included in the normalised text because it is part of the prompt. The route looks the key up in Upstash after the per-candidate rate limit and before the daily budget, so a hit spends no budget. On a hit the stored title, industry, competencies and questions are re-signed with `signInterview()`, so the three hour token expiry is unchanged. On a miss the interview is generated, validated and signed as before, then stored for 30 days. Fallbacks (`tailored: false`), rejected interviews and signing failures are never stored. The value never contains the advert text, the candidate session, an IP address or an account. Without Upstash credentials the cache is skipped silently; a Redis error or a call over 1 s counts as a miss. Bump `ADVERT_CACHE_VERSION` whenever the prompt, output schema or validation rules change.
+- Model answers. The brief asks for model answers to be pre-generated at build time and never live. The app has no model answers today and nothing generates them live, so there is nothing to move. No generation pipeline was built.
+- Arabic. Role content in `lib/roles/*.ts` ships `titleAr`, `industryAr`, `blurbAr`, `textAr`, `hintAr`, `labelAr` and `anchorAr` alongside every English field, all in the bundle at build time. Nothing to change.
+
+Verified here: `tsc --noEmit`, 134 tests passing (`scripts/advert-cache.test.mjs` added to `test:resilience`), `next build` output above, 70 prerendered HTML files under `.next/server/app/practice`. Not verified here: a cache hit against live Upstash and a live Sanity webhook, because this environment has neither.
 
 ## Sections not started
 
 - Section 3, on-device transcription: Web Speech with typing fallback exists; audio-only server fallback does not.
 - Section 4, build-time generation: `/practice/[roleId]` currently renders on demand; no model answers; no advert-hash cache.
+- Section 5, page weight: no bundle budget in CI; `components/InterviewFlow.tsx` is the largest client module.
 - Section 6, employer side: the report page runs per-request queries and signs video URLs on load.
 - Section 7, database: `pg_stat_statements` and pooling need Supabase access.
