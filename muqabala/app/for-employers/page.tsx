@@ -4,7 +4,7 @@ import { currentUser } from '@/lib/supabase/server';
 
 export const metadata: Metadata = {
   title: 'Work samples for hiring teams',
-  description: 'Turn a job description into a focused 12-minute work sample. You review every answer. Nothing is automatically rejected.',
+    description: 'Turn a job description into a focused 12-minute work sample. Send one WhatsApp. You review every answer. Nothing is automatically rejected.',
   robots: { index: true, follow: true },
   alternates: { canonical: '/for-employers' },
   openGraph: {
