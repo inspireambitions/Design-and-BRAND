@@ -125,8 +125,14 @@ body[dir='rtl'] {
 
 /* Hiring teams need a document-like workspace that stays legible in bright
    offices and inside mobile messaging browsers. Keep the employer journey
-   light without changing the candidate Coach theme. */
-.employer-light-theme {
+   light without changing the candidate Coach theme.
+
+   The marketing pages share this block. They were designed light-only, and
+   redeclaring only part of the palette let the dark root tokens leak into
+   surfaces, lines and soft fills while the text tokens stayed dark. Every
+   token is pinned here so a phone in dark mode sees the same page as desktop. */
+.employer-light-theme,
+.marketing-site {
   color-scheme: light;
   --ground: #F2F5F2;
   --surface: #FFFFFF;
