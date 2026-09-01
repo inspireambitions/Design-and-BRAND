@@ -1,6 +1,6 @@
 'use client';
 
-import posthog from 'posthog-js';
+import type { PostHog } from 'posthog-js';
 
 /**
  * Anonymous usage analytics (PostHog EU), active only when
@@ -13,7 +13,14 @@ import posthog from 'posthog-js';
  * the explicit `track` calls below, so nothing can leak by accident.
  */
 
-let ready = false;
+/**
+ * The PostHog client is loaded on demand, not bundled with the page. It is
+ * around 80 KB gzipped, which is more than the rest of the practice page, and
+ * nothing on screen depends on it. `posthog` stays null until `initAnalytics`
+ * has loaded and initialised it.
+ */
+let posthog: PostHog | null = null;
+let loading: Promise<void> | null = null;
 
 /**
  * Timings and Web Vitals often fire before PostHog has loaded. They are held
@@ -24,18 +31,27 @@ const MAX_PENDING = 32;
 
 export function initAnalytics(): void {
   const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
-  if (!key || ready || typeof window === 'undefined') return;
-  posthog.init(key, {
-    api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://eu.i.posthog.com',
-    autocapture: false,
-    capture_pageview: false,
-    capture_pageleave: false,
-    disable_session_recording: true,
-    persistence: 'localStorage',
-    person_profiles: 'identified_only',
-  });
-  ready = true;
-  for (const item of pending.splice(0)) posthog.capture(item.event, item.props);
+  if (!key || posthog || loading || typeof window === 'undefined') return;
+  loading = import('posthog-js')
+    .then(({ default: client }) => {
+      client.init(key, {
+        api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://eu.i.posthog.com',
+        autocapture: false,
+        capture_pageview: false,
+        capture_pageleave: false,
+        disable_session_recording: true,
+        persistence: 'localStorage',
+        person_profiles: 'identified_only',
+      });
+      posthog = client;
+      for (const item of pending.splice(0)) client.capture(item.event, item.props);
+    })
+    .catch(() => {
+      // Blocked by an ad blocker or offline: analytics are optional, so the
+      // queued events are simply dropped and the page carries on.
+      loading = null;
+      pending.length = 0;
+    });
 }
 
 type EventName =
@@ -78,7 +94,7 @@ type EventProps = Partial<{
 }>;
 
 export function track(event: EventName, props: EventProps = {}): void {
-  if (!ready) {
+  if (!posthog) {
     if (pending.length < MAX_PENDING) pending.push({ event, props });
     return;
   }

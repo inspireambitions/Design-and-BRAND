@@ -9,8 +9,17 @@ const nextConfig: NextConfig = {
       { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
       { key: 'Permissions-Policy', value: 'camera=(self), microphone=(self), geolocation=()' },
     ];
+    // The HTML links to these with a content hash in the query string
+    // (for example /icon.svg?icon.abc123.svg), so a long immutable lifetime is
+    // safe: a new image gets a new URL. There is no public/ folder.
+    const immutable = { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' };
     return [
       { source: '/:path*', headers: baseline },
+      { source: '/icon.svg', headers: [immutable] },
+      { source: '/opengraph-image', headers: [immutable] },
+      { source: '/twitter-image', headers: [immutable] },
+      { source: '/for-employers/opengraph-image', headers: [immutable] },
+      { source: '/for-employers/twitter-image', headers: [immutable] },
       {
         source: '/share/:path*',
         headers: [
