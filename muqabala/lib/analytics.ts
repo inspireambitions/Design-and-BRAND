@@ -58,6 +58,7 @@ type EventName =
   | 'interview_started'
   | 'interview_completed'
   | 'rating_submitted'
+  | 'email_submitted'
   | 'web_vital'
   | TimingEventName;
 
@@ -91,6 +92,8 @@ type EventProps = Partial<{
   path: string;
   streamed: boolean;
   outcome: string;
+  /** Where an email ask was shown, e.g. 'advert_pack'. Never the address itself. */
+  source: string;
 }>;
 
 export function track(event: EventName, props: EventProps = {}): void {
