@@ -580,6 +580,19 @@ export const STRINGS = {
     privacy: 'Your video is never uploaded. Temporary progress expires after seven days.',
     minutesShort: 'min',
     secondsShort: 's',
+
+    // keep this feedback (email capture after the first full feedback)
+    keepTitle: 'Keep this feedback',
+    keepBody: 'We will send this report, a strong sample answer for this question and one question a day for seven days.',
+    keepEmailLabel: 'Email address',
+    keepSend: 'Send it to me',
+    keepSending: 'Sending…',
+    keepSkip: 'Continue without saving',
+    keepSent: 'Sent. Check your inbox.',
+    keepInvalid: 'Enter a valid email address.',
+    keepUnavailable: 'We could not send this right now. Your feedback stays on this screen.',
+    keepLimited: 'Too many requests from this device. Your feedback stays on this screen.',
+    keepPrivacy: 'One email a day for seven days, then it stops. No marketing list.',
   },
   ar: {
     tagline: 'تدرّب حتى تشعر أنك مستعد.',
@@ -1154,6 +1167,18 @@ export const STRINGS = {
     privacy: 'الفيديو لا يُرفع أبداً. ينتهي التقدم المؤقت بعد سبعة أيام.',
     minutesShort: 'د',
     secondsShort: 'ث',
+
+    keepTitle: 'احتفظ بهذه الملاحظات',
+    keepBody: 'سنرسل لك هذا التقرير ونموذج إجابة قوية لهذا السؤال وسؤالاً واحداً كل يوم لمدة سبعة أيام.',
+    keepEmailLabel: 'البريد الإلكتروني',
+    keepSend: 'أرسلها لي',
+    keepSending: 'جارٍ الإرسال…',
+    keepSkip: 'المتابعة من دون حفظ',
+    keepSent: 'أُرسلت. تفقّد بريدك.',
+    keepInvalid: 'أدخل عنوان بريد إلكتروني صحيحاً.',
+    keepUnavailable: 'تعذّر الإرسال الآن. تبقى ملاحظاتك على هذه الشاشة.',
+    keepLimited: 'طلبات كثيرة من هذا الجهاز. تبقى ملاحظاتك على هذه الشاشة.',
+    keepPrivacy: 'رسالة واحدة يومياً لمدة سبعة أيام ثم تتوقف. لا قائمة تسويقية.',
   },
 } as const;
 
