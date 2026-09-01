@@ -206,7 +206,7 @@
 
 .studio {
   display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(18rem, 0.95fr);
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
   align-items: start;
   gap: clamp(1.25rem, 3vw, 2.4rem);
   margin-top: clamp(2rem, 5vw, 3.2rem);
@@ -769,9 +769,16 @@
   color: var(--employer-jade-deep);
 }
 
-@media (max-width: 64rem) {
+@media (max-width: 72rem) {
   .studio {
     grid-template-columns: 1fr;
+    gap: 1.75rem;
+  }
+
+  .folio,
+  .studioPrimary {
+    position: relative;
+    z-index: 0;
   }
 
   .folio {

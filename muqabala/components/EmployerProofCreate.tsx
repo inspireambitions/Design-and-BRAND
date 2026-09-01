@@ -236,8 +236,8 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
           <div className={styles.studioPrimary}>
             {!signedIn ? (
               <div className={styles.signInPanel}>
-                <h2>Sign in to create private interview links</h2>
-                <p>Only your signed-in employer account can open the submitted videos and reports.</p>
+                <h2>{t('proofSignInTitle')}</h2>
+                <p>{t('proofSignInBody')}</p>
                 <EmailSignIn compact next="/for-employers" />
               </div>
             ) : (
