@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/screening-cleanup",
       "schedule": "23 2 * * *"
+    },
+    {
+      "path": "/api/cron/screening-notifications",
+      "schedule": "*/10 * * * *"
     }
   ]
 }

@@ -326,6 +326,11 @@
   background: #a9ddd1;
 }
 
+.verifyForm {
+  display: grid;
+  gap: 0.9rem;
+}
+
 .saveStages {
   display: grid;
   gap: 0.65rem;

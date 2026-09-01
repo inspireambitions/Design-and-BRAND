@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { EmployerVideoInterview } from '@/components/EmployerVideoInterview';
+import { ScreeningEmailVerification } from '@/components/ScreeningEmailVerification';
 import { getScreeningPack } from '@/lib/screening-pack';
 import { screeningPreviewCopy } from '@/lib/screening-preview';
+import { currentUser } from '@/lib/supabase/server';
 
 type PageProps = { params: Promise<{ code: string }> };
 
@@ -43,6 +45,20 @@ export default async function ProofSittingPage({
   const { code } = await params;
   const pack = await getScreeningPack(code);
   if (pack.status !== 'active' && pack.status !== 'full') notFound();
+  const candidate = await currentUser();
+
+  if (!candidate?.email || !candidate.email_confirmed_at) {
+    return (
+      <div className="employer-proof-page employer-light-theme">
+        <ScreeningEmailVerification
+          publicCode={code}
+          companyName={pack.workplace}
+          roleTitle={pack.role.title}
+          roleTitleAr={pack.role.titleAr}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="employer-proof-page employer-light-theme">
@@ -53,6 +69,7 @@ export default async function ProofSittingPage({
         recruiterName={pack.recruiterName}
         publicCode={code}
         availability={pack.status}
+        candidateEmail={candidate.email}
       />
     </div>
   );

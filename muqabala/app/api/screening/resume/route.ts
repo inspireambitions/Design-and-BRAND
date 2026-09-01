@@ -8,8 +8,10 @@ import {
   screeningAttemptCookie,
   screeningPackAttemptCookie,
   screeningReceiptReference,
+  newOpaqueToken,
   tokenHash,
 } from '@/lib/server/security';
+import { currentUser } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -23,6 +25,10 @@ export async function POST(request: Request) {
 
   const admin = createAdminClient();
   if (!admin) return Response.json({ configured: false }, { status: 503 });
+  const candidate = await currentUser();
+  if (!candidate?.email || !candidate.email_confirmed_at) {
+    return Response.json({ error: 'Verify your email to continue this interview.' }, { status: 401 });
+  }
   const { data: pack } = await admin.from('screening_packs')
     .select('id,expires_at')
     .eq('public_code', parsed.data.publicCode)
@@ -33,29 +39,25 @@ export async function POST(request: Request) {
   }
 
   const cookieStore = await cookies();
-  const candidates = [
-    request.headers.get('idempotency-key'),
-    cookieStore.get(screeningPackAttemptCookie(pack.id))?.value,
-    ...cookieStore.getAll()
-      .filter((cookie) => cookie.name.startsWith('muqabala_screening_'))
-      .map((cookie) => cookie.value),
-  ].filter(isOpaqueToken);
-  const uniqueTokens = [...new Set(candidates)];
-  if (uniqueTokens.length === 0) return Response.json({ resume: null }, { headers: privateNoStoreHeaders() });
-
-  const tokenByHash = new Map(uniqueTokens.map((token) => [tokenHash(token), token]));
   const { data: interview, error } = await admin.from('interviews')
-    .select('id,candidate_name,current_question,status,submitted_at,expires_at,anonymous_token_hash')
+    .select('id,candidate_name,current_question,status,submitted_at,expires_at,anonymous_token_hash,candidate_user_id')
     .eq('screening_pack_id', pack.id)
-    .in('anonymous_token_hash', [...tokenByHash.keys()])
+    .eq('candidate_user_id', candidate.id)
     .gt('expires_at', new Date().toISOString())
     .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle();
   if (error || !interview) return Response.json({ resume: null }, { headers: privateNoStoreHeaders() });
 
-  const rawToken = tokenByHash.get(interview.anonymous_token_hash);
-  if (!rawToken) return Response.json({ resume: null }, { headers: privateNoStoreHeaders() });
+  const existingToken = cookieStore.get(screeningPackAttemptCookie(pack.id))?.value;
+  const rawToken = isOpaqueToken(existingToken) ? existingToken : newOpaqueToken();
+  if (tokenHash(rawToken) !== interview.anonymous_token_hash) {
+    const { error: tokenError } = await admin.from('interviews')
+      .update({ anonymous_token_hash: tokenHash(rawToken) })
+      .eq('id', interview.id)
+      .eq('candidate_user_id', candidate.id);
+    if (tokenError) return Response.json({ error: 'Your interview could not be resumed.' }, { status: 503 });
+  }
   const cookieOptions = {
     httpOnly: true,
     sameSite: 'lax',
