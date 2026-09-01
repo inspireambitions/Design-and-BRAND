@@ -142,6 +142,7 @@ test('employer link settings are compact and enforced atomically in the database
 test('completed recordings survive interruption and only advance after server readback', () => {
   const flow = read('components/EmployerVideoInterview.tsx');
   const draftStore = read('lib/screening-draft-store.ts');
+  const uploader = read('lib/screening-video-upload.ts');
   const statusRoute = read('app/api/screening/interviews/[id]/status/route.ts');
   const uploadRoute = read('app/api/screening/interviews/[id]/upload-url/route.ts');
 
@@ -151,6 +152,8 @@ test('completed recordings survive interruption and only advance after server re
   assert.match(flow, /await saveScreeningRecordingDraft/);
   assert.match(flow, /await readStatus\(interviewId\)/);
   assert.match(flow, /await deleteScreeningRecordingDraft/);
+  assert.match(flow, /error !== c\.recoveredRecording/);
+  assert.match(uploader, /muqabala-screening:\$\{grant\.path\}/);
   assert.match(flow, /Recorded on this device/);
   assert.match(flow, /Received by Muqabala/);
   assert.match(statusRoute, /question_index,video_upload_status,response_saved_at/);
@@ -192,4 +195,3 @@ test('JobStrike is absent from the complete employer flow', () => {
   ];
   assert.doesNotMatch(files.map(read).join('\n'), /jobstrike/i);
 });
-

@@ -211,6 +211,11 @@ export function EmployerVideoInterview({
   const transcriptRef = useRef('');
   const finishingRef = useRef(false);
   const startKeyRef = useRef<string | null>(null);
+  const copyRef = useRef(c);
+
+  useEffect(() => {
+    copyRef.current = c;
+  }, [c]);
 
   const questions = role.questions;
   const question = questions[index];
@@ -220,9 +225,9 @@ export function EmployerVideoInterview({
   const readStatus = useCallback(async (id: string): Promise<ScreeningStatus> => {
     const response = await fetch(`/api/screening/interviews/${id}/status`, { cache: 'no-store' });
     const body = await response.json().catch(() => ({})) as ScreeningStatus & { error?: string };
-    if (!response.ok) throw new Error(body.error || c.genericError);
+    if (!response.ok) throw new Error(body.error || 'Interview status could not be checked.');
     return body;
-  }, [c.genericError]);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -278,18 +283,18 @@ export function EmployerVideoInterview({
             transcript: recovered.transcript,
             questionIndex: recovered.questionIndex,
           });
-          setError(c.recoveredRecording);
+          setError(copyRef.current.recoveredRecording);
           setStage('saving');
           return;
         }
-        setError(c.resumeFound);
+        setError(copyRef.current.resumeFound);
         setStage(status.currentQuestion >= questions.length ? 'consent' : 'intro');
       })
       .catch(() => {
         if (!cancelled) setStage(availability === 'full' ? 'unavailable' : 'intro');
       });
     return () => { cancelled = true; };
-  }, [availability, c.recoveredRecording, c.resumeFound, publicCode, questions.length, readStatus]);
+  }, [availability, publicCode, questions.length, readStatus]);
 
   const attachPreview = useCallback(async () => {
     if (!videoRef.current || !streamRef.current) return;
@@ -570,6 +575,11 @@ export function EmployerVideoInterview({
     return () => window.removeEventListener('online', resume);
   }, [error, pending, savePending]);
 
+  useEffect(() => {
+    if (!pending || error !== c.recoveredRecording || !navigator.onLine) return;
+    void savePending(pending);
+  }, [c.recoveredRecording, error, pending, savePending]);
+
   const finishRecording = useCallback(async () => {
     if (finishingRef.current || stage !== 'recording') return;
     finishingRef.current = true;
@@ -847,4 +857,3 @@ export function EmployerVideoInterview({
     </main>
   );
 }
-
