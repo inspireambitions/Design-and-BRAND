@@ -8,6 +8,8 @@ export type DashboardPack = {
 export type DashboardSubmission = {
   screening_pack_id: string;
   submitted_at: string;
+  employer_reviewed_at?: string | null;
+  employer_decision?: 'shortlisted' | 'not_proceeding' | null;
 };
 
 export type DashboardAnswer = {
@@ -43,7 +45,14 @@ export function dashboardSummary(
   );
 
   return {
+    openedLinks: totalStarts,
+    startedInterviews: totalStarts,
     submittedThisWeek: submissions.filter((submission) => new Date(submission.submitted_at).getTime() >= weekAgo).length,
+    submittedTotal: submissions.length,
+    reviewedTotal: submissions.filter((submission) => Boolean(submission.employer_reviewed_at)).length,
+    waitingForReview: submissions.filter((submission) => !submission.employer_reviewed_at).length,
+    shortlistedTotal: submissions.filter((submission) => submission.employer_decision === 'shortlisted').length,
+    notProceedingTotal: submissions.filter((submission) => submission.employer_decision === 'not_proceeding').length,
     activeLinks: activePacks.length,
     placesRemaining,
     submissionRate: totalStarts > 0 ? Math.round((submissions.length / totalStarts) * 100) : 0,

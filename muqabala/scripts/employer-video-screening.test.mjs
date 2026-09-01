@@ -192,7 +192,7 @@ test('employer sees aggregate interrupted uploads without pre-consent identity',
   const dashboard = read('app/employer/page.tsx');
   assert.match(dashboard, /Upload interrupted/);
   assert.match(dashboard, /Date\.parse\(answer\.updated_at\) <= staleBefore/);
-  assert.match(dashboard, /select\('id,screening_pack_id,submitted_at'\)/);
+  assert.match(dashboard, /select\('id,screening_pack_id,started_at,submitted_at'\)/);
   assert.doesNotMatch(dashboard, /technicalInterviewRows[\s\S]{0,400}candidate_name/);
 });
 
