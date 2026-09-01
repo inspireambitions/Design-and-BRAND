@@ -8,8 +8,8 @@ import { q, type Question } from './shared';
  * answers. These banks give every catalogue role a pool to rotate through, so
  * a second attempt is a fresh interview.
  *
- * The questions are deliberately cross-industry behavioural questions —
- * real first-round staples — written to the same standard as the role
+ * The questions are deliberately cross-industry behavioural questions: 
+ * real first-round staples: written to the same standard as the role
  * questions: short, spoken, one thing at a time, both languages, with hints
  * that coach rather than answer. Each family's questions score only against
  * competency ids that family defines.
@@ -28,8 +28,8 @@ export const serviceBank: Question[] = [
     'Tell me about a colleague you found difficult to work with. How did you handle it?',
     'حدثني عن زميل وجدت صعوبة في العمل معه. كيف تعاملت مع الأمر؟',
     ['communication', 'ownership'],
-    'Stay respectful — the interviewer is watching how you talk about people as much as what you did.',
-    'حافظ على الاحترام — المُحاور يراقب طريقة حديثك عن الآخرين بقدر ما يراقب ما فعلته.',
+    'Stay respectful: the interviewer is watching how you talk about people as much as what you did.',
+    'حافظ على الاحترام: المُحاور يراقب طريقة حديثك عن الآخرين بقدر ما يراقب ما فعلته.',
   ),
   q(
     'svc_mistake_bank',
@@ -99,8 +99,8 @@ export const technicalBank: Question[] = [
   ),
   q(
     'tec_improved_something',
-    'Tell me about something you improved at work — a fix, a habit, a way of setting up.',
-    'حدثني عن شيء حسّنته في عملك — إصلاح أو عادة أو طريقة تجهيز.',
+    'Tell me about something you improved at work: a fix, a habit, a way of setting up.',
+    'حدثني عن شيء حسّنته في عملك: إصلاح أو عادة أو طريقة تجهيز.',
     ['ownership', 'evidence', 'problem_solving'],
   ),
 ];

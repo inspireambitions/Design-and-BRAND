@@ -8,7 +8,7 @@
  * candidate has been shown the employer-specific disclosure.
  */
 
-/** Picks a container the browser can actually record — Safari differs from Chrome. */
+/** Picks a container the browser can actually record: Safari differs from Chrome. */
 function pickMimeType(): string | undefined {
   if (typeof MediaRecorder === 'undefined') return undefined;
   const candidates = [
@@ -184,7 +184,7 @@ export type LevelMeter = {
 
 /**
  * Reports microphone loudness as 0-1, so the candidate can see that they are
- * actually being heard. Purely a reassurance signal — it is never recorded,
+ * actually being heard. Purely a reassurance signal: it is never recorded,
  * never scored, and never leaves the component.
  */
 export function startLevelMeter(
@@ -211,7 +211,7 @@ export function startLevelMeter(
 
   // iOS creates the context suspended when construction happens outside a user
   // gesture (our prep countdown auto-advances into recording). A suspended
-  // context reports silence forever — which the UI would phrase as "we cannot
+  // context reports silence forever: which the UI would phrase as "we cannot
   // hear you" to someone speaking normally. Resume it, and if it never starts,
   // say so via the callback so the meter is hidden instead of accusing.
   if (context.state === 'suspended') {

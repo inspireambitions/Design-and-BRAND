@@ -7,7 +7,7 @@ import { useLang } from './LanguageProvider';
  *
  * Renders nothing unless NEXT_PUBLIC_COACHING_WHATSAPP is configured, so
  * deployments without a coach are completely unchanged. The button opens the
- * candidate's own WhatsApp addressed to the coach — nothing is sent
+ * candidate's own WhatsApp addressed to the coach: nothing is sent
  * automatically and nothing about the interview leaves the device here.
  */
 const COACHING_NUMBER = (process.env.NEXT_PUBLIC_COACHING_WHATSAPP ?? '').replace(/[^\d]/g, '');

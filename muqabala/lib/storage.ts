@@ -37,7 +37,7 @@ export function saveAttempt(attempt: Attempt): boolean {
     window.localStorage.setItem(ATTEMPTS_KEY, JSON.stringify(next));
     return true;
   } catch {
-    // Storage full or blocked (private mode) — practice still works, history just is not kept.
+    // Storage full or blocked (private mode): practice still works, history just is not kept.
     return false;
   }
 }
@@ -50,7 +50,7 @@ export function rateAttempt(id: string, rating: AttemptRating): void {
     const next = all.map((a) => (a.id === id ? { ...a, rating } : a));
     window.localStorage.setItem(ATTEMPTS_KEY, JSON.stringify(next));
   } catch {
-    /* storage blocked — the rating is still shown in the session */
+    /* storage blocked: the rating is still shown in the session */
   }
 }
 

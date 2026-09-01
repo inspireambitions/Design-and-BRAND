@@ -1,10 +1,7 @@
 /**
  * Copy quality gates (brief sections 2.5 and 7).
  *
- *  1. No em dashes in candidate-facing source. Files that carried em dashes
- *     before this gate existed are listed in copy-quality.baseline.json with
- *     their count; the count may only fall. Any other file must have none.
- *     Delete a file's entry once it is clean so it can never regress.
+ *  1. No em dashes anywhere in candidate-facing source, in any file.
  *  2. "Practice" is never used as a verb in English copy.
  *  3. English strings in lib/i18n.ts for the candidate-facing prefixes read at
  *     an average Flesch-Kincaid grade of 6 or below; any single string above
@@ -27,26 +24,13 @@ const copyFiles = [...new Set(COPY_GLOBS.flatMap((pattern) => globSync(pattern, 
   .filter((file) => !file.includes('node_modules'))
   .sort();
 
-const baseline = JSON.parse(read('scripts/copy-quality.baseline.json'));
-
-test('em dashes: none in new or owned copy, and the legacy count never rises', () => {
+test('em dashes: none anywhere in candidate-facing source', () => {
   const problems = [];
-  const stale = [];
-  const remaining = {};
   for (const file of copyFiles) {
     const count = (read(file).match(/\u2014/g) ?? []).length;
-    const allowed = baseline.emDashes[file] ?? 0;
-    if (count > allowed) problems.push(`${file}: ${count} em dash${count === 1 ? '' : 'es'} (allowed ${allowed})`);
-    if (count < allowed) stale.push(`${file}: baseline says ${allowed}, found ${count}; lower the baseline`);
-    if (count > 0) remaining[file] = count;
+    if (count > 0) problems.push(`${file}: ${count} em dash${count === 1 ? '' : 'es'}`);
   }
-  for (const file of Object.keys(baseline.emDashes)) {
-    if (!copyFiles.includes(file)) stale.push(`${file}: in baseline but no longer matched; remove it`);
-  }
-  assert.deepEqual(problems, [], 'em dashes found beyond the baseline');
-  assert.deepEqual(stale, [], 'baseline is out of date');
-  const debt = Object.values(remaining).reduce((sum, count) => sum + count, 0);
-  if (debt > 0) console.log(`# em dash debt: ${debt} across ${Object.keys(remaining).length} legacy files (see scripts/copy-quality.baseline.json)`);
+  assert.deepEqual(problems, [], 'em dashes found');
 });
 
 const PRACTICE_VERB_CAPITAL = /\bPractice (for|with|until|this|your|now|again|the)\b/g;

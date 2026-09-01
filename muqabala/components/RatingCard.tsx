@@ -98,7 +98,7 @@ export function RatingCard({ attempt }: { attempt: Attempt }) {
         await navigator.share(shareData);
         return;
       } catch {
-        /* dismissed — fall through to the WhatsApp link */
+        /* dismissed: fall through to the WhatsApp link */
       }
     }
     if (typeof window !== 'undefined') {
@@ -114,7 +114,7 @@ export function RatingCard({ attempt }: { attempt: Attempt }) {
       await navigator.clipboard.writeText(summary);
       setCopied(true);
     } catch {
-      /* clipboard blocked — the share button still works */
+      /* clipboard blocked: the share button still works */
     }
   };
 

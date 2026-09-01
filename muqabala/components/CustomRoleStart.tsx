@@ -63,7 +63,7 @@ export function CustomRoleStart({ focusQuestionId, initialLanguage }: { focusQue
       const data = (await response.json()) as { role: Role; tailored: boolean; token?: string };
       setTailored(Boolean(data.tailored));
       setToken(data.token);
-      // They pasted an advert but we could not build from it — say so.
+      // They pasted an advert but we could not build from it: say so.
       setFellBack(usable && !data.tailored);
       // The role name read from the advert becomes the interview's title, so
       // the saved draft and history are filed under it rather than a generic

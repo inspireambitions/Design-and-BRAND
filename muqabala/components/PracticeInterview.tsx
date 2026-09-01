@@ -14,7 +14,7 @@ import { InterviewFlow } from './InterviewFlow';
  *
  * The draw happens once, before render, and never changes mid-interview. If
  * storage is blocked (private mode, in-app browsers) the count is simply 0 and
- * the candidate gets the curated first set — never an error.
+ * the candidate gets the curated first set: never an error.
  */
 export function PracticeInterview({ role, focusQuestionId, initialLanguage }: { role: Role; focusQuestionId?: string; initialLanguage?: 'en' | 'ar' }) {
   const focusedQuestion = focusedQuestionFromRole(role, focusQuestionId);
@@ -42,6 +42,6 @@ export function PracticeInterview({ role, focusQuestionId, initialLanguage }: { 
   // full (first paint, previews, and the deployed-copy tests all depend on
   // that), then swap in the drawn variant as soon as the attempt count is
   // read. The swap happens at the check stage, where no question text is on
-  // screen, and the opener is identical in every variant — so it is invisible.
+  // screen, and the opener is identical in every variant: so it is invisible.
   return <InterviewFlow role={drawn} mockQuestions={mockQuestions ?? undefined} initialLanguage={initialLanguage} focusQuestionId={focusQuestionId} focusedQuestion={focusedQuestion} />;
 }

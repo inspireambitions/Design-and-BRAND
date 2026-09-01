@@ -31,7 +31,7 @@ export const POPULAR_ROLE_IDS = [
  * repeat practice draws fresh questions instead of the same five. Matched by
  * reference: every catalogue role imports one of the three shared competency
  * arrays. Roles with bespoke competencies (none today) get no bank, which the
- * draw logic treats as "no rotation" — never an error.
+ * draw logic treats as "no rotation": never an error.
  */
 function withBank(role: Role): Role {
   if (role.competencies === serviceCompetencies) return { ...role, bank: serviceBank };

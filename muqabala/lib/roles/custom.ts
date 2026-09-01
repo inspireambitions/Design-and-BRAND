@@ -17,8 +17,8 @@ export function buildCustomRole(title?: string): Role {
     industry: 'Any industry',
     industryAr: 'أي قطاع',
     level: 'Mid',
-    blurb: 'A general interview that works for any job — type your own job title.',
-    blurbAr: 'مقابلة عامة تصلح لأي وظيفة — اكتب المسمى الوظيفي الخاص بك.',
+    blurb: 'A general interview that works for any job: type your own job title.',
+    blurbAr: 'مقابلة عامة تصلح لأي وظيفة: اكتب المسمى الوظيفي الخاص بك.',
     competencies: serviceCompetencies,
     questions: [
       opener,

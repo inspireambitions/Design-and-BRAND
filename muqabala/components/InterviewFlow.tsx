@@ -240,7 +240,7 @@ export function InterviewFlow({
   const [attemptCount, setAttemptCount] = useState(1);
 
   /**
-   * 'idle' means we have not asked yet — which must never be reported to the
+   * 'idle' means we have not asked yet: which must never be reported to the
    * candidate as "blocked". Only a real refusal is 'denied'.
    */
   const [cameraState, setCameraState] = useState<'idle' | 'granted' | 'denied'>('idle');
@@ -766,7 +766,7 @@ export function InterviewFlow({
       return true;
     } catch {
       // Refused, dismissed, or no camera on the device. Practice continues by
-      // typing — the camera is a rehearsal aid, never a requirement.
+      // typing: the camera is a rehearsal aid, never a requirement.
       setCameraState('denied');
       return false;
     } finally {
@@ -1067,7 +1067,7 @@ export function InterviewFlow({
   // The OS kills camera and microphone on a phone call or an app switch, and
   // nothing tells the page. Watch the tracks themselves, and when the page
   // comes back to the foreground check whether capture died while it was away
-  // — checking on return avoids false alarms on desktop tab switches.
+  //: checking on return avoids false alarms on desktop tab switches.
   useEffect(() => {
     if (stage !== 'record' || !recordingLive) return;
     const stream = streamRef.current;
@@ -2041,8 +2041,8 @@ export function InterviewFlow({
                 )}
                 <span className="sr-only" aria-live="polite">{timerAnnouncement}</span>
 
-                {/* Proof the microphone is live. Reassurance only — never
-                    recorded or scored — and shown only when a working meter
+                {/* Proof the microphone is live. Reassurance only: never
+                    recorded or scored: and shown only when a working meter
                     exists: a silent meter must hide, not accuse. */}
                 {recordingLive && !streamLost && !meterUnavailable && (
                   <div className="mic-row">
@@ -2410,7 +2410,7 @@ export function InterviewFlow({
           )}
 
           {(() => {
-            // Strongest answer / focus area / next action — computed only from
+            // Strongest answer / focus area / next action: computed only from
             // answers the AI actually scored, and only when there are at least
             // two so "strongest" and "focus" are different questions.
             const scored = answers
@@ -2426,13 +2426,13 @@ export function InterviewFlow({
                 <div className="summary-item">
                   <span className="rate-label">{t('strongest')}</span>
                   <p style={{ marginTop: '0.25rem' }}>
-                    {t('question')} {best.index + 1} · {best.feedback.score}/100 — {best.questionText}
+                    {t('question')} {best.index + 1} · {best.feedback.score}/100: {best.questionText}
                   </p>
                 </div>
                 <div className="summary-item">
                   <span className="rate-label">{t('weakest')}</span>
                   <p style={{ marginTop: '0.25rem' }}>
-                    {t('question')} {worst.index + 1} · {worst.feedback.score}/100 — {worst.questionText}
+                    {t('question')} {worst.index + 1} · {worst.feedback.score}/100: {worst.questionText}
                   </p>
                 </div>
                 {action && (
