@@ -14,6 +14,7 @@ function pack(overrides = {}) {
   return {
     id: 'pack-1',
     expires_at: '2026-09-20T12:00:00.000Z',
+    closed_at: null,
     max_candidates: 100,
     starts_used: 20,
     ...overrides,
@@ -25,6 +26,7 @@ test('work sample health has explicit active, closing, full and closed states', 
   assert.equal(packHealth(pack({ expires_at: '2026-09-03T12:00:00.000Z' }), now), 'closing');
   assert.equal(packHealth(pack({ starts_used: 100 }), now), 'full');
   assert.equal(packHealth(pack({ expires_at: '2026-08-29T11:59:59.000Z' }), now), 'closed');
+  assert.equal(packHealth(pack({ closed_at: '2026-08-28T10:00:00.000Z' }), now), 'closed');
 });
 
 test('dashboard pulse reports real capacity and completed submissions', () => {
@@ -62,6 +64,8 @@ test('candidate evidence is ordered and never invents a recording', () => {
 test('dashboard source keeps employer ownership and consent boundaries', async () => {
   const source = await readFile(new URL('../app/employer/page.tsx', import.meta.url), 'utf8');
   assert.match(source, /\.eq\('employer_id', user\.id\)/);
+  assert.match(source, /select\('id,public_code,workplace,signed_token,created_at,expires_at,closed_at,max_candidates,starts_used'\)/);
+  assert.match(source, /pack\.closed_at \|\| pack\.expires_at/);
   assert.match(source, /\.not\('submitted_at', 'is', null\)/);
   assert.doesNotMatch(source, /overall_score/);
   assert.doesNotMatch(source, /EmployerLinkActions[^\n]+signed_token/);

@@ -37,6 +37,7 @@ type Pack = {
   signed_token: string;
   created_at: string;
   expires_at: string;
+  closed_at: string | null;
   max_candidates: number;
   starts_used: number;
 };
@@ -93,7 +94,7 @@ export default async function EmployerDashboardPage() {
 
   const client = await createClient();
   const { data: packRows } = await client!.from('screening_packs')
-    .select('id,public_code,workplace,signed_token,created_at,expires_at,max_candidates,starts_used')
+    .select('id,public_code,workplace,signed_token,created_at,expires_at,closed_at,max_candidates,starts_used')
     .eq('employer_id', user.id)
     .order('created_at', { ascending: false });
   const packs = (packRows ?? []) as Pack[];
@@ -307,7 +308,7 @@ export default async function EmployerDashboardPage() {
                     <p className={styles.expiry}>
                       <ClockCountdown aria-hidden="true" />
                       {status === 'closed'
-                        ? `Closed ${new Date(pack.expires_at).toLocaleDateString('en-GB')}`
+                        ? `Closed ${new Date(pack.closed_at || pack.expires_at).toLocaleDateString('en-GB')}`
                         : `Closes ${new Date(pack.expires_at).toLocaleDateString('en-GB')}`}
                     </p>
                     {status === 'closed' || status === 'full' ? (

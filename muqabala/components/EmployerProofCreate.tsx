@@ -12,10 +12,13 @@ const DEFAULT_EXPIRY_DAYS = 14;
 const EXPIRY_OPTIONS = [1, 3, 7, 14, 21, 30] as const;
 
 type LinkDetails = {
+  id: string;
   url: string;
   expiresAt: string;
   maxCandidates: number;
 };
+
+type InviteStatus = 'idle' | 'sent' | 'error';
 
 export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
   const { lang, setLang, t } = useLang();
@@ -29,7 +32,15 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
   const [generated, setGenerated] = useState(false);
   const [creating, setCreating] = useState(false);
   const [linkDetails, setLinkDetails] = useState<LinkDetails | null>(null);
+  const [showLinkSettings, setShowLinkSettings] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [candidateEmail, setCandidateEmail] = useState('');
+  const [sendingInvite, setSendingInvite] = useState(false);
+  const [inviteStatus, setInviteStatus] = useState<InviteStatus>('idle');
+  const [sharing, setSharing] = useState(false);
+  const [closingLink, setClosingLink] = useState(false);
+  const [linkClosed, setLinkClosed] = useState(false);
+  const [closeError, setCloseError] = useState(false);
   const [error, setError] = useState<'generate' | 'create' | null>(null);
   const [tooShort, setTooShort] = useState(false);
 
@@ -39,13 +50,8 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
   const settingsReady = Number.isInteger(maxCandidates) && maxCandidates >= 1 && maxCandidates <= 1000;
   const canGenerate = companyReady && titleReady && !generating && !creating;
   const canCreate = companyReady && titleReady && jobReady && settingsReady && !generating && !creating;
+  const emailReady = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(candidateEmail.trim());
   const link = linkDetails?.url ?? '';
-  const plannedExpiryDate = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-AE' : 'en-GB', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }).format(new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000));
-
   function resetLinkSettings() {
     setMaxCandidates(DEFAULT_MAX_CANDIDATES);
     setExpiryDays(DEFAULT_EXPIRY_DAYS);
@@ -134,7 +140,7 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
         }),
       });
       const packBody = await pack.json().catch(() => ({})) as Partial<LinkDetails>;
-      if (!pack.ok || !packBody.url || !packBody.expiresAt || !packBody.maxCandidates) {
+      if (!pack.ok || !packBody.id || !packBody.url || !packBody.expiresAt || !packBody.maxCandidates) {
         setError('create');
         return;
       }
@@ -154,6 +160,74 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
       setCopied(true);
     } catch {
       setCopied(false);
+    }
+  }
+
+  async function shareLink() {
+    if (!link) return;
+    if (!navigator.share) {
+      await copyLink();
+      return;
+    }
+    setSharing(true);
+    try {
+      await navigator.share({
+        title: `${companyName.trim()}: ${jobTitle.trim()}`,
+        text: t('proofShareMessage'),
+        url: link,
+      });
+    } catch {
+      // Closing the native share sheet is not an error that needs a message.
+    } finally {
+      setSharing(false);
+    }
+  }
+
+  async function sendInvitation() {
+    if (!linkDetails || !emailReady || sendingInvite || linkClosed) return;
+    setSendingInvite(true);
+    setInviteStatus('idle');
+
+    try {
+      const response = await fetch(`/api/screening/packs/${encodeURIComponent(linkDetails.id)}/invitations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: candidateEmail.trim() }),
+      });
+      if (!response.ok) {
+        setInviteStatus('error');
+        return;
+      }
+      setInviteStatus('sent');
+    } catch {
+      setInviteStatus('error');
+    } finally {
+      setSendingInvite(false);
+    }
+  }
+
+  async function closeLink() {
+    if (!linkDetails || closingLink || linkClosed) return;
+    if (!window.confirm(t('proofCloseLinkConfirm'))) return;
+
+    setClosingLink(true);
+    setCloseError(false);
+    try {
+      const response = await fetch(`/api/screening/packs/${encodeURIComponent(linkDetails.id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'close' }),
+      });
+      if (!response.ok) {
+        setCloseError(true);
+        return;
+      }
+      setLinkClosed(true);
+      setInviteStatus('idle');
+    } catch {
+      setCloseError(true);
+    } finally {
+      setClosingLink(false);
     }
   }
 
@@ -193,6 +267,7 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
             <li>{t('proofOutcomeWords')}</li>
             <li>{t('proofOutcomeHuman')}</li>
           </ul>
+          <p className={styles.assurance}>{t('proofRecruiterValue')}</p>
 
           {!signedIn ? (
             <div className={styles.signInPanel}>
@@ -200,7 +275,7 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
               <p>Only your signed-in employer account can open the submitted videos and reports.</p>
               <EmailSignIn compact next="/for-employers" />
             </div>
-          ) : <form
+          ) : !linkDetails ? <form
             className={styles.form}
             onSubmit={(event) => {
               event.preventDefault();
@@ -274,6 +349,7 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
                 value={jobText}
                 onChange={(event) => {
                   setJobText(event.target.value);
+                  setGenerated(false);
                   setError(null);
                   setLinkDetails(null);
                   if (tooShort && event.target.value.trim().length >= MIN_ADVERT_CHARS) setTooShort(false);
@@ -287,96 +363,122 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
               />
             </label>
 
-            <fieldset className={styles.linkSettings} aria-labelledby="link-settings-label">
+            <section className={styles.linkSettings} aria-labelledby="link-settings-label">
               <div className={styles.linkSettingsHead}>
-                <span id="link-settings-label">{t('proofLinkSettingsLabel')}</span>
-                <button className={styles.linkSettingsReset} type="button" onClick={resetLinkSettings}>
-                  {t('proofLinkSettingsReset')}
+                <div>
+                  <span id="link-settings-label">{t('proofLinkSettingsLabel')}</span>
+                  <p suppressHydrationWarning>
+                    {withValues(t('proofLinkSettingsCompact'), {
+                      count: maxCandidates,
+                      duration: expiryDays === 1
+                        ? t('proofLinkDayOption')
+                        : withValues(t('proofLinkDaysOption'), { days: expiryDays }),
+                    })}
+                  </p>
+                </div>
+                <button
+                  className={styles.linkSettingsChange}
+                  type="button"
+                  aria-expanded={showLinkSettings}
+                  aria-controls="link-settings-fields"
+                  onClick={() => setShowLinkSettings((shown) => !shown)}
+                >
+                  {showLinkSettings ? t('proofLinkSettingsDone') : t('proofLinkSettingsChange')}
                 </button>
               </div>
-              <div className={styles.linkSettingsGrid}>
-                <label className={styles.linkSetting}>
-                  <span>{t('proofLinkPlacesLabel')}</span>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min={1}
-                    max={1000}
-                    value={maxCandidates}
-                    onChange={(event) => {
-                      setMaxCandidates(Number(event.target.value));
-                      setLinkDetails(null);
-                    }}
-                    onBlur={() => setMaxCandidates((value) => Math.min(1000, Math.max(1, Math.round(value || DEFAULT_MAX_CANDIDATES))))}
-                  />
-                </label>
-                <label className={styles.linkSetting}>
-                  <span>{t('proofLinkOpenForLabel')}</span>
-                  <select
-                    value={expiryDays}
-                    onChange={(event) => {
-                      setExpiryDays(Number(event.target.value));
-                      setLinkDetails(null);
-                    }}
-                  >
-                    {EXPIRY_OPTIONS.map((days) => (
-                      <option key={days} value={days}>
-                        {days === 1 ? t('proofLinkDayOption') : withValues(t('proofLinkDaysOption'), { days })}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <p>{t('proofLinkSettingsHelp')}</p>
-            </fieldset>
+              {showLinkSettings && (
+                <fieldset id="link-settings-fields" className={styles.linkSettingsFields}>
+                  <legend className={styles.srOnly}>{t('proofLinkSettingsLabel')}</legend>
+                  <div className={styles.linkSettingsGrid}>
+                    <label className={styles.linkSetting}>
+                      <span>{t('proofLinkPlacesLabel')}</span>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={1}
+                        max={1000}
+                        value={maxCandidates}
+                        onChange={(event) => {
+                          setMaxCandidates(Number(event.target.value));
+                          setLinkDetails(null);
+                        }}
+                        onBlur={() => setMaxCandidates((value) => Math.min(1000, Math.max(1, Math.round(value || DEFAULT_MAX_CANDIDATES))))}
+                      />
+                    </label>
+                    <label className={styles.linkSetting}>
+                      <span>{t('proofLinkOpenForLabel')}</span>
+                      <select
+                        value={expiryDays}
+                        onChange={(event) => {
+                          setExpiryDays(Number(event.target.value));
+                          setLinkDetails(null);
+                        }}
+                      >
+                        {EXPIRY_OPTIONS.map((days) => (
+                          <option key={days} value={days}>
+                            {days === 1 ? t('proofLinkDayOption') : withValues(t('proofLinkDaysOption'), { days })}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  <div className={styles.linkSettingsFoot}>
+                    <span>{t('proofLinkSettingsHelp')}</span>
+                    <button className={styles.linkSettingsReset} type="button" onClick={resetLinkSettings}>
+                      {t('proofLinkSettingsReset')}
+                    </button>
+                  </div>
+                </fieldset>
+              )}
+            </section>
 
             <div className={styles.actions} aria-label={t('proofCreateStepsLabel')}>
               <button
                 type="button"
-                className={styles.generate}
+                className={`${styles.generate} ${jobReady ? styles.generateSecondary : styles.generatePrimary}`}
                 disabled={!canGenerate}
                 onClick={() => void generateJobDescription()}
               >
-                <span className={styles.actionNumber} aria-hidden="true">1</span>
-                <span>{generating ? t('proofGeneratingAdvert') : t('proofGenerateAdvert')}</span>
+                <span>{generating
+                  ? t('proofGeneratingAdvert')
+                  : jobReady
+                    ? t('proofRegenerateAdvert')
+                    : t('proofGenerateAdvert')}</span>
               </button>
               <button type="submit" className={styles.submit} disabled={!canCreate}>
-                <span className={styles.actionNumber} aria-hidden="true">2</span>
                 <span>{creating ? t('proofCreating') : t('proofCreateAction')}</span>
               </button>
             </div>
 
-            <p className={styles.linkSummary} suppressHydrationWarning>
-              {t('proofLinkSettingsSummaryStart')} <strong>{maxCandidates}</strong>{' '}
-              {t('proofLinkSettingsSummaryMiddle')} <strong>{plannedExpiryDate}</strong>{t('proofLinkSettingsSummaryEnd')}
-            </p>
-
             <div id="job-description-status" className={styles.status} aria-live="polite">
-              {!companyReady || !titleReady ? (
-                <p>{t('proofAddBasicsFirst')}</p>
-              ) : !jobReady ? (
-                <p>{t('proofAddDescriptionNext')}</p>
-              ) : (
-                <p>{generated ? t('proofAdvertGenerated') : t('proofReadyToCreate')}</p>
-              )}
+              {generated && <p>{t('proofAdvertGenerated')}</p>}
             </div>
-
-            <p className={styles.assurance}>{t('proofRecruiterValue')}</p>
 
             <div className={styles.messages} aria-live="polite">
               {tooShort && <p className={styles.warning}>{t('proofAdvertTooShort')}</p>}
               {error === 'generate' && <p className={styles.warning}>{t('proofGenerateFailed')}</p>}
               {error === 'create' && <p className={styles.warning}>{t('proofCreateFailed')}</p>}
             </div>
-          </form>}
+          </form> : null}
 
-          {link && (
-            <section className={styles.linkPanel} aria-labelledby="candidate-link-heading">
-              <p className={styles.linkEyebrow}>{t('proofLinkTitle')}</p>
-              <h2 id="candidate-link-heading">{t('proofStepShare')}</h2>
-              <p className={styles.linkText}>{link}</p>
-              <p className={styles.linkNote}>
-                {linkDetails && withValues(t('proofLinkReady'), {
+          {linkDetails && (
+            <section className={styles.invitePanel} aria-labelledby="candidate-invite-heading">
+              <div className={styles.inviteHead}>
+                <div>
+                  <h2 id="candidate-invite-heading">{t('proofInviteTitle')}</h2>
+                </div>
+                <p className={linkClosed ? styles.closedStatus : styles.readyStatus}>
+                  {linkClosed ? t('proofLinkClosed') : t('proofLinkActive')}
+                </p>
+              </div>
+
+              <p className={styles.inviteSummary}>
+                <strong>{companyName.trim()}</strong>
+                <span aria-hidden="true"> · </span>
+                <span>{jobTitle.trim()}</span>
+              </p>
+              <p className={styles.linkNote} suppressHydrationWarning>
+                {withValues(t('proofLinkReady'), {
                   count: linkDetails.maxCandidates,
                   date: new Intl.DateTimeFormat(lang === 'ar' ? 'ar-AE' : 'en-GB', {
                     day: 'numeric',
@@ -385,15 +487,72 @@ export function EmployerProofCreate({ signedIn }: { signedIn: boolean }) {
                   }).format(new Date(linkDetails.expiresAt)),
                 })}
               </p>
-              <div className={styles.linkActions}>
-                <button type="button" onClick={() => void copyLink()}>
-                  {copied ? t('proofCopied') : t('proofCopyLink')}
+
+              {!linkClosed && (
+                <form
+                  className={styles.inviteForm}
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    void sendInvitation();
+                  }}
+                >
+                  <label className={styles.inviteField}>
+                    <span>{t('proofCandidateEmailLabel')}</span>
+                    <input
+                      type="email"
+                      inputMode="email"
+                      autoComplete="email"
+                      autoCapitalize="none"
+                      spellCheck={false}
+                      maxLength={254}
+                      required
+                      value={candidateEmail}
+                      onChange={(event) => {
+                        setCandidateEmail(event.target.value);
+                        setInviteStatus('idle');
+                      }}
+                      placeholder={t('proofCandidateEmailPlaceholder')}
+                      aria-describedby="candidate-invite-help candidate-invite-status"
+                    />
+                  </label>
+                  <p id="candidate-invite-help" className={styles.inviteHelp}>{t('proofInviteHelp')}</p>
+                  <button
+                    type="submit"
+                    className={styles.sendInvite}
+                    disabled={!emailReady || sendingInvite}
+                  >
+                    {sendingInvite ? t('proofSendingInvite') : t('proofSendInvite')}
+                  </button>
+                  <div id="candidate-invite-status" className={styles.inviteStatus} aria-live="polite">
+                    {inviteStatus === 'sent' && (
+                      <p className={styles.inviteSuccess}>
+                        {withValues(t('proofInviteSent'), { email: candidateEmail.trim() })}
+                      </p>
+                    )}
+                    {inviteStatus === 'error' && <p className={styles.inviteError}>{t('proofInviteFailed')}</p>}
+                  </div>
+                </form>
+              )}
+
+              <nav className={styles.secondaryActions} aria-label={t('proofOtherInviteWays')}>
+                <button type="button" onClick={() => void copyLink()} disabled={linkClosed}>
+                  {copied ? t('proofCopied') : t('proofCopyOpenLink')}
                 </button>
-                <a href={`https://wa.me/?text=${encodeURIComponent(link)}`} target="_blank" rel="noreferrer">
-                  {t('proofWhatsApp')}
-                </a>
-                <Link href="/employer">Open dashboard</Link>
-              </div>
+                <button type="button" onClick={() => void shareLink()} disabled={sharing || linkClosed}>
+                  {sharing ? t('proofSharing') : t('proofShareAnotherWay')}
+                </button>
+                <Link href="/employer">{t('proofViewCandidates')}</Link>
+              </nav>
+
+              <button
+                type="button"
+                className={styles.closeLink}
+                onClick={() => void closeLink()}
+                disabled={closingLink || linkClosed}
+              >
+                {closingLink ? t('proofClosingLink') : linkClosed ? t('proofLinkClosed') : t('proofCloseLink')}
+              </button>
+              {closeError && <p className={styles.closeError} role="alert">{t('proofCloseFailed')}</p>}
             </section>
           )}
         </section>

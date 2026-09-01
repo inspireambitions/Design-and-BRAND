@@ -71,6 +71,9 @@ export async function POST(request: Request) {
     if (result?.status === 'full') {
       return Response.json({ error: 'This employer interview link has reached its candidate limit.' }, { status: 409 });
     }
+    if (result?.status === 'closed') {
+      return Response.json({ error: 'This employer work sample has been closed.' }, { status: 410 });
+    }
     if ((result?.status !== 'started' && result?.status !== 'resumed') || !result.interview_id) {
       return Response.json({ error: 'This employer interview link is no longer available.' }, { status: 410 });
     }

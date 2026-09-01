@@ -75,6 +75,8 @@ const COPY = {
     receiptReference: 'Reference',
     emailReceipt: 'Your email receipt will be sent to',
     useAnotherEmail: 'Use another email',
+    fullLink: 'This interview link has reached its candidate limit.',
+    closedLink: 'The employer has closed this interview link to new candidates.',
   },
   ar: {
     invited: 'مقابلة من جهة العمل',
@@ -131,6 +133,8 @@ const COPY = {
     receiptReference: 'المرجع',
     emailReceipt: 'سيتم إرسال إيصال المقابلة إلى',
     useAnotherEmail: 'استخدام بريد إلكتروني آخر',
+    fullLink: 'وصل رابط المقابلة إلى الحد الأقصى لعدد المرشحين.',
+    closedLink: 'أغلقت جهة العمل رابط المقابلة أمام المرشحين الجدد.',
   },
 } as const;
 
@@ -140,7 +144,7 @@ type Props = {
   companyName: string;
   recruiterName?: string;
   publicCode: string;
-  availability?: 'active' | 'full';
+  availability?: 'active' | 'full' | 'closed';
   candidateEmail: string;
 };
 
@@ -243,7 +247,7 @@ export function EmployerVideoInterview({
           reference?: string | null;
         } | null | undefined;
         if (!resumed?.id) {
-          setStage(availability === 'full' ? 'unavailable' : 'intro');
+          setStage(availability === 'active' ? 'intro' : 'unavailable');
           return;
         }
         const resumedId = resumed.id;
@@ -281,7 +285,7 @@ export function EmployerVideoInterview({
         setStage(status.currentQuestion >= questions.length ? 'consent' : 'intro');
       })
       .catch(() => {
-        if (!cancelled) setStage(availability === 'full' ? 'unavailable' : 'intro');
+        if (!cancelled) setStage(availability === 'active' ? 'intro' : 'unavailable');
       });
     return () => { cancelled = true; };
   }, [availability, publicCode, questions.length, readStatus]);
@@ -648,7 +652,7 @@ export function EmployerVideoInterview({
         <div className={styles.shell}>
           <section className={styles.card}>
             <p className={styles.eyebrow}>{companyName}</p>
-            <h1>This interview link is no longer accepting new candidates.</h1>
+            <h1>{availability === 'closed' ? c.closedLink : c.fullLink}</h1>
           </section>
         </div>
       </main>

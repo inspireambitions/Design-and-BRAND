@@ -11,11 +11,12 @@ type Props = {
   companyName: string;
   roleTitle: string;
   roleTitleAr: string;
-  availability: 'active' | 'full';
+  availability: 'active' | 'full' | 'closed';
+  inviteToken?: string;
   initialError?: string;
 };
 
-export function ScreeningEmailVerification({ publicCode, companyName, roleTitle, roleTitleAr, availability, initialError }: Props) {
+export function ScreeningEmailVerification({ publicCode, companyName, roleTitle, roleTitleAr, availability, inviteToken, initialError }: Props) {
   const router = useRouter();
   const { lang, setLang, dir } = useLang();
   const codeRef = useRef<HTMLInputElement | null>(null);
@@ -42,7 +43,7 @@ export function ScreeningEmailVerification({ publicCode, companyName, roleTitle,
     code: 'الرمز المكوّن من ستة أرقام', verify: 'تحقق وتابع', checking: 'جارٍ فحص هذا الجهاز…',
     unsupported: 'افتح هذا الرابط في Safari العادي على iPhone أو Chrome على Android قبل المتابعة.',
     sent: 'تم إرسال الرمز. أبقِ هذه الصفحة مفتوحة وأدخل الرمز أدناه.',
-    full: 'وصل هذا الرابط إلى الحد الأقصى لعدد المرشحين.', alreadyStarted: 'بدأت المقابلة من قبل',
+    full: 'وصل هذا الرابط إلى الحد الأقصى لعدد المرشحين.', closed: 'أغلقت جهة العمل رابط المقابلة أمام المرشحين الجدد.', alreadyStarted: 'بدأت المقابلة من قبل',
     changeEmail: 'تغيير البريد الإلكتروني', resend: 'إعادة إرسال الرمز',
   } : {
     invited: 'Employer interview', title: 'Verify your email before recording',
@@ -52,7 +53,7 @@ export function ScreeningEmailVerification({ publicCode, companyName, roleTitle,
     code: 'Six-digit code', verify: 'Verify and continue', checking: 'Checking this device…',
     unsupported: 'Open this link in normal Safari on iPhone or Chrome on Android before continuing.',
     sent: 'Code sent. Keep this page open and enter the code below.',
-    full: 'This link has reached its candidate limit.', alreadyStarted: 'I already started this interview',
+    full: 'This link has reached its candidate limit.', closed: 'The employer has closed this interview link to new candidates.', alreadyStarted: 'I already started this interview',
     changeEmail: 'Change email', resend: 'Resend code',
   };
 
@@ -63,7 +64,7 @@ export function ScreeningEmailVerification({ publicCode, companyName, roleTitle,
     try {
       const response = await fetch('/api/screening/auth/request', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, publicCode, lang }),
+        body: JSON.stringify({ email, publicCode, lang, ...(inviteToken ? { inviteToken } : {}) }),
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error || 'The code could not be sent.');
@@ -77,7 +78,7 @@ export function ScreeningEmailVerification({ publicCode, companyName, roleTitle,
     try {
       const response = await fetch('/api/screening/auth/verify', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, token: code, publicCode, lang }),
+        body: JSON.stringify({ email, token: code, publicCode, lang, ...(inviteToken ? { inviteToken } : {}) }),
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error || 'The code could not be verified.');
@@ -98,7 +99,7 @@ export function ScreeningEmailVerification({ publicCode, companyName, roleTitle,
           <p className={styles.eyebrow}>{companyName}</p>
           <h1>{supported === null ? copy.checking : supported ? copy.title : copy.unsupported}</h1>
           {supported && !showVerification && <>
-            <p className={styles.lede}>{copy.full}</p>
+            <p className={styles.lede}>{availability === 'closed' ? copy.closed : copy.full}</p>
             <button className={styles.secondary} type="button" onClick={() => setResumingFullLink(true)}>{copy.alreadyStarted}</button>
           </>}
           {supported && showVerification && <>

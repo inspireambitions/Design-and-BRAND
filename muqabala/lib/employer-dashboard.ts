@@ -1,6 +1,7 @@
 export type DashboardPack = {
   id: string;
   expires_at: string;
+  closed_at: string | null;
   max_candidates: number;
   starts_used: number;
 };
@@ -22,6 +23,7 @@ export type PackHealth = 'active' | 'closing' | 'full' | 'closed';
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export function packHealth(pack: DashboardPack, now = new Date()): PackHealth {
+  if (pack.closed_at) return 'closed';
   const expiresAt = new Date(pack.expires_at).getTime();
   if (expiresAt <= now.getTime()) return 'closed';
   if (pack.starts_used >= pack.max_candidates) return 'full';

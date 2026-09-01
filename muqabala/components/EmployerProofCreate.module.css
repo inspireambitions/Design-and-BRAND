@@ -161,14 +161,14 @@
 
 .form {
   display: grid;
-  gap: 1.65rem;
-  margin-top: clamp(2.75rem, 8vw, 4.25rem);
+  gap: 1rem;
+  margin-top: clamp(1.5rem, 5vw, 2.5rem);
 }
 
 .field,
 .workplaceField {
   display: grid;
-  gap: 0.7rem;
+  gap: 0.4rem;
   color: var(--employer-ink);
   font-size: 0.98rem;
   font-weight: 700;
@@ -192,14 +192,14 @@
 
 .field input,
 .workplaceField input {
-  min-height: 3.55rem;
-  padding: 0.9rem 1.1rem;
-  font-size: 1.05rem;
+  min-height: 3.1rem;
+  padding: 0.7rem 0.9rem;
+  font-size: 1rem;
 }
 
 .field textarea {
-  min-height: 9.3rem;
-  padding: 1rem 1.1rem;
+  min-height: 7.2rem;
+  padding: 0.8rem 0.9rem;
   resize: vertical;
   font-size: 1rem;
 }
@@ -221,11 +221,9 @@
 
 .linkSettings {
   display: grid;
-  gap: 0.9rem;
-  margin: 0.15rem 0 0;
-  padding: 1.2rem 0 0;
-  border: 0;
-  border-top: 1px solid rgba(7, 23, 19, 0.14);
+  gap: 0.65rem;
+  padding-block: 0.75rem;
+  border-block: 1px solid rgba(7, 23, 19, 0.14);
 }
 
 .linkSettingsHead {
@@ -236,7 +234,12 @@
   gap: 1rem;
 }
 
-.linkSettingsHead > span {
+.linkSettingsHead > div {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.linkSettingsHead span {
   color: var(--employer-ink);
   font-family: var(--font-display);
   font-size: 0.98rem;
@@ -244,6 +247,15 @@
   line-height: 1.3;
 }
 
+.linkSettingsHead p {
+  margin: 0;
+  color: var(--employer-muted);
+  font-size: 0.86rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.linkSettingsChange,
 .linkSettingsReset {
   min-height: 44px;
   padding: 0.45rem 0;
@@ -255,17 +267,25 @@
   font-weight: 750;
 }
 
+.linkSettingsFields {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
 .linkSettingsGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  border-block: 1px solid rgba(7, 23, 19, 0.14);
+  border-top: 1px solid rgba(7, 23, 19, 0.1);
 }
 
 .linkSetting {
   display: grid;
   min-width: 0;
   gap: 0.3rem;
-  padding: 0.9rem 1rem;
+  padding: 0.7rem 0.8rem 0.25rem;
 }
 
 .linkSetting + .linkSetting {
@@ -298,20 +318,38 @@
 
 .linkSetting input:focus-visible,
 .linkSetting select:focus-visible,
+.linkSettingsChange:focus-visible,
 .linkSettingsReset:focus-visible {
   border-radius: 0.35rem;
   box-shadow: 0 0 0 3px rgba(0, 124, 104, 0.18);
 }
 
-.linkSettings > p {
-  margin: -0.1rem 0 0;
+.linkSettingsFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.linkSettingsFoot > span {
   color: var(--employer-muted);
   font-size: 0.86rem;
   line-height: 1.45;
 }
 
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .workplace {
-  margin-top: -0.35rem;
+  margin-top: -0.2rem;
 }
 
 .workplace summary {
@@ -343,35 +381,40 @@
 }
 
 .workplaceField {
-  margin-top: 0.75rem;
+  margin-top: 0.4rem;
 }
 
 .actions {
   display: grid;
   grid-template-columns: minmax(0, 0.86fr) minmax(0, 1.14fr);
   gap: 0.8rem;
-  margin-top: 0.15rem;
+  margin-top: 0.1rem;
 }
 
 .generate,
 .submit {
   display: inline-flex;
-  min-height: 3.75rem;
+  min-height: 3.25rem;
   align-items: center;
   justify-content: center;
   gap: 0.65rem;
-  padding: 1rem 1.4rem;
+  padding: 0.72rem 1rem;
   border: 1.5px solid var(--employer-jade);
   border-radius: 0.95rem;
   font-family: var(--font-display);
-  font-size: clamp(0.9rem, 2.4vw, 1.02rem);
+  font-size: clamp(0.88rem, 2.4vw, 0.98rem);
   font-weight: 800;
   line-height: 1.2;
   text-align: center;
   transition: background 120ms ease, border-color 120ms ease, color 120ms ease, transform 120ms ease;
 }
 
-.generate {
+.generatePrimary {
+  background: var(--employer-jade);
+  color: white;
+}
+
+.generateSecondary {
   background: transparent;
   color: var(--employer-jade-deep);
 }
@@ -382,24 +425,9 @@
   color: white;
 }
 
-.actionNumber {
-  display: inline-grid;
-  width: 1.7rem;
-  height: 1.7rem;
-  flex: 0 0 auto;
-  place-items: center;
-  border-radius: 50%;
-  background: rgba(0, 124, 104, 0.11);
-  font-size: 0.78rem;
-  line-height: 1;
-}
-
-.submit .actionNumber {
-  background: rgba(255, 255, 255, 0.18);
-}
-
 .generate:hover:not(:disabled) {
-  background: rgba(0, 124, 104, 0.08);
+  background: var(--employer-jade-deep);
+  color: white;
 }
 
 .submit:hover:not(:disabled) {
@@ -422,8 +450,8 @@
 }
 
 .status {
-  min-height: 1.4rem;
-  margin-top: -0.75rem;
+  min-height: 0;
+  margin-top: -0.4rem;
   color: var(--employer-muted);
   font-size: 0.86rem;
   line-height: 1.45;
@@ -448,11 +476,10 @@
 }
 
 .assurance {
-  margin: -0.45rem auto 0;
+  margin: 0.65rem 0 0;
   color: var(--employer-muted);
-  font-size: 0.9rem;
-  line-height: 1.5;
-  text-align: center;
+  font-size: 0.88rem;
+  line-height: 1.4;
 }
 
 .messages:empty {
@@ -470,62 +497,205 @@
   line-height: 1.45;
 }
 
-.linkPanel {
+.invitePanel {
   display: grid;
-  gap: 0.75rem;
-  margin-top: 2rem;
-  padding: 1.35rem;
-  border: 1px solid rgba(0, 124, 104, 0.22);
-  border-radius: 1rem;
-  background: #e8f4f0;
+  gap: 0.8rem;
+  margin-top: clamp(1.5rem, 5vw, 2.5rem);
+  padding-block: 1.15rem;
+  border-block: 1px solid rgba(7, 23, 19, 0.16);
 }
 
-.linkPanel h2 {
+.invitePanel h2 {
+  margin: 0;
   color: var(--employer-ink);
-  font-size: 1.25rem;
+  font-size: clamp(1.35rem, 5vw, 1.7rem);
+  line-height: 1.15;
 }
 
-.linkText,
-.linkNote {
+.inviteHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.readyStatus,
+.closedStatus {
+  margin: 0;
+  color: var(--employer-jade-deep);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.closedStatus {
   color: var(--employer-muted);
-  font-size: 0.88rem;
-  line-height: 1.5;
 }
 
-.linkText {
-  overflow-wrap: anywhere;
+.inviteSummary,
+.linkNote {
+  margin: 0;
+  color: var(--employer-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.inviteSummary {
   color: var(--employer-ink);
-  font-weight: 650;
 }
 
-.linkActions {
+.inviteForm {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.7rem;
+  gap: 0.45rem;
   margin-top: 0.25rem;
 }
 
-.linkActions button,
-.linkActions a {
+.inviteField {
+  display: grid;
+  gap: 0.38rem;
+  color: var(--employer-ink);
+  font-size: 0.94rem;
+  font-weight: 750;
+}
+
+.inviteField input {
+  width: 100%;
+  min-height: 3.15rem;
+  padding: 0.72rem 0.9rem;
+  border: 1.5px solid var(--employer-line);
+  border-radius: 0.85rem;
+  outline: 0;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--employer-ink);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.inviteField input::placeholder {
+  color: #747d79;
+  opacity: 1;
+}
+
+.inviteField input:focus {
+  border-color: var(--employer-jade);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(0, 124, 104, 0.12);
+}
+
+.inviteHelp {
+  margin: 0;
+  color: var(--employer-muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.sendInvite {
   display: inline-flex;
-  min-height: 48px;
+  min-height: 3.25rem;
   align-items: center;
   justify-content: center;
+  margin-top: 0.2rem;
   padding: 0.75rem 1rem;
   border: 1px solid var(--employer-jade);
-  border-radius: 999px;
+  border-radius: 0.9rem;
   background: var(--employer-jade);
   color: white;
   font-family: var(--font-display);
-  font-size: 0.9rem;
-  font-weight: 750;
+  font-size: 0.96rem;
+  font-weight: 800;
   line-height: 1.2;
+}
+
+.sendInvite:hover:not(:disabled) {
+  background: var(--employer-jade-deep);
+}
+
+.sendInvite:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.sendInvite:disabled {
+  border-color: #bec4c1;
+  background: #e7e8e4;
+  color: #68716d;
+  cursor: not-allowed;
+}
+
+.inviteStatus:empty {
+  display: none;
+}
+
+.inviteStatus p {
+  margin: 0.1rem 0 0;
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.inviteSuccess {
+  color: var(--employer-jade-deep);
+  font-weight: 700;
+}
+
+.inviteError {
+  color: #8a3e21;
+}
+
+.secondaryActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 1rem;
+  padding-top: 0.25rem;
+}
+
+.secondaryActions button,
+.secondaryActions a,
+.closeLink {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  padding: 0.4rem 0;
+  border: 0;
+  background: transparent;
+  color: var(--employer-jade-deep);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 750;
+  line-height: 1.3;
+  text-decoration: underline;
+  text-decoration-color: rgba(0, 107, 90, 0.35);
+  text-underline-offset: 0.2rem;
+}
+
+.secondaryActions button:disabled,
+.closeLink:disabled {
+  color: #737c78;
+  cursor: not-allowed;
   text-decoration: none;
 }
 
-.linkActions a {
-  background: transparent;
-  color: var(--employer-jade-deep);
+.closeLink {
+  width: fit-content;
+  min-height: 40px;
+  color: var(--employer-muted);
+  font-size: 0.82rem;
+  font-weight: 650;
+  text-decoration-color: rgba(86, 99, 95, 0.3);
+}
+
+.closeError {
+  margin: -0.45rem 0 0;
+  color: #8a3e21;
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.sendInvite:focus-visible,
+.secondaryActions button:focus-visible,
+.secondaryActions a:focus-visible,
+.closeLink:focus-visible {
+  border-radius: 0.35rem;
+  outline: 3px solid rgba(0, 124, 104, 0.2);
+  outline-offset: 2px;
 }
 
 @media (max-width: 28rem) {
@@ -552,7 +722,7 @@
   }
 
   .form {
-    margin-top: 2.75rem;
+    margin-top: 1.5rem;
   }
 
   .linkSetting {
@@ -564,18 +734,19 @@
     letter-spacing: 0.05em;
   }
 
-  .actions {
-    grid-template-columns: 1fr;
-  }
-
-  .linkActions {
-    grid-template-columns: 1fr;
+  .secondaryActions {
+    justify-content: space-between;
+    gap: 0.1rem 0.65rem;
   }
 }
 
 @media (max-width: 23rem) {
   .title {
     white-space: normal;
+  }
+
+  .actions {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -590,9 +761,6 @@
     display: none;
   }
 
-  .linkActions {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -601,7 +769,8 @@
   .workplaceField input,
   .plus,
   .generate,
-  .submit {
+  .submit,
+  .sendInvite {
     transition: none;
   }
 }

@@ -205,7 +205,13 @@ test('candidate email verification keeps employer context and avoids full-link f
   const verification = read('components/ScreeningEmailVerification.tsx');
   const callback = read('app/auth/screening-confirm/route.ts');
   const flow = read('components/EmployerVideoInterview.tsx');
+  assert.match(page, /pack\.status !== 'active' && pack\.status !== 'full' && pack\.status !== 'closed'/);
   assert.match(page, /availability=\{pack\.status\}/);
+  assert.match(page, /inviteToken=\{inviteToken\}/);
+  assert.match(verification, /availability: 'active' \| 'full' \| 'closed'/);
+  assert.match(verification, /availability === 'closed' \? copy\.closed : copy\.full/);
+  assert.match(flow, /availability\?: 'active' \| 'full' \| 'closed'/);
+  assert.match(flow, /availability === 'closed' \? c\.closedLink : c\.fullLink/);
   assert.match(verification, /availability === 'active' \|\| resumingFullLink/);
   assert.match(verification, /I already started this interview/);
   assert.match(verification, /Change email/);

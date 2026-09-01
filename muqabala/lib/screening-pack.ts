@@ -13,20 +13,22 @@ export const getScreeningPack = cache(async (code: string) => {
   if (!admin) return { status: 'unavailable' as const };
   const { data } = await admin
     .from('screening_packs')
-    .select('signed_token, workplace, expires_at, max_candidates, starts_used')
+    .select('signed_token, workplace, expires_at, closed_at, max_candidates, starts_used')
     .eq('public_code', code)
     .not('employer_id', 'is', null)
     .maybeSingle();
   if (!data) return { status: 'unavailable' as const };
-  if (new Date(data.expires_at).getTime() <= Date.now()) return { status: 'expired' as const };
-
   const payload = verifyInterview(data.signed_token);
   if (!payload || payload.kind !== 'proof' || payload.questions.length !== 3) {
     return { status: 'unavailable' as const };
   }
 
   return {
-    status: data.starts_used >= data.max_candidates ? 'full' as const : 'active' as const,
+    status: data.closed_at
+      ? 'closed' as const
+      : new Date(data.expires_at).getTime() <= Date.now()
+        ? 'expired' as const
+        : data.starts_used >= data.max_candidates ? 'full' as const : 'active' as const,
     signedToken: data.signed_token,
     workplace: payload.workplace || data.workplace || '',
     recruiterName: payload.recruiterName,

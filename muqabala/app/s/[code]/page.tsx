@@ -6,9 +6,11 @@ import { ScreeningEmailVerification } from '@/components/ScreeningEmailVerificat
 import { getScreeningPack } from '@/lib/screening-pack';
 import { screeningPreviewCopy } from '@/lib/screening-preview';
 import { currentUser } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { processScreeningNotifications } from '@/lib/server/screening-notifications';
+import { screeningInvitationEmailHash, screeningInvitationTokenHash } from '@/lib/server/screening-invitations';
 
-type PageProps = { params: Promise<{ code: string }>; searchParams?: Promise<{ verification?: string }> };
+type PageProps = { params: Promise<{ code: string }>; searchParams?: Promise<{ verification?: string; invite?: string }> };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { code } = await params;
@@ -48,9 +50,26 @@ export default async function ProofSittingPage({
   const { code } = await params;
   const query = await searchParams;
   const pack = await getScreeningPack(code);
-  if (pack.status !== 'active' && pack.status !== 'full') notFound();
+  if (pack.status !== 'active' && pack.status !== 'full' && pack.status !== 'closed') notFound();
   const candidate = await currentUser();
+  const inviteToken = query?.invite && /^[A-Za-z0-9_-]{43}$/.test(query.invite) ? query.invite : undefined;
   after(async () => { await processScreeningNotifications({ limit: 5 }); });
+
+  if (candidate?.email && candidate.email_confirmed_at && inviteToken) {
+    const admin = createAdminClient();
+    const recipientEmailHash = screeningInvitationEmailHash(candidate.email);
+    const { data: packRow } = admin
+      ? await admin.from('screening_packs').select('id').eq('public_code', code).maybeSingle()
+      : { data: null };
+    if (!admin || !recipientEmailHash || !packRow) notFound();
+    const { data: claim, error: claimError } = await admin.rpc('claim_screening_email_invitation', {
+      p_pack_id: packRow.id,
+      p_token_hash: screeningInvitationTokenHash(inviteToken),
+      p_recipient_email_hash: recipientEmailHash,
+      p_candidate_user_id: candidate.id,
+    });
+    if (claimError || claim !== 'claimed') notFound();
+  }
 
   if (!candidate?.email || !candidate.email_confirmed_at) {
     return (
@@ -61,6 +80,7 @@ export default async function ProofSittingPage({
           roleTitle={pack.role.title}
           roleTitleAr={pack.role.titleAr}
           availability={pack.status}
+          inviteToken={inviteToken}
           initialError={query?.verification === 'expired' ? 'That sign-in link has expired. Request a new six-digit code below.' : undefined}
         />
       </div>
