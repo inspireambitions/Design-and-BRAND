@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Question, Role } from '@/lib/roles';
 import type { AnswerFeedback, Attempt } from '@/lib/scoring';
@@ -21,14 +22,13 @@ import {
   type PartialFeedback,
 } from '@/lib/feedback-stream';
 import { rubricForQuestion } from '@/lib/question-rubric';
-import { compareRetries } from '@/lib/retry-comparison';
 import {
   combineProbeTranscript,
   nextStarProbe,
   probeQuestion,
   type StarElement,
 } from '@/lib/star-probe';
-import { startRecording, startLevelMeter, type AnswerRecorder, type LevelMeter } from '@/lib/media';
+import type { AnswerRecorder, LevelMeter } from '@/lib/media';
 import type { InterviewMode } from '@/lib/interview-plan-policy';
 import {
   INITIAL_DEVICE_CAPABILITIES,
@@ -37,19 +37,43 @@ import {
   type DeviceCapabilities,
   videoModeSupported,
 } from '@/lib/device-capabilities';
-import {
-  isSpeechSupported,
-  isOnDeviceRecognitionAvailable,
-  startDictation,
-  type SpeechSession,
-} from '@/lib/speech';
+import type { SpeechSession } from '@/lib/speech';
 import { useLang } from './LanguageProvider';
 import { TopBar } from './TopBar';
 import { FeedbackCard, StreamingFeedbackCard } from './FeedbackCard';
-import { ScoreRing } from './ScoreRing';
-import { RatingCard } from './RatingCard';
-import { CoachingCard } from './CoachingCard';
-import { EmailSignIn } from './EmailSignIn';
+
+/*
+ * Screens that most visits never reach, or reach only after the candidate has
+ * answered, are loaded when first rendered rather than shipped with the page.
+ */
+const ScoreRing = dynamic(() => import('./ScoreRing').then((m) => m.ScoreRing));
+const RatingCard = dynamic(() => import('./RatingCard').then((m) => m.RatingCard));
+const CoachingCard = dynamic(() => import('./CoachingCard').then((m) => m.CoachingCard));
+const EmailSignIn = dynamic(() => import('./EmailSignIn').then((m) => m.EmailSignIn));
+const RetryComparison = dynamic(() => import('./RetryComparison').then((m) => m.RetryComparison));
+const ReportShareActions = dynamic(() => import('./ReportShareActions').then((m) => m.ReportShareActions));
+
+/**
+ * Microphone, camera and dictation code is only needed once the candidate
+ * speaks, and never on browsers without speech recognition. Both modules are
+ * fetched together the first time either is needed and then reused.
+ */
+type CaptureLibs = {
+  speech: typeof import('@/lib/speech');
+  media: typeof import('@/lib/media');
+};
+
+let captureLibsPromise: Promise<CaptureLibs> | null = null;
+
+function loadCaptureLibs(): Promise<CaptureLibs> {
+  captureLibsPromise ??= Promise.all([import('@/lib/speech'), import('@/lib/media')])
+    .then(([speech, media]) => ({ speech, media }))
+    .catch((error: unknown) => {
+      captureLibsPromise = null;
+      throw error;
+    });
+  return captureLibsPromise;
+}
 
 type Stage = 'check' | 'prep' | 'record' | 'review' | 'feedback' | 'done';
 
@@ -155,28 +179,6 @@ function formatClock(seconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-
-/** The whole interview as plain text — copyable, sendable, readable anywhere. */
-function buildReportText(
-  roleTitle: string,
-  overall: number | null,
-  answers: CompletedAnswer[],
-  labels: { report: string; score: string; question: string; yourAnswer: string; worked: string; improve: string },
-): string {
-  const lines: string[] = [`${labels.report} — ${roleTitle}`];
-  if (overall !== null) lines.push(`${labels.score}: ${overall}/100`);
-  lines.push('');
-  answers.forEach((a, i) => {
-    lines.push(`${labels.question} ${i + 1}: ${a.questionText}`);
-    if (a.feedback.status === 'scored') lines.push(`${labels.score}: ${a.feedback.score}/100`);
-    lines.push(`${labels.yourAnswer}: ${a.transcript || '—'}`);
-    if (a.feedback.strengths.length) lines.push(`${labels.worked}: ${a.feedback.strengths.join(' | ')}`);
-    if (a.feedback.improvements.length) lines.push(`${labels.improve}: ${a.feedback.improvements.join(' | ')}`);
-    lines.push('');
-  });
-  return lines.join('\n');
-}
-
 export function InterviewFlow({
   role,
   customTitle,
@@ -226,7 +228,6 @@ export function InterviewFlow({
   const [requestingCamera, setRequestingCamera] = useState(false);
   const [micLevel, setMicLevel] = useState(0);
   const [playbackUrl, setPlaybackUrl] = useState<string | null>(null);
-  const [reportCopied, setReportCopied] = useState(false);
   const [speechOk, setSpeechOk] = useState(INITIAL_DEVICE_CAPABILITIES.speechSupported);
   const [onDeviceSpeech, setOnDeviceSpeech] = useState(false);
   const [answerMethod, setAnswerMethod] = useState<'speak' | 'type' | 'video'>(() =>
@@ -245,7 +246,6 @@ export function InterviewFlow({
   const [deviceFallback, setDeviceFallback] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
   const [localDraftSaveFailed, setLocalDraftSaveFailed] = useState(false);
-  const [copyFailed, setCopyFailed] = useState(false);
   const [proofStartFailed, setProofStartFailed] = useState(false);
 
   const [secondsLeft, setSecondsLeft] = useState(0);
@@ -285,6 +285,7 @@ export function InterviewFlow({
   const dictationRef = useRef<SpeechSession | null>(null);
   const recorderRef = useRef<AnswerRecorder | null>(null);
   const meterRef = useRef<LevelMeter | null>(null);
+  const captureLibsRef = useRef<CaptureLibs | null>(null);
   const playbackRef = useRef<HTMLVideoElement | null>(null);
   const savedRef = useRef(false);
   const scoringInFlightRef = useRef(false);
@@ -376,6 +377,19 @@ export function InterviewFlow({
     setStarProbeDeclined(false);
     setStarProbe(null);
   }, [index]);
+
+  // Fetch the results-screen code while the candidate reads their first
+  // feedback, so the final screen is not waiting on the network.
+  useEffect(() => {
+    if (stage !== 'feedback') return;
+    void Promise.all([
+      import('./ScoreRing'),
+      import('./RatingCard'),
+      import('./CoachingCard'),
+      import('./EmailSignIn'),
+      import('./ReportShareActions'),
+    ]).catch(() => {});
+  }, [stage]);
 
   const restoreDraft = useCallback((draft: InterviewSessionDraft) => {
     const restoredQuestions = draft.questionSnapshot.length ? draft.questionSnapshot : activeQuestions;
@@ -583,16 +597,23 @@ export function InterviewFlow({
   }, [activeQuestions, focusQuestionId, interviewLanguage, interviewToken, mode, proof, reportRoleTitle, role.id, serverAttemptId]);
 
   useEffect(() => {
-    const supported = isSpeechSupported();
+    // Same window.SpeechRecognition check as lib/speech, without loading it.
+    const supported = detectDeviceCapabilities().speechSupported;
     setSpeechOk(supported);
     if (!supported) {
       setAnswerMethod('type');
       return;
     }
     let cancelled = false;
-    isOnDeviceRecognitionAvailable(interviewLanguage === 'ar' ? 'ar-AE' : 'en-US').then((local) => {
-      if (!cancelled) setOnDeviceSpeech(local);
-    });
+    void loadCaptureLibs()
+      .then(({ speech }) => speech.isOnDeviceRecognitionAvailable(interviewLanguage === 'ar' ? 'ar-AE' : 'en-US'))
+      .then((local) => {
+        if (!cancelled) setOnDeviceSpeech(local);
+      })
+      .catch(() => {
+        // Unknown means "audio may leave the device", which is what false says.
+        if (!cancelled) setOnDeviceSpeech(false);
+      });
     return () => {
       cancelled = true;
     };
@@ -736,8 +757,12 @@ export function InterviewFlow({
     }
   }, [cameraState, stage]);
 
-  const startSpeechCapture = useCallback((initialText = ''): boolean => {
-    const speechSession = startDictation(
+  const startSpeechCapture = useCallback(async (initialText = ''): Promise<boolean> => {
+    // A failed download is treated exactly like a browser without speech:
+    // the candidate keeps going by typing.
+    const libs = await loadCaptureLibs().catch(() => null);
+    captureLibsRef.current = libs;
+    const speechSession = libs?.speech.startDictation(
       interviewLanguage === 'ar' ? 'ar-AE' : 'en-US',
       (finalText, interimText) => {
         setTranscript(finalText);
@@ -760,9 +785,11 @@ export function InterviewFlow({
     return true;
   }, [interviewLanguage, switchToTyping]);
 
+  // Only called after startSpeechCapture succeeded, so the libraries are loaded.
   const startMicMeter = useCallback(() => {
-    if (!streamRef.current) return;
-    meterRef.current = startLevelMeter(
+    const media = captureLibsRef.current?.media;
+    if (!streamRef.current || !media) return;
+    meterRef.current = media.startLevelMeter(
       streamRef.current,
       (level) => {
         if (level > 0.08) lastHeardRef.current = Date.now();
@@ -797,9 +824,10 @@ export function InterviewFlow({
     const live = Boolean(useVoice && streamRef.current);
     setRecordingLive(live);
     if (useVoice) {
-      if (!startSpeechCapture()) return;
-      if (streamRef.current) {
-        recorderRef.current = startRecording(streamRef.current);
+      if (!(await startSpeechCapture())) return;
+      const media = captureLibsRef.current?.media;
+      if (streamRef.current && media) {
+        recorderRef.current = media.startRecording(streamRef.current);
         startMicMeter();
       }
     }
@@ -807,7 +835,7 @@ export function InterviewFlow({
 
   const liveSitting = mode === 'mock' || mode === 'screening';
 
-  const toggleMockPause = useCallback(() => {
+  const toggleMockPause = useCallback(async () => {
     if (!liveSitting || stage !== 'record' || !useVoice) return;
     if (!timerPaused) {
       stopDictation();
@@ -822,7 +850,7 @@ export function InterviewFlow({
     }
     streamRef.current?.getTracks().forEach((track) => { track.enabled = true; });
     recorderRef.current?.resume();
-    if (!startSpeechCapture(transcript)) return;
+    if (!(await startSpeechCapture(transcript))) return;
     startMicMeter();
     setRecordingLive(true);
     setTimerPaused(false);
@@ -1790,7 +1818,7 @@ export function InterviewFlow({
                       type="button"
                       className="btn btn-quiet"
                       aria-pressed={timerPaused}
-                      onClick={toggleMockPause}
+                      onClick={() => void toggleMockPause()}
                     >
                       {timerPaused ? t('resumeTimer') : t('pauseTimer')}
                     </button>
@@ -2018,74 +2046,12 @@ export function InterviewFlow({
         <div className="stack">
           <FeedbackCard feedback={feedback} attempt={attemptCount} />
           {previousTry && (
-            <div className="card stack">
-              <div>
-                <p className="eyebrow">{t('answerComparison')}</p>
-                <h3 style={{ fontSize: '1.2rem' }}>{t('compareYourAnswers')}</h3>
-                <p className="tiny" style={{ marginTop: '0.35rem' }}>{t('comparisonNoClaim')}</p>
-              </div>
-              <div className="comparison-grid">
-                <div className="answer-recap">
-                  <span className="rate-label">{t('firstAnswer')}</span>
-                  <p dir="auto">{previousTry.transcript}</p>
-                </div>
-                <div className="answer-recap">
-                  <span className="rate-label">{t('latestAnswer')}</span>
-                  <p dir="auto">{transcript}</p>
-                </div>
-              </div>
-              <div>
-                <p className="eyebrow">{t('previousAdvice')}</p>
-                {previousTry.feedback.improvements.length > 0 && (
-                  <ul className="feedback-list">
-                    {previousTry.feedback.improvements.map((item, adviceIndex) => (
-                      <li key={`${adviceIndex}-${item}`} dir="auto">{item}</li>
-                    ))}
-                  </ul>
-                )}
-                {previousTry.feedback.coachTip && (
-                  <p className="coach-tip" dir="auto">{previousTry.feedback.coachTip}</p>
-                )}
-              </div>
-              {(() => {
-                const comparison = compareRetries(previousTry.feedback, feedback);
-                if (!comparison.compatible) {
-                  return <p className="notice notice-warn tiny">{t('comparisonVersionChanged')}</p>;
-                }
-                if (!comparison.evidenceAdded.length && !comparison.evidenceChanged.length
-                  && !comparison.stillMissing.length) {
-                  return <p className="tiny">{t('noEvidenceChange')}</p>;
-                 }
-                return (
-                  <div className="comparison-grid">
-                    <div>
-                      <p className="eyebrow">{t('evidenceAdded')}</p>
-                      <ul className="feedback-list">
-                        {comparison.evidenceAdded.length > 0
-                          ? comparison.evidenceAdded.map((item) => <li key={item.id} dir="auto">{item.evidence}</li>)
-                          : <li>{t('noEvidenceAdded')}</li>}
-                      </ul>
-                    </div>
-                    <div>
-                      <p className="eyebrow">{t('stillMissing')}</p>
-                      <ul className="feedback-list">
-                        {comparison.stillMissing.length > 0
-                          ? comparison.stillMissing.map((item) => <li key={item.id}>{item.label}</li>)
-                          : <li>{t('nothingStillMissing')}</li>}
-                      </ul>
-                    </div>
-                    {comparison.evidenceChanged.length > 0 && (
-                      <div>
-                        <p className="eyebrow">{t('evidenceChanged')}</p>
-                        <ul className="feedback-list">
-                          {comparison.evidenceChanged.map((item) => <li key={item.id} dir="auto">{item.evidence}</li>)}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
-            </div>
+            <RetryComparison
+              previousTranscript={previousTry.transcript}
+              previousFeedback={previousTry.feedback}
+              transcript={transcript}
+              feedback={feedback}
+            />
           )}
           {starFollowUp && (
             <div className="card stack-sm star-probe-card">
@@ -2197,108 +2163,12 @@ export function InterviewFlow({
               <p className="tiny">{t('savedLocally')}</p>
             )}
 
-            <div className="row no-print">
-              {proof && (
-                <a
-                  className="btn btn-primary"
-                  href={`https://wa.me/?text=${encodeURIComponent(buildReportText(reportRoleTitle, overallFromAnswers(answers), answers, {
-                    report: t('reportTitle'),
-                    score: t('overallScore'),
-                    question: t('question'),
-                    yourAnswer: t('yourAnswer'),
-                    worked: t('whatWorked'),
-                    improve: t('whatToImprove'),
-                  }))}`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {t('proofSendWhatsApp')}
-                </a>
-              )}
-              {typeof navigator !== 'undefined' && typeof navigator.share === 'function' && (
-                <button
-                  type="button"
-                  className="btn btn-quiet"
-                  onClick={() => {
-                    navigator
-                      .share({
-                        text: buildReportText(reportRoleTitle, overallFromAnswers(answers), answers, {
-                          report: t('reportTitle'),
-                          score: t('overallScore'),
-                          question: t('question'),
-                          yourAnswer: t('yourAnswer'),
-                          worked: t('whatWorked'),
-                          improve: t('whatToImprove'),
-                        }),
-                      })
-                      .catch(() => {});
-                  }}
-                >
-                  {t('shareReport')}
-                </button>
-              )}
-              <button
-                type="button"
-                className="btn btn-quiet"
-                onClick={() => {
-                  // window.print is missing inside some in-app browsers; a
-                  // button that throws silently is worse than none.
-                  try {
-                    if (typeof window.print === 'function') window.print();
-                    else setCopyFailed(true);
-                  } catch {
-                    setCopyFailed(true);
-                  }
-                }}
-              >
-                {t('saveReport')}
-              </button>
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(
-                      buildReportText(reportRoleTitle, overallFromAnswers(answers), answers, {
-                        report: t('reportTitle'),
-                        score: t('overallScore'),
-                        question: t('question'),
-                        yourAnswer: t('yourAnswer'),
-                        worked: t('whatWorked'),
-                        improve: t('whatToImprove'),
-                      }),
-                    );
-                    setReportCopied(true);
-                  } catch {
-                    // Blocked clipboard (common in in-app browsers): show the
-                    // text to hold-and-copy instead of failing silently.
-                    setCopyFailed(true);
-                  }
-                }}
-              >
-                {reportCopied ? t('rateCopied') : t('copyReport')}
-              </button>
-            </div>
-            {copyFailed && (
-              <div className="stack-sm no-print">
-                <p className="notice notice-warn tiny" style={{ margin: 0 }}>
-                  {t('copyFallbackHint')}
-                </p>
-                <textarea
-                  className="answer-box"
-                  readOnly
-                  value={buildReportText(reportRoleTitle, overallFromAnswers(answers), answers, {
-                    report: t('reportTitle'),
-                    score: t('overallScore'),
-                    question: t('question'),
-                    yourAnswer: t('yourAnswer'),
-                    worked: t('whatWorked'),
-                    improve: t('whatToImprove'),
-                  })}
-                  onFocus={(event) => event.currentTarget.select()}
-                />
-              </div>
-            )}
+            <ReportShareActions
+              roleTitle={reportRoleTitle}
+              overall={overallFromAnswers(answers)}
+              answers={answers}
+              proof={Boolean(proof)}
+            />
             <p className="tiny no-print">{t('saveReportHint')}</p>
           </div>
 
