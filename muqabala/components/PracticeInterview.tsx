@@ -6,6 +6,7 @@ import { focusedQuestionFromRole } from '@/lib/focused-question';
 import { drawInterview, drawMockQuestions } from '@/lib/interview-draw';
 import { loadAttempts } from '@/lib/storage';
 import { InterviewFlow } from './InterviewFlow';
+import type { AnswerMode } from '@/lib/flow/answer-mode';
 
 /**
  * Client shell for a catalogue interview: counts this device's completed
@@ -16,7 +17,7 @@ import { InterviewFlow } from './InterviewFlow';
  * storage is blocked (private mode, in-app browsers) the count is simply 0 and
  * the candidate gets the curated first set: never an error.
  */
-export function PracticeInterview({ role, focusQuestionId, initialLanguage }: { role: Role; focusQuestionId?: string; initialLanguage?: 'en' | 'ar' }) {
+export function PracticeInterview({ role, focusQuestionId, initialLanguage, initialMode }: { role: Role; focusQuestionId?: string; initialLanguage?: 'en' | 'ar'; initialMode?: AnswerMode }) {
   const focusedQuestion = focusedQuestionFromRole(role, focusQuestionId);
   // Start with a complete set on the first paint. This makes the realistic
   // eight-question interview the default without waiting for local storage.
@@ -43,5 +44,5 @@ export function PracticeInterview({ role, focusQuestionId, initialLanguage }: { 
   // that), then swap in the drawn variant as soon as the attempt count is
   // read. The swap happens at the check stage, where no question text is on
   // screen, and the opener is identical in every variant: so it is invisible.
-  return <InterviewFlow role={drawn} mockQuestions={mockQuestions ?? undefined} initialLanguage={initialLanguage} focusQuestionId={focusQuestionId} focusedQuestion={focusedQuestion} />;
+  return <InterviewFlow role={drawn} mockQuestions={mockQuestions ?? undefined} initialLanguage={initialLanguage} initialAnswerMode={initialMode} focusQuestionId={focusQuestionId} focusedQuestion={focusedQuestion} />;
 }

@@ -40,18 +40,29 @@ function useAttemptsForRole(roleId: string): Attempt[] | null {
  * parent that wants the count-up should capture `score` before it saves a new
  * attempt and pass it back as `previous`.
  */
-export function useReadiness(roleId: string): ReadinessSnapshot | null {
+export function useReadiness(roleId: string, extraAttempts: Attempt[] = []): ReadinessSnapshot | null {
   const { lang } = useLang();
-  const attempts = useAttemptsForRole(roleId);
+  const stored = useAttemptsForRole(roleId);
   return useMemo(() => {
-    if (attempts === null) return null;
+    if (stored === null) return null;
     const role = getRole(roleId);
     if (!role) return null;
+    // Signed-in candidates keep their durable copy on the server rather than in
+    // this browser, so the sitting just finished is passed in by the parent.
+    const seen = new Set(stored.map((attempt) => attempt.id));
+    const attempts = [...stored, ...extraAttempts.filter((attempt) => !seen.has(attempt.id))];
     const readiness = computeReadiness(attempts, role);
     const typedTitle = roleId === CUSTOM_ROLE_ID ? attempts[0]?.roleTitle?.trim() : '';
     const roleTitle = typedTitle || (lang === 'ar' ? role.titleAr : role.title);
     return { ...readiness, roleTitle };
-  }, [attempts, roleId, lang]);
+  }, [stored, extraAttempts, roleId, lang]);
+}
+
+/** The score a role had from local history alone, before the sitting that has just finished. */
+export function readinessBeforeSitting(roleId: string): number | undefined {
+  const role = getRole(roleId);
+  if (!role) return undefined;
+  return computeReadiness(loadAttemptsForRole(roleId), role).score;
 }
 
 /** Counts from the value first shown to the target, or jumps when motion is reduced. */
@@ -172,13 +183,16 @@ export function ReadinessScore({
   roleId,
   size,
   previous,
+  extraAttempts,
 }: {
   roleId: string;
   size: 'compact' | 'full';
   /** Value shown before the count-up begins. Omit to show the current value without animation. */
   previous?: number;
+  /** Attempts not yet in local history, such as the sitting that has just finished. */
+  extraAttempts?: Attempt[];
 }) {
-  const snapshot = useReadiness(roleId);
+  const snapshot = useReadiness(roleId, extraAttempts);
   if (!snapshot) return null;
   return <ReadinessDial snapshot={snapshot} size={size} previous={previous} />;
 }

@@ -56,6 +56,7 @@ import { FeedbackCard, StreamingFeedbackCard } from './FeedbackCard';
 import { AnswerModeSelector } from './flow/AnswerModeSelector';
 import { StarGuideLines, StarGuideToggle } from './flow/StarGuide';
 import { KeepFeedbackSlot, QuestionTagsSlot, ReadinessSlot } from './flow/Slots';
+import { recordSessionEnd, updateConsentState } from '@/lib/practice-plan/ask-policy';
 
 /*
  * Screens that most visits never reach, or reach only after the candidate has
@@ -206,6 +207,7 @@ export function InterviewFlow({
   fellBack = false,
   mockQuestions,
   initialLanguage,
+  initialAnswerMode: requestedAnswerMode,
   ignoreLocalDraft = false,
   focusQuestionId,
   focusedQuestion,
@@ -224,6 +226,8 @@ export function InterviewFlow({
   mockQuestions?: Question[];
   /** Language carried from a report retry. It stays fixed for this interview. */
   initialLanguage?: 'en' | 'ar';
+  /** A plan link can open straight into the way the candidate chose to answer. */
+  initialAnswerMode?: AnswerMode;
   /** Start a new interview from a saved template without reopening another local draft. */
   ignoreLocalDraft?: boolean;
   /** Exact trusted question requested from a report retry. */
@@ -346,7 +350,7 @@ export function InterviewFlow({
     // The highlighted card: what this device chose last time, if it still can,
     // otherwise Type on a phone and Speak on a desktop. Nothing is requested yet.
     setAnswerMethod(initialAnswerMode({
-      stored: readStoredAnswerMode(window.localStorage),
+      stored: requestedAnswerMode ?? readStoredAnswerMode(window.localStorage),
       device: capabilities,
       availability: {
         speak: capabilities.speechSupported || audioFallback,
@@ -1546,6 +1550,8 @@ export function InterviewFlow({
     // transcript in this browser once server persistence is available.
     setSaveFailed(serverAttemptId ? false : !saveAttempt(attempt));
     setSavedAttempt(attempt);
+    // A finished sitting closes the session for the email ask rule.
+    updateConsentState(recordSessionEnd);
     track('interview_completed', {
       role_id: role.id,
       lang: interviewLanguage,
@@ -2266,7 +2272,13 @@ export function InterviewFlow({
         <div className="stack">
           <FeedbackCard feedback={feedback} attempt={attemptCount} />
           {answers.length === 0 && attemptCount === 1 && practiceSitting && (
-            <KeepFeedbackSlot roleId={role.id} serverAttemptId={serverAttemptId} lang={interviewLanguage} />
+            <KeepFeedbackSlot
+              roleId={role.id}
+              questionId={question.id}
+              serverAttemptId={serverAttemptId}
+              mode={selectedAnswerMethod}
+              lang={interviewLanguage}
+            />
           )}
           {previousTry && (
             <AnswerComparison
@@ -2406,7 +2418,13 @@ export function InterviewFlow({
           </div>
 
           {!proof && (
-            <ReadinessSlot roleId={role.id} feedback={answers.map((answer) => answer.feedback)} lang={interviewLanguage} />
+            <ReadinessSlot
+              roleId={role.id}
+              feedback={answers.map((answer) => answer.feedback)}
+              answers={answers}
+              roleTitle={reportRoleTitle}
+              lang={interviewLanguage}
+            />
           )}
 
           {(() => {
