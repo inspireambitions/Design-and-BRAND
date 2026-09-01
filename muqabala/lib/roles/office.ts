@@ -1,4 +1,4 @@
-import { q, opener, closer, serviceCompetencies, technicalCompetencies, type Role } from './shared';
+import { q, qt, opener, closer, serviceCompetencies, technicalCompetencies, type Role } from './shared';
 
 export const officeRoles: Role[] = [
   {
@@ -13,7 +13,7 @@ export const officeRoles: Role[] = [
     competencies: serviceCompetencies,
     questions: [
       opener,
-      q(
+      qt(['saudi_agency'],
         'competing_priorities',
         'Two managers give you urgent work at the same time. How do you handle it?',
         'يعطيك مديران عملاً عاجلاً في نفس الوقت. كيف تتعامل مع ذلك؟',
@@ -52,19 +52,19 @@ export const officeRoles: Role[] = [
     competencies: serviceCompetencies,
     questions: [
       opener,
-      q(
+      qt(['gulf_general', 'saudi_agency'],
         'visitor_no_appointment',
         'A visitor arrives without an appointment and insists on seeing the manager. What do you do?',
         'يصل زائر بدون موعد ويصرّ على مقابلة المدير. ماذا تفعل؟',
         ['customer_focus', 'communication', 'problem_solving'],
       ),
-      q(
+      qt(['gulf_general'],
         'juggling_desk',
         'The phone is ringing, a visitor is waiting and your manager needs something urgently. What do you do?',
         'الهاتف يرن وهناك زائر ينتظر ومديرك يحتاج شيئاً عاجلاً. ماذا تفعل؟',
         ['problem_solving', 'ownership', 'communication'],
       ),
-      q(
+      qt(['saudi_agency'],
         'confidentiality',
         'Someone asks you for information about a colleague or a client. How do you respond?',
         'يطلب منك أحدهم معلومات عن زميل أو عميل. كيف ترد؟',
@@ -89,13 +89,13 @@ export const officeRoles: Role[] = [
     competencies: serviceCompetencies,
     questions: [
       opener,
-      q(
+      qt(['oman_bahrain_kuwait_retail', 'gulf_general'],
         'angry_caller',
         'A customer is shouting at you on the phone about a problem that is not your fault. What do you do?',
         'عميل يصرخ عليك عبر الهاتف بسبب مشكلة ليست خطأك. ماذا تفعل؟',
         ['customer_focus', 'ownership', 'communication', 'problem_solving'],
       ),
-      q(
+      qt(['oman_bahrain_kuwait_retail'],
         'cannot_help',
         'A customer wants something the policy does not allow. How do you tell them?',
         'يريد عميل شيئاً لا تسمح به السياسة. كيف تخبره؟',

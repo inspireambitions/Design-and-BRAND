@@ -62,6 +62,8 @@ type EventName =
   | 'share_card_created'
   | 'web_vital'
   | PracticeFlowEventName
+  | 'plan_link_clicked'
+  | 'second_session'
   | TimingEventName;
 
 /** Practice flow milestones. Properties are role_id, mode and lang only. */
@@ -105,8 +107,10 @@ type EventProps = Partial<{
   outcome: string;
   /** How the candidate answered: type, speak or video. Never the words. */
   mode: 'type' | 'speak' | 'video';
-  /** Where an email ask was shown, e.g. 'advert_pack'. Never the address itself. */
+  /** Where an email was captured: feedback_card or advert_pack. Never the address. */
   source: string;
+  /** Day of the seven-day plan a link belonged to, 1 to 7. */
+  day: number;
 }>;
 
 export function track(event: EventName, props: EventProps = {}): void {
