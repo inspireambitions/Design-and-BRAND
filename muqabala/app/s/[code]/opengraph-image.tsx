@@ -14,10 +14,11 @@ export default async function ScreeningOpenGraphImage({
 }) {
   const { code } = await params;
   const pack = await getScreeningPack(code);
+  const availablePack = pack.status === 'active' || pack.status === 'full' ? pack : null;
   const preview = screeningPreviewCopy({
-    companyName: pack?.workplace,
-    jobTitle: pack?.role.title,
-    questionCount: pack?.role.questions.length,
+    companyName: availablePack?.workplace,
+    jobTitle: availablePack?.role.title,
+    questionCount: availablePack?.role.questions.length,
   });
   const roleSize = preview.jobTitle.length > 55 ? 30 : preview.jobTitle.length > 35 ? 35 : 40;
   const companySize = preview.companyName.length > 55 ? 25 : preview.companyName.length > 35 ? 29 : 34;
@@ -117,3 +118,4 @@ export default async function ScreeningOpenGraphImage({
     size,
   );
 }
+

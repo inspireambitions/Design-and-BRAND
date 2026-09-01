@@ -5,10 +5,16 @@ import type { Role } from '@/lib/roles';
 import { startLevelMeter, startVideoAnswerRecording, type RecordedVideo, type VideoAnswerRecorder } from '@/lib/media';
 import { startDictation, type SpeechSession } from '@/lib/speech';
 import { uploadScreeningVideo, type ScreeningUploadGrant } from '@/lib/screening-video-upload';
+import {
+  deleteScreeningRecordingDraft,
+  getScreeningRecordingDrafts,
+  probeScreeningRecordingStore,
+  saveScreeningRecordingDraft,
+} from '@/lib/screening-draft-store';
 import { useLang } from './LanguageProvider';
 import styles from './EmployerVideoInterview.module.css';
 
-type Stage = 'intro' | 'device' | 'ready' | 'recording' | 'saving' | 'consent' | 'submitting' | 'complete';
+type Stage = 'resuming' | 'unavailable' | 'intro' | 'device' | 'ready' | 'recording' | 'saving' | 'consent' | 'submitting' | 'complete';
 
 const ANSWER_SECONDS = 120;
 const CONSENT_VERSION = 'employer-video-v1' as const;
@@ -58,6 +64,15 @@ const COPY = {
     genericError: 'Something went wrong. Please try again.',
     unsupported: 'This browser cannot record video and audio. Open the link in Chrome on Android or Safari on iPhone.',
     employerReview: 'The hiring team will review your recordings. You will not see scores or analysis in this interview.',
+    checkingProgress: 'Checking for a saved interview…',
+    resumeFound: 'Your saved progress is ready. Test your camera and microphone to continue.',
+    recoveredRecording: 'We recovered a response that had not finished uploading. We will continue from it.',
+    storageUnavailable: 'This browser cannot safely keep a recording during an interruption. Open this link in normal Safari on iPhone or Chrome on Android, then try again.',
+    recordedOnDevice: 'Recorded on this device',
+    uploading: 'Uploading securely',
+    received: 'Received by Muqabala',
+    receiptSubmitted: 'Submitted to',
+    receiptReference: 'Reference',
   },
   ar: {
     invited: 'مقابلة من جهة العمل',
@@ -103,6 +118,15 @@ const COPY = {
     genericError: 'حدث خطأ. حاول مرة أخرى.',
     unsupported: 'هذا المتصفح لا يستطيع تسجيل الفيديو والصوت. افتح الرابط في Chrome على Android أو Safari على iPhone.',
     employerReview: 'سيراجع فريق التوظيف تسجيلاتك. لن تظهر لك درجات أو تحليلات في هذه المقابلة.',
+    checkingProgress: 'جارٍ البحث عن مقابلة محفوظة…',
+    resumeFound: 'تم العثور على تقدمك المحفوظ. اختبر الكاميرا والميكروفون للمتابعة.',
+    recoveredRecording: 'استعدنا إجابة لم يكتمل رفعها. سنكمل من حيث توقفت.',
+    storageUnavailable: 'لا يستطيع هذا المتصفح حفظ التسجيل بأمان عند انقطاع الاتصال. افتح الرابط في Safari العادي على iPhone أو Chrome على Android ثم حاول مرة أخرى.',
+    recordedOnDevice: 'تم التسجيل على هذا الجهاز',
+    uploading: 'جارٍ الرفع الآمن',
+    received: 'استلمت مقابلة التسجيل',
+    receiptSubmitted: 'تم الإرسال إلى',
+    receiptReference: 'المرجع',
   },
 } as const;
 
@@ -111,7 +135,32 @@ type Props = {
   interviewToken: string;
   companyName: string;
   recruiterName?: string;
+  publicCode: string;
+  availability?: 'active' | 'full';
 };
+
+type ScreeningStatus = {
+  currentQuestion: number;
+  questionCount: number;
+  answers: { questionIndex: number; uploadStatus: string; receivedAt: string | null }[];
+  submitted: boolean;
+  submittedAt: string | null;
+  reference: string | null;
+};
+
+function browserStartKey(publicCode: string): string | null {
+  try {
+    const storageKey = `muqabala.screening.start.${publicCode}`;
+    const existing = window.localStorage.getItem(storageKey);
+    if (existing && /^[A-Za-z0-9_-]{40,60}$/.test(existing)) return existing;
+    const bytes = crypto.getRandomValues(new Uint8Array(32));
+    const created = btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    window.localStorage.setItem(storageKey, created);
+    return created;
+  } catch {
+    return null;
+  }
+}
 
 function formatTime(value: number): string {
   const minutes = Math.floor(value / 60);
@@ -129,10 +178,17 @@ function permissionHelp(error: unknown, fallback: string, noDevice: string, devi
   return fallback;
 }
 
-export function EmployerVideoInterview({ role, interviewToken, companyName, recruiterName }: Props) {
+export function EmployerVideoInterview({
+  role,
+  interviewToken,
+  companyName,
+  recruiterName,
+  publicCode,
+  availability = 'active',
+}: Props) {
   const { lang, setLang, dir } = useLang();
   const c = COPY[lang];
-  const [stage, setStage] = useState<Stage>('intro');
+  const [stage, setStage] = useState<Stage>('resuming');
   const [candidateName, setCandidateName] = useState('');
   const [interviewId, setInterviewId] = useState<string | null>(null);
   const [index, setIndex] = useState(0);
@@ -141,9 +197,11 @@ export function EmployerVideoInterview({ role, interviewToken, companyName, recr
   const [devicesReady, setDevicesReady] = useState(false);
   const [error, setError] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [pending, setPending] = useState<{ recording: RecordedVideo; transcript: string } | null>(null);
+  const [pending, setPending] = useState<{ recording: RecordedVideo; transcript: string; questionIndex: number } | null>(null);
   const [consent, setConsent] = useState(false);
   const [savedCount, setSavedCount] = useState(0);
+  const [receipt, setReceipt] = useState<{ submittedAt: string; reference: string } | null>(null);
+  const [recoveryReady, setRecoveryReady] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -152,11 +210,86 @@ export function EmployerVideoInterview({ role, interviewToken, companyName, recr
   const speechRef = useRef<SpeechSession | null>(null);
   const transcriptRef = useRef('');
   const finishingRef = useRef(false);
+  const startKeyRef = useRef<string | null>(null);
 
   const questions = role.questions;
   const question = questions[index];
   const questionText = lang === 'ar' ? question?.textAr : question?.text;
   const progress = questions.length ? Math.round((savedCount / questions.length) * 100) : 0;
+
+  const readStatus = useCallback(async (id: string): Promise<ScreeningStatus> => {
+    const response = await fetch(`/api/screening/interviews/${id}/status`, { cache: 'no-store' });
+    const body = await response.json().catch(() => ({})) as ScreeningStatus & { error?: string };
+    if (!response.ok) throw new Error(body.error || c.genericError);
+    return body;
+  }, [c.genericError]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const startKey = browserStartKey(publicCode);
+    startKeyRef.current = startKey;
+    void fetch('/api/screening/resume', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(startKey ? { 'Idempotency-Key': startKey } : {}),
+      },
+      body: JSON.stringify({ publicCode }),
+    })
+      .then(async (response) => response.ok ? response.json() : null)
+      .then(async (body) => {
+        if (cancelled) return;
+        const resumed = body?.resume as {
+          id?: string;
+          candidateName?: string;
+          currentQuestion?: number;
+          complete?: boolean;
+          submittedAt?: string | null;
+          reference?: string | null;
+        } | null | undefined;
+        if (!resumed?.id) {
+          setStage(availability === 'full' ? 'unavailable' : 'intro');
+          return;
+        }
+        const resumedId = resumed.id;
+        setInterviewId(resumedId);
+        setCandidateName(resumed.candidateName || '');
+        const status = await readStatus(resumedId);
+        const received = status.answers.filter((answer) => Boolean(answer.receivedAt));
+        const nextIndex = Math.max(0, Math.min(questions.length - 1, status.currentQuestion ?? received.length));
+        setIndex(nextIndex);
+        setSavedCount(received.length);
+        if (status.submitted && status.submittedAt && status.reference) {
+          const drafts = await getScreeningRecordingDrafts(resumedId);
+          await Promise.all(drafts.map((draft) => deleteScreeningRecordingDraft(resumedId, draft.questionIndex)));
+          setReceipt({ submittedAt: status.submittedAt, reference: status.reference });
+          setStage('complete');
+          return;
+        }
+        const drafts = await getScreeningRecordingDrafts(resumedId);
+        const recovered = drafts.find((draft) => draft.questionIndex === nextIndex);
+        if (recovered) {
+          setPending({
+            recording: {
+              blob: recovered.blob,
+              mimeType: recovered.mimeType,
+              durationSeconds: recovered.durationSeconds,
+            },
+            transcript: recovered.transcript,
+            questionIndex: recovered.questionIndex,
+          });
+          setError(c.recoveredRecording);
+          setStage('saving');
+          return;
+        }
+        setError(c.resumeFound);
+        setStage(status.currentQuestion >= questions.length ? 'consent' : 'intro');
+      })
+      .catch(() => {
+        if (!cancelled) setStage(availability === 'full' ? 'unavailable' : 'intro');
+      });
+    return () => { cancelled = true; };
+  }, [availability, c.recoveredRecording, c.resumeFound, publicCode, questions.length, readStatus]);
 
   const attachPreview = useCallback(async () => {
     if (!videoRef.current || !streamRef.current) return;
@@ -191,6 +324,15 @@ export function EmployerVideoInterview({ role, interviewToken, companyName, recr
 
   const testDevices = useCallback(async () => {
     setError('');
+    if (!recoveryReady) {
+      const durable = await probeScreeningRecordingStore();
+      if (!durable) {
+        setError(c.storageUnavailable);
+        setStage('device');
+        return;
+      }
+      setRecoveryReady(true);
+    }
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
       setError(c.unsupported);
       return;
@@ -224,7 +366,7 @@ export function EmployerVideoInterview({ role, interviewToken, companyName, recr
     } catch (caught) {
       setError(permissionHelp(caught, c.notReadyBody, c.noDevice, c.deviceBusy));
     }
-  }, [attachPreview, c.deviceBusy, c.noDevice, c.notReadyBody, c.unsupported, stopDevices]);
+  }, [attachPreview, c.deviceBusy, c.noDevice, c.notReadyBody, c.storageUnavailable, c.unsupported, recoveryReady, stopDevices]);
 
   const createInterview = useCallback(async () => {
     if (!candidateName.trim() || !streamRef.current) return;
@@ -232,7 +374,10 @@ export function EmployerVideoInterview({ role, interviewToken, companyName, recr
     try {
       const response = await fetch('/api/interviews', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(startKeyRef.current ? { 'Idempotency-Key': startKeyRef.current } : {}),
+        },
         body: JSON.stringify({
           roleId: role.id,
           roleTitle: role.title,
@@ -255,11 +400,15 @@ export function EmployerVideoInterview({ role, interviewToken, companyName, recr
       const body = await response.json().catch(() => ({})) as { id?: string; error?: string };
       if (!response.ok || !body.id) throw new Error(body.error || c.genericError);
       setInterviewId(body.id);
-      setStage('ready');
+      const status = await readStatus(body.id);
+      const received = status.answers.filter((answer) => Boolean(answer.receivedAt));
+      setSavedCount(received.length);
+      setIndex(Math.max(0, Math.min(questions.length - 1, status.currentQuestion)));
+      setStage(status.currentQuestion >= questions.length ? 'consent' : 'ready');
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : c.genericError);
     }
-  }, [c.genericError, candidateName, interviewToken, lang, questions, role.id, role.title]);
+  }, [c.genericError, candidateName, interviewToken, lang, questions, readStatus, role.id, role.title]);
 
   const startRecording = useCallback(() => {
     const stream = streamRef.current;
@@ -313,7 +462,7 @@ export function EmployerVideoInterview({ role, interviewToken, companyName, recr
     }).catch(() => {});
   }, [interviewId, interviewToken, lang, questions, role.id, role.title]);
 
-  const savePending = useCallback(async (toSave: { recording: RecordedVideo; transcript: string }) => {
+  const savePending = useCallback(async (toSave: { recording: RecordedVideo; transcript: string; questionIndex: number }) => {
     if (!interviewId) return;
     setStage('saving');
     setError('');
@@ -322,12 +471,52 @@ export function EmployerVideoInterview({ role, interviewToken, companyName, recr
       if (toSave.recording.blob.size > 50 * 1024 * 1024) {
         throw new Error('This recording is too large to upload. Please record the answer again.');
       }
+      await saveScreeningRecordingDraft(
+        interviewId,
+        toSave.questionIndex,
+        toSave.recording,
+        toSave.transcript,
+      );
+
+      const beforeUpload = await readStatus(interviewId);
+      const alreadyReceived = beforeUpload.answers.some(
+        (answer) => answer.questionIndex === toSave.questionIndex && Boolean(answer.receivedAt),
+      );
+      if (alreadyReceived) {
+        await deleteScreeningRecordingDraft(interviewId, toSave.questionIndex);
+        const savedIndex = toSave.questionIndex;
+        setPending(null);
+        setSavedCount(beforeUpload.answers.filter((answer) => Boolean(answer.receivedAt)).length);
+        setUploadProgress(100);
+        if (savedIndex >= questions.length - 1) setStage('consent');
+        else {
+          setIndex(savedIndex + 1);
+          setStage('ready');
+        }
+        return;
+      }
       const grantResponse = await fetch(`/api/screening/interviews/${interviewId}/upload-url`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questionIndex: index, mimeType: toSave.recording.mimeType }),
+        body: JSON.stringify({ questionIndex: toSave.questionIndex, mimeType: toSave.recording.mimeType }),
       });
-      const grantBody = await grantResponse.json().catch(() => ({})) as ScreeningUploadGrant & { error?: string };
+      const grantBody = await grantResponse.json().catch(() => ({})) as ScreeningUploadGrant & { error?: string; state?: string };
+      if (grantResponse.ok && grantBody.state === 'received') {
+        const status = await readStatus(interviewId);
+        const confirmed = status.answers.some(
+          (answer) => answer.questionIndex === toSave.questionIndex && Boolean(answer.receivedAt),
+        );
+        if (!confirmed) throw new Error(c.genericError);
+        await deleteScreeningRecordingDraft(interviewId, toSave.questionIndex);
+        setPending(null);
+        setSavedCount(status.answers.filter((answer) => Boolean(answer.receivedAt)).length);
+        if (toSave.questionIndex >= questions.length - 1) setStage('consent');
+        else {
+          setIndex(toSave.questionIndex + 1);
+          setStage('ready');
+        }
+        return;
+      }
       if (!grantResponse.ok || !grantBody.path || !grantBody.token) {
         throw new Error(grantBody.error || c.genericError);
       }
@@ -337,7 +526,7 @@ export function EmployerVideoInterview({ role, interviewToken, companyName, recr
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          questionIndex: index,
+          questionIndex: toSave.questionIndex,
           transcript: toSave.transcript,
           videoPath: grantBody.path,
           mimeType: toSave.recording.mimeType,
@@ -345,14 +534,21 @@ export function EmployerVideoInterview({ role, interviewToken, companyName, recr
           durationSeconds: toSave.recording.durationSeconds,
         }),
       });
-      const savedBody = await saveResponse.json().catch(() => ({})) as { error?: string };
+      const savedBody = await saveResponse.json().catch(() => ({})) as { error?: string; receivedAt?: string };
       if (!saveResponse.ok) throw new Error(savedBody.error || c.genericError);
 
-      const savedIndex = index;
+      const confirmedStatus = await readStatus(interviewId);
+      const confirmed = confirmedStatus.answers.some(
+        (answer) => answer.questionIndex === toSave.questionIndex && Boolean(answer.receivedAt),
+      );
+      if (!confirmed) throw new Error('The upload finished, but Muqabala has not confirmed the response yet. Please retry.');
+
+      const savedIndex = toSave.questionIndex;
       scoreInBackground(savedIndex, toSave.transcript);
+      await deleteScreeningRecordingDraft(interviewId, savedIndex);
       setPending(null);
-      setSavedCount(savedIndex + 1);
-      setUploadProgress(100);
+      setSavedCount(confirmedStatus.answers.filter((answer) => Boolean(answer.receivedAt)).length);
+      setUploadProgress(101);
       window.setTimeout(() => {
         if (savedIndex >= questions.length - 1) {
           setStage('consent');
@@ -365,7 +561,14 @@ export function EmployerVideoInterview({ role, interviewToken, companyName, recr
       setPending(toSave);
       setError(caught instanceof Error ? caught.message : c.genericError);
     }
-  }, [c.genericError, index, interviewId, questions.length, scoreInBackground]);
+  }, [c.genericError, interviewId, questions.length, readStatus, scoreInBackground]);
+
+  useEffect(() => {
+    if (!pending || !error) return;
+    const resume = () => void savePending(pending);
+    window.addEventListener('online', resume);
+    return () => window.removeEventListener('online', resume);
+  }, [error, pending, savePending]);
 
   const finishRecording = useCallback(async () => {
     if (finishingRef.current || stage !== 'recording') return;
@@ -378,7 +581,7 @@ export function EmployerVideoInterview({ role, interviewToken, companyName, recr
     try {
       const recording = await recorder?.stop();
       if (!recording) throw new Error(c.genericError);
-      const captured = { recording, transcript: transcriptRef.current.trim() };
+      const captured = { recording, transcript: transcriptRef.current.trim(), questionIndex: index };
       setPending(captured);
       await savePending(captured);
     } catch (caught) {
@@ -387,6 +590,15 @@ export function EmployerVideoInterview({ role, interviewToken, companyName, recr
       finishingRef.current = false;
     }
   }, [c.genericError, savePending, stage]);
+
+  useEffect(() => {
+    if (stage !== 'recording') return;
+    const preserveWhenHidden = () => {
+      if (document.visibilityState === 'hidden') void finishRecording();
+    };
+    document.addEventListener('visibilitychange', preserveWhenHidden);
+    return () => document.removeEventListener('visibilitychange', preserveWhenHidden);
+  }, [finishRecording, stage]);
 
   useEffect(() => {
     if (stage !== 'recording') return;
@@ -417,15 +629,32 @@ export function EmployerVideoInterview({ role, interviewToken, companyName, recr
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ consent: true, consentVersion: CONSENT_VERSION }),
       });
-      const body = await response.json().catch(() => ({})) as { error?: string };
+      const body = await response.json().catch(() => ({})) as { error?: string; submittedAt?: string; reference?: string };
       if (!response.ok) throw new Error(body.error || c.submitFailed);
+      if (!body.submittedAt || !body.reference) throw new Error(c.submitFailed);
       stopDevices();
+      const status = await readStatus(interviewId);
+      if (!status.submitted || !status.submittedAt || !status.reference) throw new Error(c.submitFailed);
+      setReceipt({ submittedAt: status.submittedAt, reference: status.reference });
       setStage('complete');
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : c.submitFailed);
       setStage('consent');
     }
-  }, [c.submitFailed, consent, interviewId, stopDevices]);
+  }, [c.submitFailed, consent, interviewId, readStatus, stopDevices]);
+
+  if (stage === 'unavailable') {
+    return (
+      <main className={styles.page} dir={dir}>
+        <div className={styles.shell}>
+          <section className={styles.card}>
+            <p className={styles.eyebrow}>{companyName}</p>
+            <h1>This interview link is no longer accepting new candidates.</h1>
+          </section>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className={styles.page} dir={dir}>
@@ -446,6 +675,13 @@ export function EmployerVideoInterview({ role, interviewToken, companyName, recr
           <span aria-hidden="true">·</span>
           <strong dir="auto">{lang === 'ar' ? role.titleAr : role.title}</strong>
         </div>
+
+        {stage === 'resuming' && (
+          <section className={styles.card} aria-live="polite">
+            <p className={styles.eyebrow}>{c.invited}</p>
+            <h1>{c.checkingProgress}</h1>
+          </section>
+        )}
 
         {interviewId && stage !== 'complete' && (
           <div className={styles.progressWrap}>
@@ -545,10 +781,21 @@ export function EmployerVideoInterview({ role, interviewToken, companyName, recr
             <p className={styles.eyebrow}>{error ? c.saveFailed : c.saving}</p>
             <h1 id="saving-title">{error ? c.saveFailed : `${c.saving}…`}</h1>
             {!error && (
-              <div className={styles.upload}>
-                <span style={{ width: `${uploadProgress}%` }} />
-                <strong>{c.upload}: {uploadProgress}%</strong>
-              </div>
+              <>
+                <ol className={styles.saveStages} aria-label={c.saving}>
+                  <li className={styles.saveStageDone}>✓ {c.recordedOnDevice}</li>
+                  <li className={uploadProgress < 100 ? styles.saveStageActive : styles.saveStageDone}>
+                    {uploadProgress < 100 ? '•' : '✓'} {c.uploading}
+                  </li>
+                  <li className={uploadProgress > 100 ? styles.saveStageDone : styles.saveStageWaiting}>
+                    {uploadProgress > 100 ? '✓' : '○'} {c.received}
+                  </li>
+                </ol>
+                <div className={styles.upload}>
+                  <span style={{ width: `${Math.min(100, uploadProgress)}%` }} />
+                  <strong>{uploadProgress > 100 ? c.received : `${c.upload}: ${uploadProgress}%`}</strong>
+                </div>
+              </>
             )}
             <p>{c.keepOpen}</p>
             {error && <div className={styles.error} role="alert">{error}</div>}
@@ -586,6 +833,13 @@ export function EmployerVideoInterview({ role, interviewToken, companyName, recr
             <p className={styles.eyebrow}>{companyName}</p>
             <h1 id="complete-title">{c.completeTitle}</h1>
             <p className={styles.lede}>{c.completeBody}</p>
+            {receipt && (
+              <div className={styles.receipt} role="status">
+                <strong>{c.receiptSubmitted} {companyName}</strong>
+                <span>{new Date(receipt.submittedAt).toLocaleString(lang === 'ar' ? 'ar-AE' : 'en-GB')}</span>
+                <span>{c.receiptReference}: {receipt.reference}</span>
+              </div>
+            )}
             <p className={styles.footnote}>{c.close}</p>
           </section>
         )}
@@ -593,3 +847,4 @@ export function EmployerVideoInterview({ role, interviewToken, companyName, recr
     </main>
   );
 }
+

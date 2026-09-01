@@ -36,12 +36,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   const { data: existing } = await access.admin!.from('interview_answers')
-    .select('video_path,video_upload_status')
+    .select('video_path,video_upload_status,response_saved_at')
     .eq('interview_id', id)
     .eq('question_index', parsed.data.questionIndex)
     .maybeSingle();
   if (existing?.video_upload_status === 'uploaded') {
-    return Response.json({ error: 'This response is already saved.' }, { status: 409 });
+    return Response.json({
+      state: 'received',
+      receivedAt: existing.response_saved_at,
+    }, { headers: privateNoStoreHeaders() });
   }
 
   const path = existing?.video_path || [
@@ -80,3 +83,4 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     maxBytes: 50 * 1024 * 1024,
   }, { headers: privateNoStoreHeaders() });
 }
+

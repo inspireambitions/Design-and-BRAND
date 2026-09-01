@@ -1,6 +1,6 @@
 import { ScreeningSubmitSchema } from '@/lib/interviews';
 import { interviewAccess } from '@/lib/server/interview-access';
-import { hasTrustedOrigin, privateNoStoreHeaders } from '@/lib/server/security';
+import { hasTrustedOrigin, privateNoStoreHeaders, screeningReceiptReference } from '@/lib/server/security';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -17,7 +17,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return Response.json({ error: 'Interview not found.' }, { status: 404 });
   }
   if (interview.locked_at || interview.submitted_at) {
-    return Response.json({ error: 'This interview has already been submitted.' }, { status: 409 });
+    if (interview.locked_at && interview.submitted_at) {
+      return Response.json({
+        submitted: true,
+        submittedAt: interview.submitted_at,
+        reference: screeningReceiptReference(id),
+      }, { headers: privateNoStoreHeaders() });
+    }
+    return Response.json({ error: 'This interview cannot be changed.' }, { status: 409 });
   }
 
   const { data: submittedAt, error } = await access.admin!.rpc('submit_screening_interview', {
@@ -28,5 +35,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (error || !submittedAt) {
     return Response.json({ error: 'Save every response before submitting.' }, { status: 409 });
   }
-  return Response.json({ submitted: true, submittedAt }, { headers: privateNoStoreHeaders() });
+  return Response.json({
+    submitted: true,
+    submittedAt,
+    reference: screeningReceiptReference(id),
+  }, { headers: privateNoStoreHeaders() });
 }
+

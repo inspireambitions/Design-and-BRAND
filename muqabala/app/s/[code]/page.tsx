@@ -9,10 +9,11 @@ type PageProps = { params: Promise<{ code: string }> };
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { code } = await params;
   const pack = await getScreeningPack(code);
+  const availablePack = pack.status === 'active' || pack.status === 'full' ? pack : null;
   const preview = screeningPreviewCopy({
-    companyName: pack?.workplace,
-    jobTitle: pack?.role.title,
-    questionCount: pack?.role.questions.length,
+    companyName: availablePack?.workplace,
+    jobTitle: availablePack?.role.title,
+    questionCount: availablePack?.role.questions.length,
   });
 
   return {
@@ -41,7 +42,7 @@ export default async function ProofSittingPage({
 }: PageProps) {
   const { code } = await params;
   const pack = await getScreeningPack(code);
-  if (!pack) notFound();
+  if (pack.status !== 'active' && pack.status !== 'full') notFound();
 
   return (
     <div className="employer-proof-page employer-light-theme">
@@ -50,7 +51,10 @@ export default async function ProofSittingPage({
         interviewToken={pack.signedToken}
         companyName={pack.workplace}
         recruiterName={pack.recruiterName}
+        publicCode={code}
+        availability={pack.status}
       />
     </div>
   );
 }
+
