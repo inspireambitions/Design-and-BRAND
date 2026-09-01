@@ -204,9 +204,6 @@ No table lacked RLS, so the migration adds none. Every policy predicate is serve
 
 Verified here: `tsc --noEmit`, `node --experimental-strip-types --test scripts/*.test.mjs`, `next build`. Not verified here: the migration against a database (no Supabase access from this environment), and `report_load_ms` on production.
 
-## Sections not started
-
-- Section 3, on-device transcription: Web Speech with typing fallback exists; audio-only server fallback does not.
 ### 2026-09-01, Section 3
 
 | Metric | Before | After | Source |
@@ -228,9 +225,15 @@ Zero video bytes is enforced at both ends: the fallback recorder opens its own m
 
 Verified here: `tsc --noEmit`, the full test suite, `next build`, `/practice/[roleId]` within the 200 KB first-load budget. Not verified here: the Firefox fallback path end to end, because this environment has no provider key and no browser. It needs a manual check on the preview deployment: open `/practice/[roleId]` in Firefox, pick Speak, answer, and confirm the skeleton then the written words appear; repeat in Video mode and confirm in the network panel that the only upload is one `audio/*` request to `/api/transcribe`.
 
-## Sections not started
+## Open items that need production access
 
-- Section 2, Middle East edge region: needs Vercel project settings and the Supabase region check. Do not migrate Supabase without confirmation.
-- Section 4, build-time generation: `/practice/[roleId]` currently renders on demand; no model answers; no advert-hash cache.
-- Section 5, page weight: no bundle budget in CI; `components/InterviewFlow.tsx` is the largest client module.
-- Section 6 and 7 code is complete above; the migrations wait for `supabase db push` after review, and the `pg_stat_statements` reading waits for a preview load test.
+All eight sections have code in place. These steps cannot be done from a build environment.
+
+- Baseline: run one day with `NEXT_PUBLIC_FEEDBACK_STREAMING=off`, record p75 figures above, then switch on.
+- PostHog: create the dashboard from the event table at the top of this file.
+- Section 2: confirm the Supabase project region in the dashboard. If it is in the US, revisit `dxb1` for the functions.
+- Section 2: measure TTFB from Dubai, Riyadh and Doha on WebPageTest after the region change is live.
+- Section 3: check the Firefox fallback on a preview as described in the Section 3 entry.
+- Section 4: create the Sanity webhook to `/api/revalidate` and set `SANITY_REVALIDATE_SECRET` in Vercel.
+- Sections 6 and 7: apply the two migrations with `supabase db push` after review, then run the k6 load test against a preview and read `pg_stat_statements` for statements over 100 ms.
+- Section 1 model choice: trial `SCORING_REASONING=low` and a smaller model, gated by `npm run gate:feedback-quality`.
