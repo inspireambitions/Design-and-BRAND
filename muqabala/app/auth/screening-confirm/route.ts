@@ -14,6 +14,12 @@ export async function GET(request: Request) {
   const client = await createClient();
   if (client && tokenHash && type && safeCode) {
     const { data, error } = await client.auth.verifyOtp({ type, token_hash: tokenHash });
-    if (!error && datauredOrigin()}/s/${safeCode}?verification=expired`
+    if (!error && data.user?.email && data.user.email_confirmed_at) {
+      return NextResponse.redirect(`${configuredOrigin()}/s/${safeCode}`);
+    }
+  }
+  return NextResponse.redirect(safeCode
+    ? `${configuredOrigin()}/s/${safeCode}?verification=expired`
     : `${configuredOrigin()}/sign-in?error=expired`);
 }
+
