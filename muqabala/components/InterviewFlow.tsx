@@ -29,12 +29,14 @@ import {
   type StarElement,
 } from '@/lib/star-probe';
 import { startRecording, startLevelMeter, type AnswerRecorder, type LevelMeter } from '@/lib/media';
+import { isAudioCaptureSupported, startAudioCapture, type AudioCapture } from '@/lib/audio-capture';
 import type { InterviewMode } from '@/lib/interview-plan-policy';
 import {
   INITIAL_DEVICE_CAPABILITIES,
   defaultAnswerMethod,
   detectDeviceCapabilities,
   type DeviceCapabilities,
+  videoCaptureSupported,
   videoModeSupported,
 } from '@/lib/device-capabilities';
 import {
@@ -89,6 +91,9 @@ const FEEDBACK_STREAMING_ENABLED = process.env.NEXT_PUBLIC_FEEDBACK_STREAMING !=
 
 /** The browser waits a little longer than the server so the server speaks first. */
 const CLIENT_SCORING_TIMEOUT_MS = FEEDBACK_STREAM_TIMEOUT_MS + 3_000;
+
+/** Server transcription budget is 20 s; the upload itself gets a little more. */
+const CLIENT_TRANSCRIPTION_TIMEOUT_MS = 25_000;
 
 type ScoreResponsePayload = { feedback: AnswerFeedback; locked?: boolean };
 
@@ -228,6 +233,15 @@ export function InterviewFlow({
   const [playbackUrl, setPlaybackUrl] = useState<string | null>(null);
   const [reportCopied, setReportCopied] = useState(false);
   const [speechOk, setSpeechOk] = useState(INITIAL_DEVICE_CAPABILITIES.speechSupported);
+  /**
+   * Browsers without the Web Speech API (Firefox, some in-app browsers) can
+   * still speak their answer: the audio alone is recorded and written up on
+   * the server when they finish. Turned off for the session if that fails.
+   */
+  const [audioFallbackAvailable, setAudioFallbackAvailable] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const [transcriptionFailed, setTranscriptionFailed] = useState(false);
+  const [playbackIsVideo, setPlaybackIsVideo] = useState(false);
   const [onDeviceSpeech, setOnDeviceSpeech] = useState(false);
   const [answerMethod, setAnswerMethod] = useState<'speak' | 'type' | 'video'>(() =>
     defaultAnswerMethod(INITIAL_DEVICE_CAPABILITIES),
@@ -283,6 +297,8 @@ export function InterviewFlow({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const dictationRef = useRef<SpeechSession | null>(null);
+  const audioCaptureRef = useRef<AudioCapture | null>(null);
+  const transcriptionAbortRef = useRef<AbortController | null>(null);
   const recorderRef = useRef<AnswerRecorder | null>(null);
   const meterRef = useRef<LevelMeter | null>(null);
   const playbackRef = useRef<HTMLVideoElement | null>(null);
@@ -298,12 +314,18 @@ export function InterviewFlow({
     const capabilities = detectDeviceCapabilities();
     setDeviceCaps(capabilities);
     setSpeechOk(capabilities.speechSupported);
+    setAudioFallbackAvailable(!capabilities.speechSupported && isAudioCaptureSupported());
     setAnswerMethod(defaultAnswerMethod(capabilities));
   }, []);
 
-  const selectedAnswerMethod = speechOk ? answerMethod : 'type';
+  const voiceAvailable = speechOk || audioFallbackAvailable;
+  const selectedAnswerMethod = voiceAvailable ? answerMethod : 'type';
   const useVoice = selectedAnswerMethod !== 'type';
-  const useVideo = selectedAnswerMethod === 'video' && videoModeSupported(deviceCaps);
+  /** Speaking without live captions: audio only is written up after the answer. */
+  const usingAudioFallback = useVoice && !speechOk;
+  const videoSelectable = videoModeSupported(deviceCaps)
+    || (audioFallbackAvailable && videoCaptureSupported(deviceCaps));
+  const useVideo = selectedAnswerMethod === 'video' && videoSelectable;
   const deviceGuidanceKey =
     deviceCaps.guidance === 'mobile'
       ? 'deviceGuidanceMobile'
@@ -586,7 +608,10 @@ export function InterviewFlow({
     const supported = isSpeechSupported();
     setSpeechOk(supported);
     if (!supported) {
-      setAnswerMethod('type');
+      // Without live captions the candidate may still speak: audio only is
+      // written up when they finish. Only a browser that cannot record audio
+      // at all is moved to typing here.
+      if (!isAudioCaptureSupported()) setAnswerMethod('type');
       return;
     }
     let cancelled = false;
@@ -611,8 +636,18 @@ export function InterviewFlow({
     setInterim('');
   }, []);
 
+  /** Drops any audio held for server transcription and stops waiting for a result. */
+  const discardAudioCapture = useCallback(() => {
+    audioCaptureRef.current?.discard();
+    audioCaptureRef.current = null;
+    transcriptionAbortRef.current?.abort();
+    transcriptionAbortRef.current = null;
+    setTranscribing(false);
+  }, []);
+
   const switchToTyping = useCallback(async () => {
     stopDictation();
+    discardAudioCapture();
     setAnswerMethod('type');
     meterRef.current?.stop();
     meterRef.current = null;
@@ -627,14 +662,25 @@ export function InterviewFlow({
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
     setCameraState('idle');
-  }, [stopDictation]);
+  }, [discardAudioCapture, stopDictation]);
 
-  // Release camera and microphone when the component unmounts.
+  // Release camera and microphone when the component unmounts, and drop any
+  // audio held for transcription. The same happens when the tab is closed or
+  // sent to the background history, so no recording outlives the session.
   useEffect(() => {
-    return () => {
+    const release = () => {
       dictationRef.current?.stop();
       meterRef.current?.stop();
+      audioCaptureRef.current?.discard();
+      audioCaptureRef.current = null;
+      transcriptionAbortRef.current?.abort();
+      transcriptionAbortRef.current = null;
       streamRef.current?.getTracks().forEach((track) => track.stop());
+    };
+    window.addEventListener('pagehide', release);
+    return () => {
+      window.removeEventListener('pagehide', release);
+      release();
     };
   }, []);
 
@@ -673,13 +719,13 @@ export function InterviewFlow({
   }, []);
 
   const retryVideoFromFallback = useCallback(async () => {
-    if (!speechOk) return;
+    if (!voiceAvailable) return;
     const cameraReady = await enableCamera();
     if (cameraReady) {
       setAnswerMethod('video');
       setDeviceFallback(false);
     }
-  }, [enableCamera, speechOk]);
+  }, [enableCamera, voiceAvailable]);
 
   const enableMicrophone = useCallback(async (): Promise<boolean> => {
     if (streamRef.current?.getTracks().some((track) => track.readyState === 'live')) return true;
@@ -760,6 +806,65 @@ export function InterviewFlow({
     return true;
   }, [interviewLanguage, switchToTyping]);
 
+  /**
+   * Audio-only fallback for browsers without live captions. The recorder gets
+   * its own microphone-only stream, so even in Video mode no camera frame can
+   * reach it. The local video preview stays on the device exactly as before.
+   */
+  const startAudioFallbackCapture = useCallback(async (): Promise<boolean> => {
+    audioCaptureRef.current?.discard();
+    const capture = await startAudioCapture();
+    if (!capture) {
+      setAudioFallbackAvailable(false);
+      setDeviceFallback(true);
+      await switchToTyping();
+      return false;
+    }
+    audioCaptureRef.current = capture;
+    return true;
+  }, [switchToTyping]);
+
+  /** Uploads one answer's audio and fills the transcript for the candidate to check. */
+  const transcribeOnServer = useCallback(async (blob: Blob, stoppedAt: number) => {
+    transcriptionAbortRef.current?.abort();
+    const controller = new AbortController();
+    transcriptionAbortRef.current = controller;
+    setTranscribing(true);
+    setTranscriptionFailed(false);
+    const timeoutId = window.setTimeout(() => controller.abort(), CLIENT_TRANSCRIPTION_TIMEOUT_MS);
+    const timingProps = { lang: interviewLanguage, outcome: 'server' };
+    try {
+      const form = new FormData();
+      form.append('audio', blob, 'answer');
+      form.append('lang', interviewLanguage);
+      const response = await fetch('/api/transcribe', {
+        method: 'POST',
+        body: form,
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error(`transcription_${response.status}`);
+      const data = (await response.json()) as { transcript?: string };
+      // A retry or next question may have moved on while the upload ran.
+      if (transcriptionAbortRef.current !== controller) return;
+      setTranscript((data.transcript ?? '').trim());
+      trackTiming('transcript_ready_ms', performance.now() - stoppedAt, timingProps);
+    } catch {
+      if (transcriptionAbortRef.current !== controller) return;
+      trackTiming('transcript_ready_ms', performance.now() - stoppedAt, { ...timingProps, outcome: 'server_failed' });
+      // 503 (no provider), a timeout or a network fault all mean the same to
+      // the candidate: type this answer, and speak-to-text is off for now.
+      setTranscriptionFailed(true);
+      setDeviceFallback(true);
+      setAudioFallbackAvailable(false);
+    } finally {
+      window.clearTimeout(timeoutId);
+      if (transcriptionAbortRef.current === controller) {
+        transcriptionAbortRef.current = null;
+        setTranscribing(false);
+      }
+    }
+  }, [interviewLanguage]);
+
   const startMicMeter = useCallback(() => {
     if (!streamRef.current) return;
     meterRef.current = startLevelMeter(
@@ -797,13 +902,19 @@ export function InterviewFlow({
     const live = Boolean(useVoice && streamRef.current);
     setRecordingLive(live);
     if (useVoice) {
-      if (!startSpeechCapture()) return;
+      if (usingAudioFallback) {
+        setTranscriptionFailed(false);
+        if (!(await startAudioFallbackCapture())) return;
+      } else if (!startSpeechCapture()) {
+        return;
+      }
       if (streamRef.current) {
         recorderRef.current = startRecording(streamRef.current);
         startMicMeter();
       }
     }
-  }, [ensureCaptureReady, playbackUrl, question.answerSeconds, startMicMeter, startSpeechCapture, switchToTyping, useVoice]);
+  }, [ensureCaptureReady, playbackUrl, question.answerSeconds, startAudioFallbackCapture, startMicMeter,
+    startSpeechCapture, switchToTyping, useVoice, usingAudioFallback]);
 
   const liveSitting = mode === 'mock' || mode === 'screening';
 
@@ -814,6 +925,7 @@ export function InterviewFlow({
       meterRef.current?.stop();
       meterRef.current = null;
       recorderRef.current?.pause();
+      audioCaptureRef.current?.pause();
       streamRef.current?.getTracks().forEach((track) => { track.enabled = false; });
       setRecordingLive(false);
       setTimerPaused(true);
@@ -822,12 +934,17 @@ export function InterviewFlow({
     }
     streamRef.current?.getTracks().forEach((track) => { track.enabled = true; });
     recorderRef.current?.resume();
-    if (!startSpeechCapture(transcript)) return;
+    if (usingAudioFallback) {
+      audioCaptureRef.current?.resume();
+    } else if (!startSpeechCapture(transcript)) {
+      return;
+    }
     startMicMeter();
     setRecordingLive(true);
     setTimerPaused(false);
     setTimerAnnouncement(t('timerResumedStatus'));
-  }, [liveSitting, stage, startMicMeter, startSpeechCapture, stopDictation, t, timerPaused, transcript, useVoice]);
+  }, [liveSitting, stage, startMicMeter, startSpeechCapture, stopDictation, t, timerPaused, transcript, useVoice,
+    usingAudioFallback]);
 
   const finishAnswer = useCallback(async () => {
     if (finalizingRef.current) return;
@@ -840,9 +957,25 @@ export function InterviewFlow({
       meterRef.current = null;
       setMicLevel(0);
       setTranscriptConfirmed(false);
+      setPlaybackIsVideo(useVideo);
       setStage('review');
-      if (useVoice) {
-        trackTiming('transcript_ready_ms', performance.now() - stoppedAt, { lang: interviewLanguage });
+      if (useVoice && !usingAudioFallback) {
+        trackTiming('transcript_ready_ms', performance.now() - stoppedAt, {
+          lang: interviewLanguage,
+          outcome: 'device',
+        });
+      }
+
+      const capture = audioCaptureRef.current;
+      audioCaptureRef.current = null;
+      if (capture) {
+        const audio = await capture.stop();
+        if (audio) {
+          // Not awaited: the review screen shows a skeleton until the words land.
+          void transcribeOnServer(audio, stoppedAt);
+        } else {
+          setTranscriptionFailed(true);
+        }
       }
 
       const recorder = recorderRef.current;
@@ -855,7 +988,7 @@ export function InterviewFlow({
       finalizingRef.current = false;
       setIsFinalizing(false);
     }
-  }, [interviewLanguage, stopDictation, useVoice]);
+  }, [interviewLanguage, stopDictation, transcribeOnServer, useVideo, useVoice, usingAudioFallback]);
 
   // The OS kills camera and microphone on a phone call or an app switch, and
   // nothing tells the page. Watch the tracks themselves, and when the page
@@ -892,6 +1025,7 @@ export function InterviewFlow({
   useEffect(() => {
     const workAtRisk = (stage === 'record' && useVoice)
       || isScoring
+      || transcribing
       || syncState === 'error'
       || localDraftSaveFailed;
     if (!workAtRisk) return;
@@ -900,7 +1034,7 @@ export function InterviewFlow({
     };
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
-  }, [isScoring, localDraftSaveFailed, stage, syncState, useVoice]);
+  }, [isScoring, localDraftSaveFailed, stage, syncState, transcribing, useVoice]);
 
   const startPrep = useCallback(() => {
     setSecondsLeft(question.prepSeconds);
@@ -1051,6 +1185,8 @@ export function InterviewFlow({
 
   const startStarProbe = useCallback(() => {
     if (!feedback || !starFollowUp) return;
+    discardAudioCapture();
+    setTranscriptionFailed(false);
     setStarProbe({
       element: starFollowUp,
       question: probeQuestion(starFollowUp, interviewLanguage),
@@ -1066,7 +1202,7 @@ export function InterviewFlow({
     automaticRetriesRef.current = 0;
     setSecondsLeft(Math.min(question.prepSeconds, 20));
     setStage('prep');
-  }, [feedback, interviewLanguage, question.prepSeconds, starFollowUp, transcript]);
+  }, [discardAudioCapture, feedback, interviewLanguage, question.prepSeconds, starFollowUp, transcript]);
 
   const skipStarProbe = useCallback(() => {
     setStarProbeDeclined(true);
@@ -1106,6 +1242,9 @@ export function InterviewFlow({
     setTranscript('');
     setTranscriptConfirmed(false);
     setInterim('');
+    // A retry drops the previous answer's audio and any write-up still in flight.
+    discardAudioCapture();
+    setTranscriptionFailed(false);
     if (useVoice && !streamRef.current) {
       const captureReady = useVideo ? await enableCamera() : await enableMicrophone();
       if (!captureReady) {
@@ -1114,7 +1253,8 @@ export function InterviewFlow({
       }
     }
     startPrep();
-  }, [enableCamera, enableMicrophone, feedback, startPrep, switchToTyping, transcript, useVideo, useVoice]);
+  }, [discardAudioCapture, enableCamera, enableMicrophone, feedback, startPrep, switchToTyping, transcript, useVideo,
+    useVoice]);
 
   const completeCurrentAnswer = useCallback(async (answerFeedback: AnswerFeedback) => {
     if (advancingRef.current) return;
@@ -1144,6 +1284,8 @@ export function InterviewFlow({
       URL.revokeObjectURL(playbackUrl);
       setPlaybackUrl(null);
     }
+    discardAudioCapture();
+    setTranscriptionFailed(false);
     setFeedback(null);
     setScoringError(null);
     setRetrySeconds(null);
@@ -1168,7 +1310,8 @@ export function InterviewFlow({
     window.setTimeout(() => {
       advancingRef.current = false;
     }, 0);
-  }, [answers, index, isLast, playbackUrl, question.id, questionText, activeQuestions, persistProgress, serverAttemptId, transcript]);
+  }, [answers, discardAudioCapture, index, isLast, playbackUrl, question.id, questionText, activeQuestions,
+    persistProgress, serverAttemptId, transcript]);
 
   completeAnswerRef.current = completeCurrentAnswer;
 
@@ -1249,7 +1392,8 @@ export function InterviewFlow({
   // candidate has been speaking for a while with nothing transcribed, stop
   // letting them wonder and offer typing.
   const elapsed = question.answerSeconds - secondsLeft;
-  const silentTranscript = stage === 'record' && elapsed > 12 && wordCount === 0;
+  // The audio fallback has no live words by design, so it is never "silent".
+  const silentTranscript = stage === 'record' && !usingAudioFallback && elapsed > 12 && wordCount === 0;
 
   return (
     <div className="shell shell-narrow">
@@ -1442,9 +1586,9 @@ export function InterviewFlow({
                 type="button"
                 className={`mode-card method-card ${selectedAnswerMethod === 'speak' ? 'on' : ''}`}
                 aria-pressed={selectedAnswerMethod === 'speak'}
-                aria-disabled={!speechOk}
+                aria-disabled={!voiceAvailable}
                 onClick={() => {
-                  if (!speechOk) return;
+                  if (!voiceAvailable) return;
                   streamRef.current?.getTracks().forEach((track) => track.stop());
                   streamRef.current = null;
                   setCameraState('idle');
@@ -1457,7 +1601,11 @@ export function InterviewFlow({
                   {speechOk && <span className="choice-note">{t('answerSpeakBest')}</span>}
                 </span>
                 <span className="tiny">
-                  {speechOk ? t('answerSpeakBody') : t('answerVideoUnavailable')}
+                  {speechOk
+                    ? t('answerSpeakBody')
+                    : audioFallbackAvailable
+                      ? t('captionsUnavailableNotice')
+                      : t('answerVideoUnavailable')}
                 </span>
               </button>
               <button
@@ -1476,9 +1624,9 @@ export function InterviewFlow({
                 type="button"
                 className={`mode-card method-card ${selectedAnswerMethod === 'video' ? 'on' : ''}`}
                 aria-pressed={selectedAnswerMethod === 'video'}
-                aria-disabled={!speechOk || !videoModeSupported(deviceCaps)}
+                aria-disabled={!videoSelectable}
                 onClick={() => {
-                  if (!speechOk || !videoModeSupported(deviceCaps)) return;
+                  if (!videoSelectable) return;
                   streamRef.current?.getTracks().forEach((track) => track.stop());
                   streamRef.current = null;
                   setCameraState('idle');
@@ -1491,7 +1639,11 @@ export function InterviewFlow({
                   {videoModeSupported(deviceCaps) && <span className="choice-note">{t('answerVideoBest')}</span>}
                 </span>
                 <span className="tiny">
-                  {videoModeSupported(deviceCaps) ? t('answerVideoBody') : t('deviceGuidanceDesktopVideo')}
+                  {videoModeSupported(deviceCaps)
+                    ? t('answerVideoBody')
+                    : videoSelectable
+                      ? t('captionsUnavailableNotice')
+                      : t('deviceGuidanceDesktopVideo')}
                 </span>
               </button>
             </div>
@@ -1546,14 +1698,22 @@ export function InterviewFlow({
                     <span>
                       {t('checkTranscript')}
                       <br />
-                      <span className="tiny">{t('transcriptReady')}</span>
+                      <span className="tiny">
+                        {usingAudioFallback ? t('captionsUnavailableNotice') : t('transcriptReady')}
+                      </span>
                     </span>
                   </li>
                 </ul>
 
-                <div className={`notice ${onDeviceSpeech ? '' : 'notice-warn'} tiny`}>
-                  {onDeviceSpeech ? t('speechOnDevice') : t('speechCloud')}
-                </div>
+                {usingAudioFallback ? (
+                  <div className="notice notice-warn tiny" role="note">
+                    {t('captionsUnavailableNotice')} {t('captionsUnavailableAudioOnly')}
+                  </div>
+                ) : (
+                  <div className={`notice ${onDeviceSpeech ? '' : 'notice-warn'} tiny`}>
+                    {onDeviceSpeech ? t('speechOnDevice') : t('speechCloud')}
+                  </div>
+                )}
                 {cameraState !== 'granted' && (
                   <button
                     type="button"
@@ -1570,7 +1730,9 @@ export function InterviewFlow({
                 <strong>{t('speakingModeTitle')}</strong>
                 <p className="tiny" style={{ marginTop: '0.35rem' }}>{t('speakingModeBody')}</p>
                 <p className="tiny" style={{ marginTop: '0.5rem' }}>
-                  {onDeviceSpeech ? t('speechOnDevice') : t('speechCloud')}
+                  {usingAudioFallback
+                    ? `${t('captionsUnavailableNotice')} ${t('captionsUnavailableAudioOnly')}`
+                    : onDeviceSpeech ? t('speechOnDevice') : t('speechCloud')}
                 </p>
               </div>
             ) : (
@@ -1666,7 +1828,7 @@ export function InterviewFlow({
               <strong>{t('deviceFallbackTitle')}</strong>
               <p className="tiny" style={{ marginTop: '0.35rem' }}>{t('deviceFallbackBody')}</p>
               <p className="tiny" style={{ marginTop: '0.35rem' }}>{t('deviceFallbackBrowserHelp')}</p>
-              {speechOk && (
+              {voiceAvailable && (
                 <button
                   type="button"
                   className="btn btn-quiet"
@@ -1857,31 +2019,37 @@ export function InterviewFlow({
               </div>
             )}
 
-            <div>
-              <p className="eyebrow" style={{ marginBottom: '0.4rem' }}>
-                {t('yourAnswer')}
-              </p>
-              {useVoice ? (
-                <div className="transcript" aria-live="polite">
-                  {transcript}
-                  {interim && <span className="transcript-interim"> {interim}</span>}
-                  {!transcript && !interim && (
-                    <span className="transcript-interim">{t('typeHint')}</span>
-                  )}
-                </div>
-              ) : (
-                <textarea
-                  className="answer-box"
-                  aria-label={t('yourAnswer')}
-                  placeholder={t('typeAnswer')}
-                  value={transcript}
-                  onChange={(e) => setTranscript(e.target.value)}
-                />
-              )}
-              <p className="tiny" style={{ marginTop: '0.4rem' }}>
-                {wordCount} {t('words')}
-              </p>
-            </div>
+            {usingAudioFallback ? (
+              <div className="notice tiny" role="note">
+                {t('captionsUnavailableNotice')} {t('captionsUnavailableAudioOnly')}
+              </div>
+            ) : (
+              <div>
+                <p className="eyebrow" style={{ marginBottom: '0.4rem' }}>
+                  {t('yourAnswer')}
+                </p>
+                {useVoice ? (
+                  <div className="transcript" aria-live="polite">
+                    {transcript}
+                    {interim && <span className="transcript-interim"> {interim}</span>}
+                    {!transcript && !interim && (
+                      <span className="transcript-interim">{t('typeHint')}</span>
+                    )}
+                  </div>
+                ) : (
+                  <textarea
+                    className="answer-box"
+                    aria-label={t('yourAnswer')}
+                    placeholder={t('typeAnswer')}
+                    value={transcript}
+                    onChange={(e) => setTranscript(e.target.value)}
+                  />
+                )}
+                <p className="tiny" style={{ marginTop: '0.4rem' }}>
+                  {wordCount} {t('words')}
+                </p>
+              </div>
+            )}
 
             <button
               type="button"
@@ -1908,7 +2076,7 @@ export function InterviewFlow({
             {playbackUrl && (
               <div className="stack-sm">
                 <span className="rate-label">{t('watchBack')}</span>
-                {useVideo ? (
+                {playbackIsVideo ? (
                   <video
                     ref={playbackRef}
                     className="playback"
@@ -1924,32 +2092,52 @@ export function InterviewFlow({
               </div>
             )}
 
-            <textarea
-              className="answer-box"
-              aria-label={t('yourAnswer')}
-              placeholder={t('typeAnswer')}
-              value={transcript}
-              onChange={(e) => {
-                setTranscript(e.target.value);
-                setTranscriptConfirmed(false);
-                setScoringError(null);
-                setRetrySeconds(null);
-                scoringSessionRef.current = null;
-                automaticRetriesRef.current = 0;
-              }}
-            />
-            <p className="tiny">{t('typeHint')}</p>
-            <label className="check-row">
-              <input
-                type="checkbox"
-                checked={transcriptConfirmed}
-                onChange={(event) => setTranscriptConfirmed(event.target.checked)}
-              />
-              <span>
-                <strong>{t('isThisWhatYouSaid')}</strong>
-                <span className="tiny">{t('confirmWrittenWords')}</span>
-              </span>
-            </label>
+            {transcribing ? (
+              <div className="notice stack-sm" role="status" aria-live="polite">
+                <strong>{t('writingUpWords')}</strong>
+                <p className="tiny">{t('writingUpWordsBody')}</p>
+                <div className="skeleton-block" aria-hidden="true">
+                  <span className="skeleton-line" />
+                  <span className="skeleton-line" />
+                  <span className="skeleton-line skeleton-line-short" />
+                </div>
+              </div>
+            ) : (
+              <>
+                {transcriptionFailed && (
+                  <div className="notice notice-warn" role="status">
+                    <strong>{t('deviceFallbackTitle')}</strong>
+                    <p className="tiny" style={{ marginTop: '0.35rem' }}>{t('deviceFallbackBody')}</p>
+                  </div>
+                )}
+                <textarea
+                  className="answer-box"
+                  aria-label={t('yourAnswer')}
+                  placeholder={t('typeAnswer')}
+                  value={transcript}
+                  onChange={(e) => {
+                    setTranscript(e.target.value);
+                    setTranscriptConfirmed(false);
+                    setScoringError(null);
+                    setRetrySeconds(null);
+                    scoringSessionRef.current = null;
+                    automaticRetriesRef.current = 0;
+                  }}
+                />
+                <p className="tiny">{t('typeHint')}</p>
+                <label className="check-row">
+                  <input
+                    type="checkbox"
+                    checked={transcriptConfirmed}
+                    onChange={(event) => setTranscriptConfirmed(event.target.checked)}
+                  />
+                  <span>
+                    <strong>{t('isThisWhatYouSaid')}</strong>
+                    <span className="tiny">{t('confirmWrittenWords')}</span>
+                  </span>
+                </label>
+              </>
+            )}
             {scoringError && (
               <div className="notice notice-warn" role="status" aria-live="polite">
                 <strong>
@@ -1975,7 +2163,7 @@ export function InterviewFlow({
                 )}
               </div>
             )}
-            {transcript.trim().length === 0 && (
+            {!transcribing && transcript.trim().length === 0 && (
               <p className="tiny" role="status">{t('answerRequired')}</p>
             )}
             <div className="row flow-actions">
@@ -1983,7 +2171,7 @@ export function InterviewFlow({
                 type="button"
                 className="btn btn-primary"
                 onClick={submitForScoring}
-                disabled={isScoring || transcript.trim().length === 0 || !transcriptConfirmed}
+                disabled={isScoring || transcribing || transcript.trim().length === 0 || !transcriptConfirmed}
               >
                 {isScoring
                   ? liveSitting ? t('preparingNext') : t('scoring')
