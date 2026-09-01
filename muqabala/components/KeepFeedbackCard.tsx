@@ -13,7 +13,7 @@ import {
   updateConsentState,
   type ConsentSource,
 } from '@/lib/practice-plan/ask-policy';
-import { CONSENT_VERSION, normalizeEmail, PLAN_MODES, type PlanMode } from '@/lib/practice-plan/schema';
+import { CONSENT_VERSION, normalizeEmail, PLAN_MODES, type PlanMode } from '@/lib/practice-plan/constants';
 
 type State = 'idle' | 'submitting' | 'invalid' | 'sent' | 'limited' | 'unavailable';
 

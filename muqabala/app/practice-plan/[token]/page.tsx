@@ -10,6 +10,23 @@ import type { PlanSnapshot } from '@/lib/practice-plan/worker';
 import { configuredOrigin } from '@/lib/server/security';
 import { PlanLanding } from '../PlanLanding';
 
+/**
+ * The link in every plan email. Verification is passive and nothing here
+ * blocks the candidate:
+ *
+ *  - The token is a signed, scoped `practice_plan:view` grant (HMAC, 21 days),
+ *    not a Supabase magic link. Opening it proves the inbox received the plan
+ *    and shows the plan; it does not create an account or sign anyone in.
+ *  - With `?day=N` the page counts the click (`plan_link_clicked` with the
+ *    day), records a return visit (`second_session`), writes the plan
+ *    reference and days opened to localStorage (`muqabala.practicePlan.v1`)
+ *    and forwards to the question in the chosen mode.
+ *  - Progress stays local to the device, as it does for every anonymous
+ *    candidate. Attaching it to an account happens only when the candidate
+ *    later signs in through the existing EmailSignIn and /auth/confirm flow,
+ *    which claims the current anonymous attempt. No step on this page asks
+ *    for anything.
+ */
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const metadata: Metadata = { robots: { index: false, follow: false, nocache: true } };

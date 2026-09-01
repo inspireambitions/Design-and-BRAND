@@ -75,7 +75,6 @@ set search_path = ''
 as $$
 declare
   v_existing uuid;
-  v_day smallint;
 begin
   select id into v_existing from public.practice_plan_requests
   where client_request_id = p_client_request_id;
