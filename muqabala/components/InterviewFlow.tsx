@@ -40,9 +40,22 @@ import {
   videoModeSupported,
 } from '@/lib/device-capabilities';
 import type { SpeechSession } from '@/lib/speech';
+import {
+  RECORDING_LIMIT_SECONDS,
+  initialAnswerMode,
+  readStarGuide,
+  readStoredAnswerMode,
+  recordingLimitSeconds,
+  storeAnswerMode,
+  storeStarGuide,
+  type AnswerMode,
+} from '@/lib/flow/answer-mode';
 import { useLang } from './LanguageProvider';
 import { TopBar } from './TopBar';
 import { FeedbackCard, StreamingFeedbackCard } from './FeedbackCard';
+import { AnswerModeSelector } from './flow/AnswerModeSelector';
+import { StarGuideLines, StarGuideToggle } from './flow/StarGuide';
+import { KeepFeedbackSlot, QuestionTagsSlot, ReadinessSlot } from './flow/Slots';
 
 /*
  * Screens that most visits never reach, or reach only after the candidate has
@@ -52,7 +65,8 @@ const ScoreRing = dynamic(() => import('./ScoreRing').then((m) => m.ScoreRing));
 const RatingCard = dynamic(() => import('./RatingCard').then((m) => m.RatingCard));
 const CoachingCard = dynamic(() => import('./CoachingCard').then((m) => m.CoachingCard));
 const EmailSignIn = dynamic(() => import('./EmailSignIn').then((m) => m.EmailSignIn));
-const RetryComparison = dynamic(() => import('./RetryComparison').then((m) => m.RetryComparison));
+const AnswerComparison = dynamic(() => import('./flow/AnswerComparison').then((m) => m.AnswerComparison));
+const ModelAnswer = dynamic(() => import('./flow/ModelAnswer').then((m) => m.ModelAnswer));
 const ReportShareActions = dynamic(() => import('./ReportShareActions').then((m) => m.ReportShareActions));
 
 /**
@@ -244,10 +258,22 @@ export function InterviewFlow({
   const [transcriptionFailed, setTranscriptionFailed] = useState(false);
   const [playbackIsVideo, setPlaybackIsVideo] = useState(false);
   const [onDeviceSpeech, setOnDeviceSpeech] = useState(false);
-  const [answerMethod, setAnswerMethod] = useState<'speak' | 'type' | 'video'>(() =>
+  const [answerMethod, setAnswerMethod] = useState<AnswerMode>(() =>
     defaultAnswerMethod(INITIAL_DEVICE_CAPABILITIES),
   );
   const [deviceCaps, setDeviceCaps] = useState<DeviceCapabilities>(INITIAL_DEVICE_CAPABILITIES);
+  /** True once the candidate has confirmed a way to answer this sitting. */
+  const [modeChosen, setModeChosen] = useState(false);
+  /** The "Change mode" panel on a later question. Never opens by itself. */
+  const [showModeSelector, setShowModeSelector] = useState(false);
+  const [starGuideOn, setStarGuideOn] = useState(false);
+  /** Transcript check starts read only; Edit turns it into the textarea. */
+  const [editingTranscript, setEditingTranscript] = useState(false);
+  /** A second attempt at the same question, answered under the first one. */
+  const [retrying, setRetrying] = useState(false);
+  /** Seconds a spoken or filmed answer may run this question. */
+  const [recordingLimit, setRecordingLimit] = useState(RECORDING_LIMIT_SECONDS);
+  const firstAnswerTrackedRef = useRef(false);
   /**
    * Guided: revealed questions, feedback after each answer, retakes.
    * Mock: eight questions one at a time, no interruptions, report at the end.
@@ -313,26 +339,34 @@ export function InterviewFlow({
 
   useEffect(() => {
     const capabilities = detectDeviceCapabilities();
+    const audioFallback = !capabilities.speechSupported && isAudioCaptureSupported();
     setDeviceCaps(capabilities);
     setSpeechOk(capabilities.speechSupported);
-    setAudioFallbackAvailable(!capabilities.speechSupported && isAudioCaptureSupported());
-    setAnswerMethod(defaultAnswerMethod(capabilities));
+    setAudioFallbackAvailable(audioFallback);
+    // The highlighted card: what this device chose last time, if it still can,
+    // otherwise Type on a phone and Speak on a desktop. Nothing is requested yet.
+    setAnswerMethod(initialAnswerMode({
+      stored: readStoredAnswerMode(window.localStorage),
+      device: capabilities,
+      availability: {
+        speak: capabilities.speechSupported || audioFallback,
+        video: videoModeSupported(capabilities) || (audioFallback && videoCaptureSupported(capabilities)),
+      },
+    }));
+    setStarGuideOn(readStarGuide(window.localStorage));
   }, []);
 
   const voiceAvailable = speechOk || audioFallbackAvailable;
-  const selectedAnswerMethod = voiceAvailable ? answerMethod : 'type';
+  const selectedAnswerMethod: AnswerMode = voiceAvailable ? answerMethod : 'type';
   const useVoice = selectedAnswerMethod !== 'type';
   /** Speaking without live captions: audio only is written up after the answer. */
   const usingAudioFallback = useVoice && !speechOk;
   const videoSelectable = videoModeSupported(deviceCaps)
     || (audioFallbackAvailable && videoCaptureSupported(deviceCaps));
   const useVideo = selectedAnswerMethod === 'video' && videoSelectable;
-  const deviceGuidanceKey =
-    deviceCaps.guidance === 'mobile'
-      ? 'deviceGuidanceMobile'
-      : deviceCaps.guidance === 'desktopLimited'
-        ? 'deviceGuidanceDesktopLimited'
-        : 'deviceGuidanceDesktopOk' as const;
+  const modeAvailability = { speak: voiceAvailable, video: videoSelectable };
+  /** Employer sittings get no coaching scaffolds. */
+  const practiceSitting = mode !== 'screening';
   const requestedQuestion = focusedQuestion ?? (focusQuestionId
     ? [...role.questions, ...(role.bank ?? [])].find((item) => item.id === focusQuestionId)
     : undefined);
@@ -424,6 +458,7 @@ export function InterviewFlow({
     setIndex(safeIndex);
     setMode(draft.mode);
     setAnswerMethod(draft.answerMethod);
+    setModeChosen(true);
     setTranscript(draft.transcript);
     setTranscriptConfirmed(draft.transcriptConfirmed);
     setFeedback(draft.feedback);
@@ -739,15 +774,6 @@ export function InterviewFlow({
     }
   }, []);
 
-  const retryVideoFromFallback = useCallback(async () => {
-    if (!voiceAvailable) return;
-    const cameraReady = await enableCamera();
-    if (cameraReady) {
-      setAnswerMethod('video');
-      setDeviceFallback(false);
-    }
-  }, [enableCamera, voiceAvailable]);
-
   const enableMicrophone = useCallback(async (): Promise<boolean> => {
     if (streamRef.current?.getTracks().some((track) => track.readyState === 'live')) return true;
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -907,20 +933,33 @@ export function InterviewFlow({
     );
   }, []);
 
-  const beginRecording = useCallback(async () => {
+  const liveSitting = mode === 'mock' || mode === 'screening';
+
+  /**
+   * `typedOnly` is passed when capture was just refused, so a stale `useVoice`
+   * in this closure cannot ask the browser a second time.
+   */
+  const beginRecording = useCallback(async (typedOnly = false) => {
+    const voice = useVoice && !typedOnly;
     setTranscript('');
     setInterim('');
+    setEditingTranscript(false);
     if (playbackUrl) {
       URL.revokeObjectURL(playbackUrl);
       setPlaybackUrl(null);
     }
-    setSecondsLeft(question.answerSeconds);
+    // Two minutes at most for a spoken or filmed answer. Extra time chosen at
+    // the start of a mock was already added to answerSeconds; keep it on top.
+    const extraSeconds = mode === 'mock' && extraTimeEnabled ? 60 : 0;
+    const limit = recordingLimitSeconds(question.answerSeconds - extraSeconds, extraSeconds);
+    setRecordingLimit(limit);
+    setSecondsLeft(limit);
     setTimerPaused(false);
     setTimerAnnouncement('');
     setStage('record');
 
     setStreamLost(false);
-    if (useVoice) {
+    if (voice) {
       const ready = await ensureCaptureReady();
       if (!ready) {
         setDeviceFallback(true);
@@ -929,9 +968,9 @@ export function InterviewFlow({
       }
     }
     streamRef.current?.getTracks().forEach((track) => { track.enabled = true; });
-    const live = Boolean(useVoice && streamRef.current);
+    const live = Boolean(voice && streamRef.current);
     setRecordingLive(live);
-    if (useVoice) {
+    if (voice) {
       if (usingAudioFallback) {
         setTranscriptionFailed(false);
         if (!(await startAudioFallbackCapture())) return;
@@ -944,10 +983,8 @@ export function InterviewFlow({
         startMicMeter();
       }
     }
-  }, [ensureCaptureReady, playbackUrl, question.answerSeconds, startAudioFallbackCapture, startMicMeter,
-    startSpeechCapture, switchToTyping, useVoice, usingAudioFallback]);
-
-  const liveSitting = mode === 'mock' || mode === 'screening';
+  }, [ensureCaptureReady, extraTimeEnabled, mode, playbackUrl, question.answerSeconds, startAudioFallbackCapture,
+    startMicMeter, startSpeechCapture, switchToTyping, useVoice, usingAudioFallback]);
 
   const toggleMockPause = useCallback(async () => {
     if (!liveSitting || stage !== 'record' || !useVoice) return;
@@ -988,8 +1025,13 @@ export function InterviewFlow({
       meterRef.current = null;
       setMicLevel(0);
       setTranscriptConfirmed(false);
+      setEditingTranscript(false);
       setPlaybackIsVideo(useVideo);
       setStage('review');
+      if (practiceSitting && !firstAnswerTrackedRef.current) {
+        firstAnswerTrackedRef.current = true;
+        track('first_answer_completed', { role_id: role.id, mode: selectedAnswerMethod, lang: interviewLanguage });
+      }
       if (useVoice && !usingAudioFallback) {
         trackTiming('transcript_ready_ms', performance.now() - stoppedAt, {
           lang: interviewLanguage,
@@ -1019,7 +1061,8 @@ export function InterviewFlow({
       finalizingRef.current = false;
       setIsFinalizing(false);
     }
-  }, [interviewLanguage, stopDictation, transcribeOnServer, useVideo, useVoice, usingAudioFallback]);
+  }, [interviewLanguage, practiceSitting, role.id, selectedAnswerMethod, stopDictation, transcribeOnServer, useVideo,
+    useVoice, usingAudioFallback]);
 
   // The OS kills camera and microphone on a phone call or an app switch, and
   // nothing tells the page. Watch the tracks themselves, and when the page
@@ -1081,26 +1124,27 @@ export function InterviewFlow({
     // were never shown punishes exactly the people pushed into typing by a
     // camera denial or a speech failure. "Review answer" is the only exit.
     if (stage === 'record' && !useVoice) return;
-    // Quick Practice has a suggested answer length, never a cut-off. The
-    // candidate ends it with Finish answer. Full Mock keeps the real timer.
-    if (stage === 'record' && mode === 'guided') return;
     // A lost stream freezes the clock instead of racing on over dead capture.
     if (stage === 'record' && streamLost) return;
     if (secondsLeft <= 0) {
+      // A spoken or filmed answer stops itself at the limit in every mode.
       if (stage === 'prep') void beginRecording();
-      else finishAnswer();
+      else void finishAnswer();
       return;
     }
     const id = window.setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
     return () => window.clearTimeout(id);
-  }, [stage, secondsLeft, beginRecording, finishAnswer, useVoice, streamLost, mode, timerPaused]);
+  }, [stage, secondsLeft, beginRecording, finishAnswer, useVoice, streamLost, timerPaused]);
 
   // completeCurrentAnswer is declared later in the file; the mock path inside
   // submitForScoring reaches it through a ref kept current on every render.
   const completeAnswerRef = useRef<((fb: AnswerFeedback) => Promise<void>) | null>(null);
 
   const submitForScoring = useCallback(async () => {
-    if (scoringInFlightRef.current || !transcriptConfirmed) return;
+    if (scoringInFlightRef.current || !transcript.trim()) return;
+    // Pressing Get feedback after seeing the words is the confirmation.
+    setTranscriptConfirmed(true);
+    setEditingTranscript(false);
     scoringInFlightRef.current = true;
     setIsScoring(true);
     setScoringError(null);
@@ -1212,7 +1256,7 @@ export function InterviewFlow({
       scoringInFlightRef.current = false;
       setIsScoring(false);
     }
-  }, [customTitle, index, interviewLanguage, interviewToken, mode, question.id, role.id, scoringTranscript, serverAttemptId, starProbe, transcript, transcriptConfirmed]);
+  }, [customTitle, index, interviewLanguage, interviewToken, mode, question.id, role.id, scoringTranscript, serverAttemptId, starProbe, transcript]);
 
   const startStarProbe = useCallback(() => {
     if (!feedback || !starFollowUp) return;
@@ -1225,6 +1269,7 @@ export function InterviewFlow({
     });
     setTranscript('');
     setTranscriptConfirmed(false);
+    setRetrying(false);
     setInterim('');
     setFeedback(null);
     setScoringError(null);
@@ -1253,9 +1298,15 @@ export function InterviewFlow({
     return () => window.clearTimeout(id);
   }, [retrySeconds, submitForScoring]);
 
+  /**
+   * Try again without leaving the screen: the first answer stays visible and
+   * the answer box opens under it. The new feedback then replaces the old.
+   */
   const retryQuestion = useCallback(async () => {
     if (feedback && transcript.trim()) {
       setPreviousTry({ transcript, feedback });
+      setRetrying(true);
+      track('retry_started', { role_id: role.id, mode: selectedAnswerMethod, lang: interviewLanguage });
     }
     setAttemptCount((c) => c + 1);
     setFeedback(null);
@@ -1276,16 +1327,18 @@ export function InterviewFlow({
     // A retry drops the previous answer's audio and any write-up still in flight.
     discardAudioCapture();
     setTranscriptionFailed(false);
+    let typedOnly = false;
     if (useVoice && !streamRef.current) {
       const captureReady = useVideo ? await enableCamera() : await enableMicrophone();
       if (!captureReady) {
         setDeviceFallback(true);
         await switchToTyping();
+        typedOnly = true;
       }
     }
-    startPrep();
-  }, [discardAudioCapture, enableCamera, enableMicrophone, feedback, startPrep, switchToTyping, transcript, useVideo,
-    useVoice]);
+    await beginRecording(typedOnly);
+  }, [beginRecording, discardAudioCapture, enableCamera, enableMicrophone, feedback, interviewLanguage, role.id,
+    selectedAnswerMethod, switchToTyping, transcript, useVideo, useVoice]);
 
   const completeCurrentAnswer = useCallback(async (answerFeedback: AnswerFeedback) => {
     if (advancingRef.current) return;
@@ -1325,6 +1378,9 @@ export function InterviewFlow({
     setTranscript('');
     setTranscriptConfirmed(false);
     setPreviousTry(null);
+    setRetrying(false);
+    setEditingTranscript(false);
+    setShowModeSelector(false);
     setInterim('');
     setStarProbe(null);
     setAttemptCount(1);
@@ -1369,11 +1425,93 @@ export function InterviewFlow({
     });
   }, [completeCurrentAnswer, question.id, t, transcript]);
 
+  /**
+   * The first question's "Choose how to answer" step. One tap confirms the
+   * mode, remembers it, and only then asks for the camera or microphone. A
+   * refusal drops quietly to typing.
+   */
+  const startWithMode = useCallback(async (chosen: AnswerMode) => {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    setCameraState('idle');
+    setDeviceFallback(false);
+    setAnswerMethod(chosen);
+    storeAnswerMode(window.localStorage, chosen);
+    const startingQuestions = mode === 'mock' && extraTimeEnabled
+      ? activeQuestions.map((item) => ({ ...item, answerSeconds: item.answerSeconds + 60 }))
+      : activeQuestions;
+    if (startingQuestions !== activeQuestions) setResumedQuestions(startingQuestions);
+    const startingLanguage = initialLanguage ?? lang;
+    setSessionLanguage(startingLanguage);
+    track('interview_started', { role_id: role.id, lang: startingLanguage });
+    track('mode_selected', { role_id: role.id, mode: chosen, lang: startingLanguage });
+    if (!proof) track('practice_started', { role_id: role.id, mode: chosen, lang: startingLanguage });
+    const attemptId = await createServerAttempt(startingQuestions);
+    if (proof && !attemptId) {
+      setProofStartFailed(true);
+      return;
+    }
+    setProofStartFailed(false);
+    // Permissions are requested here, after the choice, inside the tap that
+    // made it. Type asks for nothing.
+    if (chosen !== 'type') {
+      const captureReady = chosen === 'video' && videoSelectable ? await enableCamera() : await enableMicrophone();
+      if (!captureReady) {
+        setDeviceFallback(true);
+        await switchToTyping();
+      }
+    }
+    setModeChosen(true);
+    startPrep();
+  }, [activeQuestions, createServerAttempt, enableCamera, enableMicrophone, extraTimeEnabled, initialLanguage, lang,
+    mode, proof, role.id, startPrep, switchToTyping, videoSelectable]);
+
+  /** "Change mode" on a later question. Same rules as the first choice. */
+  const changeMode = useCallback(async (chosen: AnswerMode) => {
+    setShowModeSelector(false);
+    storeAnswerMode(window.localStorage, chosen);
+    track('mode_selected', { role_id: role.id, mode: chosen, lang: interviewLanguage });
+    if (chosen === 'type') {
+      await switchToTyping();
+      setDeviceFallback(false);
+      return;
+    }
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    setCameraState('idle');
+    setAnswerMethod(chosen);
+    const captureReady = chosen === 'video' && videoSelectable ? await enableCamera() : await enableMicrophone();
+    if (!captureReady) {
+      setDeviceFallback(true);
+      await switchToTyping();
+    } else {
+      setDeviceFallback(false);
+    }
+  }, [enableCamera, enableMicrophone, interviewLanguage, role.id, switchToTyping, videoSelectable]);
+
+  const toggleStarGuide = useCallback((on: boolean) => {
+    setStarGuideOn(on);
+    storeStarGuide(window.localStorage, on);
+  }, []);
+
+  // Feedback on screen, and the side by side view when there is one.
+  useEffect(() => {
+    if (stage !== 'feedback' || !feedback || !practiceSitting) return;
+    track('feedback_viewed', { role_id: role.id, mode: selectedAnswerMethod, lang: interviewLanguage });
+    if (previousTry) {
+      track('comparison_viewed', { role_id: role.id, mode: selectedAnswerMethod, lang: interviewLanguage });
+    }
+    // Fire once per feedback shown, not on every unrelated re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage, feedback]);
+
   const startFullMock = useCallback(() => {
     if (!mockQuestions || mockQuestions.length < 8) return;
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
     savedRef.current = false;
+    setRetrying(false);
+    setShowModeSelector(false);
     setMode('mock');
     setResumedQuestions(null);
     setServerAttemptId(null);
@@ -1422,9 +1560,70 @@ export function InterviewFlow({
   // supported, starts without error, and simply never returns words. If a
   // candidate has been speaking for a while with nothing transcribed, stop
   // letting them wonder and offer typing.
-  const elapsed = question.answerSeconds - secondsLeft;
+  const elapsed = recordingLimit - secondsLeft;
   // The audio fallback has no live words by design, so it is never "silent".
   const silentTranscript = stage === 'record' && !usingAudioFallback && elapsed > 12 && wordCount === 0;
+
+  const progressLabel = t('questionProgress')
+    .replace('{current}', String(index + 1))
+    .replace('{total}', String(activeQuestions.length));
+
+  /**
+   * Read only transcript with one Edit and one Get feedback button. Nothing to
+   * check yet (the write-up failed or the box was left empty) opens the editor.
+   */
+  const transcriptEditing = editingTranscript || transcript.trim().length === 0;
+  const transcriptCheck = (
+    <>
+      {transcriptEditing ? (
+        <div className="answer-box-wrap">
+          <textarea
+            className="answer-box"
+            aria-label={t('yourAnswer')}
+            placeholder={t('typeAnswer')}
+            value={transcript}
+            autoFocus={editingTranscript}
+            onChange={(e) => {
+              setTranscript(e.target.value);
+              setEditingTranscript(true);
+              setTranscriptConfirmed(false);
+              setScoringError(null);
+              setRetrySeconds(null);
+              scoringSessionRef.current = null;
+              automaticRetriesRef.current = 0;
+            }}
+          />
+        </div>
+      ) : (
+        <div className="transcript transcript-check" dir="auto" tabIndex={0} aria-label={t('yourAnswer')}>
+          {transcript}
+        </div>
+      )}
+      <div className="row-between">
+        <p className="tiny" style={{ margin: 0 }}>
+          {wordCount} {t('words')}
+        </p>
+        {!transcriptEditing && (
+          <button type="button" className="btn btn-ghost btn-small" onClick={() => setEditingTranscript(true)}>
+            {t('editTranscript')}
+          </button>
+        )}
+      </div>
+    </>
+  );
+
+  /** The first answer, kept in view while the candidate answers again. */
+  const previousAnswerRecap = retrying && previousTry ? (
+    <div className="card stack-sm previous-answer">
+      <p className="eyebrow" style={{ marginBottom: 0 }}>{t('previousAnswerLabel')}</p>
+      <p className="muted" dir="auto">{previousTry.transcript}</p>
+      <p className="tiny">{t('retryAnswerIntro')}</p>
+    </div>
+  ) : null;
+
+  const quietFallbackNotice = deviceFallback && !useVoice ? (
+    <p className="notice tiny quiet-notice" role="status">{t('permissionDeniedTypeInstead')}</p>
+  ) : null;
 
   return (
     <div className="shell shell-narrow">
@@ -1438,9 +1637,10 @@ export function InterviewFlow({
           />
         ))}
       </div>
-      <p className="tiny" style={{ marginBottom: '1.4rem' }}>
-        {interviewLanguage === 'ar' ? role.titleAr : role.title} · {t('question')} {index + 1} {t('of')}{' '}
-        {activeQuestions.length}
+      <p className="tiny flow-progress" style={{ marginBottom: '1.4rem' }}>
+        {interviewLanguage === 'ar' ? role.titleAr : role.title}
+        {' · '}
+        <span aria-label={`${t('question')} ${progressLabel}`}>{progressLabel}</span>
       </p>
       {serverAttemptId && stage !== 'check' && stage !== 'done' && syncState !== 'idle' && (
         <p className={`tiny ${syncState === 'error' ? 'notice notice-warn' : ''}`} role="status">
@@ -1553,11 +1753,6 @@ export function InterviewFlow({
             </details>
           </div>
 
-          <div className="notice device-guidance" role="note">
-            <strong>{t('deviceGuidanceTitle')}</strong>
-            <p className="tiny" style={{ marginTop: '0.35rem' }}>{t(deviceGuidanceKey)}</p>
-          </div>
-
           {!proof && (
           <div className="mode-row">
             {mode === 'mock' && mockQuestions && mockQuestions.length > 0 && (
@@ -1602,179 +1797,38 @@ export function InterviewFlow({
             </label>
           )}
 
-          {/* ---------- answer method ---------- */}
-          <section className="answer-method" aria-labelledby="answer-method-title">
+          {/* ---------- choose how to answer ---------- */}
+          <section className="answer-method stack-sm" aria-labelledby="answer-method-title">
             <div>
-              <p className="eyebrow" id="answer-method-title">
-                {t('answerMethodTitle')}
-              </p>
+              <p className="eyebrow" id="answer-method-title">{t('chooseHowToAnswer')}</p>
               <p className="tiny" style={{ marginTop: '0.25rem' }}>
-                {t('answerMethodBody')}
+                {deviceCaps.isDesktop ? t('modeEnterToStart') : t('modeTapToStart')}
               </p>
             </div>
-            <div className="mode-row" role="group" aria-labelledby="answer-method-title">
-              <button
-                type="button"
-                className={`mode-card method-card ${selectedAnswerMethod === 'speak' ? 'on' : ''}`}
-                aria-pressed={selectedAnswerMethod === 'speak'}
-                aria-disabled={!voiceAvailable}
-                onClick={() => {
-                  if (!voiceAvailable) return;
-                  streamRef.current?.getTracks().forEach((track) => track.stop());
-                  streamRef.current = null;
-                  setCameraState('idle');
-                  setAnswerMethod('speak');
-                  setDeviceFallback(false);
-                }}
-              >
-                <span className="method-title-row">
-                  <span className="mode-title">{t('answerSpeakTitle')}</span>
-                  {speechOk && <span className="choice-note">{t('answerSpeakBest')}</span>}
-                </span>
-                <span className="tiny">
-                  {speechOk
-                    ? t('answerSpeakBody')
-                    : audioFallbackAvailable
-                      ? t('captionsUnavailableNotice')
-                      : t('answerVideoUnavailable')}
-                </span>
-              </button>
-              <button
-                type="button"
-                className={`mode-card method-card ${selectedAnswerMethod === 'type' ? 'on' : ''}`}
-                aria-pressed={selectedAnswerMethod === 'type'}
-                onClick={() => void switchToTyping()}
-              >
-                <span className="method-title-row">
-                  <span className="mode-title">{t('answerTypeTitle')}</span>
-                  <span className="choice-note">{t('answerTypeBest')}</span>
-                </span>
-                <span className="tiny">{t('answerTypeBody')}</span>
-              </button>
-              <button
-                type="button"
-                className={`mode-card method-card ${selectedAnswerMethod === 'video' ? 'on' : ''}`}
-                aria-pressed={selectedAnswerMethod === 'video'}
-                aria-disabled={!videoSelectable}
-                onClick={() => {
-                  if (!videoSelectable) return;
-                  streamRef.current?.getTracks().forEach((track) => track.stop());
-                  streamRef.current = null;
-                  setCameraState('idle');
-                  setAnswerMethod('video');
-                  setDeviceFallback(false);
-                }}
-              >
-                <span className="method-title-row">
-                  <span className="mode-title">{t('answerVideoTitle')}</span>
-                  {videoModeSupported(deviceCaps) && <span className="choice-note">{t('answerVideoBest')}</span>}
-                </span>
-                <span className="tiny">
-                  {videoModeSupported(deviceCaps)
-                    ? t('answerVideoBody')
-                    : videoSelectable
-                      ? t('captionsUnavailableNotice')
-                      : t('deviceGuidanceDesktopVideo')}
-                </span>
-              </button>
-            </div>
+            <AnswerModeSelector
+              highlighted={selectedAnswerMethod}
+              availability={modeAvailability}
+              onChoose={(chosen) => void startWithMode(chosen)}
+              focusHighlighted={deviceCaps.isDesktop}
+              disabled={requestingCamera}
+            />
+            {requestingCamera && (
+              <p className="tiny" role="status">{t('cameraStarting')}</p>
+            )}
+            {voiceAvailable && (
+              <p className="tiny muted" role="note">
+                {audioFallbackAvailable && !speechOk
+                  ? `${t('captionsUnavailableNotice')} ${t('captionsUnavailableAudioOnly')}`
+                  : onDeviceSpeech ? t('speechOnDevice') : t('speechCloud')}
+              </p>
+            )}
           </section>
 
-          {/* Guided shows the questions before the camera is ever mentioned —
-              proof before commitment. The mock keeps them hidden on purpose. */}
-          {mode === 'guided' ? (
-            <div className="card-flat">
-              <p className="eyebrow" style={{ marginBottom: '0.6rem' }}>
-                {t('revealTitle')}
-              </p>
-              <ol className="reveal-list">
-                {activeQuestions.map((q) => (
-                  <li key={q.id}>{interviewLanguage === 'ar' ? q.textAr : q.text}</li>
-                ))}
-              </ol>
-            </div>
-          ) : (
+          {liveSitting && (
             <p className="notice tiny" style={{ margin: 0 }}>
               {proof ? t('proofHiddenNote') : t('mockHiddenNote')}
             </p>
           )}
-
-          <div className="card stack method-details">
-            {useVideo ? (
-              <>
-                <div className="video-frame">
-                  <video ref={videoRef} muted playsInline />
-                  {cameraState !== 'granted' && (
-                    <div className="video-placeholder">
-                      {cameraState === 'denied' ? t('cameraDeniedHelp') : t('cameraIdle')}
-                    </div>
-                  )}
-                </div>
-
-                <ul className="checklist">
-                  <li>
-                    <span
-                      className={`check-icon ${
-                        cameraState === 'granted' ? '' : cameraState === 'denied' ? 'fail' : 'pending'
-                      }`}
-                    >
-                      {cameraState === 'granted' ? '✓' : cameraState === 'denied' ? '!' : '·'}
-                    </span>
-                    <span>
-                      {t('checkCamera')} &amp; {t('checkMic')}
-                    </span>
-                  </li>
-                  <li>
-                    <span className="check-icon">✓</span>
-                    <span>
-                      {t('checkTranscript')}
-                      <br />
-                      <span className="tiny">
-                        {usingAudioFallback ? t('captionsUnavailableNotice') : t('transcriptReady')}
-                      </span>
-                    </span>
-                  </li>
-                </ul>
-
-                {usingAudioFallback ? (
-                  <div className="notice notice-warn tiny" role="note">
-                    {t('captionsUnavailableNotice')} {t('captionsUnavailableAudioOnly')}
-                  </div>
-                ) : (
-                  <div className={`notice ${onDeviceSpeech ? '' : 'notice-warn'} tiny`}>
-                    {onDeviceSpeech ? t('speechOnDevice') : t('speechCloud')}
-                  </div>
-                )}
-                {cameraState !== 'granted' && (
-                  <button
-                    type="button"
-                    className="btn btn-quiet"
-                    disabled={requestingCamera}
-                    onClick={() => void enableCamera()}
-                  >
-                    {cameraState === 'denied' ? t('cameraRetry') : t('enableCamera')}
-                  </button>
-                )}
-              </>
-            ) : useVoice ? (
-              <div className="notice">
-                <strong>{t('speakingModeTitle')}</strong>
-                <p className="tiny" style={{ marginTop: '0.35rem' }}>{t('speakingModeBody')}</p>
-                <p className="tiny" style={{ marginTop: '0.5rem' }}>
-                  {usingAudioFallback
-                    ? `${t('captionsUnavailableNotice')} ${t('captionsUnavailableAudioOnly')}`
-                    : onDeviceSpeech ? t('speechOnDevice') : t('speechCloud')}
-                </p>
-              </div>
-            ) : (
-              <div className="notice">
-                <strong>{t('typingModeTitle')}</strong>
-                <p className="tiny" style={{ marginTop: '0.35rem' }}>
-                  {liveSitting ? t('typingModeBodyMock') : t('typingModeBody')}
-                </p>
-              </div>
-            )}
-          </div>
 
           <div className="card-flat expectation-summary">
             <p className="eyebrow">{t('whatToExpect')}</p>
@@ -1802,73 +1856,46 @@ export function InterviewFlow({
           {proofStartFailed && (
             <p className="notice notice-warn" role="alert">{t('proofStartFailed')}</p>
           )}
-          <div className="row">
-            <button
-              type="button"
-              className="btn btn-primary"
-              disabled={requestingCamera}
-              onClick={async () => {
-                const startingQuestions = mode === 'mock' && extraTimeEnabled
-                  ? activeQuestions.map((item) => ({ ...item, answerSeconds: item.answerSeconds + 60 }))
-                  : activeQuestions;
-                if (startingQuestions !== activeQuestions) setResumedQuestions(startingQuestions);
-                const startingLanguage = initialLanguage ?? lang;
-                setSessionLanguage(startingLanguage);
-                track('interview_started', { role_id: role.id, lang: startingLanguage });
-                const attemptId = await createServerAttempt(startingQuestions);
-                if (proof && !attemptId) {
-                  setProofStartFailed(true);
-                  return;
-                }
-                setProofStartFailed(false);
-                // Ask here rather than in a separate step: this tap is the user
-                // gesture browsers want, and it comes after the disclosure the
-                // candidate has just read.
-                if (useVoice) {
-                  const captureReady = useVideo ? await enableCamera() : await enableMicrophone();
-                  if (!captureReady) {
-                    setDeviceFallback(true);
-                    await switchToTyping();
-                  }
-                }
-                startPrep();
-              }}
-            >
-              {requestingCamera
-                ? t('cameraStarting')
-                : useVideo
-                  ? t('continueWithVideo')
-                  : useVoice
-                    ? t('continueWithSpeaking')
-                  : t('continueWithTyping')}
-            </button>
-            {!proof && (
+          {!proof && (
+            <div className="row">
               <Link href="/practice" className="btn btn-ghost" style={{ textDecoration: 'none' }}>
                 {t('back')}
               </Link>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
 
       {/* ---------- preparation ---------- */}
       {stage === 'prep' && (
         <div className="stack">
-          {deviceFallback && (
-            <div className="notice notice-warn" role="status">
-              <strong>{t('deviceFallbackTitle')}</strong>
-              <p className="tiny" style={{ marginTop: '0.35rem' }}>{t('deviceFallbackBody')}</p>
-              <p className="tiny" style={{ marginTop: '0.35rem' }}>{t('deviceFallbackBrowserHelp')}</p>
-              {voiceAvailable && (
-                <button
-                  type="button"
-                  className="btn btn-quiet"
-                  style={{ marginTop: '0.65rem' }}
-                  disabled={requestingCamera}
-                  onClick={() => void retryVideoFromFallback()}
-                >
-                  {requestingCamera ? t('cameraStarting') : t('cameraRetry')}
-                </button>
+          {quietFallbackNotice}
+          {/* The selector never reappears on its own. "Change mode" opens it
+              inline; choosing a card closes it and asks for permission then. */}
+          {modeChosen && (
+            <div className="change-mode">
+              <button
+                type="button"
+                className="btn btn-ghost btn-small"
+                aria-expanded={showModeSelector}
+                aria-controls="change-mode-panel"
+                disabled={requestingCamera}
+                onClick={() => setShowModeSelector((shown) => !shown)}
+              >
+                {requestingCamera ? t('cameraStarting') : t('changeMode')}
+              </button>
+              {showModeSelector && (
+                <div id="change-mode-panel" className="card stack-sm">
+                  <p className="eyebrow" style={{ marginBottom: 0 }}>{t('chooseHowToAnswer')}</p>
+                  <AnswerModeSelector
+                    highlighted={selectedAnswerMethod}
+                    availability={modeAvailability}
+                    onChoose={(chosen) => void changeMode(chosen)}
+                    focusHighlighted={deviceCaps.isDesktop}
+                    disabled={requestingCamera}
+                    compact
+                  />
+                </div>
               )}
             </div>
           )}
@@ -1877,6 +1904,7 @@ export function InterviewFlow({
               {starProbe ? t('starProbeEyebrow') : `${t('question')} ${index + 1}`}
             </p>
             <h2 style={{ fontSize: '1.35rem' }} dir="auto">{promptText}</h2>
+            {!starProbe && <QuestionTagsSlot question={question} lang={interviewLanguage} />}
             {mode === 'guided' && !starProbe && (
               <div className="coach-tip">
                 <strong>{t('tip')}</strong>
@@ -1925,13 +1953,7 @@ export function InterviewFlow({
       {/* ---------- recording ---------- */}
       {stage === 'record' && (
         <div className="stack">
-          {deviceFallback && !useVoice && (
-            <div className="notice notice-warn" role="status">
-              <strong>{t('deviceFallbackTitle')}</strong>
-              <p className="tiny" style={{ marginTop: '0.35rem' }}>{t('deviceFallbackBody')}</p>
-              <p className="tiny" style={{ marginTop: '0.35rem' }}>{t('deviceFallbackNextQuestion')}</p>
-            </div>
-          )}
+          {quietFallbackNotice}
           <div className="card stack">
             <p className="eyebrow">
               {starProbe ? t('starProbeEyebrow') : `${t('question')} ${index + 1}`}
@@ -1939,9 +1961,25 @@ export function InterviewFlow({
             <h2 style={{ fontSize: '1.25rem' }} dir="auto">{promptText}</h2>
           </div>
 
+          {previousAnswerRecap}
+
           <div className="card stack">
             {useVoice && (
               <>
+                {recordingLive && !streamLost && (
+                  <div className="capture-indicators" role="status">
+                    {useVideo && (
+                      <span className="chip chip-live">
+                        <span className="rec-dot" aria-hidden="true" />
+                        {t('cameraOn')}
+                      </span>
+                    )}
+                    <span className="chip chip-live">
+                      <span className="rec-dot" aria-hidden="true" />
+                      {t('micOn')}
+                    </span>
+                  </div>
+                )}
                 {useVideo ? (
                   <div className="video-frame">
                     <video ref={videoRef} muted playsInline />
@@ -1953,11 +1991,11 @@ export function InterviewFlow({
                     {recordingLive && !streamLost ? (
                       <span className="video-badge">
                         <span className="rec-dot" aria-hidden="true" />
-                        {t('recording')} · {mode === 'guided' ? t('suggestedTime') : t('timeLeft')} · {formatClock(secondsLeft)}
+                        {t('recording')} · {t('timeLeft')} · {formatClock(secondsLeft)}
                       </span>
                     ) : (
                       <span className="video-badge">
-                        {mode === 'guided' ? t('suggestedTime') : t('timeLeft')} · {formatClock(secondsLeft)}
+                        {t('timeLeft')} · {formatClock(secondsLeft)}
                       </span>
                     )}
                   </div>
@@ -1965,7 +2003,7 @@ export function InterviewFlow({
                   <div className="notice" role="status">
                     <strong>{recordingLive ? t('recording') : t('speakingModeTitle')}</strong>
                     <p className="tiny" style={{ marginTop: '0.35rem' }}>
-                      {mode === 'guided' ? t('suggestedTime') : t('timeLeft')}: {formatClock(secondsLeft)}. {mode === 'guided' ? t('finishWhenReady') : ''}
+                      {t('timeLeft')}: {formatClock(secondsLeft)}. {mode === 'guided' ? t('finishWhenReady') : ''}
                     </p>
                   </div>
                 )}
@@ -1973,9 +2011,10 @@ export function InterviewFlow({
                 <div className="meter" aria-hidden="true">
                   <div
                     className={`meter-fill ${secondsLeft <= 15 ? 'crit' : 'gold'}`}
-                    style={{ width: `${(secondsLeft / question.answerSeconds) * 100}%` }}
+                    style={{ width: `${(secondsLeft / recordingLimit) * 100}%` }}
                   />
                 </div>
+                <p className="tiny" style={{ margin: 0 }}>{t('recordingLimitNote')}</p>
 
                 {liveSitting && (
                   <div className="row timer-controls">
@@ -2056,40 +2095,57 @@ export function InterviewFlow({
               </div>
             ) : (
               <div>
-                <p className="eyebrow" style={{ marginBottom: '0.4rem' }}>
-                  {t('yourAnswer')}
-                </p>
-                {useVoice ? (
-                  <div className="transcript" aria-live="polite">
-                    {transcript}
-                    {interim && <span className="transcript-interim"> {interim}</span>}
-                    {!transcript && !interim && (
-                      <span className="transcript-interim">{t('typeHint')}</span>
-                    )}
-                  </div>
-                ) : (
-                  <textarea
-                    className="answer-box"
-                    aria-label={t('yourAnswer')}
-                    placeholder={t('typeAnswer')}
-                    value={transcript}
-                    onChange={(e) => setTranscript(e.target.value)}
-                  />
-                )}
+                <div className="row-between answer-box-header">
+                  <p className="eyebrow" style={{ margin: 0 }}>
+                    {t('yourAnswer')}
+                  </p>
+                  {practiceSitting && <StarGuideToggle on={starGuideOn} onChange={toggleStarGuide} />}
+                </div>
+                {(() => {
+                  const showStar = practiceSitting && starGuideOn && !transcript && !interim;
+                  return (
+                    <div className="answer-box-wrap">
+                      {useVoice ? (
+                        <div className="transcript" aria-live="polite" aria-describedby={showStar ? 'star-lines' : undefined}>
+                          {transcript}
+                          {interim && <span className="transcript-interim"> {interim}</span>}
+                          {!transcript && !interim && !showStar && (
+                            <span className="transcript-interim">{t('typeHint')}</span>
+                          )}
+                        </div>
+                      ) : (
+                        <textarea
+                          className="answer-box"
+                          aria-label={t('yourAnswer')}
+                          placeholder={showStar ? '' : t('typeAnswer')}
+                          aria-describedby={showStar ? 'star-lines' : undefined}
+                          value={transcript}
+                          onChange={(e) => setTranscript(e.target.value)}
+                        />
+                      )}
+                      {showStar && <StarGuideLines id="star-lines" />}
+                    </div>
+                  );
+                })()}
                 <p className="tiny" style={{ marginTop: '0.4rem' }}>
                   {wordCount} {t('words')}
                 </p>
               </div>
             )}
 
-            <button
-              type="button"
-              className="btn btn-record"
-              onClick={finishAnswer}
-              disabled={isFinalizing}
-            >
-              {useVoice ? t('stopAndScore') : t('reviewTypedAnswer')}
-            </button>
+            <div className="record-actions">
+              <button
+                type="button"
+                className="btn btn-record"
+                onClick={finishAnswer}
+                disabled={isFinalizing}
+              >
+                {useVoice ? t('stopAndScore') : t('reviewTypedAnswer')}
+              </button>
+              {useVideo && (
+                <p className="tiny video-stays" role="note">{t('videoStaysOnDevice')}</p>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -2097,12 +2153,13 @@ export function InterviewFlow({
       {/* ---------- review before scoring ---------- */}
       {stage === 'review' && (
         <div className="stack">
+          {previousAnswerRecap}
           <div className="card stack">
-            <p className="eyebrow">{starProbe ? t('starProbeEyebrow') : t('yourAnswer')}</p>
+            <p className="eyebrow">{starProbe ? t('starProbeEyebrow') : t('transcriptCheckTitle')}</p>
             <h2 style={{ fontSize: '1.2rem' }} dir="auto">{promptText}</h2>
-            {starProbe && (
-              <p className="tiny muted">{t('starProbeReviewNote')}</p>
-            )}
+            <p className="tiny muted" style={{ margin: 0 }}>
+              {starProbe ? t('starProbeReviewNote') : t('transcriptCheckBody')}
+            </p>
 
             {playbackUrl && (
               <div className="stack-sm">
@@ -2136,37 +2193,9 @@ export function InterviewFlow({
             ) : (
               <>
                 {transcriptionFailed && (
-                  <div className="notice notice-warn" role="status">
-                    <strong>{t('deviceFallbackTitle')}</strong>
-                    <p className="tiny" style={{ marginTop: '0.35rem' }}>{t('deviceFallbackBody')}</p>
-                  </div>
+                  <p className="notice tiny quiet-notice" role="status">{t('permissionDeniedTypeInstead')}</p>
                 )}
-                <textarea
-                  className="answer-box"
-                  aria-label={t('yourAnswer')}
-                  placeholder={t('typeAnswer')}
-                  value={transcript}
-                  onChange={(e) => {
-                    setTranscript(e.target.value);
-                    setTranscriptConfirmed(false);
-                    setScoringError(null);
-                    setRetrySeconds(null);
-                    scoringSessionRef.current = null;
-                    automaticRetriesRef.current = 0;
-                  }}
-                />
-                <p className="tiny">{t('typeHint')}</p>
-                <label className="check-row">
-                  <input
-                    type="checkbox"
-                    checked={transcriptConfirmed}
-                    onChange={(event) => setTranscriptConfirmed(event.target.checked)}
-                  />
-                  <span>
-                    <strong>{t('isThisWhatYouSaid')}</strong>
-                    <span className="tiny">{t('confirmWrittenWords')}</span>
-                  </span>
-                </label>
+                {transcriptCheck}
               </>
             )}
             {scoringError && (
@@ -2202,7 +2231,7 @@ export function InterviewFlow({
                 type="button"
                 className="btn btn-primary"
                 onClick={submitForScoring}
-                disabled={isScoring || transcribing || transcript.trim().length === 0 || !transcriptConfirmed}
+                disabled={isScoring || transcribing || transcript.trim().length === 0}
               >
                 {isScoring
                   ? liveSitting ? t('preparingNext') : t('scoring')
@@ -2236,13 +2265,26 @@ export function InterviewFlow({
       {stage === 'feedback' && feedback && (
         <div className="stack">
           <FeedbackCard feedback={feedback} attempt={attemptCount} />
+          {answers.length === 0 && attemptCount === 1 && practiceSitting && (
+            <KeepFeedbackSlot roleId={role.id} serverAttemptId={serverAttemptId} lang={interviewLanguage} />
+          )}
           {previousTry && (
-            <RetryComparison
-              previousTranscript={previousTry.transcript}
-              previousFeedback={previousTry.feedback}
-              transcript={transcript}
-              feedback={feedback}
+            <AnswerComparison
+              firstTranscript={previousTry.transcript}
+              firstFeedback={previousTry.feedback}
+              newTranscript={transcript}
+              newFeedback={feedback}
+              lang={interviewLanguage}
+              labelFor={(id, fallback) => {
+                const competency = role.competencies.find((item) => item.id === id);
+                if (!competency) return fallback;
+                return interviewLanguage === 'ar' ? competency.labelAr : competency.label;
+              }}
             />
+          )}
+          {/* A worked example only after two attempts, never before. */}
+          {attemptCount >= 2 && practiceSitting && !starProbe && (
+            <ModelAnswer roleId={role.id} question={question} lang={interviewLanguage} />
           )}
           {starFollowUp && (
             <div className="card stack-sm star-probe-card">
@@ -2264,8 +2306,8 @@ export function InterviewFlow({
             <button type="button" className="btn btn-primary" onClick={advance}>
               {isLast ? t('finishInterview') : t('nextQuestion')}
             </button>
-            <button type="button" className="btn btn-quiet" onClick={retryQuestion}>
-              {t('tryAgain')}
+            <button type="button" className="btn btn-quiet" onClick={retryQuestion} disabled={requestingCamera}>
+              {requestingCamera ? t('cameraStarting') : t('tryAgainShort')}
             </button>
           </div>
         </div>
@@ -2362,6 +2404,10 @@ export function InterviewFlow({
             />
             <p className="tiny no-print">{t('saveReportHint')}</p>
           </div>
+
+          {!proof && (
+            <ReadinessSlot roleId={role.id} feedback={answers.map((answer) => answer.feedback)} lang={interviewLanguage} />
+          )}
 
           {(() => {
             // Strongest answer / focus area / next action — computed only from

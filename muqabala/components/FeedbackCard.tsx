@@ -2,6 +2,7 @@
 
 import type { AnswerFeedback } from '@/lib/scoring';
 import type { PartialFeedback } from '@/lib/feedback-stream';
+import { limitBlock, limitSentences } from '@/lib/flow/feedback-copy';
 import { useLang } from './LanguageProvider';
 import { ScoreRing } from './ScoreRing';
 
@@ -11,6 +12,48 @@ function SkeletonLines({ lines }: { lines: number }) {
       {Array.from({ length: lines }, (_, index) => (
         <span key={index} className={`skeleton-line${index === lines - 1 ? ' skeleton-line-short' : ''}`} />
       ))}
+    </div>
+  );
+}
+
+/**
+ * One of the three fixed feedback blocks. The text is cut to two sentences on
+ * render so a long model reply can never turn the card into an essay. An
+ * empty block keeps its heading so the card always has the same shape.
+ */
+function FeedbackBlock({
+  heading,
+  text,
+  tone,
+  loading = false,
+  emptyText,
+}: {
+  heading: string;
+  text: string;
+  tone: 'plain' | 'gold' | 'tip';
+  loading?: boolean;
+  emptyText?: string;
+}) {
+  if (tone === 'tip') {
+    return (
+      <div className="coach-tip feedback-block" dir="auto">
+        <strong>{heading}</strong>
+        {loading ? <SkeletonLines lines={2} /> : text || <span className="muted">{emptyText}</span>}
+      </div>
+    );
+  }
+  return (
+    <div className="feedback-block">
+      <p className="eyebrow" style={{ marginBottom: '0.25rem', ...(tone === 'gold' ? { color: 'var(--gold)' } : {}) }}>
+        {heading}
+      </p>
+      {loading ? (
+        <SkeletonLines lines={2} />
+      ) : text ? (
+        <p className="feedback-text" dir="auto">{text}</p>
+      ) : (
+        <p className="feedback-text muted">{emptyText}</p>
+      )}
     </div>
   );
 }
@@ -46,43 +89,27 @@ export function StreamingFeedbackCard({
         </div>
       </div>
 
-      <div className="stream-block">
-        <p className="eyebrow" style={{ marginBottom: 0 }}>{t('whatWorked')}</p>
-        {partial.strengths ? (
-          partial.strengths.length > 0 ? (
-            <ul className="feedback-list">
-              {partial.strengths.map((strength) => <li key={strength} dir="auto">{strength}</li>)}
-            </ul>
-          ) : null
-        ) : (
-          <SkeletonLines lines={3} />
-        )}
-      </div>
-
-      <div className="stream-block">
-        <p className="eyebrow" style={{ marginBottom: 0, color: 'var(--gold)' }}>{t('whatToImprove')}</p>
-        {partial.improvements ? (
-          partial.improvements.length > 0 ? (
-            <ul className="feedback-list">
-              {partial.improvements.map((improvement) => <li key={improvement} dir="auto">{improvement}</li>)}
-            </ul>
-          ) : null
-        ) : (
-          <SkeletonLines lines={3} />
-        )}
-      </div>
-
-      {partial.coachTip ? (
-        <div className="coach-tip" dir="auto">
-          <strong>{t('biggestWin')}</strong>
-          {partial.coachTip}
-        </div>
-      ) : (
-        <div className="coach-tip">
-          <strong>{t('biggestWin')}</strong>
-          <SkeletonLines lines={2} />
-        </div>
-      )}
+      <FeedbackBlock
+        heading={t('whatWorked')}
+        tone="plain"
+        loading={!partial.strengths}
+        text={limitBlock(partial.strengths ?? [])}
+        emptyText={t('feedbackBlockEmpty')}
+      />
+      <FeedbackBlock
+        heading={t('whatToImprove')}
+        tone="gold"
+        loading={!partial.improvements}
+        text={limitBlock(partial.improvements ?? [])}
+        emptyText={t('feedbackBlockEmpty')}
+      />
+      <FeedbackBlock
+        heading={t('biggestWin')}
+        tone="tip"
+        loading={!partial.coachTip}
+        text={limitSentences(partial.coachTip ?? '')}
+        emptyText={t('feedbackBlockEmpty')}
+      />
       <p className="tiny">{t('scoreStillChecking')}</p>
     </div>
   );
@@ -96,6 +123,10 @@ export function FeedbackCard({
   attempt?: number;
 }) {
   const { t } = useLang();
+  const scored = feedback.status === 'scored';
+  const worked = limitBlock(feedback.strengths);
+  const missing = limitBlock(feedback.improvements);
+  const sayNext = limitSentences(feedback.coachTip);
 
   return (
     <div className="card stack">
@@ -122,40 +153,19 @@ export function FeedbackCard({
         </p>
       )}
 
-      {feedback.strengths.length > 0 && (
-        <div>
-          <p className="eyebrow" style={{ marginBottom: 0 }}>
-            {t('whatWorked')}
-          </p>
-          <ul className="feedback-list">
-            {feedback.strengths.map((strength) => (
-              <li key={strength} dir="auto">{strength}</li>
-            ))}
-          </ul>
-        </div>
+      {/* Scored answers always show the same three blocks. An answer the
+          system declined to judge shows only the blocks that carry words. */}
+      {(scored || worked) && (
+        <FeedbackBlock heading={t('whatWorked')} tone="plain" text={worked} emptyText={t('feedbackBlockEmpty')} />
+      )}
+      {(scored || missing) && (
+        <FeedbackBlock heading={t('whatToImprove')} tone="gold" text={missing} emptyText={t('feedbackBlockEmpty')} />
+      )}
+      {(scored || sayNext) && (
+        <FeedbackBlock heading={t('biggestWin')} tone="tip" text={sayNext} emptyText={t('feedbackBlockEmpty')} />
       )}
 
-      {feedback.improvements.length > 0 && (
-        <div>
-          <p className="eyebrow" style={{ marginBottom: 0, color: 'var(--gold)' }}>
-            {t('whatToImprove')}
-          </p>
-          <ul className="feedback-list">
-            {feedback.improvements.map((improvement) => (
-              <li key={improvement} dir="auto">{improvement}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {feedback.coachTip && (
-        <div className="coach-tip" dir="auto">
-          <strong>{t('biggestWin')}</strong>
-          {feedback.coachTip}
-        </div>
-      )}
-
-      {feedback.status === 'scored' && (
+      {scored && (
         <details className="disclosure feedback-details">
           <summary>{t('seeFullFeedback')}</summary>
           <div className="stack" style={{ marginTop: '1rem' }}>

@@ -8,6 +8,21 @@ export type Competency = {
   anchorAr?: string;
 };
 
+/**
+ * An editorial example of a strong answer, written in advance and never
+ * generated live. Shown only after a candidate has tried a question twice.
+ */
+export type ModelAnswer = {
+  /** Answers the question that was asked, in the role's context. */
+  relevance: string;
+  /** Names, numbers, systems, timeframes or outcomes. */
+  evidence: string;
+  /** Situation, what they did, how it ended. */
+  structure: string;
+  /** Short plain sentences a listener can follow once. */
+  clarity: string;
+};
+
 export type Question = {
   id: string;
   text: string;
@@ -19,6 +34,9 @@ export type Question = {
   /** Shown to the candidate before they answer — coaching, not a trick. */
   hint: string;
   hintAr: string;
+  /** Optional worked example. Roles may also supply one through lib/flow/model-answers. */
+  modelAnswer?: ModelAnswer;
+  modelAnswerAr?: ModelAnswer;
 };
 
 export type Role = {
