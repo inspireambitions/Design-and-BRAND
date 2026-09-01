@@ -4106,3 +4106,262 @@ textarea.answer-box-compact {
 .summary-item p {
   font-size: 0.95rem;
 }
+
+/* ---------- practice flow: answer mode, transcript check, retry, comparison ---------- */
+
+.mode-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.mode-cards-compact {
+  gap: 0.5rem;
+}
+
+@media (max-width: 700px) {
+  .mode-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+.answer-mode-card {
+  min-height: 132px;
+  gap: 0.4rem;
+  padding: 1rem 1.05rem;
+}
+
+.mode-cards-compact .answer-mode-card {
+  min-height: 0;
+  padding: 0.75rem 0.85rem;
+}
+
+.mode-card-icon {
+  color: var(--jade);
+  flex: 0 0 auto;
+}
+
+.answer-mode-card[aria-disabled='true'] .mode-card-icon {
+  color: var(--ink-faint);
+}
+
+.answer-mode-card:focus-visible {
+  outline: 3px solid var(--jade);
+  outline-offset: 2px;
+}
+
+.btn-small {
+  min-height: 36px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+.change-mode {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.change-mode .card {
+  width: 100%;
+}
+
+.quiet-notice {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.flow-progress span {
+  font-variant-numeric: tabular-nums;
+}
+
+.capture-indicators {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.chip-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--jade-soft);
+  color: var(--jade-deep);
+}
+
+.record-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+.video-stays {
+  margin: 0;
+  text-align: center;
+  color: var(--ink-soft);
+}
+
+.answer-box-header {
+  margin-bottom: 0.4rem;
+}
+
+.answer-box-wrap {
+  position: relative;
+}
+
+.answer-box-wrap textarea.answer-box,
+.answer-box-wrap .transcript {
+  width: 100%;
+}
+
+.star-lines {
+  position: absolute;
+  inset: 0.85rem 1rem auto 1rem;
+  display: grid;
+  gap: 0.35rem;
+  pointer-events: none;
+  color: var(--ink-faint);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.star-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 36px;
+  padding: 0.2rem 0.4rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.star-toggle.on {
+  color: var(--jade-deep);
+}
+
+.star-toggle-track {
+  position: relative;
+  width: 34px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--line-strong);
+  transition: background 0.15s ease;
+}
+
+.star-toggle.on .star-toggle-track {
+  background: var(--jade);
+}
+
+.star-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  inset-inline-start: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.15s ease;
+}
+
+.star-toggle.on .star-toggle-thumb {
+  transform: translateX(14px);
+}
+
+body[dir='rtl'] .star-toggle.on .star-toggle-thumb {
+  transform: translateX(-14px);
+}
+
+.transcript-check {
+  white-space: pre-wrap;
+  max-height: none;
+}
+
+.previous-answer {
+  border-inline-start: 3px solid var(--line-strong);
+}
+
+.feedback-text {
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 700px) {
+  .comparison-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.answer-recap-new {
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.answer-recap p {
+  line-height: 1.6;
+}
+
+mark.diff-added {
+  background: var(--gold-soft);
+  color: inherit;
+  border-radius: 4px;
+  padding: 0.05em 0.2em;
+  box-shadow: inset 0 -2px 0 var(--gold);
+}
+
+.comparison-summary {
+  margin: 0;
+  padding: 0.8rem 1rem;
+  border-radius: var(--radius);
+  background: var(--jade-soft);
+  color: var(--jade-deep);
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.comparison-summary.muted {
+  background: var(--surface-sunk);
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+
+.model-answer summary {
+  font-weight: 650;
+}
+
+.model-answer-body {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.model-answer-part {
+  margin: 0;
+  line-height: 1.65;
+}
+
+.model-answer-label {
+  display: inline-block;
+  margin-inline-end: 0.35rem;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  background: var(--jade-soft);
+  color: var(--jade-deep);
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+body[dir='rtl'] .model-answer-label {
+  font-family: var(--font-arabic);
+  letter-spacing: 0;
+}
