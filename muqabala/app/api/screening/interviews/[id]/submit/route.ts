@@ -1,6 +1,7 @@
 import { ScreeningSubmitSchema } from '@/lib/interviews';
 import { after } from 'next/server';
 import { interviewAccess } from '@/lib/server/interview-access';
+import { refreshReportSummary } from '@/lib/server/report-summary';
 import { hasTrustedOrigin, privateNoStoreHeaders, screeningReceiptReference } from '@/lib/server/security';
 import { processScreeningNotifications } from '@/lib/server/screening-notifications';
 
@@ -29,6 +30,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (error || !submittedAt) {
     return Response.json({ error: 'Save every response before submitting.' }, { status: 409 });
   }
+  // The employer report reads this one-row copy instead of joining answers.
+  // A failure here only means the report page falls back to the live query.
+  await refreshReportSummary(access.admin!, id).catch(() => null);
   after(async () => { await processScreeningNotifications({ interviewId: id, limit: 2 }); });
   return Response.json({
     submitted: true,

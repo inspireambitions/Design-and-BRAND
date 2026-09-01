@@ -69,6 +69,26 @@ export function candidateEvidence(answers: DashboardAnswer[]) {
   };
 }
 
+export const CANDIDATE_PAGE_SIZE = 20;
+
+/**
+ * Translates a `?page=` value into the inclusive PostgREST `.range()` bounds.
+ * Anything that is not a positive integer reads as page one.
+ */
+export function candidatePage(raw: string | string[] | undefined, total: number | null = null, size = CANDIDATE_PAGE_SIZE) {
+  const parsed = Number.parseInt(Array.isArray(raw) ? raw[0] ?? '' : raw ?? '', 10);
+  const lastPage = total === null ? Number.POSITIVE_INFINITY : Math.max(1, Math.ceil(total / size));
+  const page = Number.isInteger(parsed) && parsed >= 1 ? Math.min(parsed, lastPage) : 1;
+  return {
+    page,
+    from: (page - 1) * size,
+    to: page * size - 1,
+    hasPrevious: page > 1,
+    hasNext: total !== null && page * size < total,
+    lastPage: total === null ? null : lastPage,
+  };
+}
+
 export function formatDuration(seconds: number | null): string {
   if (!seconds || seconds < 1) return 'Saved';
   const minutes = Math.floor(seconds / 60);

@@ -702,6 +702,32 @@
   font-size: 0.7rem;
 }
 
+.rolesPanel .candidateList {
+  padding: 0 1.5rem 1.2rem;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1.5rem;
+  border-top: 1px solid #e8e5df;
+  color: #8c948f;
+  font-size: 0.72rem;
+}
+
+.pagination a {
+  color: #087662;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.pagination span[aria-disabled="true"] {
+  color: #c2c7c3;
+  font-weight: 800;
+}
+
 .srOnly {
   position: absolute;
   overflow: hidden;
@@ -783,6 +809,46 @@
   margin-top: 0.75rem;
   border-radius: 0.75rem;
   background: #0e1714;
+}
+
+.videoPlaceholder {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 12rem;
+  margin-top: 0.75rem;
+  border-radius: 0.75rem;
+  background: #0e1714;
+  color: #f4f8f5;
+}
+
+.videoPlaceholder p {
+  margin: 0 0 1rem;
+  color: #f8d7c9;
+  font-size: 0.9rem;
+}
+
+.videoPlay {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.85rem 1.35rem;
+  border: 0;
+  border-radius: 999px;
+  background: #f4f8f5;
+  color: #0e1714;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.videoPlay:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.videoPlay svg {
+  font-size: 1.25rem;
 }
 
 .transcript,

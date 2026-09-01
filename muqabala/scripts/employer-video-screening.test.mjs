@@ -64,12 +64,13 @@ test('employer ownership, final consent and private video storage are enforced i
 
 test('employer dashboard separates recorded evidence from AI analysis', () => {
   const report = read('app/employer/interviews/[id]/page.tsx');
+  const actions = read('app/employer/actions.ts');
   const deleteControl = read('components/EmployerDeleteInterview.tsx');
   const deleteRoute = read('app/api/employer/interviews/[id]/route.ts');
   assert.match(report, /Candidate’s recorded evidence/);
   assert.match(report, /AI-generated analysis/);
   assert.match(report, /not a verified fact or an automatic decision/);
-  assert.match(report, /createSignedUrl/);
+  assert.match(actions, /createSignedUrl/);
   assert.match(report, /Kept for up to 90 days/);
   assert.match(deleteControl, /Delete this interview and all three recordings/);
   assert.match(deleteRoute, /currentUser/);
@@ -80,9 +81,62 @@ test('employer dashboard separates recorded evidence from AI analysis', () => {
 
 test('private playback cache is shorter than the signed employer link', () => {
   const upload = read('lib/screening-video-upload.ts');
-  const report = read('app/employer/interviews/[id]/page.tsx');
+  const actions = read('app/employer/actions.ts');
   assert.match(upload, /cacheControl: '60'/);
-  assert.match(report, /createSignedUrl\(answer\.video_path, 15 \* 60\)/);
+  assert.match(actions, /createSignedUrl\(answer\.video_path, 15 \* 60\)/);
+});
+
+test('employer report renders evidence text first and signs video only on play', () => {
+  const report = read('app/employer/interviews/[id]/page.tsx');
+  const player = read('components/EmployerReportVideo.tsx');
+  const actions = read('app/employer/actions.ts');
+  const upload = read('lib/screening-video-upload.ts');
+  const uploadRoute = read('app/api/screening/interviews/[id]/upload-url/route.ts');
+
+  // No media request is part of the server render: no <video>, no signing.
+  assert.doesNotMatch(report, /<video/);
+  assert.doesNotMatch(report, /createSignedUrl/);
+  assert.match(report, /<EmployerReportVideo/);
+  assert.match(report, /report_summary/);
+  assert.match(report, /usableReportSummary\(interview\.report_summary\)/);
+  assert.match(report, /from\('interview_answers'\)/);
+
+  // The player mounts <video> only after the employer taps play.
+  assert.match(player, /'use client'/);
+  assert.match(player, /signEmployerVideo\(interviewId, questionIndex\)/);
+  assert.match(player, /if \(url\) \{[\s\S]*<video/);
+  assert.match(player, /Play recording/);
+
+  // Signing checks ownership through the RLS-scoped client before the admin signs.
+  assert.match(actions, /export async function signEmployerVideo/);
+  assert.match(actions, /const owned = await ownedSubmittedInterview\(interviewId\);\s*if \(!owned\) return \{ error/);
+
+  // Video bytes go from the browser to Supabase Storage; no Next route reads them.
+  assert.match(upload, /new tus\.Upload\(file, \{\s*endpoint: grant\.endpoint/);
+  assert.match(uploadRoute, /storage\.supabase\.co\/storage\/v1\/upload\/resumable/);
+  assert.match(uploadRoute, /createSignedUploadUrl\(path\)/);
+});
+
+test('submitting writes the one-row report summary the employer page reads', () => {
+  const submitRoute = read('app/api/screening/interviews/[id]/submit/route.ts');
+  const migration = read('supabase/migrations/20260901193000_interview_report_summary.sql');
+  assert.match(submitRoute, /rpc\('submit_screening_interview'[\s\S]*refreshReportSummary\(access\.admin!, id\)/);
+  assert.match(migration, /add column if not exists report_summary jsonb/);
+  assert.match(migration, /add column if not exists report_summary_at timestamptz/);
+  assert.doesNotMatch(migration, /create policy/);
+});
+
+test('screening questions are generated once per link and never on the candidate page', () => {
+  const packRoute = read('app/api/screening/packs/route.ts');
+  const packLookup = read('lib/screening-pack.ts');
+  const candidatePage = read('app/s/[code]/page.tsx');
+  assert.match(packRoute, /const questions = proofQuestions\(role\);/);
+  assert.match(packRoute, /signProofPack\(\{[\s\S]*questions,/);
+  assert.match(packRoute, /insert\(\{[\s\S]*signed_token: signedToken/);
+  assert.match(packLookup, /select\('signed_token/);
+  assert.match(packLookup, /verifyInterview\(data\.signed_token\)/);
+  assert.doesNotMatch(packLookup, /proofQuestions|signProofPack/);
+  assert.doesNotMatch(candidatePage, /proofQuestions|signProofPack/);
 });
 
 test('employer creation form generates the description before unlocking the link action', () => {
