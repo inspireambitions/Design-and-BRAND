@@ -198,6 +198,12 @@ export const STRINGS = {
     transcriptUnsupported:
       'Live text is not supported in this browser. Type your answer instead. The feedback works the same way.',
     transcriptReady: 'Ready. Your words will appear as you speak.',
+    captionsUnavailableNotice:
+      'Live captions are not available in this browser. We will write up your words when you finish.',
+    captionsUnavailableAudioOnly:
+      'Only the sound of your answer is sent to be written up. Video stays on your device.',
+    writingUpWords: 'Writing up your words',
+    writingUpWordsBody: 'This usually takes a few seconds. Then you can check and edit the text.',
     whatToExpect: 'What happens next',
     expect1: 'question interview',
     expectOneQuestion: 'One practice question',
@@ -771,6 +777,12 @@ export const STRINGS = {
     transcriptUnsupported:
       'النص المباشر لا يعمل في هذا المتصفح. اكتب إجابتك بدلاً من ذلك. ستحصل على نفس الملاحظات.',
     transcriptReady: 'جاهز. ستظهر كلماتك أثناء حديثك.',
+    captionsUnavailableNotice:
+      'النص المباشر غير متاح في هذا المتصفح. سنكتب كلماتك عندما تنتهي.',
+    captionsUnavailableAudioOnly:
+      'يُرسل صوت إجابتك فقط لكتابته. يبقى الفيديو على جهازك.',
+    writingUpWords: 'نكتب كلماتك الآن',
+    writingUpWordsBody: 'يستغرق هذا بضع ثوانٍ عادةً. بعدها يمكنك مراجعة النص وتعديله.',
     whatToExpect: 'ماذا تتوقع',
     expect1: 'أسئلة في المقابلة',
     expectOneQuestion: 'سؤال تدريبي واحد',

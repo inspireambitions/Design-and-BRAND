@@ -97,3 +97,12 @@ export function defaultAnswerMethod(capabilities: DeviceCapabilities): 'speak' |
 export function videoModeSupported(capabilities: DeviceCapabilities): boolean {
   return capabilities.videoRecommended;
 }
+
+/**
+ * Whether a local video rehearsal can be recorded at all, regardless of live
+ * captions. Used with the audio-only transcription fallback, where the words
+ * are written up after the answer rather than as it is spoken.
+ */
+export function videoCaptureSupported(capabilities: DeviceCapabilities): boolean {
+  return capabilities.isMobile && capabilities.mediaDevicesSupported && capabilities.recordingSupported;
+}

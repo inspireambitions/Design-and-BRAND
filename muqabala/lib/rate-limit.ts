@@ -56,6 +56,16 @@ const shareLimiter = redis
     })
   : null;
 
+const transcriptionLimiter = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(20, '10 m'),
+      prefix: 'muqabala:limit:transcription',
+      analytics: false,
+      timeout: 1_000,
+    })
+  : null;
+
 const configuredDailyLimit = Number(process.env.INTERVIEW_DAILY_LIMIT ?? 400);
 const interviewDailyLimit = Number.isFinite(configuredDailyLimit)
   ? Math.max(1, Math.floor(configuredDailyLimit))
@@ -161,6 +171,21 @@ export function limitScoring(request: Request, candidateIdentity?: string): Prom
     identifier: candidateIdentity ? `candidate:${candidateIdentity}` : `ip:${requestAddress(request)}`,
     limiter: scoreLimiter,
     localLimit: 30,
+    localWindowMs: 10 * 60 * 1_000,
+  });
+}
+
+/**
+ * Audio fallback transcription. One call per answer, so twenty in ten minutes
+ * covers a full mock with retries while stopping a script from using the
+ * endpoint as free speech-to-text.
+ */
+export function limitTranscription(request: Request): Promise<LimitDecision> {
+  return sharedLimit({
+    bucketName: 'transcription',
+    identifier: `ip:${requestAddress(request)}`,
+    limiter: transcriptionLimiter,
+    localLimit: 20,
     localWindowMs: 10 * 60 * 1_000,
   });
 }

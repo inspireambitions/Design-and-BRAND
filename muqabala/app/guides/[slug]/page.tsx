@@ -4,7 +4,12 @@ import { GuidePage } from '@/components/GuidePage';
 import { sanityClient } from '@/lib/sanity/client';
 import { guideBySlugQuery, guidesQuery, type GuideDocument, type GuideListItem } from '@/lib/sanity/queries';
 
-export const revalidate = 60;
+// Every published guide is prerendered at build time and stays static until
+// Sanity calls /api/revalidate. A guide published after the build is rendered
+// on first request (dynamicParams) and then cached like the rest. The daily
+// revalidation is only a safety net if a webhook is ever missed.
+export const revalidate = 86400;
+export const dynamicParams = true;
 
 function safeJsonLd(raw: string): string | null {
   if (!raw) return null;

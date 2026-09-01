@@ -8,6 +8,14 @@ import {
   limitInterviewGeneration,
   limitInterviewGenerationDaily,
 } from '@/lib/rate-limit';
+import {
+  ADVERT_CACHE_VERSION,
+  advertCacheKey,
+  normaliseAdvertText,
+  readCachedInterview,
+  writeCachedInterview,
+  type CachedInterview,
+} from '@/lib/advert-cache';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -117,6 +125,44 @@ function tooLarge(request: Request): boolean {
   return Number.isFinite(declared) && declared > MAX_BODY_BYTES;
 }
 
+function generationModel(): string {
+  return process.env.INTERVIEW_MODEL || process.env.OPENAI_SCORING_MODEL || 'gpt-5.6-sol';
+}
+
+/**
+ * Turn a validated interview (fresh or cached) into the signed response. The
+ * token is always signed now, so a cached interview expires from the
+ * candidate's point of view exactly as a fresh one does. Returns null when the
+ * rubric cannot be signed, so the caller can fall back without caching.
+ */
+function tailoredResponse(generated: CachedInterview, jobTitle: string): Response | null {
+  const role: Role = {
+    id: 'custom',
+    title: generated.title || jobTitle || 'Your role',
+    titleAr: generated.title || jobTitle || 'وظيفتك',
+    industry: generated.industry || 'Any industry',
+    industryAr: generated.industry || 'أي قطاع',
+    level: 'Mid',
+    blurb: 'Built from the job advert you pasted.',
+    blurbAr: 'مبنية على إعلان الوظيفة الذي أدخلته.',
+    competencies: generated.competencies,
+    questions: generated.questions,
+  };
+
+  // The rubric must reach the scorer without the browser being able to author
+  // it. If it cannot be signed, do not offer a tailored interview at all.
+  const token = signInterview({
+    title: role.title,
+    industry: role.industry,
+    level: role.level,
+    competencies: generated.competencies,
+    questions: generated.questions,
+  });
+  if (!token) return null;
+
+  return Response.json({ role, tailored: true, token });
+}
+
 export async function POST(request: Request) {
   // Reject oversized posts before reading or parsing them.
   if (tooLarge(request)) {
@@ -162,6 +208,20 @@ export async function POST(request: Request) {
     );
   }
 
+  // The same advert, pasted again by anyone, gets the interview already built
+  // for it. The title is part of the key because it is part of the prompt.
+  // Looked up before the daily budget so a hit never spends it.
+  const model = generationModel();
+  const cacheKey = advertCacheKey(normaliseAdvertText(`${jobTitle}\n${jobText}`), {
+    model,
+    version: ADVERT_CACHE_VERSION,
+  });
+  const cached = await readCachedInterview(cacheKey);
+  if (cached) {
+    return tailoredResponse(cached, jobTitle)
+      ?? Response.json({ role: buildCustomRole(jobTitle), tailored: false, reason: 'invalid' });
+  }
+
   if ((await limitInterviewGenerationDaily()).limited) {
     // Budget ceiling reached for the day: still give a usable interview.
     return Response.json({ role: buildCustomRole(jobTitle), tailored: false, reason: 'busy' });
@@ -178,7 +238,7 @@ export async function POST(request: Request) {
     const client = new OpenAI({ timeout: GENERATION_DEADLINE_MS, maxRetries: 0 });
     const abort = AbortSignal.timeout(GENERATION_DEADLINE_MS);
     const response = await client.responses.parse({
-      model: process.env.INTERVIEW_MODEL || process.env.OPENAI_SCORING_MODEL || 'gpt-5.6-sol',
+      model,
       instructions: SYSTEM_PROMPT,
       input: `The candidate says they are interviewing for: ${jobTitle || '(not stated)'}
 
@@ -262,33 +322,23 @@ Build their first-round interview.`,
       return Response.json({ role: buildCustomRole(jobTitle), tailored: false, reason: 'invalid' });
     }
 
-    const role: Role = {
-      id: 'custom',
-      title: parsed.role_title || jobTitle || 'Your role',
-      titleAr: parsed.role_title || jobTitle || 'وظيفتك',
-      industry: parsed.industry || 'Any industry',
-      industryAr: parsed.industry || 'أي قطاع',
-      level: 'Mid',
-      blurb: 'Built from the job advert you pasted.',
-      blurbAr: 'مبنية على إعلان الوظيفة الذي أدخلته.',
+    const generated: CachedInterview = {
+      title: parsed.role_title,
+      industry: parsed.industry,
       competencies,
       questions,
     };
-
-    // The rubric must reach the scorer without the browser being able to author
-    // it. If it cannot be signed, do not offer a tailored interview at all.
-    const token = signInterview({
-      title: role.title,
-      industry: role.industry,
-      level: role.level,
-      competencies,
-      questions,
-    });
-    if (!token) {
+    const tailored = tailoredResponse(generated, jobTitle);
+    if (!tailored) {
       return Response.json({ role: buildCustomRole(jobTitle), tailored: false, reason: 'invalid' });
     }
 
-    return Response.json({ role, tailored: true, token });
+    // Every check passed and the rubric is signed, so this interview is worth
+    // keeping for the next candidate who pastes the same advert. Fallbacks and
+    // rejections never reach this line.
+    await writeCachedInterview(cacheKey, generated);
+
+    return tailored;
   } catch (error) {
     const timedOut =
       error instanceof Error && /abort|timeout|timed out/i.test(`${error.name} ${error.message}`);
