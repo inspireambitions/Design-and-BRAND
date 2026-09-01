@@ -19,6 +19,9 @@ export function uploadScreeningVideo(
   return new Promise((resolve, reject) => {
     const upload = new tus.Upload(file, {
       endpoint: grant.endpoint,
+      fingerprint: () => Promise.resolve(
+        `muqabala-screening:${grant.path}:${file.size}:${mimeType}`,
+      ),
       retryDelays: [0, 1_000, 3_000, 5_000, 10_000, 20_000],
       headers: { 'x-signature': grant.token },
       uploadDataDuringCreation: true,
