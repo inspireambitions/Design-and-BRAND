@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Bricolage_Grotesque, IBM_Plex_Sans_Arabic, Public_Sans } from 'next/font/google';
 import './globals.css';
 import { GoogleAnalytics } from '@/components/GoogleAnalytics';
+import { WebVitals } from '@/components/WebVitals';
 import { LanguageProvider } from '@/components/LanguageProvider';
 
 const displayFont = Bricolage_Grotesque({
@@ -85,6 +86,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
         <LanguageProvider>{children}</LanguageProvider>
         <GoogleAnalytics />
+        <WebVitals />
       </body>
     </html>
   );

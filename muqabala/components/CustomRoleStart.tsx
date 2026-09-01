@@ -6,6 +6,7 @@ import { buildCustomRole, type Role } from '@/lib/roles';
 import { takeHeroDraft } from '@/lib/hero-draft';
 import { focusedQuestionFromRole } from '@/lib/focused-question';
 import { loadLatestCustomInterviewDraft } from '@/lib/session-draft';
+import { trackTiming } from '@/lib/analytics';
 import { useLang } from './LanguageProvider';
 import { TopBar } from './TopBar';
 import { InterviewFlow } from './InterviewFlow';
@@ -45,6 +46,7 @@ export function CustomRoleStart({ focusQuestionId, initialLanguage }: { focusQue
   const startWith = async (titleArg: string, jobArg: string) => {
     const usable = !looksLikeUrl(jobArg) && jobArg.length >= 120;
     setBuilding(true);
+    const startedAt = performance.now();
     try {
       let candidateSession = window.sessionStorage.getItem('muqabala.candidate.v1');
       if (!candidateSession) {
@@ -66,6 +68,11 @@ export function CustomRoleStart({ focusQuestionId, initialLanguage }: { focusQue
       // They pasted an advert but we could not build from it — say so.
       setFellBack(usable && !data.tailored);
       setRole(data.role);
+      if (usable) {
+        trackTiming('advert_to_first_question_ms', performance.now() - startedAt, {
+          outcome: data.tailored ? 'tailored' : 'fallback',
+        });
+      }
     } catch {
       // Never strand the candidate: fall back to the generic interview.
       setTailored(false);

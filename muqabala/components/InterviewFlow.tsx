@@ -12,7 +12,14 @@ import {
   saveInterviewDraft,
   type InterviewSessionDraft,
 } from '@/lib/session-draft';
-import { track } from '@/lib/analytics';
+import { track, trackTiming } from '@/lib/analytics';
+import {
+  FEEDBACK_STREAM_CONTENT_TYPE,
+  FEEDBACK_STREAM_TIMEOUT_MS,
+  decodeFeedbackStreamChunk,
+  type FeedbackStreamEvent,
+  type PartialFeedback,
+} from '@/lib/feedback-stream';
 import { rubricForQuestion } from '@/lib/question-rubric';
 import { compareRetries } from '@/lib/retry-comparison';
 import {
@@ -38,7 +45,7 @@ import {
 } from '@/lib/speech';
 import { useLang } from './LanguageProvider';
 import { TopBar } from './TopBar';
-import { FeedbackCard } from './FeedbackCard';
+import { FeedbackCard, StreamingFeedbackCard } from './FeedbackCard';
 import { ScoreRing } from './ScoreRing';
 import { RatingCard } from './RatingCard';
 import { CoachingCard } from './CoachingCard';
@@ -61,6 +68,8 @@ type PreviousTry = {
 type ScoringError = {
   creditsExhausted: boolean;
   answerTooLong: boolean;
+  /** The 12 second budget ran out. The candidate retries by hand. */
+  timedOut: boolean;
 };
 
 class ScoringRequestError extends Error {
@@ -69,9 +78,75 @@ class ScoringRequestError extends Error {
     readonly retryAfterSeconds: number,
     readonly creditsExhausted: boolean,
     readonly answerTooLong: boolean,
+    readonly timedOut = false,
   ) {
     super('Scoring request failed');
   }
+}
+
+/** Streaming is on unless the deployment turns it off to capture a baseline. */
+const FEEDBACK_STREAMING_ENABLED = process.env.NEXT_PUBLIC_FEEDBACK_STREAMING !== 'off';
+
+/** The browser waits a little longer than the server so the server speaks first. */
+const CLIENT_SCORING_TIMEOUT_MS = FEEDBACK_STREAM_TIMEOUT_MS + 3_000;
+
+type ScoreResponsePayload = { feedback: AnswerFeedback; locked?: boolean };
+
+function scoringErrorFromBody(
+  status: number,
+  body: { error?: { code?: string; retryable?: boolean; retryAfterSeconds?: number } } | null,
+  headerRetryAfter: string | null,
+): ScoringRequestError {
+  const headerDelay = Number(headerRetryAfter);
+  const requestedDelay = body?.error?.retryAfterSeconds ?? headerDelay;
+  const delay = Number.isFinite(requestedDelay)
+    ? Math.max(2, Math.min(120, Math.ceil(requestedDelay)))
+    : 20;
+  const timedOut = body?.error?.code === 'scoring_timeout' || status === 504;
+  return new ScoringRequestError(
+    body?.error?.retryable ?? (status === 409 || status === 429 || status >= 500),
+    delay,
+    body?.error?.code === 'credits_exhausted' || status === 402,
+    body?.error?.code === 'answer_too_long' || status === 413,
+    timedOut,
+  );
+}
+
+/**
+ * Reads the NDJSON feedback stream. Partial blocks are handed to the caller as
+ * they complete; the promise settles with the final payload or throws the same
+ * typed error the JSON path would have produced.
+ */
+async function readFeedbackStream(
+  response: Response,
+  onPartial: (partial: PartialFeedback) => void,
+): Promise<ScoreResponsePayload> {
+  const reader = response.body?.getReader();
+  if (!reader) throw new ScoringRequestError(true, 20, false, false);
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let result: ScoreResponsePayload | null = null;
+  let failure: ScoringRequestError | null = null;
+  const handle = (event: FeedbackStreamEvent) => {
+    if (event.type === 'partial') onPartial(event.partial);
+    else if (event.type === 'final') result = { feedback: event.feedback, locked: event.locked };
+    else failure = scoringErrorFromBody(event.status, { error: event.error }, null);
+  };
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const decoded = decodeFeedbackStreamChunk(buffer);
+    buffer = decoded.remainder;
+    decoded.events.forEach(handle);
+    if (result || failure) break;
+  }
+  if (!result && !failure && buffer.trim()) {
+    decodeFeedbackStreamChunk(`${buffer}\n`).events.forEach(handle);
+  }
+  if (failure) throw failure;
+  if (!result) throw new ScoringRequestError(true, 20, false, false);
+  return result;
 }
 
 function formatClock(seconds: number): string {
@@ -181,6 +256,7 @@ export function InterviewFlow({
   const [transcriptConfirmed, setTranscriptConfirmed] = useState(false);
   const [interim, setInterim] = useState('');
   const [feedback, setFeedback] = useState<AnswerFeedback | null>(null);
+  const [streamingFeedback, setStreamingFeedback] = useState<PartialFeedback | null>(null);
   const [isScoring, setIsScoring] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [scoringError, setScoringError] = useState<ScoringError | null>(null);
@@ -757,6 +833,7 @@ export function InterviewFlow({
     if (finalizingRef.current) return;
     finalizingRef.current = true;
     setIsFinalizing(true);
+    const stoppedAt = performance.now();
     try {
       stopDictation();
       meterRef.current?.stop();
@@ -764,6 +841,9 @@ export function InterviewFlow({
       setMicLevel(0);
       setTranscriptConfirmed(false);
       setStage('review');
+      if (useVoice) {
+        trackTiming('transcript_ready_ms', performance.now() - stoppedAt, { lang: interviewLanguage });
+      }
 
       const recorder = recorderRef.current;
       recorderRef.current = null;
@@ -775,7 +855,7 @@ export function InterviewFlow({
       finalizingRef.current = false;
       setIsFinalizing(false);
     }
-  }, [stopDictation]);
+  }, [interviewLanguage, stopDictation, useVoice]);
 
   // The OS kills camera and microphone on a phone call or an app switch, and
   // nothing tells the page. Watch the tracks themselves, and when the page
@@ -866,14 +946,21 @@ export function InterviewFlow({
           ? crypto.randomUUID()
           : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     }
+    // Only the guided path shows feedback straight away, so only it streams.
+    // Live sittings bank the score and move on; streaming would reveal nothing.
+    const streaming = FEEDBACK_STREAMING_ENABLED && mode === 'guided';
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 45_000);
+    const timeoutId = window.setTimeout(() => controller.abort(), streaming ? CLIENT_SCORING_TIMEOUT_MS : 45_000);
+    const tappedAt = performance.now();
+    let firstBlockAt: number | null = null;
+    const timingProps = { lang: interviewLanguage, role_id: role.id, streamed: streaming };
     try {
       const response = await fetch('/api/score', {
         method: 'POST',
         signal: controller.signal,
         headers: {
           'Content-Type': 'application/json',
+          Accept: streaming ? `${FEEDBACK_STREAM_CONTENT_TYPE}, application/json` : 'application/json',
           'X-Scoring-Session': scoringSessionRef.current,
         },
         body: JSON.stringify({
@@ -891,22 +978,32 @@ export function InterviewFlow({
         const body = (await response.json().catch(() => null)) as {
           error?: { code?: string; retryable?: boolean; retryAfterSeconds?: number };
         } | null;
-        const headerDelay = Number(response.headers.get('Retry-After'));
-        const requestedDelay = body?.error?.retryAfterSeconds ?? headerDelay;
-        const delay = Number.isFinite(requestedDelay)
-          ? Math.max(2, Math.min(120, Math.ceil(requestedDelay)))
-          : 20;
-        throw new ScoringRequestError(
-          body?.error?.retryable ??
-            (response.status === 409 || response.status === 429 || response.status >= 500),
-          delay,
-          body?.error?.code === 'credits_exhausted' || response.status === 402,
-          body?.error?.code === 'answer_too_long' || response.status === 413,
-        );
+        throw scoringErrorFromBody(response.status, body, response.headers.get('Retry-After'));
       }
-      const data = (await response.json()) as { feedback: AnswerFeedback; locked?: boolean };
+      const isStream = (response.headers.get('content-type') ?? '').includes(FEEDBACK_STREAM_CONTENT_TYPE);
+      let data: ScoreResponsePayload;
+      if (isStream) {
+        data = await readFeedbackStream(response, (partial) => {
+          if (firstBlockAt === null && (partial.headline || partial.strengths?.length)) {
+            firstBlockAt = performance.now();
+            trackTiming('feedback_first_token_ms', firstBlockAt - tappedAt, timingProps);
+          }
+          setStreamingFeedback(partial);
+          setStage('feedback');
+        });
+      } else {
+        data = (await response.json()) as ScoreResponsePayload;
+      }
+      if (firstBlockAt === null) {
+        trackTiming('feedback_first_token_ms', performance.now() - tappedAt, timingProps);
+      }
+      trackTiming('feedback_complete_ms', performance.now() - tappedAt, {
+        ...timingProps,
+        outcome: data.locked ? 'locked' : data.feedback.status,
+      });
       scoringSessionRef.current = null;
       automaticRetriesRef.current = 0;
+      setStreamingFeedback(null);
       if (mode === 'mock' || mode === 'screening' || data.locked) {
         // Live sittings do not interrupt: the score is banked and the interview
         // moves straight on. Everything is shown together in the final report.
@@ -921,15 +1018,27 @@ export function InterviewFlow({
         setStage('feedback');
       }
     } catch (error) {
+      const aborted = error instanceof DOMException && error.name === 'AbortError';
       const requestError =
         error instanceof ScoringRequestError
           ? error
-          : new ScoringRequestError(true, 20, false, false);
+          : aborted
+            ? new ScoringRequestError(true, 0, false, false, true)
+            : new ScoringRequestError(true, 20, false, false);
+      // Anything half shown is withdrawn. The candidate sees a clear message
+      // and a Retry button, never a card that stopped filling in.
+      setStreamingFeedback(null);
+      setStage('review');
+      trackTiming('feedback_complete_ms', performance.now() - tappedAt, {
+        ...timingProps,
+        outcome: requestError.timedOut ? 'timeout' : 'error',
+      });
       setScoringError({
         creditsExhausted: requestError.creditsExhausted,
         answerTooLong: requestError.answerTooLong,
+        timedOut: requestError.timedOut,
       });
-      if (requestError.retryable && automaticRetriesRef.current < 2) {
+      if (!requestError.timedOut && requestError.retryable && automaticRetriesRef.current < 2) {
         automaticRetriesRef.current += 1;
         setRetrySeconds(requestError.retryAfterSeconds);
       }
@@ -1846,14 +1955,18 @@ export function InterviewFlow({
                 <strong>
                   {scoringError.answerTooLong
                     ? t('scoreAnswerTooLongTitle')
-                    : t('scoreUnavailableTitle')}
+                    : scoringError.timedOut
+                      ? t('scoreTimeoutTitle')
+                      : t('scoreUnavailableTitle')}
                 </strong>
                 <p className="tiny" style={{ marginTop: '0.35rem' }}>
                   {scoringError.answerTooLong
                     ? t('scoreAnswerTooLongBody')
-                    : scoringError.creditsExhausted
-                    ? t('scoreCreditsBody')
-                    : t('scoreUnavailableBody')}
+                    : scoringError.timedOut
+                      ? t('scoreTimeoutBody')
+                      : scoringError.creditsExhausted
+                        ? t('scoreCreditsBody')
+                        : t('scoreUnavailableBody')}
                 </p>
                 {retrySeconds !== null && (
                   <p className="tiny" style={{ marginTop: '0.35rem' }}>
@@ -1875,7 +1988,7 @@ export function InterviewFlow({
                 {isScoring
                   ? liveSitting ? t('preparingNext') : t('scoring')
                   : scoringError
-                    ? t('retryNow')
+                    ? scoringError.timedOut ? t('retry') : t('retryNow')
                     : liveSitting ? t('confirmAnswer') : t('getFeedback')}
               </button>
               {mode === 'guided' && (
@@ -1890,6 +2003,13 @@ export function InterviewFlow({
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ---------- feedback, arriving ---------- */}
+      {stage === 'feedback' && !feedback && streamingFeedback && (
+        <div className="stack">
+          <StreamingFeedbackCard partial={streamingFeedback} attempt={attemptCount} />
         </div>
       )}
 

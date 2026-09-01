@@ -1836,6 +1836,57 @@ body[dir='rtl'] .account-intro h1 {
   border-color: color-mix(in srgb, var(--warn) 30%, var(--line));
 }
 
+/* ---------- streaming feedback skeleton ---------- */
+
+.skeleton-block {
+  display: grid;
+  gap: 0.55rem;
+  padding-block: 0.45rem;
+}
+
+.skeleton-line {
+  display: block;
+  height: 0.85rem;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--line) 70%, transparent) 0%,
+    color-mix(in srgb, var(--line) 35%, transparent) 50%,
+    color-mix(in srgb, var(--line) 70%, transparent) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.skeleton-line-short {
+  width: 62%;
+}
+
+/* Each block reserves the height of a typical three-bullet answer so text
+   landing over a skeleton does not push the rest of the card down. */
+.feedback-streaming .stream-block {
+  min-height: 6.4rem;
+}
+
+.feedback-streaming .coach-tip {
+  min-height: 5.2rem;
+}
+
+.coach-tip .skeleton-block {
+  padding-block: 0.25rem 0;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-line {
+    animation: none;
+  }
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
