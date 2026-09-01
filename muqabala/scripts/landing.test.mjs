@@ -13,7 +13,8 @@ const {
   recordEmailDeclined,
   shouldAskForEmail,
 } = await import('../lib/landing/email-consent.ts');
-const { parseInterviewPackRequest, looksLikeEmail } = await import('../lib/landing/interview-pack.ts');
+const { parseInterviewPackRequest } = await import('../lib/landing/interview-pack.ts');
+const { looksLikeEmail } = await import('../lib/landing/email-check.ts');
 const { advertUsable, looksLikeUrl } = await import('../lib/landing/advert-text.ts');
 const { toRoleCards, popularRoleCards } = await import('../lib/landing/role-cards.ts');
 const { HERO_DRAFT_KEY, saveHeroDraft, takeHeroDraft } = await import('../lib/hero-draft.ts');

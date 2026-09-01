@@ -22,12 +22,3 @@ export function parseInterviewPackRequest(raw: unknown): InterviewPackRequest | 
   if (!parsed.success) return null;
   return { email: parsed.data.email.toLowerCase(), source: parsed.data.source };
 }
-
-/**
- * A quick check for the browser so an obvious typo is caught before the
- * request. The server remains the authority.
- */
-export function looksLikeEmail(value: string): boolean {
-  const trimmed = value.trim();
-  return trimmed.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmed);
-}

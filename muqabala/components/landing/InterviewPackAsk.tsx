@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from 'react';
 import { browserStores, recordEmailConsent, recordEmailDeclined } from '@/lib/landing/email-consent';
-import { looksLikeEmail } from '@/lib/landing/interview-pack';
+import { looksLikeEmail } from '@/lib/landing/email-check';
 import { useLang } from '../LanguageProvider';
 
 /**
