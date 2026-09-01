@@ -207,6 +207,30 @@ Verified here: `tsc --noEmit`, `node --experimental-strip-types --test scripts/*
 ## Sections not started
 
 - Section 3, on-device transcription: Web Speech with typing fallback exists; audio-only server fallback does not.
+### 2026-09-01, Section 3
+
+| Metric | Before | After | Source |
+| --- | --- | --- | --- |
+| `transcript_ready_ms` on-device (Web Speech) | measured, no `outcome` property | unchanged path, now tagged `outcome: device` | `components/InterviewFlow.tsx` |
+| `transcript_ready_ms` without Web Speech (Firefox, some in-app browsers) | not measured: the candidate was silently switched to typing | tagged `outcome: server` (or `server_failed`); p75 to capture on production | `components/InterviewFlow.tsx`, PostHog |
+| Candidates who chose Speak or Video in a browser without live captions | forced to type | speak as normal, audio only is written up on finish, then confirmed in the textarea | this branch |
+| Video bytes on the network from practice | zero | zero, now enforced twice (see below) | `lib/audio-capture.ts`, `app/api/transcribe/route.ts` |
+| Audio upload size | none | Opus at 24 kbps, about 180 KB per minute of speech; hard cap 6 MB | `lib/audio-capture.ts`, `lib/transcription-upload.ts` |
+
+What changed:
+
+- `POST /api/transcribe` (Node runtime) accepts one `audio` file plus `lang`, transcribes with OpenAI (`TRANSCRIPTION_MODEL`, default `gpt-4o-mini-transcribe`, automatic `whisper-1` fallback if the SDK rejects the model), 20 s budget, private no-store headers, per-IP limit of 20 per 10 minutes. The recording lives in memory for the length of the request; neither the audio nor the words are logged or stored. Without `OPENAI_API_KEY` it returns 503 `transcription_unavailable` and the browser falls back to typing.
+- When Web Speech is missing, choosing Speak or Video no longer silently switches to typing. The browser shows "Live captions are not available in this browser. We will write up your words when you finish.", records audio only while the candidate answers, uploads it on finish, shows a "Writing up your words" skeleton, then fills the transcript textarea for the candidate to confirm. In Video mode the local preview still stays on the device exactly as before.
+- Recordings are discarded on unmount, on `pagehide`, on retry, on the STAR follow-up and when the answer is completed. Nothing is written to IndexedDB or localStorage.
+- Where Web Speech is supported nothing changes except the `outcome: device` tag on the existing timing.
+
+Zero video bytes is enforced at both ends: the fallback recorder opens its own microphone-only stream (`getUserMedia({ audio: true, video: false })`) and refuses a stream that carries a video track, and the endpoint rejects any `video/*` type with 415 before reading the body. Unit tests cover the MIME selection and the server-side MIME and size validation (`scripts/transcription.test.mjs`).
+
+Verified here: `tsc --noEmit`, the full test suite, `next build`, `/practice/[roleId]` within the 200 KB first-load budget. Not verified here: the Firefox fallback path end to end, because this environment has no provider key and no browser. It needs a manual check on the preview deployment: open `/practice/[roleId]` in Firefox, pick Speak, answer, and confirm the skeleton then the written words appear; repeat in Video mode and confirm in the network panel that the only upload is one `audio/*` request to `/api/transcribe`.
+
+## Sections not started
+
+- Section 2, Middle East edge region: needs Vercel project settings and the Supabase region check. Do not migrate Supabase without confirmation.
 - Section 4, build-time generation: `/practice/[roleId]` currently renders on demand; no model answers; no advert-hash cache.
 - Section 5, page weight: no bundle budget in CI; `components/InterviewFlow.tsx` is the largest client module.
 - Section 6 and 7 code is complete above; the migrations wait for `supabase db push` after review, and the `pg_stat_statements` reading waits for a preview load test.
