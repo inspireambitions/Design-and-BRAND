@@ -216,6 +216,20 @@
   opacity: 0.45;
 }
 
+.secondary {
+  min-height: 2.75rem;
+  border: 1px solid #aebdb5;
+  border-radius: 0.8rem;
+  background: transparent;
+  color: #315047;
+  font: inherit;
+  font-weight: 750;
+}
+
+.secondary:disabled {
+  opacity: 0.45;
+}
+
 .footnote {
   font-size: 0.82rem !important;
 }

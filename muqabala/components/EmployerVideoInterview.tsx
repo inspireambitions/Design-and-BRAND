@@ -74,6 +74,7 @@ const COPY = {
     receiptSubmitted: 'Submitted to',
     receiptReference: 'Reference',
     emailReceipt: 'Your email receipt will be sent to',
+    useAnotherEmail: 'Use another email',
   },
   ar: {
     invited: 'مقابلة من جهة العمل',
@@ -129,6 +130,7 @@ const COPY = {
     receiptSubmitted: 'تم الإرسال إلى',
     receiptReference: 'المرجع',
     emailReceipt: 'سيتم إرسال إيصال المقابلة إلى',
+    useAnotherEmail: 'استخدام بريد إلكتروني آخر',
   },
 } as const;
 
@@ -155,6 +157,10 @@ function formatTime(value: number): string {
   const minutes = Math.floor(value / 60);
   const seconds = String(value % 60).padStart(2, '0');
   return `${minutes}:${seconds}`;
+}
+
+function maskEmail(value: string): string {
+  return value.replace(/(^.).*(@.*$)/, '$1•••$2');
 }
 
 function permissionHelp(error: unknown, fallback: string, noDevice: string, deviceBusy: string): string {
@@ -694,7 +700,11 @@ export function EmployerVideoInterview({
             <div className={styles.assurance}>{c.privacy}</div>
             <p className={styles.footnote}>{c.uploadDisclosure}</p>
             <p className={styles.footnote}>{c.transcriptDisclosure}</p>
-            <div className={styles.savedBanner} role="status">✓ {c.emailReceipt} {candidateEmail}</div>
+            <div className={styles.savedBanner} role="status">✓ {c.emailReceipt} {maskEmail(candidateEmail)}</div>
+            <button type="button" className={styles.secondary} onClick={async () => {
+              await fetch('/api/auth/sign-out', { method: 'POST' });
+              window.location.assign(`/s/${publicCode}`);
+            }}>{c.useAnotherEmail}</button>
             <label className={styles.field}>
               <span>{c.name}</span>
               <input

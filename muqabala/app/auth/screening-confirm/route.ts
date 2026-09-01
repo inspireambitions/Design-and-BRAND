@@ -18,5 +18,7 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${configuredOrigin()}/s/${safeCode}`);
     }
   }
-  return NextResponse.redirect(`${configuredOrigin()}/sign-in?error=expired`);
+  return NextResponse.redirect(safeCode
+    ? `${configuredOrigin()}/s/${safeCode}?verification=expired`
+    : `${configuredOrigin()}/sign-in?error=expired`);
 }

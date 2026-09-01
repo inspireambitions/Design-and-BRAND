@@ -40,6 +40,9 @@ test('pass 3: provider failures retry safely with one stable idempotency key', (
   const key = screeningNotificationIdempotencyKey('job-123');
   for (let attempt = 1; attempt <= 5; attempt += 1) assert.equal(screeningNotificationIdempotencyKey('job-123'), key);
   assert.equal(notificationRetry(429, 1).permanent, false);
+  assert.equal(notificationRetry(408, 1).permanent, false);
+  assert.equal(notificationRetry(409, 1).permanent, false);
+  assert.equal(notificationRetry(425, 1).permanent, false);
   assert.equal(notificationRetry(500, 2).permanent, false);
   assert.equal(notificationRetry(null, 3).permanent, false);
   assert.equal(notificationRetry(400, 1).permanent, true);
@@ -57,6 +60,11 @@ test('pass 4: verified identity and tenant scope are rechecked before resume, up
   assert.match(resume, /eq\('candidate_user_id', candidate\.id\)/);
   assert.match(access, /activeInterview\.candidate_user_id === user\.id/);
   assert.match(worker, /expectedUserId !== job\.recipient_user_id/);
+  assert.match(worker, /if \(interviewError\)/);
+  assert.match(worker, /if \(packResult\.error\)/);
+  assert.match(worker, /userError && userError\.status !== 404/);
+  assert.match(worker, /retryJob\(job, 'database_unavailable'\)/);
+  assert.match(worker, /retryJob\(job, 'auth_unavailable'\)/);
   assert.match(authRequest, /cookieStore\.delete\(AUTH_STATE_COOKIE\)/);
   assert.doesNotMatch(authRequest, /ATTEMPT_COOKIE|claimCurrentAttempt/);
 });
@@ -79,4 +87,14 @@ test('pass 5: five controlled 40-candidate runs reconcile without duplicate jobs
   const migration = read(migrationFile);
   assert.match(migration, /for update skip locked/);
   assert.match(migration, /attempt_count < 10/);
+});
+
+test('recovery worker uses a bounded batch and a lease longer than route runtime', () => {
+  const cron = read('app/api/cron/screening-notifications/route.ts');
+  const hardening = read('supabase/migrations/20260901053510_harden_screening_notification_recovery.sql');
+  assert.match(cron, /limit: 5/);
+  assert.match(hardening, /interval '5 minutes'/);
+  assert.match(hardening, /least\(coalesce\(p_limit, 5\), 5\)/);
+  assert.match(hardening, /if existing_row\.expires_at <= now\(\)/);
+  assert.match(hardening, /return jsonb_build_object\('status', 'expired'\)/);
 });

@@ -9,6 +9,6 @@ export async function GET(request: Request) {
   if (!secret || request.headers.get('authorization') !== `Bearer ${secret}`) {
     return Response.json({ error: 'Unauthorized.' }, { status: 401 });
   }
-  const result = await processScreeningNotifications({ limit: 25 });
+  const result = await processScreeningNotifications({ limit: 5 });
   return Response.json(result, { status: result.configured ? 200 : 503 });
 }

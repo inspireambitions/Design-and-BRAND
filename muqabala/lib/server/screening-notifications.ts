@@ -24,6 +24,17 @@ async function markJob(job: Job, values: Record<string, unknown>) {
     .eq('status', 'processing');
 }
 
+async function retryJob(job: Job, code: string) {
+  const retry = notificationRetry(null, job.attempt_count);
+  await markJob(job, {
+    status: job.attempt_count >= 10 ? 'failed' : 'pending',
+    available_at: new Date(Date.now() + retry.delayMs).toISOString(),
+    locked_until: null,
+    lease_token: null,
+    last_error_code: code,
+  });
+}
+
 export async function processScreeningNotifications(options: { interviewId?: string; limit?: number; fetchImpl?: typeof fetch } = {}) {
   const admin = createAdminClient();
   const apiKey = process.env.RESEND_TRANSACTIONAL_API_KEY || process.env.RESEND_FEEDBACK_API_KEY;
@@ -40,13 +51,24 @@ export async function processScreeningNotifications(options: { interviewId?: str
   let failed = 0;
 
   for (const job of jobs) {
-    const { data: interview } = await admin.from('interviews')
+    const { data: interview, error: interviewError } = await admin.from('interviews')
       .select('id,candidate_user_id,role_title,submitted_at,locked_at,screening_pack_id')
       .eq('id', job.interview_id)
       .maybeSingle();
-    const { data: pack } = interview?.screening_pack_id
+    if (interviewError) {
+      await retryJob(job, 'database_unavailable');
+      failed += 1;
+      continue;
+    }
+    const packResult = interview?.screening_pack_id
       ? await admin.from('screening_packs').select('workplace,employer_id').eq('id', interview.screening_pack_id).maybeSingle()
-      : { data: null };
+      : { data: null, error: null };
+    if (packResult.error) {
+      await retryJob(job, 'database_unavailable');
+      failed += 1;
+      continue;
+    }
+    const pack = packResult.data;
     const expectedUserId = job.recipient_kind === 'candidate' ? interview?.candidate_user_id : pack?.employer_id;
     if (!interview?.submitted_at || !interview.locked_at || !pack || expectedUserId !== job.recipient_user_id) {
       await markJob(job, { status: 'cancelled', locked_until: null, lease_token: null, last_error_code: 'scope_mismatch' });
@@ -56,7 +78,12 @@ export async function processScreeningNotifications(options: { interviewId?: str
 
     const { data: userData, error: userError } = await admin.auth.admin.getUserById(job.recipient_user_id);
     const recipient = userData.user;
-    if (userError || !recipient?.email || !recipient.email_confirmed_at) {
+    if (userError && userError.status !== 404) {
+      await retryJob(job, 'auth_unavailable');
+      failed += 1;
+      continue;
+    }
+    if (!recipient?.email || !recipient.email_confirmed_at) {
       await markJob(job, { status: 'failed', locked_until: null, lease_token: null, last_error_code: 'recipient_unavailable' });
       failed += 1;
       continue;

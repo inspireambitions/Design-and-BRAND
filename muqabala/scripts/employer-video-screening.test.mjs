@@ -199,3 +199,17 @@ test('JobStrike is absent from the complete employer flow', () => {
   ];
   assert.doesNotMatch(files.map(read).join('\n'), /jobstrike/i);
 });
+
+test('candidate email verification keeps employer context and avoids full-link friction', () => {
+  const page = read('app/s/[code]/page.tsx');
+  const verification = read('components/ScreeningEmailVerification.tsx');
+  const callback = read('app/auth/screening-confirm/route.ts');
+  const flow = read('components/EmployerVideoInterview.tsx');
+  assert.match(page, /availability=\{pack\.status\}/);
+  assert.match(verification, /availability === 'active' \|\| resumingFullLink/);
+  assert.match(verification, /I already started this interview/);
+  assert.match(verification, /Change email/);
+  assert.match(callback, /verification=expired/);
+  assert.match(flow, /Use another email/);
+  assert.match(flow, /maskEmail\(candidateEmail\)/);
+});
