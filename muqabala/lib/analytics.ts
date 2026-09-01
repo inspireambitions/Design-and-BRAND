@@ -58,6 +58,7 @@ type EventName =
   | 'interview_started'
   | 'interview_completed'
   | 'rating_submitted'
+  | 'share_card_created'
   | 'web_vital'
   | TimingEventName;
 

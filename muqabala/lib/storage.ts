@@ -22,6 +22,11 @@ export function loadAttempts(): Attempt[] {
   }
 }
 
+/** Local history for one role, newest first. Read-only; the saved shape is unchanged. */
+export function loadAttemptsForRole(roleId: string): Attempt[] {
+  return loadAttempts().filter((attempt) => attempt.roleId === roleId);
+}
+
 /** Returns whether the attempt was actually persisted, so the UI never claims a save that failed. */
 export function saveAttempt(attempt: Attempt): boolean {
   if (typeof window === 'undefined') return false;
