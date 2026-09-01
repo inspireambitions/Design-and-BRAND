@@ -225,6 +225,20 @@ Zero video bytes is enforced at both ends: the fallback recorder opens its own m
 
 Verified here: `tsc --noEmit`, the full test suite, `next build`, `/practice/[roleId]` within the 200 KB first-load budget. Not verified here: the Firefox fallback path end to end, because this environment has no provider key and no browser. It needs a manual check on the preview deployment: open `/practice/[roleId]` in Firefox, pick Speak, answer, and confirm the skeleton then the written words appear; repeat in Video mode and confirm in the network panel that the only upload is one `audio/*` request to `/api/transcribe`.
 
+### 2026-09-01, Sections 2 to 7 preview QA
+
+| Metric | Before | After | Source |
+| --- | --- | --- | --- |
+| Same advert pasted twice, second response | 37.9 s (fresh generation) | 0.5 s (Upstash hit, token re-signed) | curl against the PR #13 preview |
+| Advert paste to questions, cold | 37.9 s | unchanged: generation time is set by `INTERVIEW_MODEL` and its reasoning effort, far from the 6 s p75 target | same |
+| `/practice/[roleId]`, `/practice/custom`, `/guides` | rendered on demand | `x-vercel-cache: PRERENDER` | curl |
+| `/icon.svg` | default | `public, max-age=31536000, immutable` | curl |
+| `POST /api/transcribe` with `video/webm` | n/a | 415 `video_rejected` | curl |
+| `POST /api/revalidate` without signature | n/a | 503 `not_configured` until the secret is set | curl |
+| Practice flow, streamed feedback, retry comparison, guides, hiring-team page | working | working, comparison view now loads on demand | browser QA |
+
+Open from this QA: the cold advert generation needs a faster generation model or lower reasoning effort to reach 6 s; trial `INTERVIEW_REASONING=low` first and keep the change only if the generated sets still pass review. The Firefox audio fallback still needs a manual check (the QA browser had no microphone).
+
 ## Open items that need production access
 
 All eight sections have code in place. These steps cannot be done from a build environment.
