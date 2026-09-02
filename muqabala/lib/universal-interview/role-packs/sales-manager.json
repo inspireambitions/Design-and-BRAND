@@ -1,6 +1,9 @@
 {
   "role": "Sales Manager",
   "version": "1.0",
+  "author": "Inspire Ambitions HR Career Specialist",
+  "reviewed_by": null,
+  "reviewed_at": null,
   "implicit_competencies": ["c_commercial_judgement", "c_coaching"],
   "core_competencies": ["c_sales_delivery", "c_leadership"],
   "question_bank": [

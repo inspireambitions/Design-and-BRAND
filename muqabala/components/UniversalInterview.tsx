@@ -28,6 +28,7 @@ type InterviewResponse = {
   interview_id: string;
   phase: 'AWAITING_CONFIRMATION' | 'ACTIVE' | 'COMPLETE';
   question_number: number;
+  question_total: number;
   current_question: GeneratedQuestion | null;
   coverage: Record<string, { status: CoverageStatus; evidence_ids: string[] }>;
   retry_used: boolean;
@@ -284,11 +285,11 @@ export function UniversalInterview() {
         {interview.role_pack.assessment_type !== 'COMPETENCY' && <p className="notice tiny">
           {interview.role_pack.assessment_type === 'PRACTICAL' ? t('brainPracticalCaveat') : t('brainPortfolioCaveat')}
         </p>}
-        <div className="flow-progress" aria-label={`${t('brainQuestion')} ${interview.question_number} of 8`}>
-          {Array.from({ length: 8 }, (_, index) => <span key={index} className={index < interview.question_number ? 'done' : ''} />)}
+        <div className="flow-progress" aria-label={`${t('brainQuestion')} ${interview.question_number} of ${interview.question_total}`}>
+          {Array.from({ length: interview.question_total }, (_, index) => <span key={index} className={index < interview.question_number ? 'done' : ''} />)}
         </div>
         <div className="card stack">
-          <p className="eyebrow">{t('brainQuestion')} {interview.question_number} / 8</p>
+          <p className="eyebrow">{t('brainQuestion')} {interview.question_number} / {interview.question_total}</p>
           <h2 className="brain-question">{interview.current_question.text}</h2>
           <UniversalVideoAnswer
             key={`${interview.question_number}:${interview.current_question.text}`}

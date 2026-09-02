@@ -53,7 +53,7 @@ export function deterministicFeedbackFallback(state: InterviewState): FeedbackMo
     single_highest_value_improvement: recommended
       ? `Give a clearer example of ${recommended.competency.name.toLowerCase()}, including your action and result.`
       : 'Keep your strongest examples concise and specific.',
-    retry_recommended_question: Math.max(1, Math.min(8, recommended
+    retry_recommended_question: Math.max(1, Math.min(state.plan.length, recommended
       ? state.plan.find((question) => question.target_competencies.includes(recommended.competency.id))?.slot ?? 1
       : 1)),
   };

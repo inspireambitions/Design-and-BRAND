@@ -9,6 +9,9 @@ const packs = [frontDeskAgent, softwareEngineer, salesManager, graduateTrainee] 
 const genericPack: RolePack = {
   role: 'Generic role',
   version: '1.0',
+  author: 'Inspire Ambitions HR Career Specialist',
+  reviewed_by: null,
+  reviewed_at: null,
   implicit_competencies: ['c_communication', 'c_problem_solving', 'c_motivation'],
   core_competencies: ['c_role_relevance'],
   question_bank: [],

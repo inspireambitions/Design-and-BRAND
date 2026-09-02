@@ -1,6 +1,9 @@
 {
   "role": "Software Engineer",
   "version": "1.0",
+  "author": "Inspire Ambitions HR Career Specialist",
+  "reviewed_by": null,
+  "reviewed_at": null,
   "implicit_competencies": ["c_problem_solving", "c_collaboration"],
   "core_competencies": ["c_technical_reasoning"],
   "question_bank": [

@@ -22,6 +22,7 @@ export function publicInterviewState(state: InterviewState) {
     blueprint: state.blueprint,
     confirmed_by_candidate: state.confirmed_by_candidate,
     question_number: state.question_number,
+    question_total: state.plan.length,
     current_question: state.current_question,
     coverage: state.coverage,
     retry_used: state.retry_used,

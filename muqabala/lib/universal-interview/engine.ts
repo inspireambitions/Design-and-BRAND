@@ -33,6 +33,14 @@ const coverageRank: Record<CoverageStatus, number> = {
   STRONG: 4,
 };
 
+const ENTRY_PLAN_INDEXES = [0, 1, 2, 3, 6, 7] as const;
+
+function fitPlanToSeniority(plan: PlannedQuestion[], seniority: InterviewState['seniority']): PlannedQuestion[] {
+  if (plan.length !== 8) throw new Error('The interview planning pool must contain eight questions.');
+  const selected = seniority === 'ENTRY' ? ENTRY_PLAN_INDEXES.map((index) => plan[index]) : plan;
+  return selected.map((question, index) => ({ ...question, slot: index + 1 }));
+}
+
 function present(status: CriterionStatus | undefined): boolean {
   return criterionRank[status ?? 'MISSING'] >= criterionRank.PRESENT;
 }
@@ -143,8 +151,10 @@ export function activateInterview(
   const next = structuredClone(state);
   next.blueprint = confirmBlueprint(next.discovery, competencyIds);
   next.confirmed_by_candidate = true;
-  next.plan = generatedPlan ?? fallbackPlan(next.blueprint, next.profile, next.role_pack);
-  if (next.plan.length !== 8) throw new Error('The interview plan must contain eight questions.');
+  next.plan = fitPlanToSeniority(
+    generatedPlan ?? fallbackPlan(next.blueprint, next.profile, next.role_pack),
+    next.seniority,
+  );
   next.current_question = fromPlannedQuestion(next.plan[0]);
   next.phase = 'ACTIVE';
   return next;
@@ -303,7 +313,7 @@ export function advanceInterview(state: InterviewState): {
   replacementCompetencyId: string | null;
 } {
   const next = structuredClone(state);
-  if (next.question_number >= 8) {
+  if (next.question_number >= next.plan.length) {
     next.phase = 'COMPLETE';
     next.status = 'COMPLETE';
     next.current_question = null;

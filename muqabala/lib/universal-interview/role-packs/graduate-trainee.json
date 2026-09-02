@@ -1,6 +1,9 @@
 {
   "role": "Graduate Trainee",
   "version": "1.0",
+  "author": "Inspire Ambitions HR Career Specialist",
+  "reviewed_by": null,
+  "reviewed_at": null,
   "implicit_competencies": ["c_learning_agility", "c_teamwork"],
   "core_competencies": ["c_motivation", "c_problem_solving"],
   "question_bank": [

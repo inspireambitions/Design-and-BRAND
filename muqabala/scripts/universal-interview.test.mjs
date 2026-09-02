@@ -37,6 +37,9 @@ const profile = {
 const pack = {
   role: 'Front Desk Agent',
   version: '1.0',
+  author: 'Inspire Ambitions HR Career Specialist',
+  reviewed_by: null,
+  reviewed_at: null,
   implicit_competencies: ['c_complaint_handling', 'c_prioritisation'],
   core_competencies: ['c_guest_service'],
   question_bank: [],
@@ -127,6 +130,16 @@ test('role-pack implicit competencies merge and core capability ranks first', ()
   assert.equal(ranked[0].id, 'c_guest_service');
 });
 
+test('every starter role pack records authorship and leaves review evidence explicit', () => {
+  const rolePacks = ['front-desk-agent', 'software-engineer', 'sales-manager', 'graduate-trainee']
+    .map((name) => JSON.parse(readFileSync(new URL(`../lib/universal-interview/role-packs/${name}.json`, import.meta.url), 'utf8')));
+  for (const rolePack of rolePacks) {
+    assert.equal(rolePack.author, 'Inspire Ambitions HR Career Specialist');
+    assert.equal(rolePack.reviewed_by, null);
+    assert.equal(rolePack.reviewed_at, null);
+  }
+});
+
 test('candidate confirmation requires five known, different competencies', () => {
   const discovery = fallbackDiscovery(profile, pack).competencies;
   assert.equal(confirmBlueprint(discovery, discovery.slice(0, 5).map((item) => item.id)).length, 5);
@@ -202,8 +215,19 @@ test('question quality rejects praise, long text, two questions and covered targ
   assert.equal(questionQualityGate({ ...base, text: 'What happened next?' }, state).ok, false);
 });
 
-test('fallbacks are deterministic and the eighth main question completes the interview', () => {
+test('entry interviews use six balanced questions and higher levels use eight', () => {
+  const entry = stateFor('ENTRY');
+  assert.equal(entry.plan.length, 6);
+  assert.deepEqual(entry.plan.map((question) => question.slot), [1, 2, 3, 4, 5, 6]);
+  assert.deepEqual(
+    new Set(entry.plan.flatMap((question) => question.target_competencies)),
+    new Set(entry.blueprint.map((competency) => competency.id)),
+  );
+  entry.question_number = 6;
+  assert.equal(advanceInterview(entry).state.phase, 'COMPLETE');
+
   const state = stateFor();
+  assert.equal(state.plan.length, 8);
   assert.equal(deterministicExtractionFallback().evidence.summary, 'extraction failed');
   assert.equal(fallbackGeneratedQuestion('PROBE_RESULT', state.current_question, '').text, 'What changed because of your actions?');
   state.question_number = 8;
@@ -291,7 +315,7 @@ test('persistence is encrypted, identity-separated, retention-bound and concurre
   const migration = readFileSync(new URL('../supabase/migrations/20260902120000_universal_interview_brain_v2.sql', import.meta.url), 'utf8');
   assert.match(migration, /state_ciphertext text not null/);
   assert.match(migration, /universal_interview_accounts/);
-  assert.match(migration, /interval '12 months'/);
+  assert.match(migration, /interval '90 days'/);
   assert.match(migration, /processing_token_hash/);
   assert.match(migration, /model_calls smallint not null check \(model_calls between 0 and 2\)/);
   assert.match(migration, /revoke all on public\.universal_interviews from anon, authenticated/);

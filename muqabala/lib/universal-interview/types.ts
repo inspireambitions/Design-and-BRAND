@@ -196,6 +196,9 @@ export type RolePackQuestion = {
 export type RolePack = {
   role: string;
   version: string;
+  author: string;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
   implicit_competencies: string[];
   core_competencies: string[];
   question_bank: RolePackQuestion[];

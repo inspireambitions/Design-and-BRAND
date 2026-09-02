@@ -8,7 +8,7 @@ create table public.universal_interviews (
   completed_at timestamptz,
   processing_token_hash text,
   processing_until timestamptz,
-  expires_at timestamptz not null default (now() + interval '12 months')
+  expires_at timestamptz not null default (now() + interval '90 days')
 );
 
 create table public.universal_interview_accounts (
