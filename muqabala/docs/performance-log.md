@@ -250,15 +250,30 @@ Open from this QA: the cold advert generation needs a faster generation model or
 
 The first-load growth is the answer mode step (three cards with three Phosphor icons imported by path, not from the package index), the STAR guide, the transcript check and the new strings in both languages. Everything a candidate meets only after a second attempt is behind `next/dynamic`: the comparison view with the word level diff and the model answer with its text. Nothing in the practice flow is fetched before the candidate taps a mode; camera and microphone are requested inside that tap.
 
+### 2026-09-02, production follow-through
+
+| Item | Before | After | Source |
+| --- | --- | --- | --- |
+| Migrations `20260830103114`, `20260901193000`, `20260901200000`, `20260901223000` | written, not applied | applied to `hmaxzpgsefzpflrwzopa` with the repository versions | operator report, `supabase migration list` |
+| `pg_stat_statements` | unknown | v1.11 active | operator report |
+| Supabase project region | unknown | `ap-south-1` (Mumbai), the closest Supabase region to the Gulf | Supabase dashboard |
+| Search Console TXT | missing | `google-site-verification=CzEnPDgP...` present at the apex alongside SPF and the older record | `dig +short TXT trymuqabala.com` |
+| `SANITY_REVALIDATE_SECRET`, `NEXT_PUBLIC_SANITY_PROJECT_ID`, `NEXT_PUBLIC_SANITY_DATASET` | unset | set for Production and Preview; `/api/revalidate` now answers 401 `missing_signature` instead of 503 `not_configured` | Vercel, curl |
+| Production | `63e8e49` | redeployed at `63e8e49`, all key routes 200, video upload still rejected with 415 | curl |
+
+Region decision: the database is in Mumbai. If functions move off the default US region, the matching Vercel region is `bom1` (Mumbai), not `dxb1`, so functions and database stay together. Gulf users then reach both in one hop of roughly 30 to 40 ms rather than a US round trip. This needs the Vercel plan and project settings; nothing in code.
+
+Still open after this pass: the Sanity webhook and Studio CORS origin (the `hello@trymuqabala.com` account is not a member of project `rnjajs8i`; the account that claimed the project must invite it), the Search Console Verify button, the k6 load test against a preview followed by the `pg_stat_statements` reading, and the PostHog dashboard.
+
 ## Open items that need production access
 
 All eight sections have code in place. These steps cannot be done from a build environment.
 
 - Baseline: run one day with `NEXT_PUBLIC_FEEDBACK_STREAMING=off`, record p75 figures above, then switch on.
 - PostHog: create the dashboard from the event table at the top of this file.
-- Section 2: confirm the Supabase project region in the dashboard. Moving functions to Dubai needs the Vercel Pro plan and the project settings page; keep functions and database in the same region.
+- Section 2: Supabase is in `ap-south-1` (Mumbai). If functions move, use Vercel `bom1` so they sit with the database; needs the plan and project settings.
 - Section 2: measure TTFB from Dubai, Riyadh and Doha on WebPageTest after the region change is live.
 - Section 3: check the Firefox fallback on a preview as described in the Section 3 entry.
-- Section 4: create the Sanity webhook to `/api/revalidate` and set `SANITY_REVALIDATE_SECRET` in Vercel.
-- Sections 6 and 7: apply the two migrations with `supabase db push` after review, then run the k6 load test against a preview and read `pg_stat_statements` for statements over 100 ms.
+- Section 4: `SANITY_REVALIDATE_SECRET` is set in Vercel. The Sanity webhook to `/api/revalidate` still needs a project member to create it.
+- Sections 6 and 7: migrations applied on 2026-09-02. Run the k6 load test against a preview and read `pg_stat_statements` for statements over 100 ms.
 - Section 1 model choice: trial `SCORING_REASONING=low` and a smaller model, gated by `npm run gate:feedback-quality`.
