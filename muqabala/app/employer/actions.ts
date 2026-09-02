@@ -66,6 +66,17 @@ export async function signEmployerVideo(interviewId: string, questionIndex: numb
   return { url: data.signedUrl };
 }
 
+/** Section 3: the Reminders toggle on the role card. Ownership is enforced by RLS on the update. */
+export async function setRemindersEnabled(formData: FormData) {
+  const roleId = String(formData.get('roleId') ?? '');
+  const enabled = String(formData.get('enabled') ?? '') === 'true';
+  if (!UUID_PATTERN.test(roleId)) return;
+  const client = await createClient();
+  if (!client) return;
+  await client.from('screening_packs').update({ reminders_enabled: enabled }).eq('id', roleId);
+  revalidatePath('/employer');
+}
+
 export async function setEmployerDecision(formData: FormData) {
   const interviewId = String(formData.get('interviewId') ?? '');
   const decision = String(formData.get('decision') ?? '');

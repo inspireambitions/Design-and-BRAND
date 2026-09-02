@@ -157,6 +157,63 @@ test('section 2: add candidates screen renders the channel row only behind the W
   assert.match(page, /if \(!flags\.volume\) notFound\(\)/);
 });
 
+test('section 3: reminders fire at 48h and 120h, cap at three messages, and stop when toggled off or the role closes', async () => {
+  const { dueReminder, reminderOutcome, reminderOutcomeLine } = await import('../lib/employer-volume/reminders.ts');
+  const invitedAt = new Date('2026-09-01T09:00:00Z');
+  const at = (hours) => new Date(invitedAt.getTime() + hours * 60 * 60 * 1000);
+  const role = { expires_at: '2026-09-30T00:00:00Z', reminders_enabled: true };
+  const invite = {
+    status: 'invited', invited_at: invitedAt.toISOString(),
+    first_reminder_at: null, second_reminder_at: null, completion_reminder_at: null,
+    started_at: null, last_activity_at: null,
+  };
+
+  assert.equal(dueReminder(invite, role, at(47.9)), null, 'nothing before 48h');
+  assert.equal(dueReminder(invite, role, at(48)), 'reminder_1');
+  const afterFirst = { ...invite, first_reminder_at: at(48).toISOString() };
+  assert.equal(dueReminder(afterFirst, role, at(100)), null, 'nothing between reminders');
+  assert.equal(dueReminder(afterFirst, role, at(120)), 'reminder_2');
+  const afterSecond = { ...afterFirst, second_reminder_at: at(120).toISOString() };
+  assert.equal(dueReminder(afterSecond, role, at(500)), null, 'three messages is the cap');
+
+  const started = { ...invite, status: 'started', started_at: at(10).toISOString(), last_activity_at: at(12).toISOString() };
+  assert.equal(dueReminder(started, role, at(30)), null, 'active within 24h');
+  assert.equal(dueReminder(started, role, at(36.5)), 'completion');
+  assert.equal(dueReminder({ ...started, completion_reminder_at: at(36.5).toISOString() }, role, at(200)), null, 'one completion reminder only');
+  assert.equal(dueReminder({ ...afterSecond, status: 'started', started_at: at(121).toISOString(), last_activity_at: at(121).toISOString() }, role, at(200)), null, 'cap holds across kinds');
+
+  assert.equal(dueReminder(invite, { ...role, reminders_enabled: false }, at(72)), null, 'toggle off suppresses all');
+  assert.equal(dueReminder(invite, { ...role, expires_at: at(60).toISOString() }, at(72)), null, 'closed role suppresses all');
+  assert.equal(dueReminder({ ...invite, status: 'submitted' }, role, at(72)), null);
+
+  const outcome = reminderOutcome([
+    { first_reminder_at: at(48).toISOString(), second_reminder_at: null, completion_reminder_at: null, submitted_at: at(50).toISOString() },
+    { first_reminder_at: at(48).toISOString(), second_reminder_at: null, completion_reminder_at: null, submitted_at: null },
+    { first_reminder_at: null, second_reminder_at: null, completion_reminder_at: null, submitted_at: at(20).toISOString() },
+    { first_reminder_at: at(48).toISOString(), second_reminder_at: at(120).toISOString(), completion_reminder_at: null, submitted_at: at(30).toISOString() },
+  ]);
+  assert.deepEqual(outcome, { reminded: 3, answeredAfter: 1 });
+  assert.equal(reminderOutcomeLine(outcome), 'Reminded 3. 1 more answered.');
+});
+
+test('section 3: hourly cron is registered, gated by the flag and the toggle is owner-scoped', () => {
+  const vercel = JSON.parse(read('vercel.json'));
+  const cron = vercel.crons.find((entry) => entry.path === '/api/cron/employer-volume');
+  assert.ok(cron, 'employer volume cron registered');
+  assert.match(cron.schedule, /^\d+ \* \* \* \*$/, 'runs hourly');
+  const route = read('app/api/cron/employer-volume/route.ts');
+  assert.match(route, /Bearer \$\{secret\}/);
+  assert.match(route, /if \(!employerVolumeEnabled\(\)\) return Response\.json\(\{ enabled: false \}/);
+  const migration = read('supabase/migrations/20260902130000_employer_volume_reminders.sql');
+  assert.match(migration, /reminders_enabled boolean not null default true/);
+  assert.match(migration, /grant update \(reminders_enabled\) on public\.screening_packs to authenticated/);
+  const actions = read('app/employer/actions.ts');
+  assert.match(actions, /export async function setRemindersEnabled/);
+  const dashboard = read('app/employer/page.tsx');
+  assert.match(dashboard, /role="switch" aria-checked=\{remindersOn\}/);
+  assert.match(dashboard, /reminderOutcomeLine\(reminders\)/);
+});
+
 test('no em dashes in employer volume copy or docs', () => {
   for (const path of ['lib/employer-volume.ts', 'docs/employer-volume-changes.md', 'scripts/employer-volume.test.mjs']) {
     assert.doesNotMatch(read(path), /\u2014/, `${path} contains an em dash`);

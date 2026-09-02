@@ -492,6 +492,62 @@
 }
 
 .roleFilters span,
+.reminderRow {
+  display: grid;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+}
+
+.reminderRow small {
+  color: #66736d;
+  font-size: 0.7rem;
+}
+
+.reminderToggle {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.25rem 0.6rem 0.25rem 0.3rem;
+  border: 1px solid #d9d6ce;
+  border-radius: 999px;
+  background: #fff;
+  color: #24342e;
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.reminderToggle > span {
+  position: relative;
+  width: 1.6rem;
+  height: 0.95rem;
+  border-radius: 999px;
+  background: #c9d3cd;
+  transition: background 120ms ease;
+}
+
+.reminderToggle > span::after {
+  content: '';
+  position: absolute;
+  top: 0.1rem;
+  left: 0.1rem;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 120ms ease;
+}
+
+.reminderToggle[aria-checked='true'] > span {
+  background: #087662;
+}
+
+.reminderToggle[aria-checked='true'] > span::after {
+  transform: translateX(0.65rem);
+}
+
 .allReviewed {
   display: inline-flex;
   min-height: 32px;
