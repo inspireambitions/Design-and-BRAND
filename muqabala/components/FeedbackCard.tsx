@@ -37,7 +37,7 @@ function FeedbackBlock({
   if (tone === 'tip') {
     return (
       <div className="coach-tip feedback-block" dir="auto">
-        <strong>{heading}</strong>
+        <strong className="feedback-heading feedback-heading-tip">{heading}</strong>
         {loading ? <SkeletonLines lines={2} /> : text || <span className="muted">{emptyText}</span>}
       </div>
     );

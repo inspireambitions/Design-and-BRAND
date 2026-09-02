@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { track } from '@/lib/analytics';
 import type { Lang } from '@/lib/i18n';
 import { useLang } from './LanguageProvider';
+import type { Attempt } from '@/lib/scoring';
 import { useReadiness } from './ReadinessScore';
 
 type CardState = 'working' | 'ready' | 'failed';
@@ -47,9 +48,9 @@ async function loadedFonts(lang: Lang): Promise<{ display?: string; arabic?: str
  * where supported) and Save image. The drawing code is loaded on demand so it
  * never sits in the practice bundle.
  */
-export function ShareProgressCard({ roleId }: { roleId: string }) {
+export function ShareProgressCard({ roleId, extraAttempts }: { roleId: string; extraAttempts?: Attempt[] }) {
   const { t, lang } = useLang();
-  const snapshot = useReadiness(roleId);
+  const snapshot = useReadiness(roleId, extraAttempts);
   const [state, setState] = useState<CardState>('working');
   const [blob, setBlob] = useState<Blob | null>(null);
   const [url, setUrl] = useState<string | null>(null);

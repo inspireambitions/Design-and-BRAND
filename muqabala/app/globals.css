@@ -4664,8 +4664,11 @@ textarea.landing-advert-box {
   color: var(--gold);
 }
 
-.coach-tip > strong {
+.coach-tip strong.feedback-heading-tip {
+  display: block;
   font-size: 0.95rem;
   text-transform: none;
   letter-spacing: 0;
+  color: var(--gold);
+  margin-bottom: 0.3rem;
 }
