@@ -337,6 +337,20 @@
   background: var(--e-surface);
 }
 
+.shotPlaceholder {
+  display: grid;
+  min-height: 14rem;
+  place-items: center;
+  margin: 2rem 0 0;
+  padding: 1.5rem;
+  border: 2px dashed var(--e-line-strong);
+  border-radius: 1rem;
+  color: var(--e-ink-soft);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
 .shot figcaption {
   margin-top: 0.75rem;
   color: var(--e-ink-soft);

@@ -77,3 +77,7 @@ Listed before building, as the brief requires.
 ## Section log
 
 Updated after each section is committed.
+
+### Section 1: employer page
+
+Committed. `lib/employer-volume.ts` adds `EMPLOYER_VOLUME` and `WHATSAPP_ENABLED`, both false by default. With the volume flag on, `/for-employers` shows the brief's hero copy, "Start a shortlist, free" (signed out goes through `/sign-in?next=/for-employers#create`), "See a real report" scrolling to the sample block, and the sample block titled "What you get after a candidate answers" reading `/public/samples/employer-report.png`. Outside production, a visible TODO placeholder appears when that file is missing. The sign-in form was already at the bottom of the page and the Promotions or Spam line already removed. With the flag off, nothing on the page changes.

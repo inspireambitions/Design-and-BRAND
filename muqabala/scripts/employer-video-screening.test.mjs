@@ -163,7 +163,8 @@ test('employer creation form generates the description before unlocking the link
   assert.match(copy, /Learn how each candidate would approach the role before you shortlist\./);
   assert.match(copy, /I used Muqabala for \{title\} at \{company\}\./);
   assert.doesNotMatch(read('components/EmailSignIn.tsx'), /Promotions or Spam|emailDeliveryHelp/);
-  assert.match(form, /\{hasReportShot && \(/);
+  assert.match(form, /\{hasReportShot \? \(/);
+  assert.match(form, /volume && !production \?/);
   assert.match(form, /\{hasCandidateShot && \(/);
 });
 

@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { Metadata } from 'next';
 import { EmployerProofCreate } from '@/components/EmployerProofCreate';
 import { catalogueStats } from '@/lib/catalogue-stats';
+import { employerVolumeEnabled } from '@/lib/employer-volume';
 import { SCREENING_STORAGE_REGION } from '@/lib/marketing-content';
 import { currentUser } from '@/lib/supabase/server';
 
@@ -41,9 +42,11 @@ export default async function ForEmployersPage() {
     <EmployerProofCreate
       signedIn={Boolean(user)}
       stats={catalogueStats()}
-      hasReportShot={hasPublicAsset('marketing/employer-sample-report.png')}
+      hasReportShot={hasPublicAsset('samples/employer-report.png')}
       hasCandidateShot={hasPublicAsset('marketing/candidate-submission.png')}
       storageRegion={SCREENING_STORAGE_REGION}
+      volume={employerVolumeEnabled()}
+      production={process.env.NODE_ENV === 'production'}
     />
   );
 }
