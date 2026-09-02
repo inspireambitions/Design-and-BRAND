@@ -8,8 +8,8 @@ import { q, type Question } from './shared';
  * answers. These banks give every catalogue role a pool to rotate through, so
  * a second attempt is a fresh interview.
  *
- * The questions are deliberately cross-industry behavioural questions —
- * real first-round staples — written to the same standard as the role
+ * The questions are deliberately cross-industry behavioural questions: 
+ * real first-round staples: written to the same standard as the role
  * questions: short, spoken, one thing at a time, both languages, with hints
  * that coach rather than answer. Each family's questions score only against
  * competency ids that family defines.

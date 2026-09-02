@@ -1,12 +1,19 @@
 'use client';
 
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useState } from 'react';
 import type { Attempt } from '@/lib/scoring';
 import { clearAttempts, loadAttempts } from '@/lib/storage';
 import { useLang } from './LanguageProvider';
 import { TopBar } from './TopBar';
 import { ScoreRing } from './ScoreRing';
+import { ReadinessScore } from './ReadinessScore';
+
+// Canvas drawing and the share sheet are only needed once a card is on screen.
+const ShareProgressCard = dynamic(() => import('./ShareProgressCard').then((m) => m.ShareProgressCard), {
+  ssr: false,
+});
 
 type RoleGroup = {
   roleId: string;
@@ -112,6 +119,9 @@ export function ProgressView() {
                   </div>
                 </div>
               </div>
+
+              <ReadinessScore roleId={group.roleId} size="full" />
+              <ShareProgressCard roleId={group.roleId} />
 
               <div>
                 {group.attempts.map((attempt) => (

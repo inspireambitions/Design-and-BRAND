@@ -60,7 +60,7 @@ export function isSpeechSupported(): boolean {
  * This matters for what we are allowed to tell candidates. Browser speech
  * recognition sends audio to the browser vendor's speech service unless
  * on-device processing is explicitly requested and confirmed available.
- * We only return true when the browser positively confirms it — an
+ * We only return true when the browser positively confirms it: an
  * unknown answer is treated as "audio leaves the device", never the reverse.
  */
 export async function isOnDeviceRecognitionAvailable(langCode: string): Promise<boolean> {
@@ -96,12 +96,12 @@ export function startDictation(
   recognition.continuous = true;
   recognition.interimResults = true;
   // Ask for on-device recognition wherever the browser supports it, so audio
-  // stays on the phone. Ignored by browsers that do not implement it — which
+  // stays on the phone. Ignored by browsers that do not implement it: which
   // is why the UI must disclose cloud recognition unless it is confirmed.
   try {
     recognition.processLocally = true;
   } catch {
-    /* property not supported — disclosure covers this case */
+    /* property not supported: disclosure covers this case */
   }
 
   let finalText = initialText.trim();
@@ -125,7 +125,7 @@ export function startDictation(
   };
 
   recognition.onerror = (event) => {
-    // "no-speech" and "aborted" are normal during a pause — do not alarm the user.
+    // "no-speech" and "aborted" are normal during a pause: do not alarm the user.
     if (event.error !== 'no-speech' && event.error !== 'aborted') {
       onError?.(event.error);
     }

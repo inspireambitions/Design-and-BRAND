@@ -1,5 +1,6 @@
 import {
   q,
+  qt,
   opener,
   closer,
   closerTechnical,
@@ -211,13 +212,13 @@ export const retailRoles: Role[] = [
     competencies: serviceCompetencies,
     questions: [
       opener,
-      q(
+      qt(['oman_bahrain_kuwait_retail', 'gulf_general'],
         'difficult_customer',
         'Tell me about a customer who wanted to return an item you could not accept. What happened?',
         'حدثني عن عميل أراد إرجاع منتج لم يكن بإمكانك قبوله. ماذا حدث؟',
         ['customer_focus', 'ownership', 'communication'],
       ),
-      q(
+      qt(['oman_bahrain_kuwait_retail'],
         'targets',
         'Tell me about a sales target you were given. Did you hit it, and how?',
         'حدثني عن هدف مبيعات كُلّفت به. هل حققته، وكيف؟',
@@ -258,7 +259,7 @@ export const retailRoles: Role[] = [
         'Honesty is the whole answer here. Say exactly who you tell and when.',
         'الأمانة هي الإجابة كاملة هنا. حدّد بالضبط من ستُبلغ ومتى.',
       ),
-      q(
+      qt(['oman_bahrain_kuwait_retail'],
         'long_queue',
         'There is a long queue and the customer in front of you is disputing a price. What do you do?',
         'هناك طابور طويل والعميل أمامك يعترض على السعر. ماذا تفعل؟',
@@ -328,7 +329,7 @@ export const retailRoles: Role[] = [
     competencies: serviceCompetencies,
     questions: [
       opener,
-      q(
+      qt(['oman_bahrain_kuwait_retail'],
         'consultation_beauty',
         'A customer does not know what she wants. How do you help her choose?',
         'عميلة لا تعرف ماذا تريد. كيف تساعدها على الاختيار؟',

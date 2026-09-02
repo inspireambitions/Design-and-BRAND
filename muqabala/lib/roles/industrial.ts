@@ -8,7 +8,7 @@ const SAFETY_HINT_AR =
 /**
  * Oil, gas and energy is among the largest employers in Saudi Arabia, the UAE,
  * Qatar, Kuwait and Oman. These roles interview heavily on permits, procedure
- * and the discipline to stop work — not on enthusiasm.
+ * and the discipline to stop work: not on enthusiasm.
  */
 export const energyRoles: Role[] = [
   {

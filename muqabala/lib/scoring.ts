@@ -22,7 +22,7 @@ export type AnswerFeedback = {
   questionId: string;
   /**
    * 0-100, meaningful only when status is 'scored'. When the system declines
-   * to judge an answer, callers must render no score at all — a zero ring
+   * to judge an answer, callers must render no score at all: a zero ring
    * tells a candidate they failed when nothing was actually assessed.
    */
   score: number;
@@ -41,7 +41,7 @@ export type AnswerFeedback = {
   coachTip: string;
   /**
    * 'ai' judges the role's competency rubric. 'structure' is the offline
-   * checker, which measures how an answer is built — not role competence.
+   * checker, which measures how an answer is built: not role competence.
    * 'none' records an answer that the candidate chose to keep after scoring
    * failed. These states must never be presented as the same thing.
    */
@@ -90,7 +90,7 @@ function clamp(n: number, lo: number, hi: number): number {
 
 /**
  * Pull the sentence that actually demonstrates a competency.
- * Returns null when nothing in the answer does — quoting an unrelated sentence as
+ * Returns null when nothing in the answer does: quoting an unrelated sentence as
  * "evidence" for four different competencies looks like proof and is not.
  */
 function bestSentence(text: string, re: RegExp): string | null {
@@ -142,7 +142,7 @@ function hasSignalInRange(text: string, re: RegExp, startFrac: number, endFrac: 
 /**
  * Whether the transcript arrived with punctuation to reason about. Live
  * dictation often returns none, and its absence says nothing about how well
- * the candidate spoke — only about what the recogniser emitted.
+ * the candidate spoke: only about what the recogniser emitted.
  */
 function hasUsablePunctuation(text: string, wordCount: number): boolean {
   return countMatches(text, /[.!?؟]/g) >= Math.floor(wordCount / 40);
@@ -178,8 +178,8 @@ function looksLikeKeywordSoup(text: string, wordCount: number): boolean {
   const structureLooksWrong =
     hasUsablePunctuation(text, wordCount) && wordCount > 60 && sentences < 2;
 
-  // Densely packed markers, heavy repetition, or — only where punctuation
-  // exists to judge by — an answer that never forms real sentences.
+  // Densely packed markers, heavy repetition, or: only where punctuation
+  // exists to judge by: an answer that never forms real sentences.
   return triggerDensity > 0.28 || uniqueRatio < 0.4 || structureLooksWrong;
 }
 
@@ -224,7 +224,7 @@ export function arabicUnavailable(questionId: string): AnswerFeedback {
  * Offline structure checker, used when no ANTHROPIC_API_KEY is configured.
  *
  * IMPORTANT: this does NOT measure role competence. It measures how an answer
- * is built — whether it names a real situation, says what the candidate
+ * is built: whether it names a real situation, says what the candidate
  * personally did, gives concrete detail, and finishes the story. Those are the
  * things simple text patterns can honestly detect. Presenting its output as a
  * competency score would be a false claim, so it reports structure dimensions
@@ -236,7 +236,7 @@ export function structureCheck(question: Question, transcript: string): AnswerFe
   const text = transcript.trim();
   const wordCount = text.split(/\s+/).filter(Boolean).length;
 
-  // Too short to judge fairly — decline rather than invent a low score.
+  // Too short to judge fairly: decline rather than invent a low score.
   if (wordCount < 12) {
     return {
       questionId: question.id,
@@ -277,7 +277,7 @@ export function structureCheck(question: Question, transcript: string): AnswerFe
 
   const firstPerson = countMatches(text, FIRST_PERSON);
   const teamOnly = countMatches(text, TEAM_ONLY);
-  // Distinct signals only — repeating a trigger word must not raise a score.
+  // Distinct signals only: repeating a trigger word must not raise a score.
   const numbers = uniqueMatches(text, NUMBERS);
   const actions = uniqueMatches(text, ACTION);
   // Position matters: a story opens with the situation and closes with the outcome.
@@ -287,7 +287,7 @@ export function structureCheck(question: Question, transcript: string): AnswerFe
   const outcomes = hasOutcome ? uniqueMatches(text, OUTCOME) : 0;
   const sentences = wellFormedSentences(text);
 
-  // A dimension can only score well inside an answer that forms real sentences —
+  // A dimension can only score well inside an answer that forms real sentences: 
   // but only where punctuation exists to judge that by. A dictated answer with
   // no full stops must not be scaled down for something the recogniser, not the
   // candidate, failed to produce. The keyword-soup check above still guards
@@ -394,7 +394,7 @@ export function structureCheck(question: Question, transcript: string): AnswerFe
 
 /**
  * Null when no answer was scored at all. A zero would read as "you failed",
- * when in fact nothing was ever judged — a distinction the candidate is owed.
+ * when in fact nothing was ever judged: a distinction the candidate is owed.
  */
 export function overallFromAnswers(answers: { feedback: AnswerFeedback }[]): number | null {
   const scored = answers.filter((a) => a.feedback.status === 'scored');

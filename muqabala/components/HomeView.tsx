@@ -2,40 +2,37 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { POPULAR_ROLE_IDS, type Role } from '@/lib/roles';
+import { popularRoleCards, type RoleCard } from '@/lib/landing/role-cards';
+import { AdvertPasteBox } from './landing/AdvertPasteBox';
 import { useLang } from './LanguageProvider';
 import { TopBar } from './TopBar';
 
-const LEVEL_LABELS = {
-  en: { Entry: 'Entry', Mid: 'Mid', Senior: 'Senior' },
-  ar: { Entry: 'مبتدئ', Mid: 'متوسط', Senior: 'أول' },
-} as const;
-
-export function HomeView({ roles }: { roles: Role[] }) {
+/**
+ * The /practice landing. Two taps to the first question: paste an advert (or
+ * tap one role card, which opens /practice/[roleId] directly), then the mode
+ * choice inside the interview. Nothing sits between the card and the role page.
+ */
+export function HomeView({ roles }: { roles: RoleCard[] }) {
   const { lang, t } = useLang();
   const [industry, setIndustry] = useState<string | null>(null);
   const [browseAll, setBrowseAll] = useState(false);
 
-  const industries = useMemo(
-    () => Array.from(new Set(roles.map((r) => r.industry))).sort(),
-    [roles],
-  );
+  const industries = useMemo(() => {
+    const labels = new Map<string, string>();
+    for (const role of roles) if (!labels.has(role.industry)) labels.set(role.industry, role.industryAr);
+    return Array.from(labels.entries()).sort(([a], [b]) => a.localeCompare(b));
+  }, [roles]);
 
-  const popularRoles = useMemo(
-    () => POPULAR_ROLE_IDS
-      .map((id) => roles.find((role) => role.id === id))
-      .filter((role): role is Role => Boolean(role)),
-    [roles],
-  );
+  const popular = useMemo(() => popularRoleCards(roles), [roles]);
   const visible = browseAll
     ? (industry ? roles.filter((r) => r.industry === industry) : roles)
-    : popularRoles;
+    : popular;
 
   return (
     <div className="shell">
       <TopBar />
 
-      <section className="hero">
+      <section className="hero hero-compact">
         <p className="eyebrow">{t('tagline')}</p>
         <h1>{t('heroTitle')}</h1>
         <p className="lede">{t('heroBody')}</p>
@@ -44,26 +41,13 @@ export function HomeView({ roles }: { roles: Role[] }) {
           <span className="chip chip-jade">{t('point2')}</span>
           <span className="chip chip-jade">{t('point3')}</span>
         </div>
-
-        <div className="start-choice-grid" aria-label={t('chooseStartPath')}>
-          <Link href="/practice/custom" className="start-choice-card start-choice-primary">
-            <span className="chip chip-gold">{t('bestMatch')}</span>
-            <h2>{t('useJobAdvert')}</h2>
-            <p>{t('useJobAdvertBody')}</p>
-            <span className="start-choice-action">{t('useJobAdvertAction')}</span>
-          </Link>
-          <Link href="#popular-roles" className="start-choice-card">
-            <span className="chip chip-jade">{t('quickStart')}</span>
-            <h2>{t('findRole')}</h2>
-            <p>{t('findRoleBody')}</p>
-            <span className="start-choice-action">{t('findRoleAction')}</span>
-          </Link>
-        </div>
       </section>
 
-      <section className="stack" id="popular-roles">
+      <AdvertPasteBox />
+
+      <section className="stack" id="popular-roles" aria-labelledby="popular-roles-heading">
         <div>
-          <h2>{browseAll ? t('allRoles') : t('popularRoles')}</h2>
+          <h2 id="popular-roles-heading">{browseAll ? t('allRoles') : t('landingRolesHeading')}</h2>
           <p className="muted" style={{ marginTop: '0.35rem' }}>
             {t('pickRoleBody')}
           </p>
@@ -78,46 +62,37 @@ export function HomeView({ roles }: { roles: Role[] }) {
           >
             {t('allIndustries')}
           </button>
-          {industries.map((ind) => {
-            const label =
-              lang === 'ar'
-                ? (roles.find((r) => r.industry === ind)?.industryAr ?? ind)
-                : ind;
-            return (
-              <button
-                key={ind}
-                type="button"
-                className="filter-btn"
-                aria-pressed={industry === ind}
-                onClick={() => setIndustry(ind)}
-              >
-                {label}
-              </button>
-            );
-          })}
+          {industries.map(([ind, indAr]) => (
+            <button
+              key={ind}
+              type="button"
+              className="filter-btn"
+              aria-pressed={industry === ind}
+              onClick={() => setIndustry(ind)}
+            >
+              {lang === 'ar' ? indAr : ind}
+            </button>
+          ))}
         </div>}
 
-        <div className="grid grid-roles">
-          {visible.map((role) => {
-            return (
-              <Link key={role.id} href={`/practice/${role.id}`} className="role-card">
-                <div className="role-meta">
-                  <span className="chip chip-jade">
-                    {lang === 'ar' ? role.industryAr : role.industry}
-                  </span>
-                  <span className="chip">{LEVEL_LABELS[lang][role.level]}</span>
-                </div>
+        <ul className="grid grid-roles landing-role-list">
+          {visible.map((role) => (
+            <li key={role.id}>
+              <Link href={`/practice/${role.id}`} className="role-card landing-role-card">
+                <span className="chip chip-jade">
+                  {lang === 'ar' ? role.industryAr : role.industry}
+                </span>
                 <h3>{lang === 'ar' ? role.titleAr : role.title}</h3>
-                <p className="muted" style={{ fontSize: '0.88rem' }}>
+                <p className="muted landing-role-line">
                   {lang === 'ar' ? role.blurbAr : role.blurb}
                 </p>
-                <p className="tiny" style={{ marginTop: '0.3rem' }}>
-                  {t('expectOneQuestion')} · {t('expectQuickTime')}
+                <p className="tiny" style={{ margin: 0 }}>
+                  {role.questionCount} {t('landingRoleQuestions')} · {t('expectQuickTime')}
                 </p>
               </Link>
-            );
-          })}
-        </div>
+            </li>
+          ))}
+        </ul>
 
         <div className="row" style={{ justifyContent: 'center' }}>
           <button

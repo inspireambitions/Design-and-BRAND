@@ -58,8 +58,22 @@ type EventName =
   | 'interview_started'
   | 'interview_completed'
   | 'rating_submitted'
+  | 'email_submitted'
+  | 'share_card_created'
   | 'web_vital'
+  | PracticeFlowEventName
+  | 'plan_link_clicked'
+  | 'second_session'
   | TimingEventName;
+
+/** Practice flow milestones. Properties are role_id, mode and lang only. */
+export type PracticeFlowEventName =
+  | 'practice_started'
+  | 'mode_selected'
+  | 'first_answer_completed'
+  | 'feedback_viewed'
+  | 'retry_started'
+  | 'comparison_viewed';
 
 /** Performance timings, one event per measurement, all in milliseconds. */
 export type TimingEventName =
@@ -91,6 +105,12 @@ type EventProps = Partial<{
   path: string;
   streamed: boolean;
   outcome: string;
+  /** How the candidate answered: type, speak or video. Never the words. */
+  mode: 'type' | 'speak' | 'video';
+  /** Where an email was captured: feedback_card or advert_pack. Never the address. */
+  source: string;
+  /** Day of the seven-day plan a link belonged to, 1 to 7. */
+  day: number;
 }>;
 
 export function track(event: EventName, props: EventProps = {}): void {

@@ -34,7 +34,7 @@ export type InterviewTokenPayload = {
 /**
  * Signing key. A dedicated secret is preferred; failing that we derive a stable
  * one from the provider key, which every instance already shares. Without
- * either, tailored interviews simply cannot be signed — and the caller falls
+ * either, tailored interviews simply cannot be signed: and the caller falls
  * back to the generic interview rather than trusting unsigned input.
  */
 function signingKey(): Buffer | null {

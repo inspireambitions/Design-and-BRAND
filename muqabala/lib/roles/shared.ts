@@ -1,3 +1,7 @@
+import { MAX_TAGS_PER_QUESTION, type QuestionTagId } from './question-tags';
+
+export type { QuestionTagId } from './question-tags';
+
 export type Competency = {
   id: string;
   label: string;
@@ -8,6 +12,21 @@ export type Competency = {
   anchorAr?: string;
 };
 
+/**
+ * An editorial example of a strong answer, written in advance and never
+ * generated live. Shown only after a candidate has tried a question twice.
+ */
+export type ModelAnswer = {
+  /** Answers the question that was asked, in the role's context. */
+  relevance: string;
+  /** Names, numbers, systems, timeframes or outcomes. */
+  evidence: string;
+  /** Situation, what they did, how it ended. */
+  structure: string;
+  /** Short plain sentences a listener can follow once. */
+  clarity: string;
+};
+
 export type Question = {
   id: string;
   text: string;
@@ -16,9 +35,18 @@ export type Question = {
   competencies: string[];
   prepSeconds: number;
   answerSeconds: number;
-  /** Shown to the candidate before they answer — coaching, not a trick. */
+  /** Shown to the candidate before they answer: coaching, not a trick. */
   hint: string;
   hintAr: string;
+  /** Optional worked example. Roles may also supply one through lib/flow/model-answers. */
+  modelAnswer?: ModelAnswer;
+  modelAnswerAr?: ModelAnswer;
+  /**
+   * Gulf-specific context, zero to two ids from lib/roles/question-tags.ts.
+   * Editorial: set where a question is known to recur in a market, never
+   * inferred.
+   */
+  tags?: QuestionTagId[];
 };
 
 export type Role = {
@@ -124,7 +152,7 @@ export const technicalCompetencies: Competency[] = [
   },
 ];
 
-/** Competencies for roles caring for people — patients, children, residents. */
+/** Competencies for roles caring for people: patients, children, residents. */
 export const careCompetencies: Competency[] = [
   {
     id: 'communication',
@@ -176,8 +204,21 @@ export function q(
   return { id, text, textAr, competencies, hint, hintAr, prepSeconds, answerSeconds };
 }
 
+/** Attach Gulf-specific tags to a question. Throws at module load if the list is too long. */
+export function tagged(question: Question, tags: QuestionTagId[]): Question {
+  if (tags.length > MAX_TAGS_PER_QUESTION) {
+    throw new Error(`Question ${question.id} has more than ${MAX_TAGS_PER_QUESTION} tags.`);
+  }
+  return { ...question, tags };
+}
+
+/** `q` with tags first, so a tagged question reads as one call in the catalogue. */
+export function qt(tags: QuestionTagId[], ...args: Parameters<typeof q>): Question {
+  return tagged(q(...args), tags);
+}
+
 /** Every interview opens with this. */
-export const opener = q(
+export const opener = tagged(q(
   'intro',
   'Tell me about yourself and why you are applying for this role.',
   'حدثني عن نفسك ولماذا تتقدم لهذه الوظيفة.',
@@ -186,10 +227,10 @@ export const opener = q(
   'ركّز على خبرتك العملية ونقاط قوتك وسبب اهتمامك بهذه الوظيفة تحديداً. حوالي ٩٠ ثانية.',
   30,
   120,
-);
+), ['gulf_general']);
 
 /** Every interview closes with this. */
-export const closer = q(
+export const closer = tagged(q(
   'why_gulf',
   'Why do you want to work in the Gulf, and what do you know about working here?',
   'لماذا ترغب في العمل في الخليج، وماذا تعرف عن العمل هنا؟',
@@ -198,10 +239,10 @@ export const closer = q(
   'أظهر أنك فكرت جدياً في هذه الخطوة: وتيرة العمل والتنوع والتوقعات.',
   30,
   90,
-);
+), ['gulf_general', 'saudi_agency']);
 
 /** Closer for trades and safety-critical roles, which scores compliance instead. */
-export const closerTechnical = q(
+export const closerTechnical = tagged(q(
   'why_gulf_tech',
   'Why do you want to work in the Gulf, and what do you know about site standards here?',
   'لماذا ترغب في العمل في الخليج، وماذا تعرف عن معايير العمل هنا؟',
@@ -210,4 +251,4 @@ export const closerTechnical = q(
   'أظهر أنك فكرت جدياً في هذه الخطوة، بما في ذلك الحرارة وساعات العمل وقواعد السلامة.',
   30,
   90,
-);
+), ['gulf_general']);

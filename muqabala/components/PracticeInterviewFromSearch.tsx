@@ -7,8 +7,8 @@ import { readPracticeSearchParams } from '@/lib/practice-search-params';
 import { PracticeInterview } from './PracticeInterview';
 
 function WithSearchParams({ role }: { role: Role }) {
-  const { focusQuestionId, initialLanguage } = readPracticeSearchParams(useSearchParams());
-  return <PracticeInterview role={role} focusQuestionId={focusQuestionId} initialLanguage={initialLanguage} />;
+  const { focusQuestionId, initialLanguage, initialMode } = readPracticeSearchParams(useSearchParams());
+  return <PracticeInterview role={role} focusQuestionId={focusQuestionId} initialLanguage={initialLanguage} initialMode={initialMode} />;
 }
 
 /**

@@ -22,6 +22,11 @@ export function loadAttempts(): Attempt[] {
   }
 }
 
+/** Local history for one role, newest first. Read-only; the saved shape is unchanged. */
+export function loadAttemptsForRole(roleId: string): Attempt[] {
+  return loadAttempts().filter((attempt) => attempt.roleId === roleId);
+}
+
 /** Returns whether the attempt was actually persisted, so the UI never claims a save that failed. */
 export function saveAttempt(attempt: Attempt): boolean {
   if (typeof window === 'undefined') return false;
@@ -32,7 +37,7 @@ export function saveAttempt(attempt: Attempt): boolean {
     window.localStorage.setItem(ATTEMPTS_KEY, JSON.stringify(next));
     return true;
   } catch {
-    // Storage full or blocked (private mode) — practice still works, history just is not kept.
+    // Storage full or blocked (private mode): practice still works, history just is not kept.
     return false;
   }
 }
@@ -45,7 +50,7 @@ export function rateAttempt(id: string, rating: AttemptRating): void {
     const next = all.map((a) => (a.id === id ? { ...a, rating } : a));
     window.localStorage.setItem(ATTEMPTS_KEY, JSON.stringify(next));
   } catch {
-    /* storage blocked — the rating is still shown in the session */
+    /* storage blocked: the rating is still shown in the session */
   }
 }
 

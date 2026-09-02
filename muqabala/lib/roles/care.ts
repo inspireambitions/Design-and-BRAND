@@ -1,4 +1,4 @@
-import { q, opener, closer, careCompetencies, type Role } from './shared';
+import { q, qt, opener, closer, careCompetencies, type Role } from './shared';
 
 export const careRoles: Role[] = [
   {
@@ -13,13 +13,13 @@ export const careRoles: Role[] = [
     competencies: careCompetencies,
     questions: [
       opener,
-      q(
+      qt(['qatar_healthcare', 'saudi_agency'],
         'deteriorating',
         'Tell me about a patient whose condition deteriorated on your shift. What did you do?',
         'حدثني عن مريض تدهورت حالته أثناء نوبتك. ماذا فعلت؟',
         ['problem_solving', 'ownership', 'compliance', 'evidence'],
       ),
-      q(
+      qt(['qatar_healthcare'],
         'family',
         'How do you handle an anxious family member who is questioning the care being given?',
         'كيف تتعامل مع أحد أفراد العائلة القلق الذي يشكك في الرعاية المقدمة؟',
@@ -27,7 +27,7 @@ export const careRoles: Role[] = [
         'Show empathy and boundaries: what you can share, and who you involve.',
         'أظهر التعاطف والحدود: ما يمكنك مشاركته ومن تُشرِكه في الأمر.',
       ),
-      q(
+      qt(['qatar_healthcare', 'gulf_general'],
         'safety_protocol',
         'Describe how you check and administer medication safely.',
         'صف كيف تتحقق من الأدوية وتعطيها بأمان.',
@@ -52,7 +52,7 @@ export const careRoles: Role[] = [
     competencies: careCompetencies,
     questions: [
       opener,
-      q(
+      qt(['saudi_agency'],
         'refusing_care',
         'The person you care for refuses to eat or take their medication. What do you do?',
         'الشخص الذي ترعاه يرفض الأكل أو تناول دوائه. ماذا تفعل؟',
@@ -60,7 +60,7 @@ export const careRoles: Role[] = [
         'Show patience and respect for their choice, and say when you would call the family or doctor.',
         'أظهر الصبر واحترام اختياره، ووضّح متى ستتصل بالعائلة أو الطبيب.',
       ),
-      q(
+      qt(['gulf_general'],
         'dignity',
         'How do you protect someone’s dignity when helping them with personal care?',
         'كيف تحافظ على كرامة الشخص عند مساعدته في الرعاية الشخصية؟',
@@ -91,7 +91,7 @@ export const careRoles: Role[] = [
     competencies: careCompetencies,
     questions: [
       opener,
-      q(
+      qt(['qatar_healthcare'],
         'prescription_error',
         'You think a prescription may be wrong. What do you do?',
         'تعتقد أن هناك خطأ في وصفة طبية. ماذا تفعل؟',
@@ -169,7 +169,7 @@ export const careRoles: Role[] = [
     competencies: careCompetencies,
     questions: [
       opener,
-      q(
+      qt(['qatar_healthcare', 'gulf_general'],
         'insurance_refused',
         'A patient’s insurance is refused at the desk and they are upset. What do you do?',
         'يُرفض تأمين مريض عند الاستقبال وهو منزعج. ماذا تفعل؟',
@@ -177,7 +177,7 @@ export const careRoles: Role[] = [
         'Insurance problems are daily in Gulf clinics. Show calm and a clear next step.',
         'مشاكل التأمين يومية في عيادات الخليج. أظهر الهدوء وخطوة تالية واضحة.',
       ),
-      q(
+      qt(['qatar_healthcare'],
         'patient_privacy',
         'Someone asks you about another patient’s appointment or condition. How do you respond?',
         'يسألك أحدهم عن موعد أو حالة مريض آخر. كيف ترد؟',
@@ -187,7 +187,7 @@ export const careRoles: Role[] = [
         20,
         90,
       ),
-      q(
+      qt(['gulf_general'],
         'waiting_room',
         'The doctor is running an hour late and the waiting room is full. What do you do?',
         'الطبيب متأخر ساعة وغرفة الانتظار ممتلئة. ماذا تفعل؟',

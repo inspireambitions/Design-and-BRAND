@@ -15,7 +15,7 @@ import type { Question, Role } from './roles';
  * same questions, and scoring stays reproducible. No randomness.
  *
  * Scoring safety: every question here comes from role.questions or role.bank,
- * both of which the score route accepts — a drawn question can never 404.
+ * both of which the score route accepts: a drawn question can never 404.
  */
 export function drawInterview(role: Role, completedAttempts: number): Role {
   const bank = role.bank ?? [];
@@ -42,7 +42,7 @@ export function drawInterview(role: Role, completedAttempts: number): Role {
 
 /**
  * The Full Mock set: opener + six middles + closer, drawn from the same pool
- * with the same determinism. Null when the role has no bank to widen with —
+ * with the same determinism. Null when the role has no bank to widen with: 
  * callers hide the mock option rather than faking one.
  */
 export function drawMockQuestions(role: Role, completedAttempts: number): Question[] | null {
