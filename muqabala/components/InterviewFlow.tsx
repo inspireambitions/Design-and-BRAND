@@ -282,7 +282,12 @@ export function InterviewFlow({
    * Guided: revealed questions, feedback after each answer, retakes.
    * Mock: eight questions one at a time, no interruptions, report at the end.
    */
-  const [mode, setMode] = useState<InterviewMode>(proof ? 'screening' : 'guided');
+  // The realistic full interview is the default whenever a complete set exists.
+  // Quick guided practice stays one tap away, and a plan link to a single
+  // question keeps the guided sitting it asked for.
+  const [mode, setMode] = useState<InterviewMode>(
+    proof ? 'screening' : !focusQuestionId && mockQuestions && mockQuestions.length >= 8 ? 'mock' : 'guided',
+  );
   const [recordingLive, setRecordingLive] = useState(false);
   const lastHeardRef = useRef(0);
   const [meterUnavailable, setMeterUnavailable] = useState(false);
@@ -1761,7 +1766,7 @@ export function InterviewFlow({
 
           {!proof && (
           <div className="mode-row">
-            {mode === 'mock' && mockQuestions && mockQuestions.length > 0 && (
+            {mockQuestions && mockQuestions.length > 0 && (
               <button
                 type="button"
                 className={`mode-card ${mode === 'mock' ? 'on' : ''}`}
