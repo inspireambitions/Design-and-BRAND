@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import {
@@ -176,4 +177,11 @@ test('model answers exist for every front office and waiter question in both lan
   const custom = { id: 'x', modelAnswer: { relevance: 'a', evidence: 'b', structure: 'c', clarity: 'd' } };
   assert.equal(modelAnswerFor('custom', custom, 'en').relevance, 'a');
   assert.equal(modelAnswerFor('custom', custom, 'ar').relevance, 'a');
+});
+
+test('the full interview is offered on the start screen and is the default when eight questions exist', () => {
+  const flow = readFileSync(new URL('../components/InterviewFlow.tsx', import.meta.url), 'utf8');
+  assert.doesNotMatch(flow, /\{mode === 'mock' && mockQuestions && mockQuestions\.length > 0 && \(/, 'the Full interview card must not depend on mock already being selected');
+  assert.match(flow, /\{mockQuestions && mockQuestions\.length > 0 && \(\s*<button/, 'Full interview card renders whenever a full set exists');
+  assert.match(flow, /!focusQuestionId && mockQuestions && mockQuestions\.length >= 8 \? 'mock' : 'guided'/, 'full interview is the default; a single-question plan link stays guided');
 });
