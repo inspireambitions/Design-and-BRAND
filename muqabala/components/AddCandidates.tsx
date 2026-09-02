@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { employerVolumeProps, track } from '@/lib/analytics';
 import {
   parseContacts,
   resolveContacts,
@@ -89,6 +90,8 @@ export function AddCandidates({
         return;
       }
       setSent(body as SentSummary);
+      if (body.byEmail) track('invites_sent', employerVolumeProps(true, { role_id: roleId, channel: 'email', count: body.byEmail }));
+      if (body.byWhatsApp) track('invites_sent', employerVolumeProps(true, { role_id: roleId, channel: 'whatsapp', count: body.byWhatsApp }));
     } catch {
       setError('Invites could not be sent. Try again.');
     } finally {

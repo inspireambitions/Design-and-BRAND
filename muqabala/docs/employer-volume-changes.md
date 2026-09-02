@@ -117,3 +117,7 @@ Committed. With the flag on, each role card gains a five-number strip (Invited, 
 ### Section 6: pricing
 
 Skipped. `ROLE_PRICE` is not set and no payment provider is configured. Nothing in the build assumes a price; the invites route has no invite count gate beyond the role's existing candidate capacity.
+
+### Section 7: instrumentation
+
+Committed. Thirteen event names added to the `EventName` union in `lib/analytics.ts` with a new whitelist of properties: `role_id`, `channel`, `device`, `flag_state`, `count`, `type`. Browser events use `track` with `employerVolumeProps`, which adds the device class and flag state. Server events (`reminder_sent`, `candidate_answered`, `shortlist_email_opened`) go through the new `lib/server/analytics.ts`, a fire-and-forget PostHog capture with `$process_person_profile: false` and a role-scoped distinct id. Names, emails, phone numbers and transcripts are never properties; the test asserts the whitelist and each firing site. `shortlist_email_opened` fires in `/auth/confirm` when the magic link carries `src=shortlist`. `payment_completed` is declared but never fired because section 6 is skipped.

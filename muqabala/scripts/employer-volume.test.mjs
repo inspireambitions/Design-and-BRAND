@@ -267,7 +267,7 @@ test('section 4: shortlist email subject, snippet, ordering and magic link', asy
 
   const sender = read('lib/server/employer-messages.ts');
   assert.match(sender, /generateLink\(\{\s*type: 'magiclink'/);
-  assert.match(sender, /token_hash=\$\{encodeURIComponent\(hashed\)\}&type=magiclink&next=/);
+  assert.match(sender, /token_hash=\$\{encodeURIComponent\(hashed\)\}&type=magiclink&src=shortlist&role=\$\{encodeURIComponent\(roleId\)\}&next=/);
   const scheduler = read('lib/server/employer-shortlist.ts');
   assert.match(scheduler, /SHORTLIST_AFTER_HOURS = 48/);
   assert.match(scheduler, /if \(!submissions\) continue/, 'only when at least one submission exists');
@@ -380,6 +380,37 @@ test('section 5: summary image and exports are owner-only, logged, and the image
   assert.match(dashboard, /\['Invited', strip\.invited\], \['Answered', strip\.answered\], \['Full coverage', strip\.fullCoverage\], \['Shortlisted', strip\.shortlisted\], \['Decided', strip\.decided\]/);
   assert.match(dashboard, /\{whatsApp && <small>\{responseRateLine/);
   assert.match(dashboard, /name="minutes"/);
+});
+
+test('section 7: every brief event exists and no event carries a name, email or phone', () => {
+  const analytics = read('lib/analytics.ts');
+  for (const event of ['employer_landing_viewed', 'sample_report_opened', 'role_created', 'invites_sent', 'reminder_sent', 'candidate_answered', 'shortlist_email_opened', 'review_started', 'decision_made', 'candidate_shared', 'summary_shared', 'export_downloaded', 'payment_completed']) {
+    assert.match(analytics, new RegExp(`'${event}'`), `${event} in EventName`);
+  }
+  assert.match(analytics, /flag_state: 'on' \| 'off'/);
+  assert.match(analytics, /device: DeviceClass \| 'server'/);
+  assert.doesNotMatch(analytics, /email:\s*string|phone:\s*string|name:\s*string/, 'no personal fields in the props whitelist');
+
+  const server = read('lib/server/analytics.ts');
+  assert.match(server, /\$process_person_profile: false/);
+  assert.doesNotMatch(server, /\b(email|phone|name|candidate_name)\s*:/i, 'no personal property keys on the server props type');
+
+  const fired = [
+    ['components/EmployerProofCreate.tsx', ['employer_landing_viewed', 'sample_report_opened', 'role_created']],
+    ['components/AddCandidates.tsx', ['invites_sent']],
+    ['lib/server/employer-messages.ts', ['reminder_sent']],
+    ['app/api/screening/interviews/[id]/submit/route.ts', ['candidate_answered']],
+    ['app/auth/confirm/route.ts', ['shortlist_email_opened']],
+    ['components/CandidateReview.tsx', ['review_started', 'decision_made', 'candidate_shared']],
+    ['components/RoleCardTools.tsx', ['summary_shared', 'export_downloaded']],
+  ];
+  for (const [file, events] of fired) {
+    const source = read(file);
+    for (const event of events) assert.match(source, new RegExp(`'${event}'`), `${event} fired from ${file}`);
+  }
+  const invites = read('components/AddCandidates.tsx');
+  assert.match(invites, /track\('invites_sent', employerVolumeProps\(true, \{ role_id: roleId, channel: 'email', count: body\.byEmail \}\)\)/);
+  assert.doesNotMatch(invites, /track\([^)]*(email:|phone:|name:)/, 'no contact details in invite events');
 });
 
 test('no em dashes in employer volume copy or docs', () => {

@@ -59,6 +59,7 @@ export default async function EmployerInterviewReportPage({ params }: { params: 
         <LoadTiming event="report_load_ms" />
         <CandidateReview
           interviewId={id}
+          roleId={roleId}
           displayName={current.displayName}
           roleTitle={current.roleTitle}
           workplace={(packs ?? []).find((pack) => pack.id === roleId)?.workplace || 'Employer'}

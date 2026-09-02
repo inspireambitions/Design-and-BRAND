@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { employerVolumeProps, track } from '@/lib/analytics';
 import { MuqabalaMark } from './MarketingSite';
 import { useLang } from './LanguageProvider';
 import { EmailSignIn } from './EmailSignIn';
@@ -72,6 +73,8 @@ export function EmployerProofCreate({
   const ar = lang === 'ar';
   const startHref = signedIn ? '#create' : `/sign-in?next=${encodeURIComponent('/for-employers#create')}`;
 
+  useEffect(() => { track('employer_landing_viewed', employerVolumeProps(volume)); }, [volume]);
+
   return (
     <div className={[styles.page, 'employer-light-theme'].join(' ')}>
       <header className={styles.header}>
@@ -103,7 +106,7 @@ export function EmployerProofCreate({
           <p className={styles.lede}>{volume ? c.volumeSub : c.sub}</p>
           <div className={styles.heroActions}>
             <a href={volume ? startHref : '#create'} className={styles.primaryButton}>{volume ? c.volumePrimary : c.primaryCta}</a>
-            <a href="#sample-report" className={styles.secondaryButton}>{volume ? c.volumeSecondary : c.secondaryCta}</a>
+            <a href="#sample-report" className={styles.secondaryButton} onClick={() => track('sample_report_opened', employerVolumeProps(volume))}>{volume ? c.volumeSecondary : c.secondaryCta}</a>
           </div>
           <p className={styles.trustLine}>{volume ? c.volumeTrust : c.trustLine}</p>
           <p className={styles.founderLine}>{founderLine[lang]}</p>
@@ -364,6 +367,7 @@ function EmployerCreateForm({ volume }: { volume: boolean }) {
         return;
       }
       setLinkDetails(packBody as LinkDetails);
+      track('role_created', employerVolumeProps(volume, packBody.id ? { role_id: packBody.id } : {}));
       // Volume flow: the role's three questions are confirmed, so go straight to Add candidates.
       if (volume && packBody.id) router.push(`/employer/roles/${packBody.id}/candidates/add`);
     } catch {

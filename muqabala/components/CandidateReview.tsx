@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createCandidateShare, recordDecision, revokeCandidateShare, undoDecision } from '@/app/employer/actions';
+import { employerVolumeProps, track } from '@/lib/analytics';
 import { EmployerReportVideo } from '@/components/EmployerReportVideo';
 import type { Coverage } from '@/lib/employer-volume/coverage';
 import type { ReportAnswer } from '@/lib/report-summary';
@@ -27,6 +28,7 @@ export type ReviewDecision = {
 
 type Props = {
   interviewId: string;
+  roleId: string;
   displayName: string;
   roleTitle: string;
   workplace: string;
@@ -61,6 +63,7 @@ export function CandidateReview(props: Props) {
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => () => { if (undoTimer.current) clearTimeout(undoTimer.current); }, []);
+  useEffect(() => { track('review_started', employerVolumeProps(true, { role_id: props.roleId })); }, [props.roleId]);
 
   function goNext() {
     if (props.nextId) router.push(`/employer/interviews/${props.nextId}`);
@@ -74,6 +77,7 @@ export function CandidateReview(props: Props) {
     const result = await recordDecision({ interviewId: props.interviewId, decision, note });
     setBusy(false);
     if ('error' in result) { setError(result.error); return; }
+    track('decision_made', employerVolumeProps(true, { role_id: props.roleId, type: decision }));
     if (undoTimer.current) clearTimeout(undoTimer.current);
     setUndo({ decisionId: result.id, label: DECISION_LABEL[decision], until: Date.now() + UNDO_MS });
     undoTimer.current = setTimeout(() => { setUndo(null); goNext(); }, UNDO_MS);
@@ -93,6 +97,7 @@ export function CandidateReview(props: Props) {
     const result = await createCandidateShare(props.interviewId);
     setBusy(false);
     if ('error' in result) { setError(result.error); return; }
+    track('candidate_shared', employerVolumeProps(true, { role_id: props.roleId }));
     setShareUrl(result.url);
     router.refresh();
   }

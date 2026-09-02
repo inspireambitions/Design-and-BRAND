@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { claimCurrentAttempt } from '@/lib/server/claim-attempt';
 import { configuredOrigin, isOpaqueToken, safeNext } from '@/lib/server/security';
 import { createClient } from '@/lib/supabase/server';
+import { trackServer } from '@/lib/server/analytics';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,6 +31,10 @@ export async function GET(request: Request) {
           ? `/account/reports/${claimed.id}`
           : `/practice/${encodeURIComponent(claimed.roleId)}?resume=${encodeURIComponent(claimed.id)}`
         : next;
+      // A shortlist email Open link lands here first; the role id is the only property sent.
+      if (url.searchParams.get('src') === 'shortlist') {
+        trackServer('shortlist_email_opened', { role_id: url.searchParams.get('role') ?? undefined, flag_state: 'on' });
+      }
       return NextResponse.redirect(`${configuredOrigin()}${claimedNext}`);
     }
   }

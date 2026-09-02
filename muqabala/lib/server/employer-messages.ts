@@ -15,6 +15,7 @@ import {
   type ShortlistRow,
 } from '@/lib/employer-volume/shortlist-message';
 import { rankedCandidates } from '@/lib/server/employer-candidates';
+import { trackServer } from '@/lib/server/analytics';
 import { configuredOrigin } from '@/lib/server/security';
 import { openToken } from '@/lib/server/invite-token';
 import { verifyInterview } from '@/lib/interview-token';
@@ -78,7 +79,7 @@ async function buildShortlistForRole(
     });
     const hashed = linkData?.properties?.hashed_token;
     const openUrl = hashed
-      ? `${configuredOrigin()}/auth/confirm?token_hash=${encodeURIComponent(hashed)}&type=magiclink&next=${encodeURIComponent(next)}`
+      ? `${configuredOrigin()}/auth/confirm?token_hash=${encodeURIComponent(hashed)}&type=magiclink&src=shortlist&role=${encodeURIComponent(roleId)}&next=${encodeURIComponent(next)}`
       : `${configuredOrigin()}${next}`;
     rows.push({
       displayName: candidate.displayName,
@@ -234,6 +235,7 @@ export async function processEmployerMessages(options: { roleId?: string; limit?
       if (job.kind === 'reminder_2') stamp.second_reminder_at = now;
       if (job.kind === 'completion') stamp.completion_reminder_at = now;
       if (job.invite_id && Object.keys(stamp).length) await admin.from('role_invites').update(stamp).eq('id', job.invite_id);
+      if (job.kind !== 'invite' && job.kind !== 'shortlist') trackServer('reminder_sent', { role_id: job.role_id, channel: job.channel, flag_state: 'on' });
       accepted += 1;
     } else {
       await retry(job, response?.status ?? null, response ? `provider_${response.status}` : 'provider_timeout');
