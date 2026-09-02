@@ -73,7 +73,7 @@ export const serviceCompetencies: Competency[] = [
     id: 'evidence',
     label: 'Specific evidence',
     labelAr: 'أدلة محددة',
-    anchor: 'Gives concrete details — numbers, names of systems, timeframes, outcomes.',
+    anchor: 'Gives concrete details: numbers, names of systems, timeframes, outcomes.',
     anchorAr: 'يقدم تفاصيل محددة مثل الأرقام وأسماء الأنظمة والمدد والنتائج.',
   },
   {
@@ -112,7 +112,7 @@ export const technicalCompetencies: Competency[] = [
     id: 'evidence',
     label: 'Specific evidence',
     labelAr: 'أدلة محددة',
-    anchor: 'Gives concrete details — numbers, systems, standards, timeframes, outcomes.',
+    anchor: 'Gives concrete details: numbers, systems, standards, timeframes, outcomes.',
     anchorAr: 'يقدم تفاصيل محددة مثل الأرقام والأنظمة والمعايير والمدد والنتائج.',
   },
   {
@@ -151,7 +151,7 @@ export const careCompetencies: Competency[] = [
     id: 'evidence',
     label: 'Specific evidence',
     labelAr: 'أدلة محددة',
-    anchor: 'Gives concrete details — what was observed, what was done, what changed.',
+    anchor: 'Gives concrete details: what was observed, what was done, what changed.',
     anchorAr: 'يقدم تفاصيل محددة عمّا لاحظه وما فعله وما الذي تغيّر.',
   },
   {
@@ -194,8 +194,8 @@ export const closer = q(
   'Why do you want to work in the Gulf, and what do you know about working here?',
   'لماذا ترغب في العمل في الخليج، وماذا تعرف عن العمل هنا؟',
   ['communication', 'evidence'],
-  'Show you have thought seriously about the move — the pace, the diversity, the expectations.',
-  'أظهر أنك فكرت جدياً في هذه الخطوة — وتيرة العمل والتنوع والتوقعات.',
+  'Show you have thought seriously about the move: the pace, the diversity, the expectations.',
+  'أظهر أنك فكرت جدياً في هذه الخطوة: وتيرة العمل والتنوع والتوقعات.',
   30,
   90,
 );

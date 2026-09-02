@@ -124,7 +124,7 @@ export function ProgressView() {
                         minute: '2-digit',
                       })}
                     </span>
-                    <span className="comp-score">{attempt.overallScore === null ? '—' : `${attempt.overallScore}/100`}</span>
+                    <span className="comp-score">{attempt.overallScore === null ? '–' : `${attempt.overallScore}/100`}</span>
                     <span className={`delta ${deltaClass}`}>
                       {attempt.answers.length} {t('questions')}
                     </span>

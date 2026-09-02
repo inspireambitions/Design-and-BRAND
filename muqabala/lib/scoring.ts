@@ -248,7 +248,7 @@ export function structureCheck(question: Question, transcript: string): AnswerFe
       strengths: [],
       improvements: [
         'We could not hear enough of an answer to give you useful feedback.',
-        'Aim for at least 45 seconds — a situation, what you did, and how it ended.',
+        'Aim for at least 45 seconds: a situation, what you did, and how it ended.',
       ],
       coachTip:
         'Try again and tell one complete story. Even a short real example beats a general statement.',
@@ -266,7 +266,7 @@ export function structureCheck(question: Question, transcript: string): AnswerFe
       competencies: [],
       strengths: [],
       improvements: [
-        'This did not come through as a spoken answer — it reads as disconnected words rather than a story.',
+        'This did not come through as a spoken answer. It reads as disconnected words rather than a story.',
         'If you were speaking normally, the transcription may have failed. Try again, or type your answer instead.',
       ],
       coachTip:
@@ -344,7 +344,7 @@ export function structureCheck(question: Question, transcript: string): AnswerFe
 
   if (!hasSituation)
     improvements.push(
-      'Open with a specific moment — \u201cLast year at the hotel, a guest\u2026\u201d — instead of describing what you usually do.',
+      'Open with a specific moment, such as \u201cLast year at the hotel, a guest\u2026\u201d, instead of describing what you usually do.',
     );
   if (teamOnly > firstPerson)
     improvements.push(
@@ -357,7 +357,7 @@ export function structureCheck(question: Question, transcript: string): AnswerFe
   if (wordCount > 320)
     improvements.push('Tighten it. Strong answers land in 60\u2013120 seconds; long answers lose the interviewer.');
   if (wordCount < 45)
-    improvements.push('Give more. This answer was short — add the situation and the outcome.');
+    improvements.push('Give more. This answer was short. Add the situation and the outcome.');
   if (improvements.length === 0)
     improvements.push('The structure is solid. Try it once more and make the outcome even more specific.');
 
@@ -365,7 +365,7 @@ export function structureCheck(question: Question, transcript: string): AnswerFe
     teamOnly > firstPerson
       ? 'Rewrite your story replacing every \u201cwe\u201d with what you personally did. That single change usually moves an answer up a grade.'
       : numbers === 0
-        ? 'Pick one number to add — how many guests, how many minutes, how much the sale was worth. Specifics make you memorable.'
+        ? 'Pick one number to add: how many guests, how many minutes, how much the sale was worth. Specifics make you memorable.'
         : !hasOutcome
           ? 'Add one closing sentence: \u201cIn the end\u2026\u201d. Interviewers remember how stories finish.'
           : 'Strong structure. Now shorten your opening so you reach the action faster.';

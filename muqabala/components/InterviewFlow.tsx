@@ -2380,13 +2380,13 @@ export function InterviewFlow({
                 <div className="summary-item">
                   <span className="rate-label">{t('strongest')}</span>
                   <p style={{ marginTop: '0.25rem' }}>
-                    {t('question')} {best.index + 1} · {best.feedback.score}/100 — {best.questionText}
+                    {t('question')} {best.index + 1} · {best.feedback.score}/100: {best.questionText}
                   </p>
                 </div>
                 <div className="summary-item">
                   <span className="rate-label">{t('weakest')}</span>
                   <p style={{ marginTop: '0.25rem' }}>
-                    {t('question')} {worst.index + 1} · {worst.feedback.score}/100 — {worst.questionText}
+                    {t('question')} {worst.index + 1} · {worst.feedback.score}/100: {worst.questionText}
                   </p>
                 </div>
                 {action && (
