@@ -197,7 +197,7 @@ export function EmployerProofCreate({ signedIn, stats, hasReportShot, hasCandida
           ) : (
             <div className={styles.signInPanel}>
               <p>{c.createBody}</p>
-              <EmailSignIn compact next="/for-employers" showDeliveryHelp={false} />
+              <EmailSignIn compact next="/for-employers" />
             </div>
           )}
         </section>

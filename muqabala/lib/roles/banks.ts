@@ -28,8 +28,8 @@ export const serviceBank: Question[] = [
     'Tell me about a colleague you found difficult to work with. How did you handle it?',
     'حدثني عن زميل وجدت صعوبة في العمل معه. كيف تعاملت مع الأمر؟',
     ['communication', 'ownership'],
-    'Stay respectful — the interviewer is watching how you talk about people as much as what you did.',
-    'حافظ على الاحترام — المُحاور يراقب طريقة حديثك عن الآخرين بقدر ما يراقب ما فعلته.',
+    'Stay respectful. The interviewer is watching how you talk about people as much as what you did.',
+    'حافظ على الاحترام. المُحاور يراقب طريقة حديثك عن الآخرين بقدر ما يراقب ما فعلته.',
   ),
   q(
     'svc_mistake_bank',
@@ -99,8 +99,8 @@ export const technicalBank: Question[] = [
   ),
   q(
     'tec_improved_something',
-    'Tell me about something you improved at work — a fix, a habit, a way of setting up.',
-    'حدثني عن شيء حسّنته في عملك — إصلاح أو عادة أو طريقة تجهيز.',
+    'Tell me about something you improved at work, such as a fix, a habit or a way of setting up.',
+    'حدثني عن شيء حسّنته في عملك، مثل إصلاح أو عادة أو طريقة تجهيز.',
     ['ownership', 'evidence', 'problem_solving'],
   ),
 ];
