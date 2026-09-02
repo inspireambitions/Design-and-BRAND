@@ -548,6 +548,136 @@
   transform: translateX(0.65rem);
 }
 
+.strip {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid #e0ddd5;
+  border-radius: 0.75rem;
+  background: #fbfaf7;
+}
+
+.stripNumbers {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.stripNumbers div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.stripNumbers dt {
+  color: #66736d;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.stripNumbers dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.stripAction {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  justify-self: start;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid #087662;
+  border-radius: 999px;
+  background: #087662;
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.timeSaved {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  color: #24342e;
+  font-size: 0.74rem;
+}
+
+.timeSaved > span {
+  font-weight: 750;
+}
+
+.timeSaved label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: #66736d;
+}
+
+.timeSaved input {
+  width: 3.2rem;
+  min-height: 28px;
+  padding: 0.1rem 0.35rem;
+  border: 1px solid #d9d6ce;
+  border-radius: 0.4rem;
+  font: inherit;
+}
+
+.timeSaved button {
+  min-height: 28px;
+  padding: 0.1rem 0.6rem;
+  border: 1px solid #d9d6ce;
+  border-radius: 999px;
+  background: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.strip > small {
+  color: #66736d;
+  font-size: 0.7rem;
+}
+
+.roleTools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.roleTools button,
+.roleTools a {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid #d9d6ce;
+  border-radius: 999px;
+  background: #fff;
+  color: #24342e;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.roleTools small {
+  color: #a33f2c;
+  font-size: 0.68rem;
+}
+
 .allReviewed {
   display: inline-flex;
   min-height: 32px;

@@ -16,14 +16,17 @@ import {
 import { EmployerLinkActions } from '@/components/EmployerLinkActions';
 import { SignOutButton } from '@/components/SignOutButton';
 import { candidatePage, dashboardSummary, packHealth, type DashboardAnswer } from '@/lib/employer-dashboard';
-import { employerVolumeEnabled } from '@/lib/employer-volume';
+import { employerVolumeEnabled, whatsAppEnabled } from '@/lib/employer-volume';
 import { reminderOutcome, reminderOutcomeLine } from '@/lib/employer-volume/reminders';
+import { DEFAULT_MINUTES_PER_CV, actionLabel, responseRateLine, timeSavedLine } from '@/lib/employer-volume/strip';
+import { loadRoleStrip } from '@/lib/server/employer-role-strip';
+import { RoleCardTools } from '@/components/RoleCardTools';
 import { verifyInterview } from '@/lib/interview-token';
 import { configuredOrigin } from '@/lib/server/security';
 import { processScreeningNotifications } from '@/lib/server/screening-notifications';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient, currentUser } from '@/lib/supabase/server';
-import { reviewInterview, setEmployerDecision, setRemindersEnabled } from './actions';
+import { reviewInterview, setEmployerDecision, setMinutesPerCv, setRemindersEnabled } from './actions';
 import styles from './EmployerDashboard.module.css';
 
 export const dynamic = 'force-dynamic';
@@ -39,12 +42,14 @@ type Pack = {
   max_candidates: number;
   starts_used: number;
   reminders_enabled?: boolean | null;
+  minutes_per_cv?: number | null;
 };
 
 type InviteRow = {
   id: string;
   role_id: string;
   status: string;
+  channel: string;
   first_reminder_at: string | null;
   second_reminder_at: string | null;
   completion_reminder_at: string | null;
@@ -145,17 +150,22 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
   const client = await createClient();
   const volume = employerVolumeEnabled();
   const { data: packRows } = await client!.from('screening_packs')
-    .select(`id,public_code,workplace,signed_token,created_at,expires_at,max_candidates,starts_used${volume ? ',reminders_enabled' : ''}`)
+    .select(`id,public_code,workplace,signed_token,created_at,expires_at,max_candidates,starts_used${volume ? ',reminders_enabled,minutes_per_cv' : ''}`)
     .eq('employer_id', user.id)
     .order('created_at', { ascending: false });
   const packs = (packRows ?? []) as unknown as Pack[];
   const packIds = packs.map((pack) => pack.id);
   const { data: inviteRows } = volume && packIds.length
     ? await client!.from('role_invites')
-        .select('id,role_id,status,first_reminder_at,second_reminder_at,completion_reminder_at,submitted_at')
+        .select('id,role_id,status,channel,first_reminder_at,second_reminder_at,completion_reminder_at,submitted_at')
         .in('role_id', packIds)
     : { data: [] };
   const invites = (inviteRows ?? []) as InviteRow[];
+  const strips = new Map<string, Awaited<ReturnType<typeof loadRoleStrip>>>();
+  if (volume) {
+    for (const pack of packs.slice(0, 4)) strips.set(pack.id, await loadRoleStrip(client!, pack.id));
+  }
+  const whatsApp = whatsAppEnabled();
 
   const admin = createAdminClient();
   const { data: technicalInterviewRows } = admin && packIds.length
@@ -349,6 +359,34 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
                         {reminders.reminded > 0 && <small>{reminderOutcomeLine(reminders)}</small>}
                       </div>
                     )}
+                    {volume && strips.get(pack.id) && (() => {
+                      const { strip, invites: roleInvitesForRate } = strips.get(pack.id)!;
+                      const minutes = typeof pack.minutes_per_cv === 'number' ? pack.minutes_per_cv : DEFAULT_MINUTES_PER_CV;
+                      return (
+                        <div className={styles.strip}>
+                          <dl className={styles.stripNumbers}>
+                            {([['Invited', strip.invited], ['Answered', strip.answered], ['Full coverage', strip.fullCoverage], ['Shortlisted', strip.shortlisted], ['Decided', strip.decided]] as const).map(([label, value]) => (
+                              <div key={label}><dt>{label}</dt><dd>{value}</dd></div>
+                            ))}
+                          </dl>
+                          {strip.unreviewed > 0 && nextInterview
+                            ? <form action={reviewInterview}><input type="hidden" name="interviewId" value={nextInterview.id} /><button type="submit" className={styles.stripAction}>{actionLabel(strip)}</button></form>
+                            : <Link href={`/employer/roles/${pack.id}/candidates/add`} className={styles.stripAction}>{actionLabel(strip)}</Link>}
+                          <form action={setMinutesPerCv} className={styles.timeSaved}>
+                            <span>{timeSavedLine(strip, minutes)}</span>
+                            <input type="hidden" name="roleId" value={pack.id} />
+                            <label>
+                              <span>at</span>
+                              <input type="number" name="minutes" min={0} max={120} defaultValue={minutes} aria-label="Minutes per CV" />
+                              <span>min per CV</span>
+                            </label>
+                            <button type="submit">Save</button>
+                          </form>
+                          {whatsApp && <small>{responseRateLine(roleInvitesForRate)}</small>}
+                          <RoleCardTools roleId={pack.id} roleTitle={role} />
+                        </div>
+                      );
+                    })()}
                   </div>
                   <div role="cell" className={styles.roleJourney}><progress max={Math.max(1, pack.starts_used)} value={packSubmissions.length} aria-label={`${packSubmissions.length} of ${pack.starts_used} started interviews submitted`} /><small>{pack.starts_used} started · {packSubmissions.length} submitted{shortlisted ? ` · ${shortlisted} shortlisted` : ''}</small></div>
                   <div role="cell"><span className={`${styles.packStatus} ${statusClass(status)}`}>{packStatusCopy[status]}</span></div>

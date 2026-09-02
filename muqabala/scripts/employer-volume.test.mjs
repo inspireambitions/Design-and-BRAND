@@ -315,6 +315,73 @@ test('section 4: shared page is public, shows no contact details and closes when
   assert.match(respond, /status: 410/);
 });
 
+test('section 5: strip numbers reconcile with invites and decisions from fixtures', async () => {
+  const { roleStrip, actionLabel, timeSavedHours, timeSavedLine, responseRateLine } = await import('../lib/employer-volume/strip.ts');
+  const invites = [
+    ...Array.from({ length: 6 }, (_, i) => ({ id: `e${i}`, channel: 'email', status: i < 2 ? 'submitted' : 'invited' })),
+    ...Array.from({ length: 4 }, (_, i) => ({ id: `w${i}`, channel: 'whatsapp', status: i < 2 ? 'submitted' : 'started' })),
+    { id: 'b0', channel: 'both', status: 'submitted' },
+    { id: 'x0', channel: 'email', status: 'expired' },
+  ];
+  const candidates = [
+    { interviewId: 'c1', inviteId: 'e0', coverageFull: true, reviewedAt: '2026-09-02T10:00:00Z', decision: 'shortlist' },
+    { interviewId: 'c2', inviteId: 'e1', coverageFull: true, reviewedAt: '2026-09-02T10:05:00Z', decision: 'pass' },
+    { interviewId: 'c3', inviteId: 'w0', coverageFull: false, reviewedAt: '2026-09-02T10:10:00Z', decision: 'later' },
+    { interviewId: 'c4', inviteId: 'w1', coverageFull: false, reviewedAt: null, decision: null },
+    { interviewId: 'c5', inviteId: 'b0', coverageFull: true, reviewedAt: null, decision: null },
+    { interviewId: 'c6', inviteId: null, coverageFull: false, reviewedAt: '2026-09-02T11:00:00Z', decision: 'shortlisted' },
+  ];
+  const strip = roleStrip(invites, candidates);
+  assert.deepEqual(strip, { invited: 12, answered: 6, fullCoverage: 3, shortlisted: 2, decided: 4, unreviewed: 2, openedInReview: 4 });
+  assert.equal(actionLabel(strip), 'Review 2 new answers');
+  assert.equal(actionLabel({ ...strip, unreviewed: 0 }), 'Add candidates');
+  assert.equal(actionLabel({ ...strip, unreviewed: 1 }), 'Review 1 new answer');
+  assert.equal(timeSavedHours(strip, 4), 0.5, '(12 - 4) * 4 minutes = 32 minutes = 0.5 hours');
+  assert.equal(timeSavedLine(strip, 15), 'Time saved: 2.0 hours');
+  assert.equal(responseRateLine(invites), 'Email 38 percent. WhatsApp 60 percent.', 'email pool 8 incl. both, whatsapp pool 5 incl. both');
+});
+
+test('section 5: export of 500 candidates builds in well under the budget and is formula-safe', async () => {
+  const { exportCsv, EXPORT_COLUMNS } = await import('../lib/employer-volume/strip.ts');
+  const rows = Array.from({ length: 500 }, (_, i) => ({
+    candidate_ref: `MQ-${String(i).padStart(6, 'A')}`, name: i === 3 ? '=HYPERLINK("x")' : `Candidate ${i}`, email: `c${i}@example.com`, phone: null, channel: 'email',
+    invited_at: '2026-09-01T09:00:00Z', first_reminder_at: null, second_reminder_at: null, submitted_at: '2026-09-02T09:00:00Z',
+    rubric: [true, false, true, true], decision: 'shortlist', reviewer: 'kim@example.com', decided_at: '2026-09-02T10:00:00Z', note: 'Strong, "quoted" note', share_response: null, share_responded_at: null,
+  }));
+  const started = performance.now();
+  const csv = exportCsv(rows);
+  assert.ok(performance.now() - started < 2000);
+  assert.ok(csv.startsWith('\uFEFF'), 'UTF-8 BOM so Excel opens Arabic names correctly');
+  const lines = csv.trim().split('\r\n');
+  assert.equal(lines.length, 501);
+  assert.equal(lines[0], EXPORT_COLUMNS.join(','));
+  assert.match(lines[1], /,true,false,true,true,shortlist,kim@example\.com,/);
+  assert.match(lines[4], /'=HYPERLINK/, 'formula prefix neutralised');
+  assert.match(lines[1], /"Strong, ""quoted"" note"/);
+
+  const { buildPdf } = await import('../lib/employer-volume/pdf.ts');
+  const pdf = buildPdf([{ text: 'Muqabala', bold: true }, ...Array.from({ length: 120 }, (_, i) => ({ text: `Row ${i}` }))]);
+  const bytes = Buffer.from(await pdf.arrayBuffer()).toString('latin1');
+  assert.match(bytes, /^%PDF-1\.4/);
+  assert.match(bytes, /\/Count 3/, 'three pages for 121 lines');
+  assert.match(bytes, /%%EOF\n$/);
+});
+
+test('section 5: summary image and exports are owner-only, logged, and the image carries no personal data', () => {
+  const summary = read('app/api/employer/roles/[roleId]/summary/route.tsx');
+  assert.match(summary, /pack\.employer_id !== user\.id/);
+  assert.match(summary, /format: 'summary_png'/);
+  assert.doesNotMatch(summary, /candidate\.displayName|candidate_name|\.email|\.phone|loadExportRows/, 'no names or contact details reach the image');
+  assert.match(summary, /width: 1080, height: 1350/);
+  const exportRoute = read('app/api/employer/roles/[roleId]/export/route.ts');
+  assert.match(exportRoute, /from\('export_log'\)\.insert\(\{ employer_id: user\.id, role_id: pack\.id, format \}\)/);
+  assert.doesNotMatch(exportRoute, /email:|phone:/, 'the PDF summary has no contact details');
+  const dashboard = read('app/employer/page.tsx');
+  assert.match(dashboard, /\['Invited', strip\.invited\], \['Answered', strip\.answered\], \['Full coverage', strip\.fullCoverage\], \['Shortlisted', strip\.shortlisted\], \['Decided', strip\.decided\]/);
+  assert.match(dashboard, /\{whatsApp && <small>\{responseRateLine/);
+  assert.match(dashboard, /name="minutes"/);
+});
+
 test('no em dashes in employer volume copy or docs', () => {
   for (const path of ['lib/employer-volume.ts', 'docs/employer-volume-changes.md', 'scripts/employer-volume.test.mjs']) {
     assert.doesNotMatch(read(path), /\u2014/, `${path} contains an em dash`);

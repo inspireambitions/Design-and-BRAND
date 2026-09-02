@@ -188,6 +188,17 @@ export async function revokeCandidateShare(input: { interviewId: string; shareId
   return { ok: true };
 }
 
+/** Section 5: inline edit of the minutes-per-CV figure behind "Time saved". */
+export async function setMinutesPerCv(formData: FormData) {
+  const roleId = String(formData.get('roleId') ?? '');
+  const minutes = Number(formData.get('minutes'));
+  if (!UUID_PATTERN.test(roleId) || !Number.isInteger(minutes) || minutes < 0 || minutes > 120) return;
+  const client = await createClient();
+  if (!client) return;
+  await client.from('screening_packs').update({ minutes_per_cv: minutes }).eq('id', roleId);
+  revalidatePath('/employer');
+}
+
 export async function setEmployerDecision(formData: FormData) {
   const interviewId = String(formData.get('interviewId') ?? '');
   const decision = String(formData.get('decision') ?? '');

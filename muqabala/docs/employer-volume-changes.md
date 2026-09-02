@@ -107,3 +107,13 @@ Committed. **Coverage** (`lib/employer-volume/coverage.ts`): the role's first fo
 **Share**: `candidate_shares` with a hashed 7 day token. Public route `/c/[token]` (not `/s/`, which is the candidate interview) shows name or reference, ticks and the three answers with signed playback; no contact details, no other candidates, no navigation, no login. "Recommend" and "Not this one" post to `/api/c/[token]/respond` and appear on the review screen with a timestamp. Revoke from the review screen; a revoked or expired link shows "This link has closed".
 
 The timing targets in the brief (ten candidates in under four minutes on a throttled Android, magic link in under two seconds) need a deployed build with a database and were not measured here.
+
+### Section 5: dashboard strip and export
+
+Committed. With the flag on, each role card gains a five-number strip (Invited, Answered, Full coverage, Shortlisted, Decided) computed by the pure `roleStrip` in `lib/employer-volume/strip.ts` from `role_invites` and the ranked candidates, so it reconciles exactly with the decision write-through and the invites table. The action button reads "Review [n] new answers" while unreviewed submissions exist, otherwise "Add candidates". "Time saved: [h] hours" is (Invited minus candidates opened in review) times `minutes_per_cv` (new `screening_packs` column, default 4, editable inline on the card). The per-channel response rate line renders only when `WHATSAPP_ENABLED` is true.
+
+"Share summary" calls `/api/employer/roles/[roleId]/summary`, a 1080 by 1350 PNG rendered with `next/og` containing the role title, the five numbers, time saved and the Muqabala mark. It never receives names or contact details. The client uses the native share sheet when the browser supports sharing files, otherwise downloads. "Export CSV" and "Export PDF" call `/api/employer/roles/[roleId]/export`. The CSV has the brief's columns with rubric items as true or false and a UTF-8 BOM; cells that begin with a formula character are prefixed so spreadsheets do not execute them. The PDF is a dependency-free text summary with the five numbers and the decision list, no contact details. Every export writes a row to the new `export_log` (employer, role, format, time).
+
+### Section 6: pricing
+
+Skipped. `ROLE_PRICE` is not set and no payment provider is configured. Nothing in the build assumes a price; the invites route has no invite count gate beyond the role's existing candidate capacity.
