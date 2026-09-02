@@ -121,3 +121,28 @@ Skipped. `ROLE_PRICE` is not set and no payment provider is configured. Nothing 
 ### Section 7: instrumentation
 
 Committed. Thirteen event names added to the `EventName` union in `lib/analytics.ts` with a new whitelist of properties: `role_id`, `channel`, `device`, `flag_state`, `count`, `type`. Browser events use `track` with `employerVolumeProps`, which adds the device class and flag state. Server events (`reminder_sent`, `candidate_answered`, `shortlist_email_opened`) go through the new `lib/server/analytics.ts`, a fire-and-forget PostHog capture with `$process_person_profile: false` and a role-scoped distinct id. Names, emails, phone numbers and transcripts are never properties; the test asserts the whitelist and each firing site. `shortlist_email_opened` fires in `/auth/confirm` when the magic link carries `src=shortlist`. `payment_completed` is declared but never fired because section 6 is skipped.
+
+## Section 8: hand-back checklist
+
+- [x] `EMPLOYER_VOLUME` off by default. With the flag off: `/for-employers` renders the previous hero, `/employer/roles/[id]/candidates/add` returns 404, `/c/[token]` returns 404, the invites and export APIs return 404, the hourly cron returns `enabled: false`. Verified on a production build.
+- [x] Employer page: no form above the fold at 375px (screenshot taken on a production build), sign-in at the bottom, Spam line removed. Lighthouse Accessibility 100 with the flag on.
+- [x] Add candidates: parse, dedupe, invalid handling with inline fix, CSV fixtures for SmartRecruiters and Workday under `tests/fixtures/`.
+- [x] RLS: policy asserted in tests; live proof in `supabase/tests/role_invites_rls.sql` (needs a database).
+- [x] Reminders: 48h, 120h, cap of three, toggle, closed role, all with a fixed clock.
+- [x] Shortlist email: preview route for client testing; Open links are magic links landing on the candidate. Rendering in Gmail, Outlook and iOS Mail needs the preview loaded into an email testing tool, which this environment cannot do.
+- [x] Review screen: one candidate per screen, three buttons, note, undo, decision log with reviewer.
+- [x] Share page: no login, no contact details, revocable, "This link has closed" when revoked or expired.
+- [x] Number strip reconciles with fixtures; CSV and PDF export; summary PNG has no personal data; exports logged.
+- [x] Analytics events declared and fired; property whitelist excludes names, emails, phone numbers.
+- [x] This document lists current state and every change.
+- [x] Zero em dashes in changed files. British spelling. "Practise" as verb, "practice" as noun.
+- [x] No rubric number out of 100 on any new surface.
+
+## Before turning the flag on
+
+1. Apply the four migrations in `supabase/migrations/20260902*` in order. With the flag off nothing reads the new tables, so the code can deploy first.
+2. Set `EMPLOYER_VOLUME=true` in Vercel. Leave `WHATSAPP_ENABLED` unset until a messaging provider exists.
+3. `INTERVIEW_SECRET`, `RESEND_TRANSACTIONAL_API_KEY` and `CRON_SECRET` are already required and are reused. No new secrets.
+4. Run `supabase/tests/role_invites_rls.sql` against the database once.
+5. Load `/dev/email/shortlist` on a preview deployment into an email client testing tool.
+6. Drop a real screenshot at `public/samples/employer-report.png`.
