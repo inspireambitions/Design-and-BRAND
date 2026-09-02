@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { MuqabalaMark } from './MarketingSite';
 import { useLang } from './LanguageProvider';
 import { EmailSignIn } from './EmailSignIn';
@@ -22,6 +23,7 @@ const EXPIRY_OPTIONS = [1, 3, 7, 14, 21, 30] as const;
 const EMPLOYER_HOME = 'https://trymuqabala.com/for-employers';
 
 type LinkDetails = {
+  id?: string;
   url: string;
   expiresAt: string;
   maxCandidates: number;
@@ -210,7 +212,7 @@ export function EmployerProofCreate({
           <p className={styles.eyebrow}>{c.createEyebrow}</p>
           <h2 id="create-title" className={styles.sectionTitle}>{c.createTitle}</h2>
           {signedIn ? (
-            <EmployerCreateForm />
+            <EmployerCreateForm volume={volume} />
           ) : (
             <div className={styles.signInPanel}>
               <p>{c.createBody}</p>
@@ -239,8 +241,9 @@ export function EmployerProofCreate({
   );
 }
 
-function EmployerCreateForm() {
+function EmployerCreateForm({ volume }: { volume: boolean }) {
   const { lang, t } = useLang();
+  const router = useRouter();
   const [companyName, setCompanyName] = useState('');
   const [recruiterName, setRecruiterName] = useState('');
   const [jobTitle, setJobTitle] = useState('');
@@ -361,6 +364,8 @@ function EmployerCreateForm() {
         return;
       }
       setLinkDetails(packBody as LinkDetails);
+      // Volume flow: the role's three questions are confirmed, so go straight to Add candidates.
+      if (volume && packBody.id) router.push(`/employer/roles/${packBody.id}/candidates/add`);
     } catch {
       setError('create');
     } finally {

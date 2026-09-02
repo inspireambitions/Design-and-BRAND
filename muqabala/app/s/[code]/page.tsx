@@ -6,9 +6,27 @@ import { ScreeningEmailVerification } from '@/components/ScreeningEmailVerificat
 import { getScreeningPack } from '@/lib/screening-pack';
 import { screeningPreviewCopy } from '@/lib/screening-preview';
 import { currentUser } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { tokenHash } from '@/lib/server/security';
 import { processScreeningNotifications } from '@/lib/server/screening-notifications';
 
-type PageProps = { params: Promise<{ code: string }>; searchParams?: Promise<{ verification?: string }> };
+type PageProps = { params: Promise<{ code: string }>; searchParams?: Promise<{ verification?: string; i?: string }> };
+
+const INVITE_TOKEN = /^[A-Za-z0-9_-]{20,120}$/;
+
+/** 'ok' when the invite is usable, 'closed' when it exists but has expired, null when no usable invite param. */
+async function inviteState(token: string | undefined, packId: string): Promise<'ok' | 'closed' | null> {
+  if (!token || !INVITE_TOKEN.test(token)) return null;
+  const admin = createAdminClient();
+  if (!admin) return null;
+  const { data } = await admin
+    .from('role_invites')
+    .select('status,role_id')
+    .eq('token_hash', tokenHash(token))
+    .maybeSingle();
+  if (!data || data.role_id !== packId) return null;
+  return data.status === 'expired' ? 'closed' : 'ok';
+}
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { code } = await params;
@@ -48,7 +66,11 @@ export default async function ProofSittingPage({
   const { code } = await params;
   const query = await searchParams;
   const pack = await getScreeningPack(code);
+  const closedByInvite = pack.status === 'expired' && query?.i && INVITE_TOKEN.test(query.i);
+  if (closedByInvite) return <ClosedLink />;
   if (pack.status !== 'active' && pack.status !== 'full') notFound();
+  const invite = await inviteState(query?.i, pack.id);
+  if (invite === 'closed') return <ClosedLink />;
   const candidate = await currentUser();
   after(async () => { await processScreeningNotifications({ limit: 5 }); });
 
@@ -77,7 +99,19 @@ export default async function ProofSittingPage({
         publicCode={code}
         availability={pack.status}
         candidateEmail={candidate.email}
+        inviteToken={invite === 'ok' ? query?.i : undefined}
       />
     </div>
+  );
+}
+
+function ClosedLink() {
+  return (
+    <main className="employer-proof-page employer-light-theme" style={{ display: 'grid', placeItems: 'center', minHeight: '100dvh', padding: '2rem' }}>
+      <div style={{ maxWidth: '28rem', textAlign: 'center' }}>
+        <h1 style={{ fontSize: '1.6rem', marginBottom: '0.5rem' }}>This link has closed</h1>
+        <p style={{ color: '#536860' }}>The hiring team is no longer taking answers through this link. If you think this is a mistake, contact them directly.</p>
+      </div>
+    </main>
   );
 }

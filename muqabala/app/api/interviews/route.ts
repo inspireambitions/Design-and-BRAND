@@ -76,6 +76,14 @@ export async function POST(request: Request) {
     }
     interviewId = result.interview_id;
     resumed = result.status === 'resumed';
+    if (parsed.data.inviteToken) {
+      // Binds this interview to its invite and marks the invite started. A bad or
+      // expired token is ignored so the plain link keeps working as before.
+      await admin.rpc('bind_invite_to_interview', {
+        p_token_hash: tokenHash(parsed.data.inviteToken),
+        p_interview_id: interviewId,
+      }).then(() => null, () => null);
+    }
   } else {
     const { data, error } = await admin
       .from('interviews')

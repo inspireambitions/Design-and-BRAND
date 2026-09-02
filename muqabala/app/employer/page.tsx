@@ -16,6 +16,7 @@ import {
 import { EmployerLinkActions } from '@/components/EmployerLinkActions';
 import { SignOutButton } from '@/components/SignOutButton';
 import { candidatePage, dashboardSummary, packHealth, type DashboardAnswer } from '@/lib/employer-dashboard';
+import { employerVolumeEnabled } from '@/lib/employer-volume';
 import { verifyInterview } from '@/lib/interview-token';
 import { configuredOrigin } from '@/lib/server/security';
 import { processScreeningNotifications } from '@/lib/server/screening-notifications';
@@ -196,6 +197,7 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
 
   const summary = dashboardSummary(packs, submissions);
   const origin = configuredOrigin();
+  const volume = employerVolumeEnabled();
   const startedLastDay = technicalAttempts.filter((attempt) => Date.parse(attempt.started_at) >= Date.now() - 86_400_000).length;
   const unfinished = Math.max(0, technicalAttempts.length - submissions.length);
   const interrupted = interruptedInterviewIds.size;
@@ -320,8 +322,13 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
                     {unreviewed > 0 && nextInterview ? (
                       <form action={reviewInterview}><input type="hidden" name="interviewId" value={nextInterview.id} /><button type="submit">Review {unreviewed} new</button></form>
                     ) : ['active', 'closing'].includes(status) && packSubmissions.length === 0 ? (
-                      <><a href={`mailto:?subject=${encodeURIComponent(`${role} interview invitation`)}&body=${encodeURIComponent(url)}`}><EnvelopeSimple aria-hidden="true" /> Invite candidates</a><EmployerLinkActions url={url} /></>
+                      volume
+                        ? <Link href={`/employer/roles/${pack.id}/candidates/add`}><EnvelopeSimple aria-hidden="true" /> Add candidates</Link>
+                        : <><a href={`mailto:?subject=${encodeURIComponent(`${role} interview invitation`)}&body=${encodeURIComponent(url)}`}><EnvelopeSimple aria-hidden="true" /> Invite candidates</a><EmployerLinkActions url={url} /></>
                     ) : packSubmissions.length > 0 ? <span className={styles.allReviewed}>All reviewed</span> : <span className={styles.allReviewed}>Link closed</span>}
+                    {volume && ['active', 'closing'].includes(status) && packSubmissions.length > 0 && (
+                      <Link href={`/employer/roles/${pack.id}/candidates/add`}>Add candidates</Link>
+                    )}
                   </div>
                 </article>
               );

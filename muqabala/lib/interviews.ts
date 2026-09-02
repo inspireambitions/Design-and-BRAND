@@ -22,6 +22,7 @@ export const CreateInterviewSchema = z.object({
   interviewToken: z.string().max(64_000).optional(),
   focusQuestionId: z.string().min(1).max(160).optional(),
   candidateName: z.string().trim().min(2).max(100).optional(),
+  inviteToken: z.string().regex(/^[A-Za-z0-9_-]{20,120}$/).optional(),
 });
 
 export const ScreeningUploadRequestSchema = z.object({
