@@ -142,6 +142,8 @@ type Props = {
   publicCode: string;
   availability?: 'active' | 'full';
   candidateEmail: string;
+  /** Per-candidate invite token from the link query string. Binds the interview to its invite. */
+  inviteToken?: string;
 };
 
 type ScreeningStatus = {
@@ -181,6 +183,7 @@ export function EmployerVideoInterview({
   publicCode,
   availability = 'active',
   candidateEmail,
+  inviteToken,
 }: Props) {
   const { lang, setLang, dir } = useLang();
   const c = COPY[lang];
@@ -388,6 +391,7 @@ export function EmployerVideoInterview({
             answerSeconds: ANSWER_SECONDS,
           })),
           interviewToken,
+          inviteToken: inviteToken || undefined,
           candidateName: candidateName.trim(),
         }),
       });

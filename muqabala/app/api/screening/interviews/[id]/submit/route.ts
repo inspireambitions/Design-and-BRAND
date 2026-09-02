@@ -4,6 +4,8 @@ import { interviewAccess } from '@/lib/server/interview-access';
 import { refreshReportSummary } from '@/lib/server/report-summary';
 import { hasTrustedOrigin, privateNoStoreHeaders, screeningReceiptReference } from '@/lib/server/security';
 import { processScreeningNotifications } from '@/lib/server/screening-notifications';
+import { trackServer } from '@/lib/server/analytics';
+import { employerVolumeEnabled } from '@/lib/employer-volume';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -33,6 +35,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   // The employer report reads this one-row copy instead of joining answers.
   // A failure here only means the report page falls back to the live query.
   await refreshReportSummary(access.admin!, id).catch(() => null);
+  if (interview.screening_pack_id) {
+    trackServer('candidate_answered', { role_id: interview.screening_pack_id, flag_state: employerVolumeEnabled() ? 'on' : 'off' });
+  }
   after(async () => { await processScreeningNotifications({ interviewId: id, limit: 2 }); });
   return Response.json({
     submitted: true,

@@ -291,6 +291,12 @@ export const employerCopy: Localised<Record<string, string>> = {
     footerTerms: 'Terms',
     footerContact: 'Contact',
     footerLine: 'Work samples for Gulf hiring teams.',
+    volumeTitle: '223 applications. Seven worth your time. 48 hours.',
+    volumeSub: 'Paste the advert. Paste the emails. Every candidate answers three questions in their own words. You read only the ones who can do the job.',
+    volumePrimary: 'Start a shortlist, free',
+    volumeSecondary: 'See a real report',
+    volumeTrust: 'No automatic rejection. No accent, face or personality scoring. You decide.',
+    volumeSampleTitle: 'What you get after a candidate answers',
   },
   ar: {
     eyebrow: 'لفرق التوظيف',
@@ -341,6 +347,12 @@ export const employerCopy: Localised<Record<string, string>> = {
     footerTerms: 'الشروط',
     footerContact: 'تواصل',
     footerLine: 'عينات عمل لفرق التوظيف في الخليج.',
+    volumeTitle: '٢٢٣ طلباً. سبعة يستحقون وقتك. ٤٨ ساعة.',
+    volumeSub: 'الصق الإعلان. الصق عناوين البريد. يجيب كل مرشح عن ثلاثة أسئلة بكلماته. وأنت تقرأ فقط من يستطيع أداء الوظيفة.',
+    volumePrimary: 'ابدأ قائمة مختصرة مجاناً',
+    volumeSecondary: 'شاهد تقريراً حقيقياً',
+    volumeTrust: 'لا رفض تلقائي. لا تقييم للهجة أو الوجه أو الشخصية. أنت تقرر.',
+    volumeSampleTitle: 'ما تحصل عليه بعد أن يجيب المرشح',
   },
 };
 

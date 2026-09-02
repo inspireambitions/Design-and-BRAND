@@ -133,7 +133,7 @@ test('screening questions are generated once per link and never on the candidate
   assert.match(packRoute, /const questions = proofQuestions\(role\);/);
   assert.match(packRoute, /signProofPack\(\{[\s\S]*questions,/);
   assert.match(packRoute, /insert\(\{[\s\S]*signed_token: signedToken/);
-  assert.match(packLookup, /select\('signed_token/);
+  assert.match(packLookup, /select\('(id, )?signed_token/);
   assert.match(packLookup, /verifyInterview\(data\.signed_token\)/);
   assert.doesNotMatch(packLookup, /proofQuestions|signProofPack/);
   assert.doesNotMatch(candidatePage, /proofQuestions|signProofPack/);
@@ -163,7 +163,8 @@ test('employer creation form generates the description before unlocking the link
   assert.match(copy, /Learn how each candidate would approach the role before you shortlist\./);
   assert.match(copy, /I used Muqabala for \{title\} at \{company\}\./);
   assert.doesNotMatch(read('components/EmailSignIn.tsx'), /Promotions or Spam|emailDeliveryHelp/);
-  assert.match(form, /\{hasReportShot && \(/);
+  assert.match(form, /\{hasReportShot \? \(/);
+  assert.match(form, /volume && !production \?/);
   assert.match(form, /\{hasCandidateShot && \(/);
 });
 

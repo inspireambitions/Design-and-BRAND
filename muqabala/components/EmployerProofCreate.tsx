@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { employerVolumeProps, track } from '@/lib/analytics';
 import { MuqabalaMark } from './MarketingSite';
 import { useLang } from './LanguageProvider';
 import { EmailSignIn } from './EmailSignIn';
@@ -22,6 +24,7 @@ const EXPIRY_OPTIONS = [1, 3, 7, 14, 21, 30] as const;
 const EMPLOYER_HOME = 'https://trymuqabala.com/for-employers';
 
 type LinkDetails = {
+  id?: string;
   url: string;
   expiresAt: string;
   maxCandidates: number;
@@ -33,11 +36,15 @@ type Channel = 'email' | 'whatsapp';
 export type EmployerPageProps = {
   signedIn: boolean;
   stats: CatalogueStats;
-  /** True only when a real product capture exists at public/marketing/employer-sample-report.png */
+  /** True only when a real product capture exists at public/samples/employer-report.png */
   hasReportShot: boolean;
   /** True only when a real product capture exists at public/marketing/candidate-submission.png */
   hasCandidateShot: boolean;
   storageRegion: string | null;
+  /** EMPLOYER_VOLUME flag. Off by default; the page is unchanged while off. */
+  volume: boolean;
+  /** Lets the sample block show a TODO placeholder outside production only. */
+  production: boolean;
 };
 
 function withValues(template: string, values: Record<string, string | number>) {
@@ -51,11 +58,22 @@ function formatCount(value: number, lang: Lang) {
   return new Intl.NumberFormat(lang === 'ar' ? 'ar-EG' : 'en-GB').format(value);
 }
 
-export function EmployerProofCreate({ signedIn, stats, hasReportShot, hasCandidateShot, storageRegion }: EmployerPageProps) {
+export function EmployerProofCreate({
+  signedIn,
+  stats,
+  hasReportShot,
+  hasCandidateShot,
+  storageRegion,
+  volume,
+  production,
+}: EmployerPageProps) {
   const { lang, setLang } = useLang();
   const c = employerCopy[lang];
   const nav = marketingNav[lang];
   const ar = lang === 'ar';
+  const startHref = signedIn ? '#create' : `/sign-in?next=${encodeURIComponent('/for-employers#create')}`;
+
+  useEffect(() => { track('employer_landing_viewed', employerVolumeProps(volume)); }, [volume]);
 
   return (
     <div className={[styles.page, 'employer-light-theme'].join(' ')}>
@@ -84,13 +102,13 @@ export function EmployerProofCreate({ signedIn, stats, hasReportShot, hasCandida
       <main className={styles.main}>
         <section className={styles.hero} aria-labelledby="employer-title">
           <p className={styles.eyebrow}>{c.eyebrow}</p>
-          <h1 id="employer-title" className={styles.title}>{c.title}</h1>
-          <p className={styles.lede}>{c.sub}</p>
+          <h1 id="employer-title" className={styles.title}>{volume ? c.volumeTitle : c.title}</h1>
+          <p className={styles.lede}>{volume ? c.volumeSub : c.sub}</p>
           <div className={styles.heroActions}>
-            <a href="#create" className={styles.primaryButton}>{c.primaryCta}</a>
-            <a href="#sample-report" className={styles.secondaryButton}>{c.secondaryCta}</a>
+            <a href={volume ? startHref : '#create'} className={styles.primaryButton}>{volume ? c.volumePrimary : c.primaryCta}</a>
+            <a href="#sample-report" className={styles.secondaryButton} onClick={() => track('sample_report_opened', employerVolumeProps(volume))}>{volume ? c.volumeSecondary : c.secondaryCta}</a>
           </div>
-          <p className={styles.trustLine}>{c.trustLine}</p>
+          <p className={styles.trustLine}>{volume ? c.volumeTrust : c.trustLine}</p>
           <p className={styles.founderLine}>{founderLine[lang]}</p>
           <dl className={styles.facts}>
             <div><dt>{ar ? 'وظائف مغطاة' : 'Roles covered'}</dt><dd>{formatCount(stats.roles, lang)}</dd></div>
@@ -119,15 +137,19 @@ export function EmployerProofCreate({ signedIn, stats, hasReportShot, hasCandida
 
         <section className={styles.section} id="sample-report" aria-labelledby="report-title">
           <p className={styles.eyebrow}>{c.reportEyebrow}</p>
-          <h2 id="report-title" className={styles.sectionTitle}>{c.reportTitle}</h2>
+          <h2 id="report-title" className={styles.sectionTitle}>{volume ? c.volumeSampleTitle : c.reportTitle}</h2>
           <p className={styles.sectionBody}>{c.reportBody}</p>
-          {hasReportShot && (
+          {hasReportShot ? (
             <figure className={styles.shot}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/marketing/employer-sample-report.png" alt={ar ? 'تقرير عينة عمل مكتمل مع إخفاء بيانات المرشح' : 'A completed work sample report with candidate details blurred'} loading="lazy" />
+              <img src="/samples/employer-report.png" alt={ar ? 'تقرير عينة عمل مكتمل مع إخفاء بيانات المرشح' : 'A completed work sample report with candidate details blurred'} loading="lazy" />
               <figcaption>{c.reportCaption}</figcaption>
             </figure>
-          )}
+          ) : volume && !production ? (
+            <div className={styles.shotPlaceholder} role="note">
+              TODO: replace with real screenshot at public/samples/employer-report.png. This note is hidden in production.
+            </div>
+          ) : null}
         </section>
 
         <section className={styles.section} aria-labelledby="candidate-title">
@@ -193,7 +215,7 @@ export function EmployerProofCreate({ signedIn, stats, hasReportShot, hasCandida
           <p className={styles.eyebrow}>{c.createEyebrow}</p>
           <h2 id="create-title" className={styles.sectionTitle}>{c.createTitle}</h2>
           {signedIn ? (
-            <EmployerCreateForm />
+            <EmployerCreateForm volume={volume} />
           ) : (
             <div className={styles.signInPanel}>
               <p>{c.createBody}</p>
@@ -222,8 +244,9 @@ export function EmployerProofCreate({ signedIn, stats, hasReportShot, hasCandida
   );
 }
 
-function EmployerCreateForm() {
+function EmployerCreateForm({ volume }: { volume: boolean }) {
   const { lang, t } = useLang();
+  const router = useRouter();
   const [companyName, setCompanyName] = useState('');
   const [recruiterName, setRecruiterName] = useState('');
   const [jobTitle, setJobTitle] = useState('');
@@ -344,6 +367,9 @@ function EmployerCreateForm() {
         return;
       }
       setLinkDetails(packBody as LinkDetails);
+      track('role_created', employerVolumeProps(volume, packBody.id ? { role_id: packBody.id } : {}));
+      // Volume flow: the role's three questions are confirmed, so go straight to Add candidates.
+      if (volume && packBody.id) router.push(`/employer/roles/${packBody.id}/candidates/add`);
     } catch {
       setError('create');
     } finally {

@@ -1,0 +1,258 @@
+.page {
+  min-height: 100dvh;
+  padding: clamp(1.5rem, 5vw, 4rem) 1.25rem 4rem;
+  background: #f7f6f2;
+  color: #16241f;
+}
+
+.card {
+  display: grid;
+  gap: 1rem;
+  width: min(100%, 40rem);
+  margin-inline: auto;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border: 1px solid #d5ded8;
+  border-radius: 1rem;
+  background: #fff;
+}
+
+.card h1 {
+  margin: 0;
+  font-size: clamp(1.7rem, 4vw, 2.3rem);
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.eyebrow {
+  margin: 0;
+  color: #07564b;
+  font-family: var(--font-display);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.lede,
+.note,
+.summary {
+  margin: 0;
+  color: #536860;
+  line-height: 1.55;
+}
+
+.summary {
+  color: #16241f;
+  font-weight: 700;
+}
+
+.inputRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.field textarea {
+  width: 100%;
+  min-height: 11rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid #b9c6be;
+  border-radius: 0.75rem;
+  background: #fff;
+  color: #16241f;
+  font: inherit;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.field textarea:focus {
+  outline: 0;
+  border-color: #0b7a6b;
+  box-shadow: 0 0 0 3px rgba(11, 122, 107, 0.14);
+}
+
+.field textarea:disabled {
+  background: #f2f5f2;
+  color: #6f7f78;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.upload {
+  display: grid;
+  gap: 0.4rem;
+  justify-items: start;
+}
+
+.upload input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.upload span {
+  display: inline-flex;
+  min-height: 3rem;
+  align-items: center;
+  padding: 0.75rem 1.1rem;
+  border: 1px solid #0b7a6b;
+  border-radius: 0.75rem;
+  color: #07564b;
+  font-family: var(--font-display);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.upload input:focus-visible + span {
+  box-shadow: 0 0 0 3px rgba(11, 122, 107, 0.2);
+}
+
+.upload small {
+  color: #536860;
+  font-size: 0.8rem;
+}
+
+.upload small button {
+  margin-inline-start: 0.35rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #07564b;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.invalid {
+  padding: 0.75rem 1rem;
+  border: 1px solid #e0bd81;
+  border-radius: 0.75rem;
+  background: #fff8ea;
+}
+
+.invalid summary {
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.invalid ul {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.invalid li {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.invalid code {
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+.invalid span {
+  color: #70490c;
+  font-size: 0.85rem;
+}
+
+.invalid input {
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #b9c6be;
+  border-radius: 0.5rem;
+  font: inherit;
+}
+
+.channels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid #d5ded8;
+  border-radius: 0.75rem;
+}
+
+.channels legend {
+  padding: 0 0.35rem;
+  font-weight: 700;
+}
+
+.channels label {
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.primary,
+.secondary {
+  display: inline-flex;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.25rem;
+  border: 1px solid #0b7a6b;
+  border-radius: 0.75rem;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.primary {
+  background: #0b7a6b;
+  color: #fff;
+}
+
+.primary:disabled {
+  border-color: #b9c6be;
+  background: #e8ebe8;
+  color: #77837d;
+  cursor: not-allowed;
+}
+
+.secondary {
+  background: transparent;
+  color: #07564b;
+}
+
+.warning {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e0bd81;
+  border-radius: 0.75rem;
+  background: #fff3dc;
+  color: #70490c;
+}
+
+@media (max-width: 40rem) {
+  .inputRow {
+    grid-template-columns: 1fr;
+  }
+
+  .actions {
+    display: grid;
+  }
+}

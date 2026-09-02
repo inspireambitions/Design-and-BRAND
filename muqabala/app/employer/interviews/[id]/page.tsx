@@ -5,7 +5,10 @@ import { buildReportSummary, usableReportSummary, type ReportAnswer } from '@/li
 import { REPORT_ANSWER_COLUMNS, refreshReportSummary } from '@/lib/server/report-summary';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient, currentUser } from '@/lib/supabase/server';
+import { CandidateReview } from '@/components/CandidateReview';
 import { EmployerDeleteInterview } from '@/components/EmployerDeleteInterview';
+import { employerVolumeEnabled } from '@/lib/employer-volume';
+import { rankedCandidates } from '@/lib/server/employer-candidates';
 import { EmployerReportVideo } from '@/components/EmployerReportVideo';
 import { LoadTiming } from '@/components/LoadTiming';
 import styles from '../../EmployerDashboard.module.css';
@@ -25,12 +28,55 @@ export default async function EmployerInterviewReportPage({ params }: { params: 
   // One row carries the header and, for submissions since report_summary was
   // introduced, every answer card. RLS still limits this to the employer's packs.
   const { data: interview } = await client!.from('interviews')
-    .select('id,screening_pack_id,candidate_name,role_title,language,submitted_at,consented_at,report_summary')
+    .select('id,screening_pack_id,candidate_name,role_title,language,submitted_at,consented_at,report_summary,employer_reviewed_at')
     .eq('id', id)
     .in('screening_pack_id', packIds)
     .not('submitted_at', 'is', null)
     .maybeSingle();
   if (!interview) notFound();
+
+  if (employerVolumeEnabled()) {
+    // Volume flow: one candidate per screen, ranked within the role.
+    const roleId = interview.screening_pack_id as string;
+    const ranked = await rankedCandidates(client!, roleId);
+    const index = ranked.findIndex((candidate) => candidate.interviewId === id);
+    const current = ranked[index];
+    if (!current) notFound();
+    const nextCandidate = ranked.slice(index + 1).find((candidate) => !candidate.reviewedAt) ?? ranked[index + 1] ?? null;
+    const [{ data: decisionRows }, { data: shareRows }] = await Promise.all([
+      client!.from('employer_decisions').select('id,decision,note,created_at').eq('interview_id', id).order('created_at', { ascending: false }).limit(1),
+      client!.from('candidate_shares').select('id,created_at,expires_at,revoked_at,response,responded_at').eq('interview_id', id).order('created_at', { ascending: false }),
+    ]);
+    const latest = decisionRows?.[0];
+    const admin = createAdminClient();
+    if (admin && !interview.employer_reviewed_at) {
+      after(async () => {
+        await admin.from('interviews').update({ employer_reviewed_at: new Date().toISOString() }).eq('id', id).is('employer_reviewed_at', null);
+      });
+    }
+    return (
+      <>
+        <LoadTiming event="report_load_ms" />
+        <CandidateReview
+          interviewId={id}
+          roleId={roleId}
+          displayName={current.displayName}
+          roleTitle={current.roleTitle}
+          workplace={(packs ?? []).find((pack) => pack.id === roleId)?.workplace || 'Employer'}
+          submittedAt={current.submittedAt}
+          coverage={current.coverage}
+          answers={current.answers}
+          position={index + 1}
+          total={ranked.length}
+          nextId={nextCandidate?.interviewId ?? null}
+          latestDecision={latest ? { id: latest.id, decision: latest.decision, note: latest.note, createdAt: latest.created_at } : null}
+          shares={(shareRows ?? []).map((row) => ({
+            id: row.id, createdAt: row.created_at, expiresAt: row.expires_at, revokedAt: row.revoked_at, response: row.response, respondedAt: row.responded_at,
+          }))}
+        />
+      </>
+    );
+  }
 
   let answers: ReportAnswer[];
   const summary = usableReportSummary(interview.report_summary);

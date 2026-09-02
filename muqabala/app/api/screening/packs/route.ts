@@ -56,16 +56,17 @@ export async function POST(request: Request) {
   const expiresAt = new Date(Date.now() + parsed.data.expiryDays * 24 * 60 * 60 * 1000).toISOString();
   let code = publicCode();
   for (let attempt = 0; attempt < 5; attempt += 1) {
-    const { error } = await admin.from('screening_packs').insert({
+    const { data: created, error } = await admin.from('screening_packs').insert({
       public_code: code,
       signed_token: signedToken,
       workplace,
       employer_id: employer.id,
       expires_at: expiresAt,
       max_candidates: parsed.data.maxCandidates,
-    });
+    }).select('id').single();
     if (!error) {
       return Response.json({
+        id: created?.id,
         url: `${configuredOrigin()}/s/${code}`,
         title: role.title,
         workplace,

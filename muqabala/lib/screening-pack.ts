@@ -13,7 +13,7 @@ export const getScreeningPack = cache(async (code: string) => {
   if (!admin) return { status: 'unavailable' as const };
   const { data } = await admin
     .from('screening_packs')
-    .select('signed_token, workplace, expires_at, max_candidates, starts_used')
+    .select('id, signed_token, workplace, expires_at, max_candidates, starts_used')
     .eq('public_code', code)
     .not('employer_id', 'is', null)
     .maybeSingle();
@@ -27,6 +27,7 @@ export const getScreeningPack = cache(async (code: string) => {
 
   return {
     status: data.starts_used >= data.max_candidates ? 'full' as const : 'active' as const,
+    id: data.id as string,
     signedToken: data.signed_token,
     workplace: payload.workplace || data.workplace || '',
     recruiterName: payload.recruiterName,

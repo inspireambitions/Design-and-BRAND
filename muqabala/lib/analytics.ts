@@ -64,7 +64,27 @@ type EventName =
   | PracticeFlowEventName
   | 'plan_link_clicked'
   | 'second_session'
+  | EmployerVolumeEventName
   | TimingEventName;
+
+/**
+ * Employer volume events. Properties are role_id, channel, device and
+ * flag_state only. Candidate names, emails and phone numbers are never sent.
+ */
+export type EmployerVolumeEventName =
+  | 'employer_landing_viewed'
+  | 'sample_report_opened'
+  | 'role_created'
+  | 'invites_sent'
+  | 'reminder_sent'
+  | 'candidate_answered'
+  | 'shortlist_email_opened'
+  | 'review_started'
+  | 'decision_made'
+  | 'candidate_shared'
+  | 'summary_shared'
+  | 'export_downloaded'
+  | 'payment_completed';
 
 /** Practice flow milestones. Properties are role_id, mode and lang only. */
 export type PracticeFlowEventName =
@@ -111,7 +131,22 @@ type EventProps = Partial<{
   source: string;
   /** Day of the seven-day plan a link belonged to, 1 to 7. */
   day: number;
+  /** Employer volume: message channel, email or whatsapp. */
+  channel: 'email' | 'whatsapp' | 'both';
+  /** Employer volume: mobile, tablet, desktop or server. */
+  device: DeviceClass | 'server';
+  /** Employer volume: whether EMPLOYER_VOLUME was on when the event fired. */
+  flag_state: 'on' | 'off';
+  /** Employer volume: number of invites in a batch, never who. */
+  count: number;
+  /** Employer volume: decision type or export format. */
+  type: string;
 }>;
+
+/** Props shared by every employer volume event on the client. */
+export function employerVolumeProps(flagOn: boolean, extra: Omit<EventProps, 'device' | 'flag_state'> = {}): EventProps {
+  return { device: deviceClass(), flag_state: flagOn ? 'on' : 'off', ...extra };
+}
 
 export function track(event: EventName, props: EventProps = {}): void {
   if (!posthog) {

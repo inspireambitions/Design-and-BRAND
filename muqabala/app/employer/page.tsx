@@ -16,12 +16,17 @@ import {
 import { EmployerLinkActions } from '@/components/EmployerLinkActions';
 import { SignOutButton } from '@/components/SignOutButton';
 import { candidatePage, dashboardSummary, packHealth, type DashboardAnswer } from '@/lib/employer-dashboard';
+import { employerVolumeEnabled, whatsAppEnabled } from '@/lib/employer-volume';
+import { reminderOutcome, reminderOutcomeLine } from '@/lib/employer-volume/reminders';
+import { DEFAULT_MINUTES_PER_CV, actionLabel, responseRateLine, timeSavedLine } from '@/lib/employer-volume/strip';
+import { loadRoleStrip } from '@/lib/server/employer-role-strip';
+import { RoleCardTools } from '@/components/RoleCardTools';
 import { verifyInterview } from '@/lib/interview-token';
 import { configuredOrigin } from '@/lib/server/security';
 import { processScreeningNotifications } from '@/lib/server/screening-notifications';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient, currentUser } from '@/lib/supabase/server';
-import { reviewInterview, setEmployerDecision } from './actions';
+import { reviewInterview, setEmployerDecision, setMinutesPerCv, setRemindersEnabled } from './actions';
 import styles from './EmployerDashboard.module.css';
 
 export const dynamic = 'force-dynamic';
@@ -36,6 +41,19 @@ type Pack = {
   expires_at: string;
   max_candidates: number;
   starts_used: number;
+  reminders_enabled?: boolean | null;
+  minutes_per_cv?: number | null;
+};
+
+type InviteRow = {
+  id: string;
+  role_id: string;
+  status: string;
+  channel: string;
+  first_reminder_at: string | null;
+  second_reminder_at: string | null;
+  completion_reminder_at: string | null;
+  submitted_at: string | null;
 };
 
 // Every submission, light columns only: drives the counts and the queue order.
@@ -130,12 +148,24 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
   after(async () => { await processScreeningNotifications({ limit: 5 }); });
 
   const client = await createClient();
+  const volume = employerVolumeEnabled();
   const { data: packRows } = await client!.from('screening_packs')
-    .select('id,public_code,workplace,signed_token,created_at,expires_at,max_candidates,starts_used')
+    .select(`id,public_code,workplace,signed_token,created_at,expires_at,max_candidates,starts_used${volume ? ',reminders_enabled,minutes_per_cv' : ''}`)
     .eq('employer_id', user.id)
     .order('created_at', { ascending: false });
-  const packs = (packRows ?? []) as Pack[];
+  const packs = (packRows ?? []) as unknown as Pack[];
   const packIds = packs.map((pack) => pack.id);
+  const { data: inviteRows } = volume && packIds.length
+    ? await client!.from('role_invites')
+        .select('id,role_id,status,channel,first_reminder_at,second_reminder_at,completion_reminder_at,submitted_at')
+        .in('role_id', packIds)
+    : { data: [] };
+  const invites = (inviteRows ?? []) as InviteRow[];
+  const strips = new Map<string, Awaited<ReturnType<typeof loadRoleStrip>>>();
+  if (volume) {
+    for (const pack of packs.slice(0, 4)) strips.set(pack.id, await loadRoleStrip(client!, pack.id));
+  }
+  const whatsApp = whatsAppEnabled();
 
   const admin = createAdminClient();
   const { data: technicalInterviewRows } = admin && packIds.length
@@ -310,9 +340,54 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
               const unreviewed = packSubmissions.filter((submission) => !submission.employer_reviewed_at).length;
               const url = `${origin}/s/${pack.public_code}`;
               const nextInterview = packSubmissions.find((item) => !item.employer_reviewed_at);
+              const roleInvites = invites.filter((invite) => invite.role_id === pack.id);
+              const reminders = reminderOutcome(roleInvites);
+              const remindersOn = pack.reminders_enabled !== false;
               return (
                 <article className={styles.roleRow} role="row" key={pack.id}>
-                  <div role="cell"><strong>{role}</strong><small>{pack.workplace || 'Employer'}</small></div>
+                  <div role="cell">
+                    <strong>{role}</strong><small>{pack.workplace || 'Employer'}</small>
+                    {volume && (
+                      <div className={styles.reminderRow}>
+                        <form action={setRemindersEnabled}>
+                          <input type="hidden" name="roleId" value={pack.id} />
+                          <input type="hidden" name="enabled" value={remindersOn ? 'false' : 'true'} />
+                          <button type="submit" role="switch" aria-checked={remindersOn} className={styles.reminderToggle}>
+                            <span aria-hidden="true" />Reminders {remindersOn ? 'on' : 'off'}
+                          </button>
+                        </form>
+                        {reminders.reminded > 0 && <small>{reminderOutcomeLine(reminders)}</small>}
+                      </div>
+                    )}
+                    {volume && strips.get(pack.id) && (() => {
+                      const { strip, invites: roleInvitesForRate } = strips.get(pack.id)!;
+                      const minutes = typeof pack.minutes_per_cv === 'number' ? pack.minutes_per_cv : DEFAULT_MINUTES_PER_CV;
+                      return (
+                        <div className={styles.strip}>
+                          <dl className={styles.stripNumbers}>
+                            {([['Invited', strip.invited], ['Answered', strip.answered], ['Full coverage', strip.fullCoverage], ['Shortlisted', strip.shortlisted], ['Decided', strip.decided]] as const).map(([label, value]) => (
+                              <div key={label}><dt>{label}</dt><dd>{value}</dd></div>
+                            ))}
+                          </dl>
+                          {strip.unreviewed > 0 && nextInterview
+                            ? <form action={reviewInterview}><input type="hidden" name="interviewId" value={nextInterview.id} /><button type="submit" className={styles.stripAction}>{actionLabel(strip)}</button></form>
+                            : <Link href={`/employer/roles/${pack.id}/candidates/add`} className={styles.stripAction}>{actionLabel(strip)}</Link>}
+                          <form action={setMinutesPerCv} className={styles.timeSaved}>
+                            <span>{timeSavedLine(strip, minutes)}</span>
+                            <input type="hidden" name="roleId" value={pack.id} />
+                            <label>
+                              <span>at</span>
+                              <input type="number" name="minutes" min={0} max={120} defaultValue={minutes} aria-label="Minutes per CV" />
+                              <span>min per CV</span>
+                            </label>
+                            <button type="submit">Save</button>
+                          </form>
+                          {whatsApp && <small>{responseRateLine(roleInvitesForRate)}</small>}
+                          <RoleCardTools roleId={pack.id} roleTitle={role} />
+                        </div>
+                      );
+                    })()}
+                  </div>
                   <div role="cell" className={styles.roleJourney}><progress max={Math.max(1, pack.starts_used)} value={packSubmissions.length} aria-label={`${packSubmissions.length} of ${pack.starts_used} started interviews submitted`} /><small>{pack.starts_used} started · {packSubmissions.length} submitted{shortlisted ? ` · ${shortlisted} shortlisted` : ''}</small></div>
                   <div role="cell"><span className={`${styles.packStatus} ${statusClass(status)}`}>{packStatusCopy[status]}</span></div>
                   <div role="cell" className={status === 'closing' ? styles.closingDate : undefined}>{status === 'closing' && daysUntil(pack.expires_at) <= 1 ? 'Tomorrow' : formatCloseDate(pack.expires_at)}</div>
@@ -320,8 +395,13 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
                     {unreviewed > 0 && nextInterview ? (
                       <form action={reviewInterview}><input type="hidden" name="interviewId" value={nextInterview.id} /><button type="submit">Review {unreviewed} new</button></form>
                     ) : ['active', 'closing'].includes(status) && packSubmissions.length === 0 ? (
-                      <><a href={`mailto:?subject=${encodeURIComponent(`${role} interview invitation`)}&body=${encodeURIComponent(url)}`}><EnvelopeSimple aria-hidden="true" /> Invite candidates</a><EmployerLinkActions url={url} /></>
+                      volume
+                        ? <Link href={`/employer/roles/${pack.id}/candidates/add`}><EnvelopeSimple aria-hidden="true" /> Add candidates</Link>
+                        : <><a href={`mailto:?subject=${encodeURIComponent(`${role} interview invitation`)}&body=${encodeURIComponent(url)}`}><EnvelopeSimple aria-hidden="true" /> Invite candidates</a><EmployerLinkActions url={url} /></>
                     ) : packSubmissions.length > 0 ? <span className={styles.allReviewed}>All reviewed</span> : <span className={styles.allReviewed}>Link closed</span>}
+                    {volume && ['active', 'closing'].includes(status) && packSubmissions.length > 0 && (
+                      <Link href={`/employer/roles/${pack.id}/candidates/add`}>Add candidates</Link>
+                    )}
                   </div>
                 </article>
               );
