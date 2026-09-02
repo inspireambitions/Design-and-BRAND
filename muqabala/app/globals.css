@@ -211,7 +211,8 @@ a {
 .shell {
   max-width: 62rem;
   margin: 0 auto;
-  padding: 0 1.1rem 4rem;
+  /* Clear of phone browser toolbars and home indicators, so the last line is never half hidden. */
+  padding: 0 1.1rem calc(5rem + env(safe-area-inset-bottom, 0px));
 }
 
 .shell-narrow {
@@ -1800,14 +1801,20 @@ body[dir='rtl'] .account-intro h1 {
 
 .foot {
   margin-top: 3rem;
-  padding-top: 1.1rem;
+  padding: 1.1rem 0 0.5rem;
   border-top: 1px solid var(--line);
   font-size: 0.82rem;
+  line-height: 1.6;
   color: var(--ink-faint);
   display: flex;
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
+  overflow: visible;
+}
+
+.foot > span {
+  display: block;
 }
 
 /* ---------- hero ---------- */
