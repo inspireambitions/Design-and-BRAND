@@ -143,7 +143,7 @@ test('section 2: invites table is owner-scoped, tokens are hashed and the candid
   assert.match(candidatePage, /This link has closed/);
   const inviteToken = read('lib/server/invite-token.ts');
   assert.match(inviteToken, /aes-256-gcm/);
-  assert.doesNotMatch(read('lib/server/employer-messages.ts'), /token_hash.*link/);
+  assert.doesNotMatch(read('lib/server/employer-messages.ts'), /inviteLink\([^)]*token_hash/, 'invite links are built from the sealed token, never the hash');
 });
 
 test('section 2: add candidates screen renders the channel row only behind the WhatsApp flag', () => {
@@ -212,6 +212,107 @@ test('section 3: hourly cron is registered, gated by the flag and the toggle is 
   const dashboard = read('app/employer/page.tsx');
   assert.match(dashboard, /role="switch" aria-checked=\{remindersOn\}/);
   assert.match(dashboard, /reminderOutcomeLine\(reminders\)/);
+});
+
+test('section 4: rubric coverage is ticks from stored evidence, never a number, and orders candidates', async () => {
+  const { coverageFor, compareCandidates, coverageMarks } = await import('../lib/employer-volume/coverage.ts');
+  const competencies = [
+    { id: 'communication', label: 'Communication' },
+    { id: 'ownership', label: 'Ownership' },
+    { id: 'problem_solving', label: 'Problem solving' },
+    { id: 'evidence', label: 'Specific evidence' },
+    { id: 'customer_focus', label: 'Customer focus' },
+  ];
+  const scored = (pairs) => ({ feedback: { status: 'scored', competencies: pairs.map(([id, evidence]) => ({ id, evidence })) } });
+  const full = coverageFor(competencies, [
+    scored([['communication', 'I explained'], ['ownership', null]]),
+    scored([['ownership', 'I took charge'], ['problem_solving', 'I found a room']]),
+    scored([['evidence', 'twenty minutes'], ['customer_focus', 'the guest smiled']]),
+  ]);
+  assert.equal(full.total, 4, 'first four competencies only');
+  assert.equal(full.covered, 4);
+  assert.equal(full.full, true);
+  assert.equal(coverageMarks(full), '\u2713 \u2713 \u2713 \u2713');
+  assert.doesNotMatch(JSON.stringify(full), /\/100|"score"/, 'no number out of 100');
+
+  const partial = coverageFor(competencies, [scored([['communication', 'yes'], ['ownership', '  ']]), { feedback: { status: 'pending' } }]);
+  assert.equal(partial.covered, 1, 'blank evidence and pending answers do not count');
+  assert.equal(partial.full, false);
+
+  const list = [
+    { id: 'b', coverage: partial, submittedAt: '2026-09-01T10:00:00Z' },
+    { id: 'a', coverage: full, submittedAt: '2026-09-02T10:00:00Z' },
+    { id: 'c', coverage: coverageFor(competencies, [scored([['communication', 'x'], ['ownership', 'y'], ['problem_solving', 'z']])]), submittedAt: '2026-09-01T09:00:00Z' },
+    { id: 'd', coverage: full, submittedAt: '2026-09-01T08:00:00Z' },
+  ].sort(compareCandidates).map((item) => item.id);
+  assert.deepEqual(list, ['d', 'a', 'c', 'b'], 'full coverage first, then count, then earliest submission');
+});
+
+test('section 4: shortlist email subject, snippet, ordering and magic link', async () => {
+  const { shortlistSubject, shortlistText, shortlistHtml, firstAnswerSnippet, pickShortlistRows } = await import('../lib/employer-volume/shortlist-message.ts');
+  const cov = (n) => ({ items: Array.from({ length: 4 }, (_, i) => ({ id: String(i), label: 'x', labelAr: 'x', covered: i < n })), covered: n, total: 4, full: n === 4 });
+  const input = {
+    roleTitle: 'Receptionist', employerName: 'Nour Clinic', invited: 223, answered: 41, fullCoverage: 7,
+    rows: [{ displayName: 'Aisha R.', coverage: cov(4), firstAnswer: 'Hello there', openUrl: 'https://trymuqabala.com/auth/confirm?token_hash=abc&type=magiclink&next=%2Femployer%2Finterviews%2F1' }],
+  };
+  assert.equal(shortlistSubject(input), 'Receptionist: 41 answered, 7 to review');
+  assert.match(shortlistText(input), /223 invited\. 41 answered\. 7 with full rubric coverage\./);
+  assert.match(shortlistHtml(input), /auth\/confirm\?token_hash=abc&amp;type=magiclink/);
+  assert.doesNotMatch(shortlistHtml(input), /\/100/);
+  assert.equal(firstAnswerSnippet('a'.repeat(200)).length, 93, '90 characters plus an ellipsis');
+  assert.equal(firstAnswerSnippet('  short   answer '), 'short answer');
+  const picked = pickShortlistRows(Array.from({ length: 14 }, (_, i) => ({ id: i, coverage: cov(i % 5), submittedAt: `2026-09-0${(i % 9) + 1}T00:00:00Z` })));
+  assert.equal(picked.length, 10);
+  assert.ok(picked[0].coverage.covered >= picked[9].coverage.covered);
+
+  const sender = read('lib/server/employer-messages.ts');
+  assert.match(sender, /generateLink\(\{\s*type: 'magiclink'/);
+  assert.match(sender, /token_hash=\$\{encodeURIComponent\(hashed\)\}&type=magiclink&next=/);
+  const scheduler = read('lib/server/employer-shortlist.ts');
+  assert.match(scheduler, /SHORTLIST_AFTER_HOURS = 48/);
+  assert.match(scheduler, /if \(!submissions\) continue/, 'only when at least one submission exists');
+  assert.match(scheduler, /shortlist_close_sent_at/);
+  const preview = read('app/dev/email/shortlist/route.ts');
+  assert.match(preview, /if \(process\.env\.NODE_ENV === 'production'\) notFound\(\)/);
+});
+
+test('section 4: decisions are logged with reviewer, undo deletes the row, and the review screen is one candidate', () => {
+  const actions = read('app/employer/actions.ts');
+  assert.match(actions, /from\('employer_decisions'\)\s*\.insert\(\{ interview_id: owned\.interviewId, role_id: owned\.roleId, reviewer_id: owned\.userId, decision: input\.decision, note \}\)/);
+  assert.match(actions, /export async function undoDecision/);
+  assert.match(actions, /from\('employer_decisions'\)\s*\.delete\(\)/);
+  assert.match(actions, /export async function createCandidateShare/);
+  assert.match(actions, /7 \* 24 \* 60 \* 60 \* 1000/);
+  assert.match(actions, /\/c\/\$\{token\}/);
+
+  const review = read('components/CandidateReview.tsx');
+  assert.match(review, /const UNDO_MS = 10_000/);
+  assert.match(review, /decide\('shortlist'\)[\s\S]*decide\('pass'\)[\s\S]*decide\('later'\)/);
+  assert.match(review, /start - end > 80\) goNext\(\)/, 'swipe left advances');
+  assert.match(review, /maxLength=\{280\}/);
+  assert.doesNotMatch(review, /\/100/);
+  const css = read('components/CandidateReview.module.css');
+  assert.match(css, /\.decisionBar \{[\s\S]*position: fixed;[\s\S]*bottom: 0;/);
+  assert.match(css, /width: min\(100% - 2rem, 40rem\)/, 'centred at 640px on desktop');
+
+  const migration = read('supabase/migrations/20260902140000_employer_volume_review.sql');
+  assert.match(migration, /create table if not exists public\.employer_decisions/);
+  assert.match(migration, /decision in \('shortlist', 'pass', 'later'\)/);
+  assert.match(migration, /create table if not exists public\.candidate_shares/);
+  assert.match(migration, /response in \('recommend', 'not_this_one'\)/);
+  assert.match(migration, /revoke all on public\.candidate_shares from public, anon, authenticated/);
+});
+
+test('section 4: shared page is public, shows no contact details and closes when revoked', () => {
+  const page = read('app/c/[token]/page.tsx');
+  assert.match(page, /if \(share\.revoked_at \|\| new Date\(share\.expires_at\)\.getTime\(\) <= Date\.now\(\)\) return <Closed \/>/);
+  assert.match(page, /This link has closed/);
+  assert.doesNotMatch(page, /email|phone/i, 'no contact details are selected or rendered');
+  assert.doesNotMatch(page, /currentUser|redirect\('\/sign-in/, 'no login step');
+  assert.doesNotMatch(page, /\/100/);
+  const respond = read('app/api/c/[token]/respond/route.ts');
+  assert.match(respond, /\.is\('revoked_at', null\)/);
+  assert.match(respond, /status: 410/);
 });
 
 test('no em dashes in employer volume copy or docs', () => {

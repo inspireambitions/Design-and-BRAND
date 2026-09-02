@@ -5,6 +5,16 @@ import { notificationRetry } from '@/lib/screening-notification-policy';
 import { whatsAppEnabled } from '@/lib/employer-volume';
 import { inviteHtml, inviteSubject, inviteText } from '@/lib/employer-volume/invite-message';
 import { reminderHtml, reminderSubject, reminderText, type ReminderKind } from '@/lib/employer-volume/reminder-message';
+import {
+  firstAnswerSnippet,
+  pickShortlistRows,
+  shortlistHtml,
+  shortlistSubject,
+  shortlistText,
+  type ShortlistInput,
+  type ShortlistRow,
+} from '@/lib/employer-volume/shortlist-message';
+import { rankedCandidates } from '@/lib/server/employer-candidates';
 import { configuredOrigin } from '@/lib/server/security';
 import { openToken } from '@/lib/server/invite-token';
 import { verifyInterview } from '@/lib/interview-token';
@@ -35,6 +45,58 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export function inviteLink(publicCode: string, token: string): string {
   return `${configuredOrigin()}/s/${publicCode}?i=${token}`;
+}
+
+/**
+ * Shortlist email for one role. Each Open link is a Supabase magic link whose
+ * `next` lands on that candidate in the review screen, so the employer signs in
+ * and arrives with no password step.
+ */
+async function buildShortlistForRole(
+  admin: NonNullable<ReturnType<typeof createAdminClient>>,
+  roleId: string,
+  roleTitle: string,
+  employerName: string,
+): Promise<{ to: string; subject: string; text: string; html: string } | null> {
+  const { data: pack } = await admin.from('screening_packs').select('employer_id').eq('id', roleId).maybeSingle();
+  if (!pack?.employer_id) return null;
+  const { data: userData } = await admin.auth.admin.getUserById(pack.employer_id as string);
+  const to = userData.user?.email;
+  if (!to || !userData.user?.email_confirmed_at) return null;
+
+  const candidates = await rankedCandidates(admin, roleId);
+  if (candidates.length === 0) return null;
+  const { count: invited } = await admin.from('role_invites').select('id', { count: 'exact', head: true }).eq('role_id', roleId);
+
+  const rows: ShortlistRow[] = [];
+  for (const candidate of pickShortlistRows(candidates)) {
+    const next = `/employer/interviews/${candidate.interviewId}`;
+    const { data: linkData } = await admin.auth.admin.generateLink({
+      type: 'magiclink',
+      email: to,
+      options: { redirectTo: `${configuredOrigin()}/auth/confirm?next=${encodeURIComponent(next)}` },
+    });
+    const hashed = linkData?.properties?.hashed_token;
+    const openUrl = hashed
+      ? `${configuredOrigin()}/auth/confirm?token_hash=${encodeURIComponent(hashed)}&type=magiclink&next=${encodeURIComponent(next)}`
+      : `${configuredOrigin()}${next}`;
+    rows.push({
+      displayName: candidate.displayName,
+      coverage: candidate.coverage,
+      firstAnswer: firstAnswerSnippet(candidate.answers[0]?.transcript),
+      openUrl,
+    });
+  }
+
+  const input: ShortlistInput = {
+    roleTitle,
+    employerName,
+    invited: invited ?? 0,
+    answered: candidates.length,
+    fullCoverage: candidates.filter((candidate) => candidate.coverage.full).length,
+    rows,
+  };
+  return { to, subject: shortlistSubject(input), text: shortlistText(input), html: shortlistHtml(input) };
 }
 
 /** Drains the employer message outbox. The invite link is rebuilt from the sealed token on each send. */
@@ -94,7 +156,8 @@ export async function processEmployerMessages(options: { roleId?: string; limit?
       failed += 1;
       continue;
     }
-    if (new Date(pack.expires_at).getTime() <= Date.now()) {
+    // The closing shortlist email is the one message that goes out after the role closes.
+    if (job.kind !== 'shortlist' && new Date(pack.expires_at).getTime() <= Date.now()) {
       await mark(job, { status: 'cancelled', locked_until: null, lease_token: null, last_error_code: 'role_closed' });
       failed += 1;
       continue;
@@ -115,15 +178,22 @@ export async function processEmployerMessages(options: { roleId?: string; limit?
     let subject: string;
     let text: string;
     let html: string;
+    let recipientEmail: string = inviteRow?.email ?? '';
     if (job.kind === 'invite') {
       subject = inviteSubject(message);
       text = inviteText(message);
       html = inviteHtml(message);
     } else if (job.kind === 'shortlist') {
-      // Built by the shortlist module in section 4; skipped until then.
-      await mark(job, { status: 'cancelled', locked_until: null, lease_token: null, last_error_code: 'not_implemented' });
-      failed += 1;
-      continue;
+      const built = await buildShortlistForRole(admin, pack.id, roleTitle, pack.workplace || 'Your team');
+      if (!built) {
+        await mark(job, { status: 'cancelled', locked_until: null, lease_token: null, last_error_code: 'no_recipient' });
+        failed += 1;
+        continue;
+      }
+      subject = built.subject;
+      text = built.text;
+      html = built.html;
+      recipientEmail = built.to;
     } else {
       const kind = job.kind as ReminderKind;
       subject = reminderSubject(kind, message);
@@ -142,7 +212,7 @@ export async function processEmployerMessages(options: { roleId?: string; limit?
         },
         body: JSON.stringify({
           from: 'Muqabala <hello@auth.trymuqabala.com>',
-          to: [inviteRow!.email],
+          to: [recipientEmail],
           reply_to: 'hello@trymuqabala.com',
           subject,
           text,
