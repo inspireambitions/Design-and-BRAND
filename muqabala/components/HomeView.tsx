@@ -45,6 +45,14 @@ export function HomeView({ roles }: { roles: RoleCard[] }) {
 
       <AdvertPasteBox />
 
+      {process.env.NEXT_PUBLIC_UNIVERSAL_BRAIN_V2 === 'on' && <section className="card row-between brain-entry-card">
+        <div>
+          <h2>{t('brainTryV2')}</h2>
+          <p className="muted">{t('brainTryV2Body')}</p>
+        </div>
+        <Link href="/practice/universal" className="btn btn-primary">{t('brainTryV2')}</Link>
+      </section>}
+
       <section className="stack" id="popular-roles" aria-labelledby="popular-roles-heading">
         <div>
           <h2 id="popular-roles-heading">{browseAll ? t('allRoles') : t('landingRolesHeading')}</h2>

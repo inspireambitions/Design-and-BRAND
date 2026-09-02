@@ -1963,6 +1963,146 @@ body[dir='rtl'] .account-intro h1 {
   color: var(--ink-faint);
 }
 
+/* ---------- Universal Interview Brain V2 ---------- */
+.universal-brain {
+  padding-bottom: 5rem;
+}
+
+.brain-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.brain-check-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+}
+
+.brain-check-row label,
+.brain-competency {
+  cursor: pointer;
+}
+
+.brain-competency-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.brain-competency {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.brain-competency.selected {
+  border-color: var(--jade);
+  background: var(--jade-soft);
+}
+
+.brain-competency span {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.brain-competency small {
+  color: var(--ink-muted);
+}
+
+.brain-question {
+  font-size: clamp(1.35rem, 4vw, 1.8rem);
+  line-height: 1.25;
+}
+
+.brain-answer {
+  min-height: 12rem;
+}
+
+.brain-video-capture {
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-sunk);
+}
+
+.brain-video-heading {
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.brain-video-heading h3,
+.brain-video-heading p,
+.brain-video-capture > p {
+  margin: 0;
+}
+
+.brain-video-frame {
+  width: min(100%, 34rem);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: calc(var(--radius) - 4px);
+  background: #08110f;
+  aspect-ratio: 16 / 9;
+}
+
+.brain-video-frame video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.brain-recording-live {
+  flex: 0 0 auto;
+  padding: 0.35rem 0.55rem;
+  border-radius: 999px;
+  background: #9f1d27;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+.brain-video-actions {
+  flex-wrap: wrap;
+}
+
+.brain-feedback-block {
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+.brain-feedback-block h3,
+.brain-feedback-block p,
+.brain-entry-card p {
+  margin: 0;
+}
+
+.brain-before-after {
+  gap: 1rem;
+}
+
+@media (max-width: 640px) {
+  .brain-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .brain-entry-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .brain-video-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
 /* ---------- post-interview rating ---------- */
 
 .rate-label {

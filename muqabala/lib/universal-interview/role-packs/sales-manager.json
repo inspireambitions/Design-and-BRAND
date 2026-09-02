@@ -1,0 +1,22 @@
+{
+  "role": "Sales Manager",
+  "version": "1.0",
+  "implicit_competencies": ["c_commercial_judgement", "c_coaching"],
+  "core_competencies": ["c_sales_delivery", "c_leadership"],
+  "question_bank": [
+    {
+      "text": "Tell me about a sales target your team missed and what you changed.",
+      "question_type": "COMMERCIAL",
+      "target_competencies": ["c_sales_delivery", "c_commercial_judgement"],
+      "intent": "SALES_RECOVERY"
+    },
+    {
+      "text": "How did you help an underperforming salesperson improve?",
+      "question_type": "LEADERSHIP",
+      "target_competencies": ["c_coaching"],
+      "intent": "PEOPLE_COACHING"
+    }
+  ],
+  "assessment_type": "COMPETENCY",
+  "technical_reference": null
+}

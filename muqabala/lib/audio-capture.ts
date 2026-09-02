@@ -55,25 +55,8 @@ export function isAudioCaptureSupported(): boolean {
   );
 }
 
-/**
- * Opens a microphone-only stream and starts recording it. Resolves null when
- * the microphone was refused or the browser cannot record audio; the caller
- * then falls back to typing.
- */
-export async function startAudioCapture(): Promise<AudioCapture | null> {
-  if (!isAudioCaptureSupported()) return null;
-
-  let stream: MediaStream;
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-  } catch {
-    return null;
-  }
-  // Belt and braces: even a misbehaving browser must not hand us a camera.
-  if (stream.getVideoTracks().length > 0) {
-    stream.getTracks().forEach((track) => track.stop());
-    return null;
-  }
+function createAudioCapture(stream: MediaStream, releaseTracks: boolean): AudioCapture | null {
+  if (!stream.getAudioTracks().some((track) => track.readyState === 'live')) return null;
 
   const mimeType = pickAudioMimeType((type) => MediaRecorder.isTypeSupported(type));
   let recorder: MediaRecorder;
@@ -82,7 +65,7 @@ export async function startAudioCapture(): Promise<AudioCapture | null> {
       ? new MediaRecorder(stream, { mimeType, audioBitsPerSecond: AUDIO_BITS_PER_SECOND })
       : new MediaRecorder(stream, { audioBitsPerSecond: AUDIO_BITS_PER_SECOND });
   } catch {
-    stream.getTracks().forEach((track) => track.stop());
+    if (releaseTracks) stream.getTracks().forEach((track) => track.stop());
     return null;
   }
 
@@ -93,11 +76,10 @@ export async function startAudioCapture(): Promise<AudioCapture | null> {
   };
 
   const releaseStream = () => {
-    stream.getTracks().forEach((track) => track.stop());
+    if (releaseTracks) stream.getTracks().forEach((track) => track.stop());
   };
 
   try {
-    // A one second timeslice makes the final chunk reliable on mobile browsers.
     recorder.start(1000);
   } catch {
     releaseStream();
@@ -164,4 +146,38 @@ export async function startAudioCapture(): Promise<AudioCapture | null> {
       releaseStream();
     },
   };
+}
+
+/**
+ * Records the audio track from an existing camera stream. The source tracks
+ * remain owned by the caller, so stopping this recorder never turns off the
+ * preview. This avoids a second permission prompt during a video answer.
+ */
+export function startAudioCaptureFromStream(source: MediaStream): AudioCapture | null {
+  if (!isAudioCaptureSupported()) return null;
+  const audioTracks = source.getAudioTracks().filter((track) => track.readyState === 'live');
+  if (audioTracks.length === 0) return null;
+  return createAudioCapture(new MediaStream(audioTracks), false);
+}
+
+/**
+ * Opens a microphone-only stream and starts recording it. Resolves null when
+ * the microphone was refused or the browser cannot record audio; the caller
+ * then falls back to typing.
+ */
+export async function startAudioCapture(): Promise<AudioCapture | null> {
+  if (!isAudioCaptureSupported()) return null;
+
+  let stream: MediaStream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+  } catch {
+    return null;
+  }
+  // Belt and braces: even a misbehaving browser must not hand us a camera.
+  if (stream.getVideoTracks().length > 0) {
+    stream.getTracks().forEach((track) => track.stop());
+    return null;
+  }
+  return createAudioCapture(stream, true);
 }

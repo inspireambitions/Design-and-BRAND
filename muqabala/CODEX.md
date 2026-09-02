@@ -254,6 +254,15 @@ URL is Vercel-protected, so run future public gates against `https://trymuqabala
 
 ## 5. Known gaps / roadmap
 
+### Universal Interview Brain V2
+
+The approved text-only adaptive engine is implemented on branch
+`codex/universal-interview-brain-v2-20260902` behind
+`NEXT_PUBLIC_UNIVERSAL_BRAIN_V2=off`. Its hand-off and release checklist are in
+`docs/universal-interview-brain-v2.md`. Do not enable or merge it as a production
+feature until the 300-turn human gold set, open product decisions, staging migration,
+external testing and latency gate are complete.
+
 **Shipped:** 69 roles across 20 industries plus a catch-all interview for any job, bilingual EN/AR with RTL, camera + live transcript,
 unlimited retries, evidence-based feedback, progress tracking, accounts + Supabase persistence,
 private report sharing, employer-issued video work samples with an owner-only Evidence Desk,

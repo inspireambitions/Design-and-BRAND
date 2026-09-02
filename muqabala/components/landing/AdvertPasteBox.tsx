@@ -10,7 +10,7 @@ import { InterviewPackAsk } from './InterviewPackAsk';
 
 /**
  * The primary start path on /practice. The pasted advert is handed to
- * /practice/custom through the sessionStorage draft, which builds the
+ * /practice/universal through the sessionStorage draft, which builds the
  * interview as soon as it mounts. Before that handoff the candidate is asked,
  * once, where to send their interview pack.
  */
@@ -28,10 +28,13 @@ export function AdvertPasteBox() {
   const usable = advertUsable(trimmed);
 
   const handOver = () => {
+    const destination = process.env.NEXT_PUBLIC_UNIVERSAL_BRAIN_V2 === 'on'
+      ? '/practice/universal'
+      : '/practice/custom';
     setLeaving(true);
-    router.prefetch('/practice/custom');
+    router.prefetch(destination);
     saveHeroDraft({ jobTitle: '', jobText: trimmed });
-    router.push('/practice/custom');
+    router.push(destination);
   };
 
   const continueToInterview = () => {

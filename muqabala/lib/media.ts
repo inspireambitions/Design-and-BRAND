@@ -46,6 +46,8 @@ export type RecordedVideo = {
 
 export type VideoAnswerRecorder = {
   stop: () => Promise<RecordedVideo | null>;
+  /** Stops recording and drops every captured chunk. */
+  discard: () => void;
 };
 
 function baseVideoMimeType(value: string | undefined): RecordedVideo['mimeType'] {
@@ -79,10 +81,11 @@ export function startVideoAnswerRecording(stream: MediaStream): VideoAnswerRecor
     return null;
   }
 
-  const chunks: BlobPart[] = [];
+  let chunks: BlobPart[] = [];
+  let discarded = false;
   const startedAt = Date.now();
   recorder.ondataavailable = (event) => {
-    if (event.data?.size) chunks.push(event.data);
+    if (!discarded && event.data?.size) chunks.push(event.data);
   };
   try {
     recorder.start(1000);
@@ -97,13 +100,16 @@ export function startVideoAnswerRecording(stream: MediaStream): VideoAnswerRecor
         return;
       }
       recorder.onstop = () => {
-        if (chunks.length === 0) {
+        if (discarded || chunks.length === 0) {
+          chunks = [];
           resolve(null);
           return;
         }
         const mimeType = baseVideoMimeType(recorder.mimeType || selectedMimeType);
+        const blob = new Blob(chunks, { type: mimeType });
+        chunks = [];
         resolve({
-          blob: new Blob(chunks, { type: mimeType }),
+          blob,
           mimeType,
           durationSeconds: Math.max(1, Math.min(120, Math.ceil((Date.now() - startedAt) / 1000))),
         });
@@ -115,6 +121,17 @@ export function startVideoAnswerRecording(stream: MediaStream): VideoAnswerRecor
         resolve(null);
       }
     }),
+    discard: () => {
+      discarded = true;
+      chunks = [];
+      recorder.ondataavailable = null;
+      recorder.onstop = null;
+      try {
+        if (recorder.state !== 'inactive') recorder.stop();
+      } catch {
+        /* already stopped */
+      }
+    },
   };
 }
 

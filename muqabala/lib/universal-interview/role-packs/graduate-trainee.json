@@ -1,0 +1,22 @@
+{
+  "role": "Graduate Trainee",
+  "version": "1.0",
+  "implicit_competencies": ["c_learning_agility", "c_teamwork"],
+  "core_competencies": ["c_motivation", "c_problem_solving"],
+  "question_bank": [
+    {
+      "text": "Tell me about something difficult you had to learn quickly.",
+      "question_type": "BEHAVIOURAL",
+      "target_competencies": ["c_learning_agility"],
+      "intent": "LEARNING_AGILITY"
+    },
+    {
+      "text": "Describe a university, volunteer, or personal project where you solved a problem.",
+      "question_type": "BEHAVIOURAL",
+      "target_competencies": ["c_problem_solving"],
+      "intent": "EARLY_CAREER_EVIDENCE"
+    }
+  ],
+  "assessment_type": "COMPETENCY",
+  "technical_reference": null
+}
