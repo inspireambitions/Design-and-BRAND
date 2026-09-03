@@ -1,0 +1,10 @@
+.page { display: grid; min-height: 75dvh; place-items: center; padding: 2rem 1rem; background: #f2f4f1; color: #14221d; }
+.card { display: grid; width: min(100%, 31rem); gap: 1rem; padding: clamp(1.5rem, 6vw, 3rem); border: 1px solid #d8ddd9; border-radius: 1.1rem; background: #fff; box-shadow: 0 24px 70px rgba(23,43,36,.09); }
+.card > p { margin: 0; color: #08705e; font-size: .7rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.card h1 { margin: 0; font: 800 clamp(2rem, 8vw, 3rem)/.98 var(--font-display); letter-spacing: -.05em; }
+.card > span { color: #61706a; font-size: .85rem; line-height: 1.55; }
+.card label { display: grid; gap: .4rem; font-size: .75rem; font-weight: 700; }
+.card input { min-height: 3rem; border: 1px solid #c8d4cf; border-radius: .6rem; padding: .7rem; font: inherit; }
+.card button { min-height: 3rem; border: 0; border-radius: 999px; background: #08705e; color: #fff; font: 800 .82rem/1 var(--font-body); cursor: pointer; }
+.card button:disabled { cursor: wait; opacity: .6; }
+.card small { color: #8b321e; }

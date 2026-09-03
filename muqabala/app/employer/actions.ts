@@ -118,6 +118,7 @@ export async function recordDecision(input: { interviewId: string; decision: Vol
   if (error || typeof data !== 'string') return { error: 'The decision could not be saved. Try again.' };
   revalidatePath('/employer');
   revalidatePath(`/employer/interviews/${owned.interviewId}`);
+  revalidatePath(`/employer/candidates/${owned.interviewId}/evaluation`);
   return { id: data };
 }
 
@@ -137,6 +138,7 @@ export async function undoDecision(input: { interviewId: string; decisionId: str
   if (removed !== true) return { error: 'Nothing to undo.' };
   revalidatePath('/employer');
   revalidatePath(`/employer/interviews/${owned.interviewId}`);
+  revalidatePath(`/employer/candidates/${owned.interviewId}/evaluation`);
   return { ok: true };
 }
 

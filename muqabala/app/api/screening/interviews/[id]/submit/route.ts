@@ -6,9 +6,11 @@ import { hasTrustedOrigin, privateNoStoreHeaders, screeningReceiptReference } fr
 import { processScreeningNotifications } from '@/lib/server/screening-notifications';
 import { trackServer } from '@/lib/server/analytics';
 import { employerVolumeEnabled } from '@/lib/employer-volume';
+import { generateCandidateEvaluationReport } from '@/lib/server/evaluation-report';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   if (!hasTrustedOrigin(request)) return Response.json({ error: 'Invalid request origin.' }, { status: 403 });
@@ -38,7 +40,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (interview.screening_pack_id) {
     trackServer('candidate_answered', { role_id: interview.screening_pack_id, flag_state: employerVolumeEnabled() ? 'on' : 'off' });
   }
-  after(async () => { await processScreeningNotifications({ interviewId: id, limit: 2 }); });
+  after(async () => {
+    await Promise.allSettled([
+      processScreeningNotifications({ interviewId: id, limit: 2 }),
+      generateCandidateEvaluationReport(id),
+    ]);
+  });
   return Response.json({
     submitted: true,
     submittedAt,

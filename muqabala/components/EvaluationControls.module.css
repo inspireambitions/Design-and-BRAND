@@ -1,0 +1,28 @@
+.controls { display: grid; grid-template-columns: 1.2fr .8fr 1fr; gap: 1rem; width: min(100%, 74rem); margin: 1rem auto 0; }
+.block { display: flex; min-width: 0; flex-direction: column; align-items: start; gap: .7rem; padding: 1rem; border: 1px solid #d8ddd9; border-radius: .85rem; background: #fff; }
+.heading { display: flex; gap: .7rem; }
+.heading > svg { flex: 0 0 auto; width: 1.15rem; height: 1.15rem; margin-top: .1rem; color: #08705e; }
+.heading h2 { margin: 0; font: 780 .95rem/1.15 var(--font-display); }
+.heading p { margin: .3rem 0 0; color: #697771; font-size: .72rem; line-height: 1.4; }
+.block textarea { width: 100%; min-height: 5rem; resize: vertical; border: 1px solid #cbd5d1; border-radius: .55rem; padding: .65rem; font: inherit; }
+.block label { display: flex; align-items: center; gap: .5rem; color: #53635d; font-size: .75rem; }
+.block select { min-height: 2.25rem; border: 1px solid #cbd5d1; border-radius: .45rem; background: #fff; padding-inline: .45rem; }
+.block > button, .button, .copy button, .shares button { display: inline-flex; min-height: 2.5rem; align-items: center; justify-content: center; gap: .35rem; border: 0; border-radius: 999px; background: #08705e; color: #fff; padding: .55rem 1rem; font: 750 .74rem/1 var(--font-body); text-decoration: none; cursor: pointer; }
+.block button:disabled { cursor: not-allowed; opacity: .48; }
+.block small { color: #7e5a11; font-size: .68rem; }
+.copy { display: grid; grid-template-columns: minmax(0, 1fr) auto; width: 100%; gap: .5rem; }
+.copy code { overflow: hidden; padding: .6rem; border-radius: .45rem; background: #f0f4f2; font-size: .62rem; text-overflow: ellipsis; white-space: nowrap; }
+.copy button { min-height: 2.2rem; padding-inline: .7rem; }
+.copy svg, .shares svg { width: .85rem; height: .85rem; }
+.shares { display: grid; width: 100%; gap: .4rem; margin: 0; padding: 0; list-style: none; }
+.shares li { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding-top: .5rem; border-top: 1px solid #edf0ee; font-size: .7rem; }
+.shares button { min-height: 2rem; background: #fff1ed; color: #8b321e; padding-inline: .65rem; }
+.message { grid-column: 1 / -1; margin: 0; padding: .7rem 1rem; border-radius: .55rem; background: #e3f3ed; color: #075d4d; font-size: .75rem; }
+.versionBlock { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .8rem 1rem; border: 1px dashed #bdcbc6; border-radius: .75rem; background: #f7faf8; }
+.versionBlock div { display: grid; gap: .2rem; }
+.versionBlock strong { font-size: .8rem; }
+.versionBlock span { color: #68756f; font-size: .7rem; }
+.versionBlock button { min-height: 2.35rem; flex: 0 0 auto; border: 1px solid #9fb7ae; border-radius: 999px; background: #fff; color: #075d4d; padding-inline: .9rem; font-weight: 750; cursor: pointer; }
+.versionBlock button:disabled { opacity: .5; }
+@media (max-width: 850px) { .controls { grid-template-columns: 1fr; } }
+@media print { .controls { display: none; } }

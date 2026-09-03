@@ -98,6 +98,23 @@ export async function loadStoredInterview(interviewId: string): Promise<Intervie
   return authorised ? upgradeStoredQuestionState(openInterviewState(data.state_ciphertext)) : null;
 }
 
+/**
+ * Service-only reader for a stored employer interview. Callers must establish
+ * interview ownership before returning any derived data to a browser.
+ */
+export async function loadStoredInterviewForReporting(interviewId: string): Promise<InterviewState | null> {
+  const admin = createAdminClient();
+  if (!admin) return null;
+  const { data } = await admin
+    .from('universal_interviews')
+    .select('state_ciphertext')
+    .eq('id', interviewId)
+    .maybeSingle<{ state_ciphertext: string }>();
+  return data?.state_ciphertext
+    ? upgradeStoredQuestionState(openInterviewState(data.state_ciphertext))
+    : null;
+}
+
 export async function releaseInterviewClaim(interviewId: string, claim: string): Promise<void> {
   const admin = createAdminClient();
   if (!admin) return;

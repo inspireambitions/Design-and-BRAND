@@ -63,7 +63,7 @@ For new employer recordings, `app/api/transcribe/route.ts` requests `whisper-1` 
 
 ### Live schema confirmation
 
-The live Supabase schema was checked read-only on 3 September 2026. There is no evidence-record table or evidence-level timestamp/transcript-span column. `video_duration_seconds` is only the length of the whole recording. `response_saved_at` is a wall-clock save time and cannot identify where evidence occurs in a recording.
+The live Supabase schema was checked again on 3 September 2026 after the timed-evidence migration. `public.interview_evidence_records`, `interview_answers.transcript_segments` and `interview_answers.transcript_timing_version` are present. Anonymous and ordinary authenticated roles cannot read the evidence table. `video_duration_seconds` remains the recording bound used to reject an invalid timestamp.
 
 ## 2. Required evidence identity check
 
@@ -85,9 +85,9 @@ The Phase 1 gate now passes for new employer interviews that receive timed trans
 - `createCandidateShare()`: creates a seven-day token link in `public.candidate_shares`.
 - `revokeCandidateShare()`: timestamps `revoked_at` on the matching share.
 
-The current share model has creation, expiry, revocation and optional colleague response fields. It does not require a viewer email and does not log every open. It is therefore not sufficient for the proposed evaluation-report sharing rules.
+The older candidate-share model remains for the recording-review screen. Evaluation reports use separate `evaluation_report_shares` and `evaluation_report_access_log` tables. A viewer email is required, stored encrypted with a separate hash, and every open is recorded.
 
-Employer notes currently live inside `public.employer_decisions.note`. They are attributed through `reviewer_id` and timestamped through `created_at`, but there is no separate append-only report-note model or 24-hour edit rule.
+Evaluation notes now use `evaluation_report_notes`. The application exposes insert and read only. It never edits or deletes a note, which is stricter than the requested 24-hour lock.
 
 ## 4. Existing exports
 
@@ -97,18 +97,13 @@ The role-level export endpoint is `app/api/employer/roles/[roleId]/export/route.
 - PDF uses `buildPdf()` from `lib/employer-volume/pdf.ts`.
 - Export events are stored in `public.export_log` with employer ID, role ID, format and time.
 
-The PDF renderer is a minimal server-side text PDF writer. It is not an HTML-to-PDF renderer and cannot directly reuse the attached HTML and print CSS. The current PDF is a role summary, not a stored, versioned candidate evaluation.
+The PDF renderer is a minimal server-side text PDF writer. It now accepts compact line height and indentation while keeping existing role exports unchanged. `lib/evaluation-report-pdf.ts` builds the candidate PDF only from the validated stored report object.
 
 ## 5. Employer candidate page and buttons
 
-`app/employer/page.tsx` contains the candidate actions:
+`app/employer/page.tsx` now uses `Watch recording` for a new submission and `View evaluation` after review. The evaluation action opens `/employer/candidates/<id>/evaluation`.
 
-- the new-submission list uses `Watch`
-- the submitted-interview list uses `Open` after review and `Watch` before review
-
-Both actions call `reviewInterview()` and open `/employer/interviews/<id>`.
-
-The volume review screen is `components/CandidateReview.tsx`. It shows rubric ticks, recordings, whole transcripts, sharing and decision controls. It does not show a stored candidate evaluation object.
+The volume review screen remains the recording-first view and now links directly to the stored evaluation.
 
 The alternative report view in `app/employer/interviews/[id]/page.tsx` renders AI-written feedback and numeric scores. Those fields cannot be reused for this brief because the proposed schema forbids scores and requires every line to cite a timed evidence record.
 
@@ -116,7 +111,7 @@ The alternative report view in `app/employer/interviews/[id]/page.tsx` renders A
 
 `lib/marketing-content.ts` contains `volumeSecondary: 'See a real report'`.
 
-`components/EmployerProofCreate.tsx` links that call to `#sample-report`. The section currently displays `/samples/employer-report.png` when the asset exists. It does not link to a public, fixture-backed evaluation-report route.
+`components/EmployerProofCreate.tsx` now links that call to `/for-employers/sample-report`. The route renders fictional fixture data through the same report component and carries a visible sample banner.
 
 ## 7. Evidence foundation added before Phase 2
 
@@ -130,12 +125,18 @@ The evidence foundation now provides:
 
 Phase 2 may proceed for reports built only from `public.interview_evidence_records`.
 
-## 8. Reference conflicts to resolve before rendering
+## 8. Reference conflicts resolved for rendering
 
 The attached sample and the written rules conflict in three places:
 
-1. The sample employer note contains `attitude`, which the rules forbid anywhere in rendered output.
-2. The required footer contains `recommendation`, while the forbidden-word validator includes `recommend`. A substring-based CI grep would reject the required footer.
-3. The sample shows question number and time but does not visibly show the required evidence-record ID. The future rendering contract must state whether the ID is displayed, embedded in the timestamp link or retained only as validated report data.
+1. The fictional note uses neutral operational wording.
+2. The fixed footer keeps the intended meaning without either prohibited term.
+3. Every evidence ticket visibly carries the full stored UUID plus `Q<n> mm:ss`.
 
-These conflicts do not change the Phase 1 evidence-storage failure, but they must be resolved before a future renderer and its forbidden-copy tests can agree.
+## 9. Stored report implementation
+
+`candidate_evaluation_reports` stores an immutable JSON report and an explicit version. `store_candidate_evaluation_report()` locks the interview row, archives the current version and inserts the next version in one database transaction. Normal page loads never regenerate it. An explicit employer-owner action creates the next version and keeps older versions readable.
+
+The report schema allows no overall measure, rank or numeric assessment field. Code maps stored rubric statuses to the three permitted evidence bands. A model receives only a competency name and up to three stored evidence records. Every returned line passes the citation, timestamp, word-count, wording, number and proper-noun checks. A double failure falls back to a cited transcript excerpt. A prohibited term within the candidate's own excerpt is replaced with `[omitted]` before rendering.
+
+PDF and private sharing both require a current human decision. Shares default to seven days, accept one to 30 days, require a viewer email, can be closed by the employer and never expose a raw email in the URL or database. Access rows record the report version, action, user or encrypted viewer email, and time.

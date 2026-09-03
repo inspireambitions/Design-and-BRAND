@@ -126,6 +126,7 @@ export function CandidateReview(props: Props) {
     >
       <header className={styles.header}>
         <Link href="/employer" className={styles.back}>All roles</Link>
+        <Link href={`/employer/candidates/${props.interviewId}/evaluation`} className={styles.evaluation}>View evaluation</Link>
         <span className={styles.position}>{props.position} of {props.total}</span>
         <button type="button" className={styles.next} onClick={goNext}>{props.nextId ? 'Next' : 'Done'}</button>
       </header>

@@ -106,7 +106,7 @@ export function EmployerProofCreate({
           <p className={styles.lede}>{volume ? c.volumeSub : c.sub}</p>
           <div className={styles.heroActions}>
             <a href={volume ? startHref : '#create'} className={styles.primaryButton}>{volume ? c.volumePrimary : c.primaryCta}</a>
-            <a href="#sample-report" className={styles.secondaryButton} onClick={() => track('sample_report_opened', employerVolumeProps(volume))}>{volume ? c.volumeSecondary : c.secondaryCta}</a>
+            <Link href="/for-employers/sample-report" className={styles.secondaryButton} onClick={() => track('sample_report_opened', employerVolumeProps(volume))}>{volume ? c.volumeSecondary : c.secondaryCta}</Link>
           </div>
           <p className={styles.trustLine}>{volume ? c.volumeTrust : c.trustLine}</p>
           <p className={styles.founderLine}>{founderLine[lang]}</p>

@@ -317,7 +317,7 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
                   <article className={styles.candidateRow} key={submission.id}>
                     <span className={styles.avatar} aria-hidden="true">{initials(submission.candidate_name)}</span>
                     <div><h3>{submission.candidate_name || 'Candidate'} · {submission.role_title}</h3><p>{pack?.workplace || 'Employer'} · submitted {relativeTime(submission.submitted_at)} · {candidateAnswers.length} answers, {duration} min</p></div>
-                    <form action={reviewInterview}><input type="hidden" name="interviewId" value={submission.id} /><button className={styles.watchButton} type="submit"><Play aria-hidden="true" weight="fill" /> Watch</button></form>
+                    <form action={reviewInterview}><input type="hidden" name="interviewId" value={submission.id} /><button className={styles.watchButton} type="submit"><Play aria-hidden="true" weight="fill" /> Watch recording</button></form>
                     <DashboardDecisionActions
                       interviewId={submission.id}
                       candidateLabel={submission.candidate_name || 'candidate'}
@@ -441,7 +441,9 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
                     <h3>{submission.candidate_name || 'Candidate'} · {submission.role_title}</h3>
                     <p>{pack?.workplace || 'Employer'} · submitted {relativeTime(submission.submitted_at)} · {candidateAnswers.length} answers, {duration} min · {decisionCopy(submission)}</p>
                   </div>
-                  <form action={reviewInterview}><input type="hidden" name="interviewId" value={submission.id} /><button className={styles.watchButton} type="submit"><Play aria-hidden="true" weight="fill" /> {submission.employer_reviewed_at ? 'Open' : 'Watch'}</button></form>
+                  {submission.employer_reviewed_at
+                    ? <Link className={styles.watchButton} href={`/employer/candidates/${submission.id}/evaluation`}>View evaluation</Link>
+                    : <form action={reviewInterview}><input type="hidden" name="interviewId" value={submission.id} /><button className={styles.watchButton} type="submit"><Play aria-hidden="true" weight="fill" /> Watch recording</button></form>}
                   <DashboardDecisionActions
                     interviewId={submission.id}
                     candidateLabel={submission.candidate_name || 'candidate'}

@@ -21,7 +21,8 @@
 }
 
 .back,
-.next {
+.next,
+.evaluation {
   display: inline-flex;
   min-height: 44px;
   align-items: center;
@@ -36,6 +37,8 @@
   text-decoration: none;
   cursor: pointer;
 }
+
+.evaluation { color: #075f51; }
 
 .position {
   color: #536860;

@@ -1,0 +1,26 @@
+.wrap { min-width: 0; }
+.ticket {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: .42rem;
+  width: 100%;
+  min-height: 2.35rem;
+  padding: .38rem .55rem;
+  border: 1px solid #cbd9d4;
+  border-radius: .55rem;
+  background: #f4f8f6;
+  color: #0d5f50;
+  cursor: pointer;
+  text-align: left;
+}
+.ticket:hover, .ticket:focus-visible { border-color: #087662; background: #e9f3ef; }
+.ticket:disabled { cursor: wait; opacity: .65; }
+.ticket svg { width: .9rem; height: .9rem; }
+.ticket strong { white-space: nowrap; font: 750 .72rem/1 var(--font-body); }
+.ticket code { overflow: hidden; color: #62746e; font: 600 .58rem/1.25 ui-monospace, monospace; text-overflow: ellipsis; white-space: nowrap; }
+.player { position: relative; margin-top: .55rem; }
+.player video { display: block; width: 100%; max-height: 18rem; border-radius: .65rem; background: #091713; }
+.player > button { position: absolute; top: .4rem; right: .4rem; display: grid; width: 2rem; height: 2rem; place-items: center; border: 0; border-radius: 50%; background: rgba(0,0,0,.7); color: #fff; cursor: pointer; }
+.error { display: block; margin-top: .35rem; color: #8a301e; }
+@media print { .ticket { pointer-events: none; } .ticket svg { display: none; } .player, .error { display: none; } }
