@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useLang } from './LanguageProvider';
 import { GuideBody } from './GuideBody';
-import { MarketingFooter, MarketingHeader } from './MarketingSite';
+import { MarketingHeader } from './MarketingSite';
 import { marketingNav } from '@/lib/marketing-content';
 import type { GuideDocument } from '@/lib/sanity/queries';
 
@@ -36,7 +36,6 @@ export function GuidePage({ guide }: { guide: GuideDocument }) {
           </p>
         </article>
       </main>
-      <MarketingFooter />
       <Link href="/practice" className="marketing-mobile-cta">{nav.practice}</Link>
     </div>
   );

@@ -12,6 +12,8 @@ import {
   saveScreeningRecordingDraft,
 } from '@/lib/screening-draft-store';
 import { useLang } from './LanguageProvider';
+import { FocusedInterviewFooterGuard } from './FooterVisibility';
+import { hideEmployerInterviewFooter } from '@/lib/footer-visibility';
 import styles from './EmployerVideoInterview.module.css';
 
 type Stage = 'resuming' | 'unavailable' | 'intro' | 'device' | 'ready' | 'recording' | 'saving' | 'consent' | 'submitting' | 'complete';
@@ -661,6 +663,7 @@ export function EmployerVideoInterview({
 
   return (
     <main className={styles.page} dir={dir}>
+      <FocusedInterviewFooterGuard active={hideEmployerInterviewFooter(stage)} />
       <header className={styles.header}>
         <a className={styles.brand} href="/" aria-label="Muqabala home">
           <span className={styles.mark} aria-hidden="true">م</span>

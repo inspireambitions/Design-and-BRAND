@@ -51,6 +51,8 @@ import {
   type AnswerMode,
 } from '@/lib/flow/answer-mode';
 import { useLang } from './LanguageProvider';
+import { FocusedInterviewFooterGuard } from './FooterVisibility';
+import { hidePracticeFooter } from '@/lib/footer-visibility';
 import { TopBar } from './TopBar';
 import { FeedbackCard, StreamingFeedbackCard } from './FeedbackCard';
 import { AnswerModeSelector } from './flow/AnswerModeSelector';
@@ -1638,6 +1640,7 @@ export function InterviewFlow({
 
   return (
     <div className="shell shell-narrow">
+      <FocusedInterviewFooterGuard active={hidePracticeFooter(stage, Boolean(feedback), requestingCamera)} />
       <TopBar showProgressLink={false} locked={stage !== 'check' && stage !== 'done'} />
 
       <div className="rail" aria-hidden="true">

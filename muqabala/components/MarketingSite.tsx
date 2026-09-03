@@ -8,11 +8,11 @@ import { useLang } from './LanguageProvider';
 
 export type { MarketingStats };
 
-export function MuqabalaMark() {
+export function MuqabalaMark({ inverse = false }: { inverse?: boolean }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="32" height="32" aria-hidden="true" focusable="false">
-      <path d="M 26 36 A 27 27 0 1 0 70 36" fill="none" stroke="#0E3B36" strokeWidth="11" strokeLinecap="round" />
-      <circle cx="35" cy="17" r="7.5" fill="#0E3B36" />
+      <path d="M 26 36 A 27 27 0 1 0 70 36" fill="none" stroke={inverse ? '#F3F7F5' : '#0E3B36'} strokeWidth="11" strokeLinecap="round" />
+      <circle cx="35" cy="17" r="7.5" fill={inverse ? '#F3F7F5' : '#0E3B36'} />
       <circle cx="61" cy="17" r="7.5" fill="#B9892E" />
     </svg>
   );
@@ -64,40 +64,6 @@ export function MarketingHeader() {
         </div>
       </div>
     </header>
-  );
-}
-export function MarketingFooter() {
-  const { lang } = useLang();
-  const nav = marketingNav[lang];
-  return (
-    <footer className="marketing-footer">
-      <div className="marketing-wrap marketing-footer-grid">
-        <div>
-          <div className="marketing-brand marketing-brand-footer">
-            <MuqabalaMark />
-            <span>Muqabala</span>
-          </div>
-          <p>{lang === 'ar' ? 'تدريب خاص لمقابلات العمل في الخليج.' : 'Private practice for Gulf job interviews.'}</p>
-          <p className="marketing-footer-owner">Muqabala by Inspire Ambitions</p>
-        </div>
-        <div className="marketing-footer-links">
-          <Link href="/practice">{nav.practice}</Link>
-          <Link href="/how-it-works">{nav.how}</Link>
-          <Link href="/interview-roles">{nav.roles}</Link>
-          <Link href="/how-feedback-works">{nav.feedback}</Link>
-          <Link href="/faq">{nav.faq}</Link>
-        </div>
-        <div className="marketing-footer-links">
-          <Link href="/about">{nav.about}</Link>
-          <Link href="/guides">{nav.blog}</Link>
-          <Link href="/for-employers">{nav.hiring}</Link>
-          <Link href="/contact">{lang === 'ar' ? 'تواصل' : 'Contact'}</Link>
-          <Link href="/privacy">{lang === 'ar' ? 'الخصوصية' : 'Privacy'}</Link>
-          <Link href="/terms">{lang === 'ar' ? 'الشروط' : 'Terms'}</Link>
-          <Link href="/accessibility">{lang === 'ar' ? 'إمكانية الوصول' : 'Accessibility'}</Link>
-        </div>
-      </div>
-    </footer>
   );
 }
 type ExampleRole = 'front-office' | 'nurse';
@@ -332,7 +298,6 @@ export function MarketingHome({ roles, stats }: { roles: MarketingRole[]; stats:
           </div>
         </section>
       </main>
-      <MarketingFooter />
       <Link href="/practice" className="marketing-mobile-cta">{marketingNav[lang].practice}</Link>
     </div>
   );
@@ -369,7 +334,6 @@ export function MarketingInfoPage({ content }: { content: Record<'en' | 'ar', Ma
           <Link href="/practice" className="marketing-button">{marketingNav[lang].practice}</Link>
         </section>
       </main>
-      <MarketingFooter />
       <Link href="/practice" className="marketing-mobile-cta">{marketingNav[lang].practice}</Link>
     </div>
   );
@@ -397,7 +361,6 @@ export function InterviewRolesPage({ roles }: { roles: MarketingRole[] }) {
           ))}
         </section>
       </main>
-      <MarketingFooter />
       <Link href="/practice" className="marketing-mobile-cta">{marketingNav[lang].practice}</Link>
     </div>
   );

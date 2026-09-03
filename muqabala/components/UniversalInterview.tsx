@@ -12,6 +12,8 @@ import type {
 import { useLang } from './LanguageProvider';
 import { TopBar } from './TopBar';
 import { UniversalVideoAnswer } from './UniversalVideoAnswer';
+import { FocusedInterviewFooterGuard } from './FooterVisibility';
+import { hideUniversalInterviewFooter } from '@/lib/footer-visibility';
 
 type Stage = 'SETUP' | 'CONFIRM' | 'INTERVIEW' | 'FEEDBACK_LOADING' | 'FEEDBACK' | 'DELETED';
 
@@ -246,6 +248,7 @@ export function UniversalInterview() {
 
   return (
     <main className="shell shell-narrow universal-brain">
+      <FocusedInterviewFooterGuard active={hideUniversalInterviewFooter(stage)} />
       <TopBar showProgressLink={false} />
 
       {stage !== 'DELETED' && <header className="stack-sm">

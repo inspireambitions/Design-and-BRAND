@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useLang } from './LanguageProvider';
-import { MarketingFooter, MarketingHeader } from './MarketingSite';
+import { MarketingHeader } from './MarketingSite';
 import { marketingNav } from '@/lib/marketing-content';
 import type { GuideListItem } from '@/lib/sanity/queries';
 
@@ -49,7 +49,6 @@ export function GuidesIndex({ guides }: { guides: GuideListItem[] }) {
           </p>
         </section>
       </main>
-      <MarketingFooter />
       <Link href="/practice" className="marketing-mobile-cta">{nav.practice}</Link>
     </div>
   );

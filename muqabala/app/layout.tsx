@@ -4,6 +4,7 @@ import './globals.css';
 import { GoogleAnalytics } from '@/components/GoogleAnalytics';
 import { WebVitals } from '@/components/WebVitals';
 import { LanguageProvider } from '@/components/LanguageProvider';
+import { SiteFooter } from '@/components/SiteFooter';
 
 const displayFont = Bricolage_Grotesque({
   subsets: ['latin'],
@@ -87,7 +88,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(appSchema) }}
         />
-        <LanguageProvider>{children}</LanguageProvider>
+        <LanguageProvider>
+          {children}
+          <SiteFooter />
+        </LanguageProvider>
         <GoogleAnalytics />
         <WebVitals />
       </body>

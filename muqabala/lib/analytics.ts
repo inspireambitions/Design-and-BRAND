@@ -60,6 +60,7 @@ type EventName =
   | 'rating_submitted'
   | 'email_submitted'
   | 'share_card_created'
+  | 'footer_link_clicked'
   | 'web_vital'
   | PracticeFlowEventName
   | 'plan_link_clicked'
@@ -141,6 +142,8 @@ type EventProps = Partial<{
   count: number;
   /** Employer volume: decision type or export format. */
   type: string;
+  /** Stable footer destination id. Never a URL or user-entered value. */
+  link_id: string;
 }>;
 
 /** Props shared by every employer volume event on the client. */
