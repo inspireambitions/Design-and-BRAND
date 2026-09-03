@@ -161,6 +161,7 @@ export function precheckAnswer(raw: string): PrecheckResult {
   return {
     kind,
     cleaned_answer: cleanedAnswer,
+    word_count: answerWords.length,
     short_answer: answerWords.length < 15,
     truncated,
     stripped_patterns: stripped.hits,

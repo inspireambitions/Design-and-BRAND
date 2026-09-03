@@ -250,6 +250,7 @@ export type InterviewState = {
 export type PrecheckResult = {
   kind: 'NONE' | 'NO_EXAMPLE' | 'REPHRASE_REQUEST' | 'SKIP_REQUEST';
   cleaned_answer: string;
+  word_count: number;
   short_answer: boolean;
   truncated: boolean;
   stripped_patterns: string[];

@@ -104,10 +104,13 @@ export async function POST(request: Request) {
   const rateLimit = await limitScoring(request, state.interview_id);
   if (rateLimit.limited) return jsonError('Too many answers were sent. Wait a few minutes.', 429, 'rate_limited');
   if (state.phase !== 'ACTIVE' || !state.current_question) return jsonError('This interview is not awaiting an answer.', 409, 'not_active');
+  const precheck = precheckAnswer(parsed.data.answer);
+  if (precheck.kind === 'NONE' && precheck.word_count < 5) {
+    return jsonError('Add a little more detail before sending your answer.', 400, 'answer_too_short');
+  }
   const claim = await claimStoredInterview(state);
   if (!claim) return jsonError('This answer is already being processed.', 409, 'interview_busy');
 
-  const precheck = precheckAnswer(parsed.data.answer);
   const budget = new ModelCallBudget(2);
   let fallbackUsed = false;
   let extraction: ExtractionResult | null = null;

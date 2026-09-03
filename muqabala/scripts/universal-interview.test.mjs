@@ -117,7 +117,17 @@ test('answer prechecks run before model extraction', () => {
   assert.equal(precheckAnswer("I don't know").kind, 'NO_EXAMPLE');
   assert.equal(precheckAnswer('Could you rephrase that?').kind, 'REPHRASE_REQUEST');
   assert.equal(precheckAnswer('Next question').kind, 'SKIP_REQUEST');
+  assert.equal(precheckAnswer('Hello').word_count, 1);
+  assert.equal(precheckAnswer('I led the project myself').word_count, 5);
   assert.equal(precheckAnswer('I handled the issue myself and the guest returned.').short_answer, true);
+});
+
+test('turn and retry routes reject evidence answers shorter than five words', () => {
+  const turnRoute = readFileSync(new URL('../app/api/universal-interview/turn/route.ts', import.meta.url), 'utf8');
+  const retryRoute = readFileSync(new URL('../app/api/universal-interview/retry/route.ts', import.meta.url), 'utf8');
+  assert.match(turnRoute, /precheck\.kind === 'NONE' && precheck\.word_count < 5/);
+  assert.match(turnRoute, /answer_too_short/);
+  assert.match(retryRoute, /precheck\.kind !== 'NONE' \|\| precheck\.word_count < 5/);
 });
 
 test('role-pack implicit competencies merge and core capability ranks first', () => {

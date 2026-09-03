@@ -34,7 +34,9 @@ export async function POST(request: Request) {
   const planned = state.plan[parsed.data.question_number - 1];
   if (!planned) return jsonError('Question not found.', 404, 'question_not_found');
   const precheck = precheckAnswer(parsed.data.answer);
-  if (precheck.kind !== 'NONE') return jsonError('Give a complete new answer for this retry.', 400, 'invalid_retry_answer');
+  if (precheck.kind !== 'NONE' || precheck.word_count < 5) {
+    return jsonError('Give a complete new answer for this retry.', 400, 'invalid_retry_answer');
+  }
   const claim = await claimStoredInterview(state);
   if (!claim) return jsonError('This retry is already being processed.', 409, 'interview_busy');
 
