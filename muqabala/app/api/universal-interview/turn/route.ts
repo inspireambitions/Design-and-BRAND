@@ -155,10 +155,6 @@ export async function POST(request: Request) {
       const replacement = generated ?? fallbackReplacementQuestion(state, advanced.replacementCompetencyId);
       fallbackUsed ||= !generated;
       state = setGeneratedFollowup(state, replacement);
-    } else if (advanced.needsReplacement && !advanced.replacementCompetencyId) {
-      state.phase = 'COMPLETE';
-      state.status = 'COMPLETE';
-      state.current_question = null;
     }
   } else {
     state = applyImmediateDecision(state, decision, extraction);

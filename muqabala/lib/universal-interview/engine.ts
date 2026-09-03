@@ -304,6 +304,20 @@ export function applyImmediateDecision(
 export function setGeneratedFollowup(state: InterviewState, question: GeneratedQuestion): InterviewState {
   const next = structuredClone(state);
   next.current_question = question;
+  if (question.kind === 'MAIN') {
+    const planned = next.plan[next.question_number - 1];
+    if (planned) {
+      next.plan[next.question_number - 1] = {
+        ...planned,
+        question_type: question.question_type,
+        target_competencies: question.target_competencies,
+        primary_intent: question.intent,
+        text: question.text,
+        framework: question.framework,
+        rephrase: `Please answer this in another way: ${question.text}`,
+      };
+    }
+  }
   return next;
 }
 
@@ -332,6 +346,9 @@ export function advanceInterview(state: InterviewState): {
   const blueprintTarget = highestValueUncovered(next);
   const replacementTarget = blueprintTarget ?? highestValueUncovered(next, true);
   next.current_question = fromPlannedQuestion(planned);
+  if (!replacementTarget) {
+    return { state: next, needsReplacement: false, replacementCompetencyId: null };
+  }
   return { state: next, needsReplacement: true, replacementCompetencyId: replacementTarget };
 }
 

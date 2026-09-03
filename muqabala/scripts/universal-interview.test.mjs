@@ -10,6 +10,7 @@ import {
   criteriaMeetSeniority,
   decideTurn,
   deterministicExtractionFallback,
+  setGeneratedFollowup,
 } from '../lib/universal-interview/engine.ts';
 import {
   confirmBlueprint,
@@ -20,7 +21,7 @@ import {
 import { assessJobDescription, precheckAnswer, stripInjection } from '../lib/universal-interview/sanitise.ts';
 import { fallbackGeneratedQuestion, questionQualityGate } from '../lib/universal-interview/questions.ts';
 import { evaluateObservedTurns, validateGoldSet } from '../lib/universal-interview/evaluation.ts';
-import { candidateCopySafe, normaliseGeneratedPlan } from '../lib/universal-interview/api.ts';
+import { candidateCopySafe, normaliseGeneratedPlan, validateExtractionSemantics } from '../lib/universal-interview/api.ts';
 import { ModelCallBudget } from '../lib/universal-interview/model-budget.ts';
 import { zodTextFormat } from 'openai/helpers/zod';
 import { ExtractionSchema } from '../lib/universal-interview/schemas.ts';
@@ -216,6 +217,19 @@ test('a sufficient target is never probed again', () => {
   assert.equal(decision.override_reason, 'target_sufficient');
 });
 
+test('evidence can credit only competencies targeted by the current question', () => {
+  const state = stateFor();
+  state.current_question = { ...state.current_question, target_competencies: ['c_guest_service'], framework: 'STAR' };
+  const unrelated = extraction({
+    evidence: {
+      ...extraction().evidence,
+      competencies: [{ id: 'c_communication', strength: 'STRONG', evidence_type: 'EMPLOYMENT' }],
+    },
+  });
+  assert.match(validateExtractionSemantics(state, unrelated), /not targeted/);
+  assert.equal(validateExtractionSemantics(state, extraction()), null);
+});
+
 test('the decision table enforces two probes and the executive ownership limit', () => {
   let state = stateFor();
   const result = extraction({ recommended_action: 'PROBE_ACTION', probe_target: 'personal action' });
@@ -283,6 +297,27 @@ test('entry interviews use six balanced questions and higher levels use eight', 
   const advanced = advanceInterview(state);
   assert.equal(advanced.state.phase, 'COMPLETE');
   assert.equal(advanced.state.current_question, null);
+});
+
+test('coverage never shortens the declared interview length', () => {
+  const state = stateFor('PROFESSIONAL');
+  for (const competency of state.discovery) state.coverage[competency.id].status = 'STRONG';
+  const advanced = advanceInterview(state);
+  assert.equal(advanced.state.phase, 'ACTIVE');
+  assert.equal(advanced.state.question_number, 2);
+  assert.equal(advanced.needsReplacement, false);
+});
+
+test('adaptive main questions update the plan used by retry', () => {
+  const state = stateFor();
+  state.question_number = 2;
+  const replacement = fallbackGeneratedQuestion('MOVE_ON', state.current_question, '');
+  replacement.kind = 'MAIN';
+  replacement.text = 'Tell me about a complaint you resolved for a guest.';
+  replacement.target_competencies = ['c_complaint_handling'];
+  const updated = setGeneratedFollowup(state, replacement);
+  assert.equal(updated.plan[1].text, replacement.text);
+  assert.deepEqual(updated.plan[1].target_competencies, ['c_complaint_handling']);
 });
 
 test('code, not the planning model, owns slot type, target and framework', () => {

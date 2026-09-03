@@ -35,9 +35,9 @@ export function publicInterviewState(state: InterviewState) {
 }
 
 export function validateExtractionSemantics(state: InterviewState, extraction: ExtractionResult): string | null {
-  const allowedCompetencies = new Set(state.discovery.map((competency) => competency.id));
+  const allowedCompetencies = new Set(state.current_question?.target_competencies ?? []);
   if (extraction.evidence.competencies.some((competency) => !allowedCompetencies.has(competency.id))) {
-    return 'unknown competency id';
+    return 'competency was not targeted by the current question';
   }
   const expectedCriteria = FRAMEWORK_CRITERIA[state.current_question?.framework ?? 'STAR'];
   if (expectedCriteria.some((criterion) => !(criterion in extraction.evidence.criteria))) {
