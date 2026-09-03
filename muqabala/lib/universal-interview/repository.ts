@@ -90,6 +90,17 @@ export async function loadStoredInterview(interviewId: string): Promise<Intervie
   return authorised ? openInterviewState(data.state_ciphertext) : null;
 }
 
+export async function releaseInterviewClaim(interviewId: string, claim: string): Promise<void> {
+  const admin = createAdminClient();
+  if (!admin) return;
+  await admin.from('universal_interviews').update({
+    processing_token_hash: null,
+    processing_until: null,
+  })
+    .eq('id', interviewId)
+    .eq('processing_token_hash', tokenHash(claim));
+}
+
 export async function claimStoredInterview(state: InterviewState): Promise<string | null> {
   const admin = createAdminClient();
   if (!admin) return null;

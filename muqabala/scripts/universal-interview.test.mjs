@@ -22,6 +22,8 @@ import { fallbackGeneratedQuestion, questionQualityGate } from '../lib/universal
 import { evaluateObservedTurns, validateGoldSet } from '../lib/universal-interview/evaluation.ts';
 import { candidateCopySafe, normaliseGeneratedPlan } from '../lib/universal-interview/api.ts';
 import { ModelCallBudget } from '../lib/universal-interview/model-budget.ts';
+import { zodTextFormat } from 'openai/helpers/zod';
+import { ExtractionSchema } from '../lib/universal-interview/schemas.ts';
 
 const profile = {
   experience_level: 'PROFESSIONAL',
@@ -128,6 +130,27 @@ test('turn and retry routes reject evidence answers shorter than five words', ()
   assert.match(turnRoute, /precheck\.kind === 'NONE' && precheck\.word_count < 5/);
   assert.match(turnRoute, /answer_too_short/);
   assert.match(retryRoute, /precheck\.kind !== 'NONE' \|\| precheck\.word_count < 5/);
+});
+
+test('the evidence schema compiles for strict OpenAI structured output', () => {
+  assert.doesNotThrow(() => zodTextFormat(ExtractionSchema, 'turn_evidence'));
+});
+
+test('model extraction failure is visible and never advances with empty evidence', () => {
+  const turnRoute = readFileSync(new URL('../app/api/universal-interview/turn/route.ts', import.meta.url), 'utf8');
+  const retryRoute = readFileSync(new URL('../app/api/universal-interview/retry/route.ts', import.meta.url), 'utf8');
+  assert.match(turnRoute, /answer_processing_unavailable/);
+  assert.doesNotMatch(turnRoute, /deterministicExtractionFallback/);
+  assert.match(retryRoute, /answer_processing_unavailable/);
+  assert.doesNotMatch(retryRoute, /deterministicExtractionFallback/);
+});
+
+test('the candidate journey restores after refresh and has a feedback loading state', () => {
+  const component = readFileSync(new URL('../components/UniversalInterview.tsx', import.meta.url), 'utf8');
+  const route = readFileSync(new URL('../app/api/universal-interview/[id]/route.ts', import.meta.url), 'utf8');
+  assert.match(component, /SAVED_INTERVIEW_KEY/);
+  assert.match(component, /FEEDBACK_LOADING/);
+  assert.match(route, /export async function GET/);
 });
 
 test('role-pack implicit competencies merge and core capability ranks first', () => {

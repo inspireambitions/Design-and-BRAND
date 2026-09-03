@@ -1,4 +1,4 @@
-import { applyExtraction, deterministicExtractionFallback } from '@/lib/universal-interview/engine';
+import { applyExtraction } from '@/lib/universal-interview/engine';
 import { buildFinalFeedback, deterministicFeedbackFallback } from '@/lib/universal-interview/feedback';
 import { candidateCopySafe, jsonError, universalInterviewEnabled, validateExtractionSemantics } from '@/lib/universal-interview/api';
 import { callStructured, ModelCallBudget } from '@/lib/universal-interview/model';
@@ -9,7 +9,7 @@ import {
   feedbackInput,
 } from '@/lib/universal-interview/prompts';
 import { fromPlannedQuestion } from '@/lib/universal-interview/questions';
-import { claimStoredInterview, loadStoredInterview, recordStageMetric, saveClaimedInterview } from '@/lib/universal-interview/repository';
+import { claimStoredInterview, loadStoredInterview, recordStageMetric, releaseInterviewClaim, saveClaimedInterview } from '@/lib/universal-interview/repository';
 import { ExtractionSchema, FeedbackSchema, RetryRequestSchema } from '@/lib/universal-interview/schemas';
 import { precheckAnswer } from '@/lib/universal-interview/sanitise';
 import { hasTrustedOrigin, privateNoStoreHeaders } from '@/lib/server/security';
@@ -55,9 +55,25 @@ export async function POST(request: Request) {
     budget,
     allowValidationRetry: false,
   });
-  const extraction = generatedExtraction && !validateExtractionSemantics(extractionState, generatedExtraction)
-    ? generatedExtraction
-    : deterministicExtractionFallback();
+  const criteriaEntries = generatedExtraction?.evidence.criteria ?? [];
+  const criteria = Object.fromEntries(criteriaEntries.map((item) => [item.criterion, item.status]));
+  const extraction = generatedExtraction
+    ? { ...generatedExtraction, evidence: { ...generatedExtraction.evidence, criteria } }
+    : null;
+  const duplicateCriteria = new Set(criteriaEntries.map((item) => item.criterion)).size !== criteriaEntries.length;
+  if (!extraction || duplicateCriteria || validateExtractionSemantics(extractionState, extraction)) {
+    await releaseInterviewClaim(state.interview_id, claim);
+    await recordStageMetric({
+      interviewId: state.interview_id,
+      stage: 'RETRY',
+      promptVersion: state.prompt_version,
+      modelCalls: budget.used,
+      schemaRetry: budget.schemaRetried,
+      fallbackUsed: true,
+      latencyMs: Date.now() - started,
+    });
+    return jsonError('We could not read that retry. Please send it again.', 503, 'answer_processing_unavailable');
+  }
   state = applyExtraction(extractionState, extraction, precheck.cleaned_answer);
   state.phase = 'COMPLETE';
   state.status = 'COMPLETE';
@@ -90,7 +106,7 @@ export async function POST(request: Request) {
     promptVersion: state.prompt_version,
     modelCalls: budget.used,
     schemaRetry: budget.schemaRetried,
-    fallbackUsed: extraction !== generatedExtraction || output !== generatedFeedback,
+    fallbackUsed: !feedbackSafe,
     latencyMs: Date.now() - started,
   });
 

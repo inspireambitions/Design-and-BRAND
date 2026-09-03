@@ -3,7 +3,6 @@ import {
   applyExtraction,
   applyImmediateDecision,
   decideTurn,
-  deterministicExtractionFallback,
   recordDecision,
   setGeneratedFollowup,
   turnActionNeedsQuestion,
@@ -24,7 +23,7 @@ import {
   questionInput,
 } from '@/lib/universal-interview/prompts';
 import { fallbackGeneratedQuestion, fallbackReplacementQuestion } from '@/lib/universal-interview/questions';
-import { claimStoredInterview, loadStoredInterview, recordStageMetric, saveClaimedInterview } from '@/lib/universal-interview/repository';
+import { claimStoredInterview, loadStoredInterview, recordStageMetric, releaseInterviewClaim, saveClaimedInterview } from '@/lib/universal-interview/repository';
 import { ExtractionSchema, GeneratedQuestionSchema, TurnRequestSchema } from '@/lib/universal-interview/schemas';
 import { precheckAnswer } from '@/lib/universal-interview/sanitise';
 import type { ExtractionResult, GeneratedQuestion, InterviewState, TurnAction } from '@/lib/universal-interview/types';
@@ -52,8 +51,12 @@ async function extractAnswer(state: InterviewState, answer: string, shortAnswer:
       if (budget.remaining > 0) budget.markRetry();
       continue;
     }
-    const failure = validateExtractionSemantics(state, result);
-    if (!failure) return result;
+    const criteriaEntries = result.evidence.criteria;
+    const criteria = Object.fromEntries(criteriaEntries.map((item) => [item.criterion, item.status]));
+    const normalised: ExtractionResult = { ...result, evidence: { ...result.evidence, criteria } };
+    const hasDuplicateCriteria = new Set(criteriaEntries.map((item) => item.criterion)).size !== criteriaEntries.length;
+    const failure = hasDuplicateCriteria ? 'duplicate framework criterion' : validateExtractionSemantics(state, normalised);
+    if (!failure) return normalised;
     semanticFailure = failure;
     if (budget.remaining > 0) budget.markRetry();
   }
@@ -117,7 +120,20 @@ export async function POST(request: Request) {
   if (precheck.kind === 'NONE') {
     const generatedExtraction = await extractAnswer(state, precheck.cleaned_answer, precheck.short_answer, budget);
     fallbackUsed = !generatedExtraction;
-    extraction = generatedExtraction ?? deterministicExtractionFallback();
+    if (!generatedExtraction) {
+      await releaseInterviewClaim(state.interview_id, claim);
+      await recordStageMetric({
+        interviewId: state.interview_id,
+        stage: 'TURN',
+        promptVersion: state.prompt_version,
+        modelCalls: budget.used,
+        schemaRetry: budget.schemaRetried,
+        fallbackUsed: true,
+        latencyMs: Date.now() - started,
+      });
+      return jsonError('We could not read that answer. Please send it again.', 503, 'answer_processing_unavailable');
+    }
+    extraction = generatedExtraction;
     state = applyExtraction(state, extraction, precheck.cleaned_answer);
   }
   const probeCountBeforeDecision = state.probe_count_current;

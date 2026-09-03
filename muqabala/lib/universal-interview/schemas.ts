@@ -31,6 +31,15 @@ const FrameworkSchema = z.enum([
   'ROLE_KNOWLEDGE',
 ]);
 const CriterionStatusSchema = z.enum(['MISSING', 'WEAK', 'PRESENT', 'STRONG']);
+const CriterionNameSchema = z.enum([
+  'situation', 'task', 'action', 'result',
+  'specificity', 'role_understanding', 'credibility', 'career_logic',
+  'judgement', 'prioritisation', 'risk_recognition', 'reasoning',
+  'conceptual_understanding', 'application', 'trade_offs', 'clarity',
+  'scope', 'ownership', 'decision', 'stakeholder_handling', 'outcome',
+  'numbers', 'causality', 'coherence', 'relevance',
+  'accuracy_of_role_understanding', 'realism', 'priorities',
+]);
 
 export const CandidateProfileSchema = z.object({
   experience_level: ExperienceLevelSchema,
@@ -78,7 +87,10 @@ export const ExtractionSchema = z.object({
       strength: z.enum(['WEAK', 'MEDIUM', 'STRONG']),
       evidence_type: z.enum(['EMPLOYMENT', 'INTERNSHIP', 'ACADEMIC', 'VOLUNTEER', 'PERSONAL_PROJECT', 'HYPOTHETICAL']),
     }).strict()).max(5),
-    criteria: z.record(z.string(), CriterionStatusSchema),
+    criteria: z.array(z.object({
+      criterion: CriterionNameSchema,
+      status: CriterionStatusSchema,
+    }).strict()).min(3).max(5),
     personal_ownership: z.enum(['CLEAR', 'UNCLEAR', 'ABSENT']),
     numbers_stated: z.array(z.string().max(80)).max(10),
     unsupported_claims: z.array(z.string().max(200)).max(10),
