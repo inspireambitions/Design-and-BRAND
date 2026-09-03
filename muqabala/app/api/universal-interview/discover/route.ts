@@ -8,7 +8,7 @@ import { createStoredInterview, recordStageMetric } from '@/lib/universal-interv
 import { getRolePack, rolePackFound } from '@/lib/universal-interview/role-packs';
 import { assessJobDescription } from '@/lib/universal-interview/sanitise';
 import { DiscoverRequestSchema, DiscoverySchema } from '@/lib/universal-interview/schemas';
-import { candidateCopySafe, jsonError, universalInterviewEnabled } from '@/lib/universal-interview/api';
+import { candidateCopySafe, jsonError, publicDiscoveryState, universalInterviewEnabled } from '@/lib/universal-interview/api';
 import { hasTrustedOrigin, privateNoStoreHeaders } from '@/lib/server/security';
 import { limitInterviewGeneration, limitInterviewGenerationDaily } from '@/lib/rate-limit';
 
@@ -91,14 +91,8 @@ export async function POST(request: Request) {
         ? 'The job description could not be used, so this blueprint uses the role pack.'
         : 'No reviewed role pack was found, so this blueprint uses the general baseline.';
 
-  return Response.json({
-    interview_id: state.interview_id,
-    role_summary: discovery.role_summary,
-    jd_quality: jdQuality,
-    competencies: discovery.competencies,
-    suggested_competency_ids: discovery.competencies.slice(0, 5).map((competency) => competency.id),
-    notice,
-    model_calls: budget.used,
-    prompt_version: state.prompt_version,
-  }, { headers: privateNoStoreHeaders() });
+  return Response.json(
+    publicDiscoveryState(state, discovery.role_summary, notice),
+    { headers: privateNoStoreHeaders() },
+  );
 }

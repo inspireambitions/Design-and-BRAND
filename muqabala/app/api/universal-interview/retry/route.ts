@@ -1,6 +1,6 @@
 import { applyExtraction } from '@/lib/universal-interview/engine';
 import { buildFinalFeedback, deterministicFeedbackFallback } from '@/lib/universal-interview/feedback';
-import { candidateCopySafe, jsonError, universalInterviewEnabled, validateExtractionSemantics } from '@/lib/universal-interview/api';
+import { candidateCopySafe, jsonError, publicRetryComparison, universalInterviewEnabled, validateExtractionSemantics } from '@/lib/universal-interview/api';
 import { callStructured, ModelCallBudget } from '@/lib/universal-interview/model';
 import {
   EXTRACTION_INSTRUCTIONS,
@@ -142,7 +142,5 @@ export async function POST(request: Request) {
     latencyMs: Date.now() - started,
   });
 
-  return Response.json({
-    ...state.retry_result,
-  }, { headers: privateNoStoreHeaders() });
+  return Response.json(publicRetryComparison(state.retry_result), { headers: privateNoStoreHeaders() });
 }

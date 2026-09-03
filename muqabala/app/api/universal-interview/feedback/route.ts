@@ -1,5 +1,5 @@
 import { buildFinalFeedback, deterministicFeedbackFallback } from '@/lib/universal-interview/feedback';
-import { candidateCopySafe, jsonError, universalInterviewEnabled } from '@/lib/universal-interview/api';
+import { candidateCopySafe, jsonError, publicFinalFeedback, universalInterviewEnabled } from '@/lib/universal-interview/api';
 import { callStructured, ModelCallBudget } from '@/lib/universal-interview/model';
 import { FEEDBACK_INSTRUCTIONS, feedbackInput } from '@/lib/universal-interview/prompts';
 import { claimStoredInterview, loadStoredInterview, recordStageMetric, saveClaimedInterview } from '@/lib/universal-interview/repository';
@@ -32,10 +32,13 @@ export async function POST(request: Request) {
   const rateLimit = await limitScoring(request, state.interview_id);
   if (rateLimit.limited) return jsonError('Feedback is busy. Wait a few minutes.', 429, 'rate_limited');
   if (state.phase !== 'COMPLETE') return jsonError('Finish the interview before requesting feedback.', 409, 'not_complete');
-  if (state.final_feedback) return Response.json({
-    ...state.final_feedback,
-    retry_question_text: state.plan[state.final_feedback.retry_recommended_question - 1]?.text,
-  }, { headers: privateNoStoreHeaders() });
+  if (state.final_feedback) return Response.json(
+    publicFinalFeedback(
+      state.final_feedback,
+      state.plan[state.final_feedback.retry_recommended_question - 1]?.text,
+    ),
+    { headers: privateNoStoreHeaders() },
+  );
   const claim = await claimStoredInterview(state);
   if (!claim) return jsonError('Feedback is already being prepared.', 409, 'interview_busy');
 
@@ -63,8 +66,11 @@ export async function POST(request: Request) {
     fallbackUsed: safeOutput !== generated,
     latencyMs: Date.now() - started,
   });
-  return Response.json({
-    ...state.final_feedback,
-    retry_question_text: state.plan[state.final_feedback.retry_recommended_question - 1]?.text,
-  }, { headers: privateNoStoreHeaders() });
+  return Response.json(
+    publicFinalFeedback(
+      state.final_feedback,
+      state.plan[state.final_feedback.retry_recommended_question - 1]?.text,
+    ),
+    { headers: privateNoStoreHeaders() },
+  );
 }

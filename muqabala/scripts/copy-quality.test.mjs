@@ -46,6 +46,27 @@ test('"practice" is never a verb in English copy (use "practise")', () => {
   assert.deepEqual(problems, []);
 });
 
+function collectStrings(value) {
+  if (typeof value === 'string') return [value];
+  if (Array.isArray(value)) return value.flatMap(collectStrings);
+  if (value && typeof value === 'object') return Object.values(value).flatMap(collectStrings);
+  return [];
+}
+
+test('public copy never exposes internal release labels', async () => {
+  const [{ STRINGS }, { infoPages }] = await Promise.all([
+    import('../lib/i18n.ts'),
+    import('../lib/marketing-content.ts'),
+  ]);
+  const publicCopy = [...collectStrings(STRINGS), ...collectStrings(infoPages)];
+  const releaseLabel = /\b(?:MVP|V2|beta|prototype|proof of concept)\b/i;
+  assert.deepEqual(publicCopy.filter((value) => releaseLabel.test(value)), []);
+
+  const arabicAdaptivePrivacy = infoPages.privacy.ar.sections
+    .find((section) => section.title === 'المقابلات النصية المتكيفة')?.body ?? '';
+  assert.match(arabicAdaptivePrivacy, /90 يوماً/);
+});
+
 const READABILITY_PREFIXES = ['whatWorked', 'whatToImprove', 'biggestWin', 'keep', 'landing', 'readiness', 'shareCard', 'tag', 'plan'];
 const MAX_AVERAGE_GRADE = 6;
 const LIST_ABOVE_GRADE = 8;

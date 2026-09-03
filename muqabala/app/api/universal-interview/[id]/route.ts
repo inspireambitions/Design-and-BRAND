@@ -1,5 +1,12 @@
 import { deleteStoredInterview, loadStoredInterview } from '@/lib/universal-interview/repository';
-import { jsonError, publicInterviewState, universalInterviewEnabled } from '@/lib/universal-interview/api';
+import {
+  jsonError,
+  publicDiscoveryState,
+  publicFinalFeedback,
+  publicInterviewState,
+  publicRetryComparison,
+  universalInterviewEnabled,
+} from '@/lib/universal-interview/api';
 import { hasTrustedOrigin, privateNoStoreHeaders } from '@/lib/server/security';
 
 export const runtime = 'nodejs';
@@ -12,20 +19,18 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   if (!state) return jsonError('Interview not found.', 404, 'not_found');
   return Response.json({
     interview: publicInterviewState(state),
-    discovery: {
-      interview_id: state.interview_id,
-      role_summary: `Interview for ${state.role}`,
-      competencies: state.discovery,
-      suggested_competency_ids: state.blueprint.length
-        ? state.blueprint.map((competency) => competency.id)
-        : state.discovery.slice(0, 5).map((competency) => competency.id),
-      notice: 'Your saved interview has been restored.',
-    },
-    feedback: state.final_feedback ? {
-      ...state.final_feedback,
-      retry_question_text: state.plan[state.final_feedback.retry_recommended_question - 1]?.text,
-    } : null,
-    retry_result: state.retry_result ?? null,
+    discovery: publicDiscoveryState(
+      state,
+      `Interview for ${state.role}`,
+      'Your saved interview has been restored.',
+    ),
+    feedback: state.final_feedback
+      ? publicFinalFeedback(
+          state.final_feedback,
+          state.plan[state.final_feedback.retry_recommended_question - 1]?.text,
+        )
+      : null,
+    retry_result: state.retry_result ? publicRetryComparison(state.retry_result) : null,
   }, { headers: privateNoStoreHeaders() });
 }
 

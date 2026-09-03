@@ -47,10 +47,10 @@ export function HomeView({ roles }: { roles: RoleCard[] }) {
 
       {process.env.NEXT_PUBLIC_UNIVERSAL_BRAIN_V2 === 'on' && <section className="card row-between brain-entry-card">
         <div>
-          <h2>{t('brainTryV2')}</h2>
-          <p className="muted">{t('brainTryV2Body')}</p>
+          <h2>{t('brainTryAdaptive')}</h2>
+          <p className="muted">{t('brainTryAdaptiveBody')}</p>
         </div>
-        <Link href="/practice/universal" className="btn btn-primary">{t('brainTryV2')}</Link>
+        <Link href="/practice/universal" className="btn btn-primary">{t('brainTryAdaptive')}</Link>
       </section>}
 
       <section className="stack" id="popular-roles" aria-labelledby="popular-roles-heading">

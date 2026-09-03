@@ -59,5 +59,5 @@ export async function POST(request: Request) {
     fallbackUsed: !plan,
     latencyMs: Date.now() - started,
   });
-  return Response.json({ ...publicInterviewState(confirmed), model_calls: budget.used }, { headers: privateNoStoreHeaders() });
+  return Response.json(publicInterviewState(confirmed), { headers: privateNoStoreHeaders() });
 }

@@ -707,11 +707,11 @@ export const STRINGS = {
     keepLimited: 'Too many requests from this device. Your feedback stays on this screen.',
     keepPrivacy: 'One email a day for seven days, then it stops. No marketing list.',
 
-    // Universal Interview Brain V2
-    brainEyebrow: 'Universal Interview Brain V2',
+    // Adaptive interview practice
+    brainEyebrow: 'Muqabala adaptive interview',
     brainTitle: 'Build an interview that listens',
     brainBody: 'Tell us about the role. You will confirm what matters before the first question.',
-    brainEnglishOnly: 'This MVP interview runs in English only.',
+    brainEnglishOnly: 'This interview currently runs in English.',
     brainTargetRole: 'Target role',
     brainTargetPlaceholder: 'For example, Front Desk Agent',
     brainExperienceLevel: 'Experience level',
@@ -775,9 +775,9 @@ export const STRINGS = {
     brainDeleteConfirm: 'Delete this interview and its answers permanently?',
     brainDeleted: 'Your interview data was deleted.',
     brainError: 'This interview could not continue. Try again.',
-    brainStartNew: 'Start another V2 interview',
-    brainTryV2: 'Try the adaptive text interview',
-    brainTryV2Body: 'Confirm five competencies, answer eight questions, and get one evidence report at the end.',
+    brainStartNew: 'Start another interview',
+    brainTryAdaptive: 'Try the adaptive text interview',
+    brainTryAdaptiveBody: 'Confirm five competencies, answer eight questions, and get one evidence report at the end.',
   },
   ar: {
     tagline: 'تدرّب حتى تشعر أنك مستعد.',
@@ -1476,11 +1476,11 @@ export const STRINGS = {
     keepLimited: 'طلبات كثيرة من هذا الجهاز. تبقى ملاحظاتك على هذه الشاشة.',
     keepPrivacy: 'رسالة واحدة يومياً لمدة سبعة أيام ثم تتوقف. لا قائمة تسويقية.',
 
-    // Universal Interview Brain V2
-    brainEyebrow: 'محرك المقابلات الشامل V2',
+    // Adaptive interview practice
+    brainEyebrow: 'مقابلة متكيفة من مقابلة',
     brainTitle: 'أنشئ مقابلة تستمع إلى إجاباتك',
     brainBody: 'أخبرنا عن الوظيفة. ستؤكد ما يهم قبل السؤال الأول.',
-    brainEnglishOnly: 'تعمل نسخة MVP من هذه المقابلة باللغة الإنجليزية فقط.',
+    brainEnglishOnly: 'تعمل هذه المقابلة حالياً باللغة الإنجليزية.',
     brainTargetRole: 'الوظيفة المستهدفة',
     brainTargetPlaceholder: 'مثال: موظف استقبال',
     brainExperienceLevel: 'مستوى الخبرة',
@@ -1544,9 +1544,9 @@ export const STRINGS = {
     brainDeleteConfirm: 'هل تريد حذف هذه المقابلة وإجاباتها نهائياً؟',
     brainDeleted: 'حُذفت بيانات مقابلتك.',
     brainError: 'تعذر متابعة هذه المقابلة. حاول مرة أخرى.',
-    brainStartNew: 'ابدأ مقابلة V2 أخرى',
-    brainTryV2: 'جرّب المقابلة النصية المتكيفة',
-    brainTryV2Body: 'أكد خمس كفاءات، وأجب عن ثمانية أسئلة، ثم احصل على تقرير أدلة واحد في النهاية.',
+    brainStartNew: 'ابدأ مقابلة أخرى',
+    brainTryAdaptive: 'جرّب المقابلة النصية المتكيفة',
+    brainTryAdaptiveBody: 'أكد خمس كفاءات، وأجب عن ثمانية أسئلة، ثم احصل على تقرير أدلة واحد في النهاية.',
   },
 } as const;
 

@@ -115,7 +115,7 @@ export function assessJobDescription(raw: string): JDQualityResult {
     reason = 'The job description has fewer than 80 words.';
   } else if (!isProbablyEnglish(cleaned)) {
     score = 0;
-    reason = 'Only English job descriptions are supported in this MVP.';
+    reason = 'Only English job descriptions are supported right now.';
   } else {
     if (responsibilities < 3) score -= 30;
     if (boilerplateRatio > 0.4) score -= 30;

@@ -21,7 +21,15 @@ import {
 import { assessJobDescription, precheckAnswer, stripInjection } from '../lib/universal-interview/sanitise.ts';
 import { fallbackGeneratedQuestion, questionQualityGate } from '../lib/universal-interview/questions.ts';
 import { evaluateObservedTurns, validateGoldSet } from '../lib/universal-interview/evaluation.ts';
-import { candidateCopySafe, normaliseGeneratedPlan, validateExtractionSemantics } from '../lib/universal-interview/api.ts';
+import {
+  candidateCopySafe,
+  normaliseGeneratedPlan,
+  publicDiscoveryState,
+  publicFinalFeedback,
+  publicInterviewState,
+  publicRetryComparison,
+  validateExtractionSemantics,
+} from '../lib/universal-interview/api.ts';
 import { ModelCallBudget } from '../lib/universal-interview/model-budget.ts';
 import { zodTextFormat } from 'openai/helpers/zod';
 import { ExtractionSchema } from '../lib/universal-interview/schemas.ts';
@@ -337,7 +345,36 @@ test('retry comparison is persisted and restored with the report', () => {
   const retryRoute = readFileSync(new URL('../app/api/universal-interview/retry/route.ts', import.meta.url), 'utf8');
   const getRoute = readFileSync(new URL('../app/api/universal-interview/[id]/route.ts', import.meta.url), 'utf8');
   assert.match(retryRoute, /state\.retry_result =/);
-  assert.match(getRoute, /retry_result: state\.retry_result/);
+  assert.match(getRoute, /publicRetryComparison\(state\.retry_result\)/);
+});
+
+test('public Brain responses contain only fields the candidate journey uses', () => {
+  const state = stateFor();
+  const interview = publicInterviewState(state);
+  assert.deepEqual(Object.keys(interview), [
+    'interview_id', 'phase', 'question_number', 'question_total',
+    'current_question', 'retry_used', 'role_pack',
+  ]);
+  assert.deepEqual(Object.keys(interview.current_question), ['text']);
+  assert.deepEqual(Object.keys(interview.role_pack), ['assessment_type']);
+
+  const discovery = publicDiscoveryState(state, 'Interview for Front Desk Agent', 'Ready to begin.');
+  assert.deepEqual(Object.keys(discovery.competencies[0]), ['id', 'name', 'family', 'source', 'source_text']);
+
+  const feedback = buildFinalFeedback(state, deterministicFeedbackFallback(state));
+  const publicFeedback = publicFinalFeedback(feedback, 'Try this question again.');
+  assert.equal('patterns' in publicFeedback, false);
+  assert.equal('evidence_ids' in publicFeedback.competencies[0], false);
+
+  const retry = publicRetryComparison({
+    question_number: 1,
+    before: { c_guest_service: 'NO_EVIDENCE' },
+    after: { c_guest_service: 'STRONG' },
+    feedback: [feedback.competencies[0]],
+  });
+  assert.equal(retry.before.c_guest_service, 'Missing evidence');
+  assert.equal(retry.after.c_guest_service, 'Strong evidence');
+  assert.equal('evidence_ids' in retry.feedback[0], false);
 });
 
 test('code, not the planning model, owns slot type, target and framework', () => {

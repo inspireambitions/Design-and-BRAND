@@ -3,11 +3,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { takeHeroDraft } from '@/lib/hero-draft';
 import type {
-  CoverageStatus,
   DiscoveredCompetency,
   ExperienceLevel,
   FinalFeedback,
-  GeneratedQuestion,
 } from '@/lib/universal-interview/types';
 import { useLang } from './LanguageProvider';
 import { TopBar } from './TopBar';
@@ -30,20 +28,29 @@ type InterviewResponse = {
   phase: 'AWAITING_CONFIRMATION' | 'ACTIVE' | 'COMPLETE';
   question_number: number;
   question_total: number;
-  current_question: GeneratedQuestion | null;
-  coverage: Record<string, { status: CoverageStatus; evidence_ids: string[] }>;
+  current_question: { text: string } | null;
   retry_used: boolean;
-  role_pack: { found: boolean; assessment_type: 'COMPETENCY' | 'PRACTICAL' | 'PORTFOLIO'; technical_accuracy_verified: boolean };
-  action?: string;
+  role_pack: { assessment_type: 'COMPETENCY' | 'PRACTICAL' | 'PORTFOLIO' };
 };
 
-type FeedbackResponse = FinalFeedback & { retry_question_text?: string };
+type EvidenceBand = FinalFeedback['competencies'][number]['band'];
+type PublicCompetencyFeedback = Pick<
+  FinalFeedback['competencies'][number],
+  'id' | 'what_worked' | 'what_is_missing' | 'improve_this' | 'band'
+>;
+type FeedbackResponse = Pick<
+  FinalFeedback,
+  'single_highest_value_improvement' | 'retry_recommended_question' | 'caveats'
+> & {
+  competencies: PublicCompetencyFeedback[];
+  retry_question_text?: string;
+};
 
 type RetryResponse = {
   question_number: number;
-  before: Record<string, CoverageStatus>;
-  after: Record<string, CoverageStatus>;
-  feedback: FinalFeedback['competencies'];
+  before: Record<string, EvidenceBand>;
+  after: Record<string, EvidenceBand>;
+  feedback: PublicCompetencyFeedback[];
 };
 
 const SAVED_INTERVIEW_KEY = 'muqabala.universalInterview.v2';

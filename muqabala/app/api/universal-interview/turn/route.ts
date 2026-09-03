@@ -31,7 +31,7 @@ export async function POST(request: Request) {
       fallbackUsed: result.fallbackUsed,
       latencyMs: result.latencyMs,
     });
-    return Response.json({ ...publicInterviewState(result.state), action: result.action }, { headers: privateNoStoreHeaders() });
+    return Response.json(publicInterviewState(result.state), { headers: privateNoStoreHeaders() });
   } catch (error) {
     await releaseInterviewClaim(state.interview_id, claim);
     if (error instanceof UniversalTurnError) return jsonError(error.message, error.status, error.code);

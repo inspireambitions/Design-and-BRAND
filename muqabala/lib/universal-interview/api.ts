@@ -1,4 +1,12 @@
-import type { ExtractionResult, GeneratedQuestion, InterviewState, PlannedQuestion } from './types.ts';
+import { coverageBand } from './feedback.ts';
+import type {
+  ExtractionResult,
+  FinalFeedback,
+  GeneratedQuestion,
+  InterviewState,
+  PlannedQuestion,
+  RetryComparison,
+} from './types.ts';
 import { FRAMEWORK_CRITERIA, frameworkForQuestionType, questionQualityGate } from './questions.ts';
 
 const FORBIDDEN_CANDIDATE_COPY = /\b(?:contradiction|lie|dishonest|inconsistent)\b|—/i;
@@ -14,23 +22,68 @@ export function candidateCopySafe(value: unknown): boolean {
 export function publicInterviewState(state: InterviewState) {
   return {
     interview_id: state.interview_id,
-    role: state.role,
-    seniority: state.seniority,
     phase: state.phase,
-    status: state.status,
-    prompt_version: state.prompt_version,
-    blueprint: state.blueprint,
-    confirmed_by_candidate: state.confirmed_by_candidate,
     question_number: state.question_number,
     question_total: state.plan.length,
-    current_question: state.current_question,
-    coverage: state.coverage,
+    current_question: state.current_question ? { text: state.current_question.text } : null,
     retry_used: state.retry_used,
     role_pack: {
-      found: !state.role_pack.is_fallback,
       assessment_type: state.role_pack.assessment_type,
-      technical_accuracy_verified: Boolean(state.role_pack.technical_reference),
     },
+  };
+}
+
+export function publicDiscoveryState(
+  state: InterviewState,
+  roleSummary: string,
+  notice: string,
+) {
+  return {
+    interview_id: state.interview_id,
+    role_summary: roleSummary,
+    competencies: state.discovery.map(({ id, name, family, source, source_text }) => ({
+      id,
+      name,
+      family,
+      source,
+      source_text,
+    })),
+    suggested_competency_ids: state.blueprint.length
+      ? state.blueprint.map((competency) => competency.id)
+      : state.discovery.slice(0, 5).map((competency) => competency.id),
+    notice,
+  };
+}
+
+function publicCompetencyFeedback(item: FinalFeedback['competencies'][number]) {
+  return {
+    id: item.id,
+    what_worked: item.what_worked,
+    what_is_missing: item.what_is_missing,
+    improve_this: item.improve_this,
+    band: item.band,
+  };
+}
+
+export function publicFinalFeedback(feedback: FinalFeedback, retryQuestionText?: string) {
+  return {
+    competencies: feedback.competencies.map(publicCompetencyFeedback),
+    single_highest_value_improvement: feedback.single_highest_value_improvement,
+    retry_recommended_question: feedback.retry_recommended_question,
+    caveats: feedback.caveats,
+    ...(retryQuestionText ? { retry_question_text: retryQuestionText } : {}),
+  };
+}
+
+export function publicRetryComparison(comparison: RetryComparison) {
+  const bands = (values: RetryComparison['before']) => Object.fromEntries(
+    Object.entries(values).map(([id, status]) => [id, coverageBand(status)]),
+  );
+  return {
+    question_number: comparison.question_number,
+    before: bands(comparison.before),
+    after: bands(comparison.after),
+    feedback: comparison.feedback.map(publicCompetencyFeedback),
   };
 }
 
