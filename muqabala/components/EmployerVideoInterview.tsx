@@ -18,6 +18,7 @@ import { hideEmployerInterviewFooter } from '@/lib/footer-visibility';
 import styles from './EmployerVideoInterview.module.css';
 
 type Stage = 'resuming' | 'unavailable' | 'intro' | 'device' | 'ready' | 'recording' | 'saving' | 'consent' | 'submitting' | 'complete';
+type SaveFailureKind = 'upload' | 'analysis' | null;
 
 const ANSWER_SECONDS = 120;
 const CONSENT_VERSION = 'employer-video-v1' as const;
@@ -57,6 +58,9 @@ const COPY = {
     saved: 'Response saved',
     saveFailed: 'Your recording is still on this page, but it has not uploaded yet.',
     retrySave: 'Retry saving response',
+    analysisFailed: 'Your response is saved. Its analysis needs another try.',
+    analysisKeepOpen: 'Do not record again. Keep this page open and retry the analysis.',
+    retryAnalysis: 'Retry analysis',
     consentTitle: 'Ready to submit',
     consentBody: 'All three video responses are saved. Check the consent box before you send them to the employer.',
     brainConsentBody: 'All your video responses are saved. Check the consent box before you send them to the employer.',
@@ -119,6 +123,9 @@ const COPY = {
     saved: 'تم حفظ الإجابة',
     saveFailed: 'لا يزال تسجيلك موجوداً في هذه الصفحة، لكنه لم يُرفع بعد.',
     retrySave: 'إعادة محاولة حفظ الإجابة',
+    analysisFailed: 'تم حفظ إجابتك. يحتاج تحليلها إلى محاولة أخرى.',
+    analysisKeepOpen: 'لا تسجل مرة أخرى. أبقِ هذه الصفحة مفتوحة وأعد محاولة التحليل.',
+    retryAnalysis: 'إعادة محاولة التحليل',
     consentTitle: 'جاهز للإرسال',
     consentBody: 'تم حفظ إجابات الفيديو الثلاث. وافق على الإقرار قبل إرسالها إلى جهة العمل.',
     brainConsentBody: 'تم حفظ جميع إجابات الفيديو. وافق على الإقرار قبل إرسالها إلى جهة العمل.',
@@ -224,6 +231,7 @@ export function EmployerVideoInterview({
   const [micLevel, setMicLevel] = useState(0);
   const [devicesReady, setDevicesReady] = useState(false);
   const [error, setError] = useState('');
+  const [saveFailureKind, setSaveFailureKind] = useState<SaveFailureKind>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [pending, setPending] = useState<{ recording: RecordedVideo; transcript: string; questionIndex: number } | null>(null);
   const [consent, setConsent] = useState(false);
@@ -572,8 +580,10 @@ export function EmployerVideoInterview({
 
   const savePending = useCallback(async (toSave: { recording: RecordedVideo; transcript: string; questionIndex: number }) => {
     if (!interviewId) return;
+    let responseConfirmed = false;
     setStage('saving');
     setError('');
+    setSaveFailureKind(null);
     setUploadProgress(0);
     try {
       if (toSave.recording.blob.size > 50 * 1024 * 1024) {
@@ -591,6 +601,7 @@ export function EmployerVideoInterview({
         (answer) => answer.questionIndex === toSave.questionIndex && Boolean(answer.receivedAt),
       );
       if (alreadyReceived) {
+        responseConfirmed = true;
         const savedIndex = toSave.questionIndex;
         setUploadProgress(100);
         await continueAfterSaved(savedIndex, beforeUpload, toSave.transcript);
@@ -608,6 +619,8 @@ export function EmployerVideoInterview({
           (answer) => answer.questionIndex === toSave.questionIndex && Boolean(answer.receivedAt),
         );
         if (!confirmed) throw new Error(c.genericError);
+        responseConfirmed = true;
+        setUploadProgress(100);
         await continueAfterSaved(toSave.questionIndex, status, toSave.transcript);
         return;
       }
@@ -637,10 +650,12 @@ export function EmployerVideoInterview({
       );
       if (!confirmed) throw new Error('The upload finished, but Muqabala has not confirmed the response yet. Please retry.');
 
+      responseConfirmed = true;
       const savedIndex = toSave.questionIndex;
       await continueAfterSaved(savedIndex, confirmedStatus, toSave.transcript);
     } catch (caught) {
       setPending(toSave);
+      setSaveFailureKind(responseConfirmed ? 'analysis' : 'upload');
       setError(caught instanceof Error ? caught.message : c.genericError);
     }
   }, [c.genericError, continueAfterSaved, interviewId, readStatus]);
@@ -901,8 +916,8 @@ export function EmployerVideoInterview({
 
         {stage === 'saving' && (
           <section className={styles.card} aria-labelledby="saving-title">
-            <p className={styles.eyebrow}>{error ? c.saveFailed : c.saving}</p>
-            <h1 id="saving-title">{error ? c.saveFailed : `${c.saving}…`}</h1>
+            <p className={styles.eyebrow}>{error ? saveFailureKind === 'analysis' ? c.analysisFailed : c.saveFailed : c.saving}</p>
+            <h1 id="saving-title">{error ? saveFailureKind === 'analysis' ? c.analysisFailed : c.saveFailed : `${c.saving}…`}</h1>
             {!error && (
               <>
                 <ol className={styles.saveStages} aria-label={c.saving}>
@@ -920,10 +935,12 @@ export function EmployerVideoInterview({
                 </div>
               </>
             )}
-            <p>{c.keepOpen}</p>
+            <p>{saveFailureKind === 'analysis' ? c.analysisKeepOpen : c.keepOpen}</p>
             {error && <div className={styles.error} role="alert">{error}</div>}
             {error && pending && (
-              <button type="button" className={styles.primary} onClick={() => void savePending(pending)}>{c.retrySave}</button>
+              <button type="button" className={styles.primary} onClick={() => void savePending(pending)}>
+                {saveFailureKind === 'analysis' ? c.retryAnalysis : c.retrySave}
+              </button>
             )}
           </section>
         )}

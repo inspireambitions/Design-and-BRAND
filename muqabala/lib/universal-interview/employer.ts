@@ -181,7 +181,9 @@ export function employerBrainAnswerFeedback(input: {
   evidenceStart: number;
 }): AnswerFeedback {
   const evidence = input.state.evidence_ledger.slice(input.evidenceStart).at(-1);
-  if (!evidence) {
+  const automatedAnalysisUnavailable = evidence?.summary === 'extraction failed'
+    && Object.keys(evidence.competencies).length === 0;
+  if (!evidence || automatedAnalysisUnavailable) {
     return {
       questionId: input.questionId,
       score: 0,

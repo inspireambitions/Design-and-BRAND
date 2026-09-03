@@ -11,7 +11,7 @@ import { fallbackDiscovery, fallbackPlan, mergeAndRankCompetencies } from '../li
 import { createInterviewState } from '../lib/universal-interview/engine.ts';
 import { publicInterviewState } from '../lib/universal-interview/api.ts';
 import { ModelCallBudget } from '../lib/universal-interview/model-budget.ts';
-import { generateQuestionWithRetry } from '../lib/universal-interview/process-turn.ts';
+import { generateQuestionWithRetry, processUniversalTurn } from '../lib/universal-interview/process-turn.ts';
 import {
   frameworkForQuestionType,
   makeBankQuestion,
@@ -138,6 +138,27 @@ test('candidate API serialisation strips all internal question fields', () => {
   ]);
   assert.equal('interviewer_intent' in response.current_question, false);
   assert.equal('probe_targets' in response.current_question, false);
+});
+
+test('screening turn stays within budget and continues safely when automated analysis is unavailable', async () => {
+  const previousKey = process.env.OPENAI_API_KEY;
+  delete process.env.OPENAI_API_KEY;
+  try {
+    const state = makeState();
+    const answer = 'I cleaned the room carefully and checked every item before the guest arrived.';
+    const result = await processUniversalTurn(state, answer, {
+      allowDeterministicExtractionFallback: true,
+    });
+
+    assert.equal(result.modelCalls <= 2, true);
+    assert.equal(result.fallbackUsed, true);
+    assert.equal(result.state.question_number, 2);
+    assert.equal(result.state.transcripts.E01, answer);
+    assert.equal(result.state.decision_log.at(-1)?.fallback_used, true);
+  } finally {
+    if (previousKey === undefined) delete process.env.OPENAI_API_KEY;
+    else process.env.OPENAI_API_KEY = previousKey;
+  }
 });
 
 test('two rejected model answers trigger one retry, then a validated bank fallback and rejection logs', async () => {

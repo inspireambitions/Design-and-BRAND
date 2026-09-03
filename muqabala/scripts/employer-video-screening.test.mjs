@@ -167,6 +167,25 @@ test('adaptive screening resumes safely after an answer was uploaded but the nex
   assert.match(brainRoute, /snapshot\.length === current\.current_question/);
 });
 
+test('adaptive screening never presents a saved response as a failed upload', () => {
+  const flow = read('components/EmployerVideoInterview.tsx');
+  const brainRoute = read('app/api/screening/interviews/[id]/brain/route.ts');
+  const turnProcessor = read('lib/universal-interview/process-turn.ts');
+  const employerBridge = read('lib/universal-interview/employer.ts');
+  assert.match(turnProcessor, /new ModelCallBudget\(2\)/);
+  assert.doesNotMatch(turnProcessor, /new ModelCallBudget\(3\)/);
+  assert.match(brainRoute, /allowDeterministicExtractionFallback: true/);
+  assert.match(brainRoute, /code: 'analysis_unavailable'/);
+  assert.doesNotMatch(brainRoute, /Retry without recording again/);
+  assert.match(flow, /type SaveFailureKind = 'upload' \| 'analysis' \| null/);
+  assert.match(flow, /responseConfirmed \? 'analysis' : 'upload'/);
+  assert.match(flow, /analysisFailed: 'Your response is saved\. Its analysis needs another try\.'/);
+  assert.match(flow, /retryAnalysis: 'Retry analysis'/);
+  assert.match(employerBridge, /automatedAnalysisUnavailable/);
+  assert.match(employerBridge, /if \(!evidence \|\| automatedAnalysisUnavailable\)/);
+  assert.match(employerBridge, /status: 'unscored'/);
+});
+
 test('employer creation form generates the description before unlocking the link action', () => {
   const form = read('components/EmployerProofCreate.tsx');
   const styles = read('components/EmployerProofCreate.module.css');

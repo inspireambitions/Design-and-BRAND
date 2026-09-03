@@ -117,7 +117,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return Response.json({ error: 'The interview is not awaiting a response.' }, { status: 409 });
     }
     try {
-      const result = await processUniversalTurn(state, answer.transcript || '');
+      const result = await processUniversalTurn(state, answer.transcript || '', {
+        allowDeterministicExtractionFallback: true,
+      });
       result.state.screening!.processed_answer_count += 1;
       result.state.screening!.evidence_after_answers.push(result.state.evidence_ledger.length);
       await saveClaimedInterview(result.state, claim);
@@ -132,7 +134,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       if (error instanceof UniversalTurnError) {
         return Response.json({ error: error.message, code: error.code }, { status: error.status });
       }
-      return Response.json({ error: 'Muqabala could not analyse this response. Retry without recording again.' }, { status: 503 });
+      const internalCode = error instanceof Error && /^[a-z0-9_]+(?::[a-z0-9_]+)?$/i.test(error.message)
+        ? error.message.split(':')[0]
+        : 'unexpected_turn_error';
+      console.warn('screening_brain_turn_failed', { code: internalCode });
+      return Response.json({
+        error: 'Your response is saved. Its analysis needs another try.',
+        code: 'analysis_unavailable',
+      }, { status: 503 });
     }
   }
   const settled = await settleAnswer(state, question, questionIndex, access.admin!).then(() => true, () => false);

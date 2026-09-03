@@ -1,5 +1,5 @@
 import {
-  advanceInterview, applyExtraction, applyImmediateDecision, decideTurn, recordDecision,
+  advanceInterview, applyExtraction, applyImmediateDecision, decideTurn, deterministicExtractionFallback, recordDecision,
   setGeneratedFollowup, turnActionNeedsQuestion,
 } from './engine.ts';
 import { validateExtractionSemantics, validateGeneratedQuestion } from './api.ts';
@@ -28,7 +28,7 @@ export class UniversalTurnError extends Error {
 async function extractAnswer(state: InterviewState, answer: string, shortAnswer: boolean, budget: ModelCallBudget) {
   const basePrompt = extractionInput(state, answer, shortAnswer);
   let semanticFailure = '';
-  while (budget.remaining > 0) {
+  for (let attempt = 0; attempt < 2 && budget.remaining > 0; attempt += 1) {
     const result = await callStructured({
       stage: 'T1', schemaName: 'turn_evidence', schema: ExtractionSchema,
       instructions: EXTRACTION_INSTRUCTIONS,
@@ -102,7 +102,11 @@ export async function generateQuestionWithRetry(input: {
   return null;
 }
 
-export async function processUniversalTurn(state: InterviewState, answer: string) {
+export async function processUniversalTurn(
+  state: InterviewState,
+  answer: string,
+  options: { allowDeterministicExtractionFallback?: boolean } = {},
+) {
   const started = Date.now();
   if (state.phase !== 'ACTIVE' || !state.current_question) {
     throw new UniversalTurnError(409, 'not_active', 'This interview is not awaiting an answer.');
@@ -111,16 +115,16 @@ export async function processUniversalTurn(state: InterviewState, answer: string
   if (precheck.kind === 'NONE' && precheck.word_count < 5) {
     throw new UniversalTurnError(400, 'answer_too_short', 'Add a little more detail before sending your answer.');
   }
-  const budget = new ModelCallBudget(3);
+  const budget = new ModelCallBudget(2);
   let fallbackUsed = false;
   let extraction: ExtractionResult | null = null;
   if (precheck.kind === 'NONE') {
     const generatedExtraction = await extractAnswer(state, precheck.cleaned_answer, precheck.short_answer, budget);
     fallbackUsed = !generatedExtraction;
-    if (!generatedExtraction) {
+    if (!generatedExtraction && !options.allowDeterministicExtractionFallback) {
       throw new UniversalTurnError(503, 'answer_processing_unavailable', 'We could not read that answer. Please send it again.');
     }
-    extraction = generatedExtraction;
+    extraction = generatedExtraction ?? deterministicExtractionFallback();
     state = applyExtraction(state, extraction, precheck.cleaned_answer);
   }
   const probeCountBeforeDecision = state.probe_count_current;
