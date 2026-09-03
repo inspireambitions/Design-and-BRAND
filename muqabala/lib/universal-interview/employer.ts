@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { fallbackDiscovery, fallbackPlan, mergeAndRankCompetencies } from './blueprint.ts';
 import { activateInterview, createInterviewState } from './engine.ts';
+import { candidateSafeQuestion } from './questions.ts';
 import { getRolePack } from './role-packs/index.ts';
 import { assessJobDescription } from './sanitise.ts';
 import type {
@@ -127,11 +128,12 @@ export function createEmployerBrainState(input: {
 }
 
 export function employerBrainQuestionSnapshot(question: GeneratedQuestion, turnIndex: number): Question {
+  const safeQuestion = candidateSafeQuestion(question);
   return {
-    id: `brain_${turnIndex}_${question.kind.toLowerCase()}`,
-    text: question.text,
-    textAr: question.text,
-    competencies: question.target_competencies,
+    id: `brain_${turnIndex}_${safeQuestion.kind.toLowerCase()}`,
+    text: safeQuestion.text,
+    textAr: safeQuestion.text,
+    competencies: safeQuestion.target_competencies,
     hint: '',
     hintAr: '',
     prepSeconds: 30,
@@ -146,7 +148,7 @@ export function publicEmployerBrainState(state: InterviewState) {
     question_number: state.question_number,
     question_total: state.plan.length,
     current_question: state.current_question
-      ? { text: state.current_question.text }
+      ? { text: candidateSafeQuestion(state.current_question).text }
       : null,
   };
 }

@@ -7,9 +7,13 @@ import type {
   PlannedQuestion,
   RetryComparison,
 } from './types.ts';
-import { FRAMEWORK_CRITERIA, frameworkForQuestionType, questionQualityGate } from './questions.ts';
-
-const FORBIDDEN_CANDIDATE_COPY = /\b(?:contradiction|lie|dishonest|inconsistent|MVP|V2|beta|prototype|prompt version|model call)\b|—/i;
+import {
+  candidateCopySafeValue,
+  candidateSafeQuestion,
+  FRAMEWORK_CRITERIA,
+  frameworkForQuestionType,
+  questionQualityGate,
+} from './questions.ts';
 const INTERNAL_PUBLIC_LABEL = /\b(?:MVP|V2|beta|prototype|proof of concept|prompt[_ ]version|model[_ ]calls?|role pack|candidate-set)\b/i;
 
 const FAMILY_LABELS = {
@@ -26,7 +30,7 @@ export function universalInterviewEnabled(): boolean {
 }
 
 export function candidateCopySafe(value: unknown): boolean {
-  return !FORBIDDEN_CANDIDATE_COPY.test(JSON.stringify(value));
+  return candidateCopySafeValue(value);
 }
 
 function publicText(value: string, fallback: string): string {
@@ -43,7 +47,7 @@ export function publicInterviewState(state: InterviewState) {
         : 'interview' as const,
     question_number: state.question_number,
     question_total: state.plan.length,
-    current_question: state.current_question ? { text: state.current_question.text } : null,
+    current_question: state.current_question ? { text: candidateSafeQuestion(state.current_question).text } : null,
     retry_used: state.retry_used,
     role_caveat: state.role_pack.assessment_type === 'PRACTICAL'
       ? 'practical' as const

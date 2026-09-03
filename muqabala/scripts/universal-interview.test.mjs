@@ -19,7 +19,12 @@ import {
   mergeAndRankCompetencies,
 } from '../lib/universal-interview/blueprint.ts';
 import { assessJobDescription, precheckAnswer, stripInjection } from '../lib/universal-interview/sanitise.ts';
-import { fallbackGeneratedQuestion, questionQualityGate } from '../lib/universal-interview/questions.ts';
+import {
+  candidateQuestionSafetyReason,
+  candidateSafeQuestion,
+  fallbackGeneratedQuestion,
+  questionQualityGate,
+} from '../lib/universal-interview/questions.ts';
 import { evaluateObservedTurns, validateGoldSet } from '../lib/universal-interview/evaluation.ts';
 import {
   candidateCopySafe,
@@ -287,6 +292,41 @@ test('question quality rejects praise, long text, two questions and covered targ
   assert.equal(questionQualityGate({ ...base, text: 'What happened? What changed?' }, state).ok, false);
   state.coverage[base.target_competencies[0]].status = 'SUFFICIENT';
   assert.equal(questionQualityGate({ ...base, text: 'What happened next?' }, state).ok, false);
+});
+
+test('adaptive follow-ups never expose interviewer instructions or foreign-script fragments', () => {
+  const state = stateFor();
+  const reportedQuestions = [
+    'What specific example shows Why the candidate specifically wants the Housekeeping Attendant role and what relevant experience or understanding they have of room-cleaning standards and guest care?',
+    'What specific example shows Ask for one specific room-cleaning example from the hotel attachment, including the standards followed, how guest belongings and needs were handled, and why that experience motivated pursuit of this役割?',
+  ];
+
+  assert.notEqual(candidateQuestionSafetyReason(reportedQuestions[0], 'PROBE'), null);
+  assert.notEqual(candidateQuestionSafetyReason(reportedQuestions[1], 'PROBE'), null);
+  for (const text of reportedQuestions) {
+    const safe = candidateSafeQuestion({ ...state.current_question, text, kind: 'PROBE' });
+    assert.equal(safe.text, 'What is one specific example from your experience?');
+    assert.equal(candidateQuestionSafetyReason(safe.text, safe.kind), null);
+  }
+
+  const fallback = fallbackGeneratedQuestion('PROBE_SPECIFICITY', state.current_question, reportedQuestions[1]);
+  assert.equal(fallback.text, 'What is one specific example from your experience?');
+  assert.doesNotMatch(fallback.text, /candidate|ask for|attachment|役割/i);
+});
+
+test('short interviewer guides and non-English script fail the candidate question gate', () => {
+  assert.equal(candidateQuestionSafetyReason('Ask for one clear example?', 'PROBE'), 'interviewer_instruction');
+  assert.equal(candidateQuestionSafetyReason('Why the candidate wants this role?', 'PROBE'), 'interviewer_instruction');
+  assert.equal(candidateQuestionSafetyReason('What experience prepared you for this役割?', 'MAIN'), 'non_english_script');
+  assert.equal(candidateQuestionSafetyReason('What experience prepared you for this role?', 'MAIN'), null);
+});
+
+test('employer screening repairs unsafe stored questions at both output boundaries', () => {
+  const employerBridge = readFileSync(new URL('../lib/universal-interview/employer.ts', import.meta.url), 'utf8');
+  const snapshotBoundary = employerBridge.match(/export function employerBrainQuestionSnapshot[\s\S]*?\n\}/)?.[0] ?? '';
+  const responseBoundary = employerBridge.match(/export function publicEmployerBrainState[\s\S]*?\n\}/)?.[0] ?? '';
+  assert.match(snapshotBoundary, /candidateSafeQuestion\(question\)/);
+  assert.match(responseBoundary, /candidateSafeQuestion\(state\.current_question\)/);
 });
 
 test('entry interviews use six balanced questions and higher levels use eight', () => {

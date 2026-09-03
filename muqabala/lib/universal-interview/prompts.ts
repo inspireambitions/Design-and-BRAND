@@ -53,6 +53,7 @@ ${FAIRNESS_RULE}
 Return the supplied schema only. Output facts, not coaching, advice, scores, bands, counters or pass decisions.
 Use only competency ids provided. Use possible_inconsistency for differing scope and never label it a contradiction.
 A hypothetical example must use evidence_type HYPOTHETICAL.
+Keep probe_target to a short English evidence-gap phrase. Never write a question, interviewer instruction or candidate-facing sentence there.
 Return each requested evidence criterion exactly once in the criteria array.`;
 
 export function extractionInput(state: InterviewState, answer: string, shortAnswer: boolean): string {
@@ -78,6 +79,8 @@ ${DATA_RULE}
 Return the supplied schema only. Use British English. Do not use em dashes. Do not praise or suggest an answer.
 Write one question with one question mark. Do not join two questions with "and".
 Probes must be under 30 words. Main questions must be under 45 words.
+Address the person directly with you or your. The probe target is internal context. Never copy it as an instruction or write phrases such as "Ask for" or "Why the candidate".
+Use English only. Never add translated words or characters from another writing system.
 For a clarification, use neutral wording such as: Earlier you mentioned X. Help me understand how that relates to Y.`;
 
 export function questionInput(input: {

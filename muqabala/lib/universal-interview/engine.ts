@@ -1,5 +1,6 @@
 import { confirmBlueprint, fallbackPlan } from './blueprint.ts';
 import {
+  candidateSafeQuestion,
   fallbackGeneratedQuestion,
   FRAMEWORK_CRITERIA,
   fromPlannedQuestion,
@@ -304,18 +305,19 @@ export function applyImmediateDecision(
 
 export function setGeneratedFollowup(state: InterviewState, question: GeneratedQuestion): InterviewState {
   const next = structuredClone(state);
-  next.current_question = question;
-  if (question.kind === 'MAIN') {
+  const safeQuestion = candidateSafeQuestion(question);
+  next.current_question = safeQuestion;
+  if (safeQuestion.kind === 'MAIN') {
     const planned = next.plan[next.question_number - 1];
     if (planned) {
       next.plan[next.question_number - 1] = {
         ...planned,
-        question_type: question.question_type,
-        target_competencies: question.target_competencies,
-        primary_intent: question.intent,
-        text: question.text,
-        framework: question.framework,
-        rephrase: `Please answer this in another way: ${question.text}`,
+        question_type: safeQuestion.question_type,
+        target_competencies: safeQuestion.target_competencies,
+        primary_intent: safeQuestion.intent,
+        text: safeQuestion.text,
+        framework: safeQuestion.framework,
+        rephrase: `Please answer this in another way: ${safeQuestion.text}`,
       };
     }
   }

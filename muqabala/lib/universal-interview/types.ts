@@ -1,4 +1,4 @@
-export const PROMPT_VERSION = 'universal-brain-v2.0.0';
+export const PROMPT_VERSION = 'universal-brain-v2.0.1';
 
 export type CompetencyFamily =
   | 'behavioural'
