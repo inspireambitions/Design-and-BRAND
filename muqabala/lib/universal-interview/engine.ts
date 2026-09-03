@@ -6,6 +6,7 @@ import {
   fromPlannedQuestion,
   highestValueUncovered,
   isSufficient,
+  makeValidatedQuestion,
 } from './questions.ts';
 import type {
   CandidateProfile,
@@ -281,7 +282,16 @@ export function applyImmediateDecision(
   if (!next.current_question) throw new Error('No active question.');
   if (decision.action === 'REPHRASE') {
     const planned = next.plan[next.question_number - 1];
-    next.current_question = { ...next.current_question, text: planned.rephrase, kind: 'REPHRASE' };
+    next.current_question = makeValidatedQuestion({
+      ...next.current_question,
+      question_id: `${next.current_question.question_id}_rephrase`,
+      candidate_text: planned.rephrase_text,
+      interviewer_intent: 'REPHRASE',
+      probe_targets: [],
+      source: 'BANK',
+      prompt_version: null,
+      kind: 'REPHRASE',
+    });
     return next;
   }
   if (decision.action === 'OFFER_HYPOTHETICAL') {
@@ -314,10 +324,18 @@ export function setGeneratedFollowup(state: InterviewState, question: GeneratedQ
         ...planned,
         question_type: safeQuestion.question_type,
         target_competencies: safeQuestion.target_competencies,
-        primary_intent: safeQuestion.intent,
-        text: safeQuestion.text,
+        interviewer_intent: safeQuestion.interviewer_intent,
+        candidate_text: safeQuestion.candidate_text,
         framework: safeQuestion.framework,
-        rephrase: `Please answer this in another way: ${safeQuestion.text}`,
+        rephrase_text: safeQuestion.rephrase_text,
+        question_id: safeQuestion.question_id,
+        probe_targets: safeQuestion.probe_targets,
+        seniority: safeQuestion.seniority,
+        language: safeQuestion.language,
+        source: safeQuestion.source,
+        prompt_version: safeQuestion.prompt_version,
+        validated: safeQuestion.validated,
+        kind: safeQuestion.kind,
       };
     }
   }

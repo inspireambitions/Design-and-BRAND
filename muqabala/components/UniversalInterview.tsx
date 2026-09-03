@@ -31,9 +31,12 @@ type DiscoverResponse = {
 type InterviewResponse = {
   interview_id: string;
   stage: 'confirmation' | 'interview' | 'complete';
-  question_number: number;
-  question_total: number;
-  current_question: { text: string } | null;
+  current_question: null | {
+    question_id: string;
+    candidate_text: string;
+    question_number: number;
+    total_questions: number;
+  };
   retry_used: boolean;
   role_caveat: 'practical' | 'portfolio' | null;
 };
@@ -350,14 +353,14 @@ export function UniversalInterview() {
         {interview.role_caveat && <p className="notice tiny">
           {interview.role_caveat === 'practical' ? t('brainPracticalCaveat') : t('brainPortfolioCaveat')}
         </p>}
-        <div className="flow-progress" aria-label={`${t('brainQuestion')} ${interview.question_number} of ${interview.question_total}`}>
-          {Array.from({ length: interview.question_total }, (_, index) => <span key={index} className={index < interview.question_number ? 'done' : ''} />)}
+        <div className="flow-progress" aria-label={`${t('brainQuestion')} ${interview.current_question.question_number} of ${interview.current_question.total_questions}`}>
+          {Array.from({ length: interview.current_question.total_questions }, (_, index) => <span key={index} className={index < interview.current_question!.question_number ? 'done' : ''} />)}
         </div>
         <div className="card stack">
-          <p className="eyebrow">{t('brainQuestion')} {interview.question_number} / {interview.question_total}</p>
-          <h2 className="brain-question">{interview.current_question.text}</h2>
+          <p className="eyebrow">{t('brainQuestion')} {interview.current_question.question_number} / {interview.current_question.total_questions}</p>
+          <h2 className="brain-question">{interview.current_question.candidate_text}</h2>
           <UniversalVideoAnswer
-            key={`${interview.question_number}:${interview.current_question.text}`}
+            key={interview.current_question.question_id}
             disabled={busy}
             onTranscript={setAnswer}
           />

@@ -39,15 +39,20 @@ export async function POST(request: Request) {
   if (!claim) return jsonError('This interview is already being updated.', 409, 'interview_busy');
 
   const budget = new ModelCallBudget(2);
-  const generated = await callStructured({
-    stage: 'P2',
-    schemaName: 'interview_plan',
-    schema: PlanSchema,
-    instructions: PLAN_INSTRUCTIONS,
-    prompt: planInput(confirmed),
-    budget,
-  });
-  const plan = generated ? normaliseGeneratedPlan(confirmed, generated.plan) : null;
+  let plan: ReturnType<typeof normaliseGeneratedPlan> = null;
+  for (let attempt = 0; attempt < 2 && budget.remaining > 0 && !plan; attempt += 1) {
+    const generated = await callStructured({
+      stage: 'P2',
+      schemaName: 'interview_plan',
+      schema: PlanSchema,
+      instructions: PLAN_INSTRUCTIONS,
+      prompt: `${planInput(confirmed)}${attempt ? '\n\nYour previous candidate_text failed validation. Return eight corrected questions.' : ''}`,
+      budget,
+      allowValidationRetry: false,
+    });
+    plan = generated ? normaliseGeneratedPlan(confirmed, generated.plan) : null;
+    if (!plan && budget.remaining > 0) budget.markRetry();
+  }
   confirmed = activateInterview(state, parsed.data.competency_ids, plan ?? fallbackPlan(confirmed.blueprint, state.profile, state.role_pack));
   await saveClaimedInterview(confirmed, claim);
   await recordStageMetric({

@@ -8,16 +8,18 @@
   "core_competencies": ["c_technical_reasoning"],
   "question_bank": [
     {
-      "text": "Walk me through a difficult technical problem and the trade-offs behind your solution.",
+      "question_id": "software_technical_tradeoffs",
+      "candidate_text": "How did you weigh trade-offs when solving a difficult technical problem?",
       "question_type": "TECHNICAL",
       "target_competencies": ["c_technical_reasoning", "c_problem_solving"],
-      "intent": "TECHNICAL_TRADE_OFFS"
+      "interviewer_intent": "TECHNICAL_TRADE_OFFS"
     },
     {
-      "text": "Tell me about a disagreement over a technical approach and how you handled it.",
+      "question_id": "software_collaboration",
+      "candidate_text": "How did you handle a disagreement over a technical approach?",
       "question_type": "BEHAVIOURAL",
       "target_competencies": ["c_collaboration"],
-      "intent": "TECHNICAL_COLLABORATION"
+      "interviewer_intent": "TECHNICAL_COLLABORATION"
     }
   ],
   "assessment_type": "PRACTICAL",

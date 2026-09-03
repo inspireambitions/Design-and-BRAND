@@ -165,10 +165,11 @@ type Props = {
 
 type BrainPublicState = {
   stage: 'questions' | 'complete';
-  question_number: number;
-  question_total: number;
   current_question: null | {
-    text: string;
+    question_id: string;
+    candidate_text: string;
+    question_number: number;
+    total_questions: number;
   };
 };
 
@@ -250,15 +251,17 @@ export function EmployerVideoInterview({
   const adaptiveAvailable = brainEnabled && lang === 'en';
   const question = brainMode && brainState?.current_question
     ? {
-        id: `brain_${index}`,
-        text: brainState.current_question.text,
-        textAr: brainState.current_question.text,
+        id: brainState.current_question.question_id,
         competencies: [],
       }
     : questions[index];
-  const questionText = lang === 'ar' ? question?.textAr : question?.text;
-  const questionTotal = brainMode ? (brainState?.question_total ?? (role.level === 'Entry' ? 6 : 8)) : questions.length;
-  const questionNumber = brainMode ? (brainState?.question_number ?? 1) : index + 1;
+  const questionText = brainMode && brainState?.current_question
+    ? brainState.current_question.candidate_text
+    : lang === 'ar'
+      ? questions[index]?.textAr
+      : questions[index]?.text;
+  const questionTotal = brainMode ? (brainState?.current_question?.total_questions ?? (role.level === 'Entry' ? 6 : 8)) : questions.length;
+  const questionNumber = brainMode ? (brainState?.current_question?.question_number ?? 1) : index + 1;
   const progress = questionTotal
     ? Math.round((brainMode ? Math.max(0, questionNumber - 1) : savedCount) / questionTotal * 100)
     : 0;

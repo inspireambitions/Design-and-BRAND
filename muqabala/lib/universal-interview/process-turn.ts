@@ -8,14 +8,20 @@ import {
   EXTRACTION_INSTRUCTIONS, extractionInput, generatedQuestionFromModel,
   QUESTION_INSTRUCTIONS, questionInput,
 } from './prompts.ts';
-import { fallbackGeneratedQuestion, fallbackReplacementQuestion } from './questions.ts';
+import { fallbackGeneratedQuestion, validatedBankFallback } from './questions.ts';
+import { rejectedQuestionLog, validateQuestionObject } from './candidate-question.ts';
 import { ExtractionSchema, GeneratedQuestionSchema } from './schemas.ts';
 import { precheckAnswer } from './sanitise.ts';
 import type { ExtractionResult, GeneratedQuestion, InterviewState, TurnAction } from './types.ts';
 
 export class UniversalTurnError extends Error {
-  constructor(public status: number, public code: string, message: string) {
+  status: number;
+  code: string;
+
+  constructor(status: number, code: string, message: string) {
     super(message);
+    this.status = status;
+    this.code = code;
   }
 }
 
@@ -46,27 +52,51 @@ async function extractAnswer(state: InterviewState, answer: string, shortAnswer:
   return null;
 }
 
-async function generateQuestion(input: {
+type RawModelQuestion = {
+  candidate_text: string;
+  question_type: GeneratedQuestion['question_type'];
+  target_competencies: string[];
+  interviewer_intent: string;
+};
+
+export async function generateQuestionWithRetry(input: {
   state: InterviewState; action: TurnAction; probeTarget: string;
   replacementCompetencyId?: string | null; kind: GeneratedQuestion['kind']; budget: ModelCallBudget;
+  request?: (validationReasons: string[]) => Promise<RawModelQuestion | null>;
+  log?: (entry: ReturnType<typeof rejectedQuestionLog>) => void;
 }): Promise<GeneratedQuestion | null> {
-  let semanticFailure = '';
-  while (input.budget.remaining > 0) {
-    const result = await callStructured({
-      stage: 'T2', schemaName: 'next_interview_question', schema: GeneratedQuestionSchema,
-      instructions: QUESTION_INSTRUCTIONS,
-      prompt: `${questionInput(input)}${semanticFailure ? `\n\nYour previous question failed: ${semanticFailure}.` : ''}`,
-      budget: input.budget, allowValidationRetry: false,
-    });
+  let reasons: string[] = [];
+  const request = input.request ?? (async (validationReasons: string[]) => callStructured({
+    stage: 'T2', schemaName: 'next_interview_question', schema: GeneratedQuestionSchema,
+    instructions: QUESTION_INSTRUCTIONS,
+    prompt: `${questionInput(input)}${validationReasons.length ? `\n\nYour previous question failed validation: ${validationReasons.join(', ')}.` : ''}`,
+    budget: input.budget, allowValidationRetry: false,
+  }));
+  const log = input.log ?? ((entry) => console.warn('question_rejected', entry));
+
+  for (let attempt = 0; attempt < 2 && (input.request || input.budget.remaining > 0); attempt += 1) {
+    const result = await request(reasons);
     if (!result) {
-      semanticFailure = 'schema validation failed';
+      reasons = ['schema validation failed'];
       if (input.budget.remaining > 0) input.budget.markRetry();
       continue;
     }
-    const question = generatedQuestionFromModel(result, input.kind);
-    const failure = validateGeneratedQuestion(input.state, question);
-    if (!failure) return question;
-    semanticFailure = failure;
+    const question = generatedQuestionFromModel(result, {
+      kind: input.kind,
+      seniority: input.state.seniority,
+      promptVersion: input.state.prompt_version,
+      questionId: `model_${input.state.question_number}_${input.kind.toLowerCase()}`,
+      probeTargets: input.probeTarget ? [input.probeTarget] : [],
+    });
+    const validation = validateQuestionObject(question);
+    if (validation.ok) {
+      const failure = validateGeneratedQuestion(input.state, validation.question);
+      if (!failure) return validation.question;
+      reasons = failure.split(',').map((reason) => reason.trim()).filter(Boolean);
+    } else {
+      reasons = validation.reasons;
+    }
+    log(rejectedQuestionLog(question, reasons));
     if (input.budget.remaining > 0) input.budget.markRetry();
   }
   return null;
@@ -81,7 +111,7 @@ export async function processUniversalTurn(state: InterviewState, answer: string
   if (precheck.kind === 'NONE' && precheck.word_count < 5) {
     throw new UniversalTurnError(400, 'answer_too_short', 'Add a little more detail before sending your answer.');
   }
-  const budget = new ModelCallBudget(2);
+  const budget = new ModelCallBudget(3);
   let fallbackUsed = false;
   let extraction: ExtractionResult | null = null;
   if (precheck.kind === 'NONE') {
@@ -99,19 +129,28 @@ export async function processUniversalTurn(state: InterviewState, answer: string
     const advanced = advanceInterview(state);
     state = advanced.state;
     if (advanced.needsReplacement && advanced.replacementCompetencyId && state.current_question) {
-      const generated = await generateQuestion({
+      const generated = await generateQuestionWithRetry({
         state, action: 'MOVE_ON', probeTarget: '', replacementCompetencyId: advanced.replacementCompetencyId,
         kind: 'MAIN', budget,
       });
-      state = setGeneratedFollowup(state, generated ?? fallbackReplacementQuestion(state, advanced.replacementCompetencyId));
+      state = setGeneratedFollowup(
+        state,
+        generated ?? validatedBankFallback(state, advanced.replacementCompetencyId, 'MAIN'),
+      );
       fallbackUsed ||= !generated;
     }
   } else {
     state = applyImmediateDecision(state, decision, extraction);
     if (turnActionNeedsQuestion(decision.action) && state.current_question) {
       const kind: GeneratedQuestion['kind'] = decision.action === 'CLARIFY' ? 'CLARIFY' : decision.action === 'REDIRECT' ? 'REDIRECT' : 'PROBE';
-      const generated = await generateQuestion({ state, action: decision.action, probeTarget: decision.probe_target, kind, budget });
-      state = setGeneratedFollowup(state, generated ?? fallbackGeneratedQuestion(decision.action, state.current_question, decision.probe_target));
+      const generated = await generateQuestionWithRetry({ state, action: decision.action, probeTarget: decision.probe_target, kind, budget });
+      const competencyId = state.current_question.target_competencies[0];
+      state = setGeneratedFollowup(
+        state,
+        generated ?? (competencyId
+          ? validatedBankFallback(state, competencyId, kind)
+          : fallbackGeneratedQuestion(decision.action, state.current_question, decision.probe_target)),
+      );
       fallbackUsed ||= !generated;
     }
   }

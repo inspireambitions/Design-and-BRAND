@@ -70,9 +70,9 @@ export const PlanSchema = z.object({
   plan: z.array(z.object({
     slot: z.number().int().min(1).max(8),
     question_type: QuestionTypeSchema,
-    primary_intent: z.string().trim().min(2).max(80),
+    interviewer_intent: z.string().trim().min(2).max(80),
     target_competencies: z.array(z.string().regex(/^c_[a-z0-9_]{2,60}$/)).min(1).max(2),
-    text: z.string().trim().min(8).max(300),
+    candidate_text: z.string().trim().min(8).max(300),
     framework: FrameworkSchema,
   }).strict()).length(8),
 }).strict();
@@ -116,10 +116,10 @@ export const ExtractionSchema = z.object({
 }).strict();
 
 export const GeneratedQuestionSchema = z.object({
-  text: z.string().trim().min(5).max(300),
+  candidate_text: z.string().trim().min(5).max(300),
   question_type: QuestionTypeSchema,
   target_competencies: z.array(z.string().regex(/^c_[a-z0-9_]{2,60}$/)).min(1).max(2),
-  intent: z.string().trim().min(2).max(100),
+  interviewer_intent: z.string().trim().min(2).max(100),
 }).strict();
 
 export const FeedbackSchema = z.object({

@@ -1,0 +1,23 @@
+name: Question pipeline
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  validate-candidate-questions:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: muqabala
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: muqabala/package-lock.json
+      - run: npm ci
+      - run: npm run test:question-pipeline
+      - run: npm run check:question-copy
+      - run: npm run validate:question-bank

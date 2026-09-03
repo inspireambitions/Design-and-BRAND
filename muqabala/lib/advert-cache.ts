@@ -23,7 +23,7 @@ import type { Competency, Question } from './roles';
  * rules change. The value is part of the key, so an old entry is simply never
  * found again and expires on its own.
  */
-export const ADVERT_CACHE_VERSION = 'interview-2026-09-01';
+export const ADVERT_CACHE_VERSION = 'interview-2026-09-03-question-gate-v1';
 
 export const ADVERT_CACHE_TTL_SECONDS = 30 * 24 * 60 * 60;
 

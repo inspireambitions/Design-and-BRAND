@@ -7,6 +7,7 @@ import {
   releaseInterviewClaim, saveClaimedInterview,
 } from '@/lib/universal-interview/repository';
 import type { GeneratedQuestion, InterviewState } from '@/lib/universal-interview/types';
+import { makeBankQuestion } from '@/lib/universal-interview/questions';
 import { interviewAccess } from '@/lib/server/interview-access';
 import { hasTrustedOrigin, privateNoStoreHeaders } from '@/lib/server/security';
 import { limitScoring } from '@/lib/rate-limit';
@@ -18,15 +19,15 @@ export const maxDuration = 30;
 
 const RequestSchema = z.object({ questionIndex: z.number().int().min(0).max(49) }).strict();
 
-function questionFromSnapshot(question: Question): GeneratedQuestion {
-  return {
-    text: question.text,
+function questionFromSnapshot(question: Question, seniority: InterviewState['seniority']): GeneratedQuestion {
+  return makeBankQuestion({
+    question_id: question.id,
+    candidate_text: question.text,
+    interviewer_intent: question.id,
     question_type: 'BEHAVIOURAL',
     target_competencies: question.competencies,
-    intent: question.id,
-    framework: 'STAR',
-    kind: 'MAIN',
-  };
+    seniority,
+  });
 }
 
 async function settleAnswer(
@@ -39,7 +40,7 @@ async function settleAnswer(
   const evidenceStart = questionIndex > 0 ? counts[questionIndex - 1] ?? 0 : 0;
   const feedback = employerBrainAnswerFeedback({
     state,
-    question: questionFromSnapshot(question),
+    question: questionFromSnapshot(question, state.seniority),
     questionId: question.id,
     evidenceStart,
   });

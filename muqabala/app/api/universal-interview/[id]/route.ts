@@ -27,7 +27,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     feedback: state.final_feedback
       ? publicFinalFeedback(
           state.final_feedback,
-          state.plan[state.final_feedback.retry_recommended_question - 1]?.text,
+          state.plan[state.final_feedback.retry_recommended_question - 1]?.candidate_text,
         )
       : null,
     retry_result: state.retry_result ? publicRetryComparison(state.retry_result) : null,

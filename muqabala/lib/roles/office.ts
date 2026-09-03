@@ -21,7 +21,7 @@ export const officeRoles: Role[] = [
       ),
       q(
         'mistake',
-        'Tell me about a mistake you made at work and what you did about it.',
+        'Tell me about a mistake you made at work?',
         'حدثني عن خطأ ارتكبته في العمل وماذا فعلت حياله.',
         ['ownership', 'evidence', 'communication'],
         'Employers respect candidates who own mistakes and fix them. Say what you changed afterwards.',
@@ -29,7 +29,7 @@ export const officeRoles: Role[] = [
       ),
       q(
         'tools',
-        'Which office systems do you use, and what do you actually build or manage in them?',
+        'Which office systems do you use?',
         'ما الأنظمة المكتبية التي تستخدمها، وماذا تنشئ أو تدير بها فعلياً؟',
         ['evidence', 'communication'],
         'Name the tools and the real tasks: reports, trackers, calendars, filing systems.',
@@ -105,7 +105,7 @@ export const officeRoles: Role[] = [
       ),
       q(
         'metrics',
-        'What targets have you worked to, and how did you perform against them?',
+        'What targets have you worked to?',
         'ما الأهداف التي عملت وفقها، وكيف كان أداؤك مقارنة بها؟',
         ['evidence', 'ownership'],
         'Give the real numbers: calls handled, resolution rate, satisfaction scores.',
@@ -138,7 +138,7 @@ export const officeRoles: Role[] = [
       ),
       q(
         'unknown_issue',
-        'You get a ticket for a problem you have never seen. Walk me through what you do.',
+        'What do you do when you receive a ticket for an unfamiliar problem?',
         'تصلك تذكرة عن مشكلة لم ترها من قبل. اشرح لي ماذا ستفعل.',
         ['problem_solving', 'ownership', 'evidence'],
       ),
@@ -169,13 +169,13 @@ export const officeRoles: Role[] = [
       opener,
       q(
         'discrepancy',
-        'Tell me about a discrepancy you found in the accounts. How did you resolve it?',
+        'Tell me about a discrepancy you found in the accounts?',
         'حدثني عن اختلاف وجدته في الحسابات. كيف قمت بحله؟',
         ['problem_solving', 'evidence', 'ownership'],
       ),
       q(
         'month_end',
-        'Walk me through your month-end close process.',
+        'Walk me through your month-end close process?',
         'اشرح لي عملية الإقفال الشهري لديك.',
         ['evidence', 'communication', 'compliance'],
         'Be specific about the sequence, the systems, and the deadlines you work to.',
@@ -216,7 +216,7 @@ export const officeRoles: Role[] = [
       ),
       q(
         'selling_products',
-        'Tell me about a time you recommended a product that genuinely suited a customer.',
+        'Tell me about a time you recommended a product that genuinely suited a customer?',
         'حدثني عن مرة رشّحت فيها منتجاً يناسب العميل فعلاً.',
         ['customer_focus', 'evidence', 'communication'],
       ),
@@ -247,13 +247,13 @@ export const officeRoles: Role[] = [
       opener,
       q(
         'lost_deal',
-        'Tell me about a deal you lost. Why did you lose it and what did you learn?',
+        'Tell me about a deal you lost?',
         'حدثني عن صفقة خسرتها. لماذا خسرتها وماذا تعلمت؟',
         ['ownership', 'evidence', 'problem_solving'],
       ),
       q(
         'biggest_win',
-        'Walk me through your biggest win, from first contact to signature.',
+        'Walk me through your biggest win, from first contact to signature?',
         'اشرح لي أكبر صفقة حققتها، من أول اتصال حتى التوقيع.',
         ['evidence', 'communication', 'customer_focus'],
         'Give the numbers, the timeline, and what you personally did to move it forward.',
@@ -288,7 +288,7 @@ export const officeRoles: Role[] = [
       opener,
       q(
         'first_deal',
-        'Tell me about a property deal you closed. Walk me through how it happened.',
+        'Tell me about a property deal you closed?',
         'حدثني عن صفقة عقارية أتممتها. اشرح لي كيف حدثت.',
         ['evidence', 'customer_focus', 'ownership'],
         'Give real detail: the property, the price, the objections and how you handled them.',
@@ -329,7 +329,7 @@ export const officeRoles: Role[] = [
       opener,
       q(
         'grievance',
-        'Tell me about an employee complaint you handled. How did it end?',
+        'Tell me about an employee complaint you handled?',
         'حدثني عن شكوى موظف تعاملت معها. كيف انتهت؟',
         ['ownership', 'communication', 'problem_solving', 'evidence'],
       ),
@@ -366,7 +366,7 @@ export const officeRoles: Role[] = [
       opener,
       q(
         'struggling_student',
-        'Tell me about a student who was falling behind. What did you do about it?',
+        'What did you do when a student was falling behind?',
         'حدثني عن طالب كان متأخراً دراسياً. ماذا فعلت حيال ذلك؟',
         ['problem_solving', 'ownership', 'evidence'],
       ),
@@ -448,7 +448,7 @@ export const officeRoles: Role[] = [
       ),
       q(
         'document_systems',
-        'Which document control systems have you used and how do you organise a register?',
+        'Which document control systems have you used?',
         'ما أنظمة مراقبة الوثائق التي استخدمتها وكيف تنظّم السجل؟',
         ['evidence', 'communication'],
         'Name the real systems, such as Aconex, SharePoint or EDMS, and your numbering conventions.',
@@ -518,7 +518,7 @@ export const officeRoles: Role[] = [
       opener,
       q(
         'confidential_info',
-        'You handle confidential information daily. Tell me how you protect it.',
+        'How do you protect confidential information in your daily work?',
         'تتعامل مع معلومات سرية يومياً. أخبرني كيف تحميها.',
         ['compliance', 'ownership', 'evidence'],
       ),
@@ -594,7 +594,7 @@ export const officeRoles: Role[] = [
       opener,
       q(
         'hard_bug',
-        'Tell me about the hardest bug you have fixed. How did you find it?',
+        'Tell me about the hardest bug you have fixed?',
         'حدثني عن أصعب خطأ برمجي أصلحته. كيف وجدته؟',
         ['problem_solving', 'evidence', 'ownership'],
         'Walk through your actual debugging process, not just the outcome.',
@@ -610,7 +610,7 @@ export const officeRoles: Role[] = [
       ),
       q(
         'tech_stack',
-        'What have you built, and what were you personally responsible for?',
+        'What have you built?',
         'ماذا بنيت، وما الذي كنت مسؤولاً عنه شخصياً؟',
         ['evidence', 'communication'],
         'Name the technologies and be honest about your specific contribution.',

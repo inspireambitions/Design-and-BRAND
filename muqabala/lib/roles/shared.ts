@@ -1,4 +1,5 @@
 import { MAX_TAGS_PER_QUESTION, type QuestionTagId } from './question-tags';
+import { validateCandidateText } from '../universal-interview/candidate-question';
 
 export type { QuestionTagId } from './question-tags';
 
@@ -47,6 +48,10 @@ export type Question = {
    * inferred.
    */
   tags?: QuestionTagId[];
+  /** The catalogue ingestion gate has approved the English candidate text. */
+  validated?: true;
+  /** Internal purpose retained away from the candidate interface. */
+  interviewerIntent?: string;
 };
 
 export type Role = {
@@ -201,7 +206,29 @@ export function q(
   prepSeconds = 30,
   answerSeconds = 120,
 ): Question {
-  return { id, text, textAr, competencies, hint, hintAr, prepSeconds, answerSeconds };
+  const validation = validateCandidateText(text, { language: 'en', seniority: 'ENTRY' });
+  if (!validation.ok) {
+    console.warn('question_rejected', {
+      event: 'question_rejected',
+      source: 'BANK',
+      question_id: id,
+      reasons: validation.reasons,
+      prompt_version: null,
+    });
+    throw new Error(`Question ${id} failed bank ingestion: ${validation.reasons.join(',')}`);
+  }
+  return {
+    id,
+    text,
+    textAr,
+    competencies,
+    hint,
+    hintAr,
+    prepSeconds,
+    answerSeconds,
+    validated: true,
+    interviewerIntent: id,
+  };
 }
 
 /** Attach Gulf-specific tags to a question. Throws at module load if the list is too long. */
@@ -220,7 +247,7 @@ export function qt(tags: QuestionTagId[], ...args: Parameters<typeof q>): Questi
 /** Every interview opens with this. */
 export const opener = tagged(q(
   'intro',
-  'Tell me about yourself and why you are applying for this role.',
+  'What makes your background relevant to this role?',
   'حدثني عن نفسك ولماذا تتقدم لهذه الوظيفة.',
   ['communication', 'customer_focus'],
   'Keep it to your work history, your strengths, and why this specific role. About 90 seconds.',
@@ -232,7 +259,7 @@ export const opener = tagged(q(
 /** Every interview closes with this. */
 export const closer = tagged(q(
   'why_gulf',
-  'Why do you want to work in the Gulf, and what do you know about working here?',
+  'Why do you want to work in the Gulf?',
   'لماذا ترغب في العمل في الخليج، وماذا تعرف عن العمل هنا؟',
   ['communication', 'evidence'],
   'Show you have thought seriously about the move: the pace, the diversity, the expectations.',
@@ -244,7 +271,7 @@ export const closer = tagged(q(
 /** Closer for trades and safety-critical roles, which scores compliance instead. */
 export const closerTechnical = tagged(q(
   'why_gulf_tech',
-  'Why do you want to work in the Gulf, and what do you know about site standards here?',
+  'Why do you want to work in the Gulf?',
   'لماذا ترغب في العمل في الخليج، وماذا تعرف عن معايير العمل هنا؟',
   ['communication', 'compliance'],
   'Show you have thought seriously about the move, including the heat, the hours and the safety rules.',

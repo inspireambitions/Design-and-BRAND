@@ -6,6 +6,7 @@ import { currentUser } from '@/lib/supabase/server';
 import { newOpaqueToken, tokenHash } from '@/lib/server/security';
 import { openInterviewState, sealInterviewState } from './crypto';
 import type { InterviewState } from './types';
+import { upgradeStoredQuestionState } from './questions';
 
 export const UNIVERSAL_INTERVIEW_COOKIE = 'muqabala_brain_v2';
 
@@ -94,7 +95,7 @@ export async function loadStoredInterview(interviewId: string): Promise<Intervie
       authorised = Boolean(link);
     }
   }
-  return authorised ? openInterviewState(data.state_ciphertext) : null;
+  return authorised ? upgradeStoredQuestionState(openInterviewState(data.state_ciphertext)) : null;
 }
 
 export async function releaseInterviewClaim(interviewId: string, claim: string): Promise<void> {

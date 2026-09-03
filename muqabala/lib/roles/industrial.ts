@@ -25,13 +25,13 @@ export const energyRoles: Role[] = [
       opener,
       q(
         'plant_upset',
-        'Tell me about a plant upset or alarm you responded to. What did you do?',
+        'Tell me about a plant upset or alarm you responded to?',
         'حدثني عن اضطراب أو إنذار في المحطة تعاملت معه. ماذا فعلت؟',
         ['problem_solving', 'ownership', 'compliance', 'evidence'],
       ),
       q(
         'permit_system',
-        'Explain how a permit to work system operates and your part in it.',
+        'Explain how a permit to work system operates and your part in it?',
         'اشرح كيف يعمل نظام تصاريح العمل وما دورك فيه.',
         ['compliance', 'evidence', 'communication'],
         SAFETY_HINT,
@@ -66,7 +66,7 @@ export const energyRoles: Role[] = [
       opener,
       q(
         'calibration',
-        'Walk me through how you calibrate a transmitter and prove it is correct.',
+        'Walk me through how you calibrate a transmitter and prove it is correct?',
         'اشرح لي كيف تعاير جهاز إرسال وتتحقق من صحته.',
         ['evidence', 'problem_solving', 'communication'],
         'Name your instruments and your actual steps. Detail is what separates candidates here.',
@@ -144,7 +144,7 @@ export const energyRoles: Role[] = [
       opener,
       q(
         'scaffold_build',
-        'Walk me through erecting a scaffold safely from the ground up.',
+        'How do you erect a scaffold safely from the ground up?',
         'اشرح لي كيف تركّب سقالة بأمان من الأرض إلى الأعلى.',
         ['compliance', 'evidence', 'problem_solving'],
         SAFETY_HINT,
@@ -152,7 +152,7 @@ export const energyRoles: Role[] = [
       ),
       q(
         'scaffold_tag',
-        'What does a scaffold tag mean, and what do you do if it is missing or red?',
+        'What do you do if a scaffold tag is missing or red?',
         'ماذا تعني بطاقة السقالة، وماذا تفعل إذا كانت مفقودة أو حمراء؟',
         ['compliance', 'ownership', 'communication'],
         undefined,
@@ -162,7 +162,7 @@ export const energyRoles: Role[] = [
       ),
       q(
         'height_incident',
-        'Tell me about a time you saw something unsafe while working at height.',
+        'Tell me about a time you saw something unsafe while working at height?',
         'حدثني عن مرة رأيت فيها شيئاً غير آمن أثناء العمل على ارتفاع.',
         ['compliance', 'ownership', 'communication'],
       ),
@@ -183,7 +183,7 @@ export const energyRoles: Role[] = [
       opener,
       q(
         'nonconformance',
-        'Tell me about a non-conformance you raised. What happened afterwards?',
+        'Tell me about a non-conformance you raised?',
         'حدثني عن حالة عدم مطابقة رفعتها. ماذا حدث بعد ذلك؟',
         ['compliance', 'ownership', 'evidence', 'communication'],
       ),

@@ -104,24 +104,28 @@ export type JDQualityResult = {
   reason: string | null;
 };
 
-export type PlannedQuestion = {
-  slot: number;
-  question_type: QuestionType;
-  primary_intent: string;
-  target_competencies: string[];
-  text: string;
-  rephrase: string;
-  framework: Framework;
-};
-
-export type GeneratedQuestion = {
-  text: string;
+export type CandidateQuestion = {
+  question_id: string;
+  candidate_text: string;
+  interviewer_intent: string;
+  probe_targets: string[];
   question_type: QuestionType;
   target_competencies: string[];
-  intent: string;
+  seniority: ExperienceLevel;
+  language: 'en';
+  source: 'BANK' | 'MODEL';
+  prompt_version: string | null;
+  validated: boolean;
+  rephrase_text: string;
   framework: Framework;
   kind: 'MAIN' | 'PROBE' | 'CLARIFY' | 'REDIRECT' | 'HYPOTHETICAL' | 'REPHRASE';
 };
+
+export type PlannedQuestion = CandidateQuestion & {
+  slot: number;
+};
+
+export type GeneratedQuestion = CandidateQuestion;
 
 export type ExtractedCompetency = {
   id: string;
@@ -186,12 +190,7 @@ export type DecisionLogEntry = {
   stripped_patterns: string[];
 };
 
-export type RolePackQuestion = {
-  text: string;
-  question_type: QuestionType;
-  target_competencies: string[];
-  intent: string;
-};
+export type RolePackQuestion = CandidateQuestion;
 
 export type RolePack = {
   role: string;

@@ -35,7 +35,7 @@ export async function POST(request: Request) {
   if (state.final_feedback) return Response.json(
     publicFinalFeedback(
       state.final_feedback,
-      state.plan[state.final_feedback.retry_recommended_question - 1]?.text,
+      state.plan[state.final_feedback.retry_recommended_question - 1]?.candidate_text,
     ),
     { headers: privateNoStoreHeaders() },
   );
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
   return Response.json(
     publicFinalFeedback(
       state.final_feedback,
-      state.plan[state.final_feedback.retry_recommended_question - 1]?.text,
+      state.plan[state.final_feedback.retry_recommended_question - 1]?.candidate_text,
     ),
     { headers: privateNoStoreHeaders() },
   );

@@ -15,7 +15,7 @@ export const creativeRoles: Role[] = [
       opener,
       q(
         'campaign_results',
-        'Tell me about a campaign you ran. What did it achieve?',
+        'Tell me about a campaign you ran?',
         'حدثني عن حملة نفّذتها. ماذا حققت؟',
         ['evidence', 'ownership', 'problem_solving'],
         'Give the real numbers, such as reach, engagement, leads and cost, and what you would change.',
@@ -25,7 +25,7 @@ export const creativeRoles: Role[] = [
       ),
       q(
         'campaign_failed',
-        'Tell me about a campaign that did not work. Why not?',
+        'What did you learn from a campaign you ran that did not work?',
         'حدثني عن حملة لم تنجح. لماذا؟',
         ['ownership', 'problem_solving', 'evidence'],
       ),
@@ -56,7 +56,7 @@ export const creativeRoles: Role[] = [
       opener,
       q(
         'design_brief',
-        'Walk me through a piece of work from the brief to the final file.',
+        'How do you take a design brief through to the final file?',
         'اشرح لي عملاً من الفكرة الأولى حتى الملف النهائي.',
         ['evidence', 'communication', 'problem_solving'],
         'Talk about the decisions you made and why, not just the software you used.',
@@ -66,7 +66,7 @@ export const creativeRoles: Role[] = [
       ),
       q(
         'client_rejects',
-        'A client rejects your work and cannot explain what they want. What do you do?',
+        'What do you do when a client rejects your work without clear feedback?',
         'يرفض العميل عملك ولا يستطيع شرح ما يريده. ماذا تفعل؟',
         ['communication', 'problem_solving', 'customer_focus'],
       ),
@@ -97,7 +97,7 @@ export const creativeRoles: Role[] = [
       opener,
       q(
         'shoot_wrong',
-        'Tell me about a shoot where something went wrong. What did you do?',
+        'What did you do when something went wrong during a shoot?',
         'حدثني عن تصوير حدث فيه خطأ. ماذا فعلت؟',
         ['problem_solving', 'ownership', 'evidence'],
         'Gear failure, bad light, a late client. Say what you actually did to save it.',

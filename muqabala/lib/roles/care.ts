@@ -15,7 +15,7 @@ export const careRoles: Role[] = [
       opener,
       qt(['qatar_healthcare', 'saudi_agency'],
         'deteriorating',
-        'Tell me about a patient whose condition deteriorated on your shift. What did you do?',
+        'Tell me about a patient whose condition deteriorated on your shift?',
         'حدثني عن مريض تدهورت حالته أثناء نوبتك. ماذا فعلت؟',
         ['problem_solving', 'ownership', 'compliance', 'evidence'],
       ),
@@ -29,7 +29,7 @@ export const careRoles: Role[] = [
       ),
       qt(['qatar_healthcare', 'gulf_general'],
         'safety_protocol',
-        'Describe how you check and administer medication safely.',
+        'Describe how you check and administer medication safely?',
         'صف كيف تتحقق من الأدوية وتعطيها بأمان.',
         ['compliance', 'evidence'],
         'Walk through your actual checks step by step.',
@@ -68,7 +68,7 @@ export const careRoles: Role[] = [
       ),
       q(
         'emergency_home',
-        'You find the person you care for on the floor. Walk me through what you do.',
+        'What do you do if you find the person in your care on the floor?',
         'تجد الشخص الذي ترعاه على الأرض. اشرح لي ماذا ستفعل.',
         ['problem_solving', 'ownership', 'compliance'],
         'Give your steps in order. Calm and correct sequence is what is being scored.',
@@ -132,7 +132,7 @@ export const careRoles: Role[] = [
       opener,
       q(
         'child_safety',
-        'A child in your care has an accident at home. Walk me through what you do.',
+        'What do you do if a child in your care has an accident at home?',
         'يتعرض طفل في رعايتك لحادث في المنزل. اشرح لي ماذا ستفعل.',
         ['problem_solving', 'ownership', 'compliance'],
         'Give your steps in order, including when and how you tell the parents.',
@@ -218,7 +218,7 @@ export const careRoles: Role[] = [
       ),
       q(
         'critical_result',
-        'You get a critical result. Walk me through what happens next.',
+        'What do you do when you receive a critical result?',
         'تحصل على نتيجة حرجة. اشرح لي ماذا يحدث بعد ذلك.',
         ['compliance', 'communication', 'ownership', 'evidence'],
       ),
@@ -263,7 +263,7 @@ export const careRoles: Role[] = [
       ),
       q(
         'repeat_image',
-        'Tell me about a time you had to repeat an image. Why, and what did you learn?',
+        'Tell me about a time you had to repeat an image?',
         'حدثني عن مرة اضطررت لإعادة صورة. لماذا، وماذا تعلمت؟',
         ['ownership', 'evidence', 'problem_solving'],
         undefined,

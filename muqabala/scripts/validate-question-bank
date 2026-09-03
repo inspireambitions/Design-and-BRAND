@@ -1,0 +1,112 @@
+#!/usr/bin/env node
+
+const fs = require('node:fs');
+const path = require('node:path');
+const { execFileSync } = require('node:child_process');
+const ts = require('typescript');
+const { validateCandidateText } = require('../lib/universal-interview/candidate-question.ts');
+
+const projectRoot = path.resolve(__dirname, '..');
+
+function textValue(node) {
+  return node && (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) ? node.text : null;
+}
+
+function readSource(filePath, sourceRef) {
+  if (!sourceRef) return fs.readFileSync(filePath, 'utf8');
+  const relative = path.relative(projectRoot, filePath).replaceAll('\\', '/');
+  return execFileSync('git', ['show', `${sourceRef}:muqabala/${relative}`], {
+    cwd: projectRoot,
+    encoding: 'utf8',
+  });
+}
+
+function collectCatalogueRows(sourceRef) {
+  const rolesDirectory = path.join(projectRoot, 'lib', 'roles');
+  const files = fs.readdirSync(rolesDirectory)
+    .filter((name) => name.endsWith('.ts') && !['index.ts', 'question-tags.ts'].includes(name))
+    .sort();
+  const rows = [];
+
+  for (const fileName of files) {
+    const filePath = path.join(rolesDirectory, fileName);
+    const source = readSource(filePath, sourceRef);
+    const file = ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+    function visit(node) {
+      if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
+        const call = node.expression.text;
+        const offset = call === 'q' ? 0 : call === 'qt' ? 1 : -1;
+        if (offset >= 0) {
+          const questionId = textValue(node.arguments[offset]);
+          const candidateText = textValue(node.arguments[offset + 1]);
+          if (questionId && candidateText !== null) {
+            rows.push({
+              question_id: `${fileName.replace(/\.ts$/, '')}:${questionId}`,
+              candidate_text: candidateText,
+              seniority: 'ENTRY',
+            });
+          }
+        }
+      }
+      ts.forEachChild(node, visit);
+    }
+    visit(file);
+  }
+  return rows;
+}
+
+function collectRolePackRows(sourceRef) {
+  const directory = path.join(projectRoot, 'lib', 'universal-interview', 'role-packs');
+  return fs.readdirSync(directory)
+    .filter((name) => name.endsWith('.json'))
+    .sort()
+    .flatMap((fileName) => {
+      const pack = JSON.parse(readSource(path.join(directory, fileName), sourceRef));
+      return (pack.question_bank || []).map((question, index) => ({
+        question_id: question.question_id || `${fileName.replace(/\.json$/, '')}:${index + 1}`,
+        candidate_text: question.candidate_text || question.text || '',
+        seniority: fileName === 'graduate-trainee.json' ? 'ENTRY' : 'PROFESSIONAL',
+      }));
+    });
+}
+
+function collectQuestionBank(sourceRef) {
+  return [...collectCatalogueRows(sourceRef), ...collectRolePackRows(sourceRef)];
+}
+
+function buildReport(rows) {
+  const results = rows.map((row) => ({
+    ...row,
+    validation: validateCandidateText(row.candidate_text, { language: 'en', seniority: row.seniority }),
+  }));
+  const failures = results.filter((row) => !row.validation.ok);
+  const width = Math.max('question_id'.length, ...failures.map((row) => row.question_id.length));
+  const lines = [
+    `${'question_id'.padEnd(width)} | reasons`,
+    `${'-'.repeat(width)}-|--------`,
+    ...failures.map((row) => `${row.question_id.padEnd(width)} | ${row.validation.reasons.join(',')}`),
+    '',
+    `Rows: ${rows.length}`,
+    `Failing: ${failures.length}`,
+    `Passing: ${rows.length - failures.length}`,
+  ];
+  return { results, failures, output: `${lines.join('\n')}\n` };
+}
+
+function main() {
+  const refIndex = process.argv.indexOf('--git-ref');
+  const sourceRef = refIndex >= 0 ? process.argv[refIndex + 1] : undefined;
+  const report = buildReport(collectQuestionBank(sourceRef));
+  const outputIndex = process.argv.indexOf('--output');
+  if (outputIndex >= 0) {
+    const outputPath = process.argv[outputIndex + 1];
+    if (!outputPath) throw new Error('--output requires a file path.');
+    fs.writeFileSync(path.resolve(projectRoot, outputPath), report.output, 'utf8');
+  }
+  process.stdout.write(report.output);
+  if (report.failures.length) process.exitCode = 1;
+}
+
+if (require.main === module) main();
+
+module.exports = { buildReport, collectQuestionBank };

@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
 import { fallbackDiscovery, fallbackPlan, mergeAndRankCompetencies } from './blueprint.ts';
 import { activateInterview, createInterviewState } from './engine.ts';
-import { candidateSafeQuestion } from './questions.ts';
+import { candidateSafeQuestion, makeBankQuestion } from './questions.ts';
+import { serialiseCandidateQuestion, validateCandidateText } from './candidate-question.ts';
 import { getRolePack } from './role-packs/index.ts';
 import { assessJobDescription } from './sanitise.ts';
 import type {
@@ -73,11 +74,31 @@ function overlayEmployerQuestions(
   questions.slice(0, slots.length).forEach((question, questionIndex) => {
     const slot = slots[questionIndex];
     const targets = question.competencies.map((id) => competencyIds.get(id)).filter(Boolean) as string[];
+    const validation = validateCandidateText(question.text, {
+      language: 'en',
+      seniority: base[slot].seniority,
+    });
+    if (!validation.ok) {
+      console.warn('question_rejected', {
+        event: 'question_rejected',
+        source: 'BANK',
+        question_id: question.id,
+        reasons: validation.reasons,
+        prompt_version: null,
+      });
+      return;
+    }
     next[slot] = {
-      ...next[slot],
-      text: question.text,
-      rephrase: `Please answer this in another way: ${question.text}`,
-      target_competencies: targets.length ? targets.slice(0, 2) : next[slot].target_competencies,
+      ...makeBankQuestion({
+        question_id: question.id,
+        candidate_text: question.text,
+        interviewer_intent: next[slot].interviewer_intent,
+        probe_targets: next[slot].probe_targets,
+        question_type: next[slot].question_type,
+        target_competencies: targets.length ? targets.slice(0, 2) : next[slot].target_competencies,
+        seniority: next[slot].seniority,
+      }),
+      slot: next[slot].slot,
     };
   });
   return next;
@@ -131,8 +152,8 @@ export function employerBrainQuestionSnapshot(question: GeneratedQuestion, turnI
   const safeQuestion = candidateSafeQuestion(question);
   return {
     id: `brain_${turnIndex}_${safeQuestion.kind.toLowerCase()}`,
-    text: safeQuestion.text,
-    textAr: safeQuestion.text,
+    text: safeQuestion.candidate_text,
+    textAr: safeQuestion.candidate_text,
     competencies: safeQuestion.target_competencies,
     hint: '',
     hintAr: '',
@@ -145,10 +166,8 @@ export function employerBrainQuestionSnapshot(question: GeneratedQuestion, turnI
 export function publicEmployerBrainState(state: InterviewState) {
   return {
     stage: state.phase === 'COMPLETE' ? 'complete' as const : 'questions' as const,
-    question_number: state.question_number,
-    question_total: state.plan.length,
     current_question: state.current_question
-      ? { text: candidateSafeQuestion(state.current_question).text }
+      ? serialiseCandidateQuestion(candidateSafeQuestion(state.current_question), state.question_number, state.plan.length)
       : null,
   };
 }

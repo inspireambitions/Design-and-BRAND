@@ -8,16 +8,18 @@
   "core_competencies": ["c_guest_service"],
   "question_bank": [
     {
-      "text": "Tell me about a time you recovered a difficult guest experience.",
+      "question_id": "front_desk_complaint_recovery",
+      "candidate_text": "Tell me about a time you recovered a difficult guest experience?",
       "question_type": "BEHAVIOURAL",
       "target_competencies": ["c_complaint_handling"],
-      "intent": "COMPLAINT_RECOVERY"
+      "interviewer_intent": "COMPLAINT_RECOVERY"
     },
     {
-      "text": "A guest is waiting while the phone rings and a colleague asks for help. What would you do first?",
+      "question_id": "front_desk_prioritisation",
+      "candidate_text": "What would you do first if a guest was waiting while the phone rang?",
       "question_type": "SITUATIONAL",
       "target_competencies": ["c_prioritisation"],
-      "intent": "PRIORITISATION"
+      "interviewer_intent": "PRIORITISATION"
     }
   ],
   "assessment_type": "COMPETENCY",

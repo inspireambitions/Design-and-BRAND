@@ -1,5 +1,14 @@
+import {
+  assertValidatedQuestion,
+  fixedRephrase,
+  validateCandidateText,
+  validateQuestionObject,
+} from './candidate-question.ts';
 import type {
+  CandidateQuestion,
+  CandidateProfile,
   CoverageStatus,
+  ExperienceLevel,
   Framework,
   GeneratedQuestion,
   InterviewState,
@@ -8,18 +17,6 @@ import type {
 } from './types.ts';
 
 const FORBIDDEN_CANDIDATE_COPY = /\b(?:contradiction|lie|dishonest|inconsistent|MVP|V2|beta|prototype|prompt version|model call)\b|—/i;
-const NON_ENGLISH_SCRIPT = /[\u0370-\u052f\u0590-\u109f\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/u;
-const INTERVIEWER_GUIDE_PREFIX = /^(?:(?:what|which)\s+(?:specific\s+)?example\s+shows\s+)?(?:ask(?:\s+(?:the\s+)?candidate|\s+for)\b|(?:why|what|how|whether|where|when)\s+the candidate\b|the candidate\b|interviewer(?:\s+should)?\b|probe(?:\s+for|\s+the)?\b|follow[- ]?up\b)/i;
-const INTERNAL_ATTACHMENT_REFERENCE = /\b(?:from|in)\s+(?:the\s+)?(?:job|hotel|employer|uploaded)?\s*attachment\b/i;
-
-const SAFE_QUESTION_FALLBACKS: Record<GeneratedQuestion['kind'], string> = {
-  MAIN: 'What experience best shows your fit for this role?',
-  PROBE: 'What is one specific example from your experience?',
-  CLARIFY: 'What part did you personally handle in that situation?',
-  REDIRECT: 'What relevant example answers the original question?',
-  HYPOTHETICAL: 'If you faced this situation, what would you do first?',
-  REPHRASE: 'What relevant example would you like to use?',
-};
 
 export const FRAMEWORK_CRITERIA: Record<Framework, string[]> = {
   STAR: ['situation', 'task', 'action', 'result'],
@@ -47,19 +44,43 @@ export function frameworkForQuestionType(type: QuestionType): Framework {
   return table[type];
 }
 
-export function fromPlannedQuestion(question: PlannedQuestion): GeneratedQuestion {
-  return {
-    text: question.text,
-    question_type: question.question_type,
-    target_competencies: question.target_competencies,
-    intent: question.primary_intent,
-    framework: question.framework,
-    kind: 'MAIN',
-  };
+export function makeValidatedQuestion(input: Omit<CandidateQuestion, 'validated' | 'rephrase_text'> & {
+  rephrase_text?: string;
+}): CandidateQuestion {
+  const result = validateQuestionObject({
+    ...input,
+    rephrase_text: input.rephrase_text ?? fixedRephrase(input.question_type),
+  });
+  if (!result.ok) {
+    throw new Error(`Question ${input.question_id} failed validation: ${result.reasons.join(',')}`);
+  }
+  return result.question;
 }
 
-function wordCount(value: string): number {
-  return value.trim().split(/\s+/).filter(Boolean).length;
+export function makeBankQuestion(input: {
+  question_id: string;
+  candidate_text: string;
+  interviewer_intent: string;
+  probe_targets?: string[];
+  question_type: QuestionType;
+  target_competencies: string[];
+  seniority: ExperienceLevel;
+  kind?: GeneratedQuestion['kind'];
+  rephrase_text?: string;
+}): CandidateQuestion {
+  return makeValidatedQuestion({
+    ...input,
+    probe_targets: input.probe_targets ?? [],
+    language: 'en',
+    source: 'BANK',
+    prompt_version: null,
+    framework: frameworkForQuestionType(input.question_type),
+    kind: input.kind ?? 'MAIN',
+  });
+}
+
+export function fromPlannedQuestion(question: PlannedQuestion): GeneratedQuestion {
+  return assertValidatedQuestion({ ...question, kind: 'MAIN' });
 }
 
 export function candidateCopySafeValue(value: unknown): boolean {
@@ -68,28 +89,15 @@ export function candidateCopySafeValue(value: unknown): boolean {
 
 export function candidateQuestionSafetyReason(
   text: string,
-  kind: GeneratedQuestion['kind'],
+  _kind: GeneratedQuestion['kind'],
+  seniority: ExperienceLevel = 'PROFESSIONAL',
 ): string | null {
-  const trimmed = text.trim();
-  const questionMarks = (trimmed.match(/\?/g) ?? []).length;
-  const limit = kind === 'MAIN' || kind === 'REPHRASE' ? 45 : 30;
-  if (trimmed.length < 5 || wordCount(trimmed) < 2) return 'question_too_short';
-  if (questionMarks > 1) return 'more_than_one_question_mark';
-  if (wordCount(trimmed) > limit) return 'word_limit';
-  if (!candidateCopySafeValue(trimmed)) return 'forbidden_candidate_facing_wording';
-  if (NON_ENGLISH_SCRIPT.test(trimmed)) return 'non_english_script';
-  if (/^(?:great|thanks)\b/i.test(trimmed)) return 'starts_with_praise';
-  if (/\band\b[^?]*\?/i.test(trimmed)) return 'possible_double_barrelled_question';
-  if (INTERVIEWER_GUIDE_PREFIX.test(trimmed)) return 'interviewer_instruction';
-  if (INTERNAL_ATTACHMENT_REFERENCE.test(trimmed)) return 'internal_attachment_reference';
-  return null;
+  if (!candidateCopySafeValue(text)) return 'FORBIDDEN_CANDIDATE_COPY';
+  return validateCandidateText(text, { language: 'en', seniority }).reasons[0] ?? null;
 }
 
 export function candidateSafeQuestion(question: GeneratedQuestion): GeneratedQuestion {
-  if (!candidateQuestionSafetyReason(question.text, question.kind)) {
-    return { ...question, text: question.text.trim() };
-  }
-  return { ...question, text: SAFE_QUESTION_FALLBACKS[question.kind] };
+  return assertValidatedQuestion(question);
 }
 
 const coverageRank: Record<CoverageStatus, number> = {
@@ -102,10 +110,16 @@ const coverageRank: Record<CoverageStatus, number> = {
 
 export function questionQualityGate(
   question: GeneratedQuestion,
-  state: Pick<InterviewState, 'coverage' | 'dedupe_keys'>,
+  state: Pick<InterviewState, 'coverage' | 'dedupe_keys' | 'seniority'>,
 ): { ok: true } | { ok: false; reason: string } {
-  const safetyFailure = candidateQuestionSafetyReason(question.text, question.kind);
-  if (safetyFailure) return { ok: false, reason: safetyFailure };
+  if (!candidateCopySafeValue(question.candidate_text)) {
+    return { ok: false, reason: 'FORBIDDEN_CANDIDATE_COPY' };
+  }
+  const validation = validateCandidateText(question.candidate_text, {
+    language: question.language,
+    seniority: state.seniority,
+  });
+  if (!validation.ok) return { ok: false, reason: validation.reasons.join(',') };
   for (const competencyId of question.target_competencies) {
     const status = state.coverage[competencyId]?.status ?? 'NO_EVIDENCE';
     if (coverageRank[status] >= coverageRank.SUFFICIENT && question.kind !== 'CLARIFY') {
@@ -130,23 +144,29 @@ export function fallbackGeneratedQuestion(
     PROBE_RESULT: 'What changed because of your actions?',
     PROBE_OWNERSHIP: 'Which part did you personally own?',
     PROBE_SPECIFICITY: 'What is one specific example from your experience?',
-    PROBE_SCALE: 'What was the scale of that work?',
+    PROBE_SCALE: 'What was the scale of your work?',
     PROBE_REASONING: 'What reasoning led you to that decision?',
-    CLARIFY: 'Earlier you described the scope differently. Which scope applies?',
-    REDIRECT: 'What relevant example answers the original question?',
+    CLARIFY: 'Earlier you described the scope differently. Which scope applies to your example?',
+    REDIRECT: 'What relevant example from your experience answers the original question?',
     OFFER_HYPOTHETICAL: 'If you faced this situation, what would you do first?',
   };
-  return {
+  const kind: GeneratedQuestion['kind'] = action === 'CLARIFY'
+    ? 'CLARIFY'
+    : action === 'REDIRECT'
+      ? 'REDIRECT'
+      : action === 'OFFER_HYPOTHETICAL'
+        ? 'HYPOTHETICAL'
+        : 'PROBE';
+  return makeValidatedQuestion({
     ...current,
-    text: textByAction[action] ?? current.text,
-    kind: action === 'CLARIFY'
-      ? 'CLARIFY'
-      : action === 'REDIRECT'
-        ? 'REDIRECT'
-        : action === 'OFFER_HYPOTHETICAL'
-          ? 'HYPOTHETICAL'
-          : 'PROBE',
-  };
+    question_id: `${current.question_id}_${kind.toLowerCase()}`,
+    candidate_text: textByAction[action] ?? current.candidate_text,
+    interviewer_intent: action,
+    probe_targets: [],
+    source: 'BANK',
+    prompt_version: null,
+    kind,
+  });
 }
 
 export function fallbackReplacementQuestion(state: InterviewState, competencyId: string): GeneratedQuestion {
@@ -161,14 +181,48 @@ export function fallbackReplacementQuestion(state: InterviewState, competencyId:
         : competency.family === 'motivation'
           ? 'MOTIVATION'
           : 'BEHAVIOURAL';
-  return {
-    text: `Tell me about one example that shows your ${competency.name.toLowerCase()}.`,
+  return makeBankQuestion({
+    question_id: `fallback_${competency.id}`,
+    candidate_text: `What example best shows your ${competency.name.toLowerCase()}?`,
     question_type: questionType,
     target_competencies: [competency.id],
-    intent: 'REPLACEMENT_FOR_COVERED_COMPETENCY',
-    framework: frameworkForQuestionType(questionType),
-    kind: 'MAIN',
-  };
+    interviewer_intent: 'REPLACEMENT_FOR_COVERED_COMPETENCY',
+    seniority: state.seniority,
+  });
+}
+
+export function genericBehaviouralFallback(
+  state: Pick<InterviewState, 'seniority'>,
+  competencyId: string,
+  kind: GeneratedQuestion['kind'] = 'MAIN',
+): GeneratedQuestion {
+  return makeBankQuestion({
+    question_id: `generic_${competencyId}_${kind.toLowerCase()}`,
+    candidate_text: 'What is one relevant example from your experience?',
+    question_type: 'BEHAVIOURAL',
+    target_competencies: [competencyId],
+    interviewer_intent: 'GENERIC_BEHAVIOURAL_FALLBACK',
+    seniority: state.seniority,
+    kind,
+  });
+}
+
+export function validatedBankFallback(
+  state: InterviewState,
+  competencyId: string,
+  kind: GeneratedQuestion['kind'] = 'MAIN',
+): GeneratedQuestion {
+  const bankQuestion = state.role_pack.question_bank.find((question) => (
+    question.target_competencies.includes(competencyId)
+    && question.question_id !== state.current_question?.question_id
+  ));
+  if (!bankQuestion) return genericBehaviouralFallback(state, competencyId, kind);
+  return makeValidatedQuestion({
+    ...bankQuestion,
+    question_id: `${bankQuestion.question_id}_${kind.toLowerCase()}`,
+    seniority: state.seniority,
+    kind,
+  });
 }
 
 export function highestValueUncovered(state: InterviewState, includeNonBlueprint = false): string | null {
@@ -181,4 +235,84 @@ export function highestValueUncovered(state: InterviewState, includeNonBlueprint
 
 export function isSufficient(status: CoverageStatus | undefined): boolean {
   return coverageRank[status ?? 'NO_EVIDENCE'] >= coverageRank.SUFFICIENT;
+}
+
+export function seniorityFromProfile(profile: CandidateProfile): ExperienceLevel {
+  return profile.experience_level;
+}
+
+type LegacyQuestion = Partial<CandidateQuestion> & {
+  text?: string;
+  intent?: string;
+  primary_intent?: string;
+  rephrase?: string;
+  slot?: number;
+};
+
+const LEGACY_SAFE_TEXT: Record<GeneratedQuestion['kind'], string> = {
+  MAIN: 'What is one relevant example from your experience?',
+  PROBE: 'What detail from your example would you add?',
+  CLARIFY: 'Which part of the situation did you personally handle?',
+  REDIRECT: 'What relevant example from your experience answers the question?',
+  HYPOTHETICAL: 'What would you do first in this situation?',
+  REPHRASE: 'What is one relevant example from your experience?',
+};
+
+function upgradeLegacyQuestion(
+  raw: LegacyQuestion,
+  seniority: ExperienceLevel,
+  index: number,
+): CandidateQuestion {
+  const questionType = raw.question_type ?? 'BEHAVIOURAL';
+  const kind = raw.kind ?? 'MAIN';
+  const candidateText = raw.candidate_text ?? raw.text ?? '';
+  const input = {
+    question_id: raw.question_id ?? `legacy_${index + 1}`,
+    candidate_text: candidateText,
+    interviewer_intent: raw.interviewer_intent ?? raw.primary_intent ?? raw.intent ?? 'LEGACY_QUESTION',
+    probe_targets: raw.probe_targets ?? [],
+    question_type: questionType,
+    target_competencies: raw.target_competencies ?? [],
+    seniority,
+    language: 'en' as const,
+    source: raw.source ?? (raw.prompt_version ? 'MODEL' as const : 'BANK' as const),
+    prompt_version: raw.prompt_version ?? null,
+    framework: raw.framework ?? frameworkForQuestionType(questionType),
+    kind,
+    rephrase_text: fixedRephrase(questionType),
+  };
+  const validation = validateQuestionObject(input);
+  if (validation.ok && candidateCopySafeValue(candidateText)) return validation.question;
+  console.warn('question_rejected', {
+    event: 'question_rejected',
+    source: input.source,
+    question_id: input.question_id,
+    reasons: validation.ok ? ['FORBIDDEN_CANDIDATE_COPY'] : validation.reasons,
+    prompt_version: input.prompt_version,
+  });
+  return makeValidatedQuestion({ ...input, candidate_text: LEGACY_SAFE_TEXT[kind], source: 'BANK', prompt_version: null });
+}
+
+/** Upgrade encrypted interviews created before the canonical question schema. */
+export function upgradeStoredQuestionState(state: InterviewState): InterviewState {
+  const next = structuredClone(state);
+  next.plan = (next.plan as unknown as LegacyQuestion[]).map((raw, index) => ({
+    ...upgradeLegacyQuestion(raw, next.seniority, index),
+    slot: raw.slot ?? index + 1,
+  }));
+  next.role_pack.question_bank = (next.role_pack.question_bank as unknown as LegacyQuestion[]).flatMap((raw, index) => {
+    try {
+      return [upgradeLegacyQuestion(raw, next.seniority, index)];
+    } catch {
+      return [];
+    }
+  });
+  if (next.current_question) {
+    next.current_question = upgradeLegacyQuestion(
+      next.current_question as unknown as LegacyQuestion,
+      next.seniority,
+      next.question_number - 1,
+    );
+  }
+  return next;
 }

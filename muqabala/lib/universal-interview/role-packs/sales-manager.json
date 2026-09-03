@@ -8,16 +8,18 @@
   "core_competencies": ["c_sales_delivery", "c_leadership"],
   "question_bank": [
     {
-      "text": "Tell me about a sales target your team missed and what you changed.",
+      "question_id": "sales_manager_recovery",
+      "candidate_text": "What did you change after your team missed a sales target?",
       "question_type": "COMMERCIAL",
       "target_competencies": ["c_sales_delivery", "c_commercial_judgement"],
-      "intent": "SALES_RECOVERY"
+      "interviewer_intent": "SALES_RECOVERY"
     },
     {
-      "text": "How did you help an underperforming salesperson improve?",
+      "question_id": "sales_manager_coaching",
+      "candidate_text": "How did you help an underperforming salesperson improve?",
       "question_type": "LEADERSHIP",
       "target_competencies": ["c_coaching"],
-      "intent": "PEOPLE_COACHING"
+      "interviewer_intent": "PEOPLE_COACHING"
     }
   ],
   "assessment_type": "COMPETENCY",

@@ -23,6 +23,7 @@ import {
   candidateQuestionSafetyReason,
   candidateSafeQuestion,
   fallbackGeneratedQuestion,
+  makeBankQuestion,
   questionQualityGate,
 } from '../lib/universal-interview/questions.ts';
 import { evaluateObservedTurns, validateGoldSet } from '../lib/universal-interview/evaluation.ts';
@@ -288,10 +289,10 @@ test('no-example offers one hypothetical and then moves on', () => {
 test('question quality rejects praise, long text, two questions and covered targets', () => {
   const state = stateFor();
   const base = { ...state.current_question, kind: 'PROBE' };
-  assert.equal(questionQualityGate({ ...base, text: 'Great, what happened?' }, state).ok, false);
-  assert.equal(questionQualityGate({ ...base, text: 'What happened? What changed?' }, state).ok, false);
+  assert.equal(questionQualityGate({ ...base, candidate_text: 'Great, what happened?' }, state).ok, false);
+  assert.equal(questionQualityGate({ ...base, candidate_text: 'What happened? What changed?' }, state).ok, false);
   state.coverage[base.target_competencies[0]].status = 'SUFFICIENT';
-  assert.equal(questionQualityGate({ ...base, text: 'What happened next?' }, state).ok, false);
+  assert.equal(questionQualityGate({ ...base, candidate_text: 'What did you do next?' }, state).ok, false);
 });
 
 test('adaptive follow-ups never expose interviewer instructions or foreign-script fragments', () => {
@@ -304,20 +305,21 @@ test('adaptive follow-ups never expose interviewer instructions or foreign-scrip
   assert.notEqual(candidateQuestionSafetyReason(reportedQuestions[0], 'PROBE'), null);
   assert.notEqual(candidateQuestionSafetyReason(reportedQuestions[1], 'PROBE'), null);
   for (const text of reportedQuestions) {
-    const safe = candidateSafeQuestion({ ...state.current_question, text, kind: 'PROBE' });
-    assert.equal(safe.text, 'What is one specific example from your experience?');
-    assert.equal(candidateQuestionSafetyReason(safe.text, safe.kind), null);
+    assert.throws(
+      () => candidateSafeQuestion({ ...state.current_question, candidate_text: text, kind: 'PROBE' }),
+      /Refusing to serve unvalidated question/,
+    );
   }
 
   const fallback = fallbackGeneratedQuestion('PROBE_SPECIFICITY', state.current_question, reportedQuestions[1]);
-  assert.equal(fallback.text, 'What is one specific example from your experience?');
-  assert.doesNotMatch(fallback.text, /candidate|ask for|attachment|役割/i);
+  assert.equal(fallback.candidate_text, 'What is one specific example from your experience?');
+  assert.doesNotMatch(fallback.candidate_text, /candidate|ask for|attachment|役割/i);
 });
 
 test('short interviewer guides and non-English script fail the candidate question gate', () => {
-  assert.equal(candidateQuestionSafetyReason('Ask for one clear example?', 'PROBE'), 'interviewer_instruction');
-  assert.equal(candidateQuestionSafetyReason('Why the candidate wants this role?', 'PROBE'), 'interviewer_instruction');
-  assert.equal(candidateQuestionSafetyReason('What experience prepared you for this役割?', 'MAIN'), 'non_english_script');
+  assert.equal(candidateQuestionSafetyReason('Ask for one clear example?', 'PROBE'), 'INTERVIEWER_VERB');
+  assert.equal(candidateQuestionSafetyReason('Why the candidate wants this role?', 'PROBE'), 'THIRD_PERSON');
+  assert.equal(candidateQuestionSafetyReason('What experience prepared you for this役割?', 'MAIN'), 'NON_LATIN');
   assert.equal(candidateQuestionSafetyReason('What experience prepared you for this role?', 'MAIN'), null);
 });
 
@@ -343,7 +345,7 @@ test('entry interviews use six balanced questions and higher levels use eight', 
   const state = stateFor();
   assert.equal(state.plan.length, 8);
   assert.equal(deterministicExtractionFallback().evidence.summary, 'extraction failed');
-  assert.equal(fallbackGeneratedQuestion('PROBE_RESULT', state.current_question, '').text, 'What changed because of your actions?');
+  assert.equal(fallbackGeneratedQuestion('PROBE_RESULT', state.current_question, '').candidate_text, 'What changed because of your actions?');
   state.question_number = 8;
   const advanced = advanceInterview(state);
   assert.equal(advanced.state.phase, 'COMPLETE');
@@ -362,12 +364,16 @@ test('coverage never shortens the declared interview length', () => {
 test('adaptive main questions update the plan used by retry', () => {
   const state = stateFor();
   state.question_number = 2;
-  const replacement = fallbackGeneratedQuestion('MOVE_ON', state.current_question, '');
-  replacement.kind = 'MAIN';
-  replacement.text = 'Tell me about a complaint you resolved for a guest.';
-  replacement.target_competencies = ['c_complaint_handling'];
+  const replacement = makeBankQuestion({
+    question_id: 'replacement_complaint',
+    candidate_text: 'Tell me about a complaint you resolved for a guest?',
+    interviewer_intent: 'COMPLAINT_RECOVERY',
+    question_type: 'BEHAVIOURAL',
+    target_competencies: ['c_complaint_handling'],
+    seniority: state.seniority,
+  });
   const updated = setGeneratedFollowup(state, replacement);
-  assert.equal(updated.plan[1].text, replacement.text);
+  assert.equal(updated.plan[1].candidate_text, replacement.candidate_text);
   assert.deepEqual(updated.plan[1].target_competencies, ['c_complaint_handling']);
 });
 
@@ -392,10 +398,11 @@ test('public Brain responses contain only fields the candidate journey uses', ()
   const state = stateFor();
   const interview = publicInterviewState(state);
   assert.deepEqual(Object.keys(interview), [
-    'interview_id', 'stage', 'question_number', 'question_total',
-    'current_question', 'retry_used', 'role_caveat',
+    'interview_id', 'stage', 'current_question', 'retry_used', 'role_caveat',
   ]);
-  assert.deepEqual(Object.keys(interview.current_question), ['text']);
+  assert.deepEqual(Object.keys(interview.current_question), [
+    'question_id', 'candidate_text', 'question_number', 'total_questions',
+  ]);
 
   state.discovery[0] = {
     ...state.discovery[0],
@@ -435,7 +442,7 @@ test('code, not the planning model, owns slot type, target and framework', () =>
     ...item,
     question_type: 'COMMERCIAL',
     target_competencies: [state.blueprint[4].id],
-    primary_intent: 'MODEL_CHOICE',
+    interviewer_intent: 'MODEL_CHOICE',
   }));
   const normalised = normaliseGeneratedPlan(state, generated);
   assert.ok(normalised);

@@ -8,6 +8,12 @@ import type {
   RetryComparison,
 } from './types.ts';
 import {
+  fixedRephrase,
+  rejectedQuestionLog,
+  serialiseCandidateQuestion,
+  validateQuestionObject,
+} from './candidate-question.ts';
+import {
   candidateCopySafeValue,
   candidateSafeQuestion,
   FRAMEWORK_CRITERIA,
@@ -45,9 +51,9 @@ export function publicInterviewState(state: InterviewState) {
       : state.phase === 'COMPLETE'
         ? 'complete' as const
         : 'interview' as const,
-    question_number: state.question_number,
-    question_total: state.plan.length,
-    current_question: state.current_question ? { text: candidateSafeQuestion(state.current_question).text } : null,
+    current_question: state.current_question
+      ? serialiseCandidateQuestion(candidateSafeQuestion(state.current_question), state.question_number, state.plan.length)
+      : null,
     retry_used: state.retry_used,
     role_caveat: state.role_pack.assessment_type === 'PRACTICAL'
       ? 'practical' as const
@@ -130,12 +136,18 @@ export function validateExtractionSemantics(state: InterviewState, extraction: E
   return null;
 }
 
-export function normaliseGeneratedPlan(state: InterviewState, plan: Array<Omit<PlannedQuestion, 'rephrase'>>): PlannedQuestion[] | null {
+export function normaliseGeneratedPlan(state: InterviewState, plan: Array<{
+  slot: number;
+  candidate_text: string;
+  question_type: PlannedQuestion['question_type'];
+  target_competencies: string[];
+  interviewer_intent: string;
+}>): PlannedQuestion[] | null {
   const allowed = new Set(state.blueprint.map((competency) => competency.id));
   const slots = [...plan].sort((left, right) => left.slot - right.slot);
   if (slots.length !== 8 || slots.some((item, index) => item.slot !== index + 1)) return null;
   if (slots.some((item) => item.target_competencies.some((id) => !allowed.has(id)))) return null;
-  if (!candidateCopySafe(slots)) return null;
+  if (slots.some((item) => !candidateCopySafe(item.candidate_text))) return null;
 
   const motivation = state.blueprint.find((competency) => competency.family === 'motivation') ?? state.blueprint[0];
   const behavioural = state.blueprint.find((competency) => competency.family === 'behavioural') ?? state.blueprint[2];
@@ -162,28 +174,38 @@ export function normaliseGeneratedPlan(state: InterviewState, plan: Array<Omit<P
     { type: typeFor(3), targets: [state.blueprint[3].id], intent: state.blueprint[3].id },
     { type: typeFor(4), targets: [state.blueprint[4].id], intent: 'HIGHEST_VALUE_UNCOVERED' },
   ];
-  const normalised = slots.map((item, index) => ({
-    ...item,
-    question_type: fixed[index].type,
-    target_competencies: fixed[index].targets,
-    primary_intent: fixed[index].intent,
-    framework: frameworkForQuestionType(fixed[index].type),
-    rephrase: `Please answer this in another way: ${item.text}`,
-  }));
+  const normalised: PlannedQuestion[] = [];
+  for (const [index, item] of slots.entries()) {
+    const questionType = fixed[index].type;
+    const candidate = {
+      question_id: `model_plan_${item.slot}`,
+      candidate_text: item.candidate_text,
+      interviewer_intent: fixed[index].intent,
+      probe_targets: [],
+      question_type: questionType,
+      target_competencies: fixed[index].targets,
+      seniority: state.seniority,
+      language: 'en' as const,
+      source: 'MODEL' as const,
+      prompt_version: state.prompt_version,
+      rephrase_text: fixedRephrase(questionType),
+      framework: frameworkForQuestionType(questionType),
+      kind: 'MAIN' as const,
+    };
+    const validated = validateQuestionObject(candidate);
+    if (!validated.ok) {
+      console.warn('question_rejected', rejectedQuestionLog(candidate, validated.reasons));
+      return null;
+    }
+    normalised.push({ ...validated.question, slot: item.slot });
+  }
   const temporary = { ...state, coverage: state.coverage, dedupe_keys: [] };
-  if (normalised.some((item) => !questionQualityGate({
-    text: item.text,
-    question_type: item.question_type,
-    target_competencies: item.target_competencies,
-    intent: item.primary_intent,
-    framework: item.framework,
-    kind: 'MAIN',
-  }, temporary).ok)) return null;
+  if (normalised.some((item) => !questionQualityGate(item, temporary).ok)) return null;
   return normalised;
 }
 
 export function validateGeneratedQuestion(state: InterviewState, question: GeneratedQuestion): string | null {
-  if (!candidateCopySafe(question)) return 'forbidden candidate-facing wording';
+  if (!candidateCopySafe(question.candidate_text)) return 'forbidden candidate-facing wording';
   const allowed = new Set(state.discovery.map((competency) => competency.id));
   if (question.target_competencies.some((id) => !allowed.has(id))) return 'unknown competency id';
   const quality = questionQualityGate(question, state);
