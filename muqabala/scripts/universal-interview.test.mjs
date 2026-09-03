@@ -352,14 +352,26 @@ test('public Brain responses contain only fields the candidate journey uses', ()
   const state = stateFor();
   const interview = publicInterviewState(state);
   assert.deepEqual(Object.keys(interview), [
-    'interview_id', 'phase', 'question_number', 'question_total',
-    'current_question', 'retry_used', 'role_pack',
+    'interview_id', 'stage', 'question_number', 'question_total',
+    'current_question', 'retry_used', 'role_caveat',
   ]);
   assert.deepEqual(Object.keys(interview.current_question), ['text']);
-  assert.deepEqual(Object.keys(interview.role_pack), ['assessment_type']);
 
-  const discovery = publicDiscoveryState(state, 'Interview for Front Desk Agent', 'Ready to begin.');
-  assert.deepEqual(Object.keys(discovery.competencies[0]), ['id', 'name', 'family', 'source', 'source_text']);
+  state.discovery[0] = {
+    ...state.discovery[0],
+    source: 'EXPLICIT',
+    source_text: 'Role pack core competency',
+  };
+  const discovery = publicDiscoveryState(
+    state,
+    'Universal Interview Brain V2 role pack',
+    'This notice came from the role pack.',
+  );
+  assert.deepEqual(Object.keys(discovery.competencies[0]), ['id', 'name', 'detail']);
+  assert.equal(discovery.role_summary, 'Interview for Front Desk Agent.');
+  assert.equal(discovery.competencies[0].detail, 'Behavioural skill');
+  assert.equal(discovery.notice, 'Your interview is ready to review.');
+  assert.doesNotMatch(JSON.stringify(discovery), /INFERRED|ASSUMED|PROFESSIONAL|role pack|MVP|V2/i);
 
   const feedback = buildFinalFeedback(state, deterministicFeedbackFallback(state));
   const publicFeedback = publicFinalFeedback(feedback, 'Try this question again.');
@@ -398,6 +410,7 @@ test('candidate-facing model output rejects forbidden words and em dashes', () =
   assert.equal(candidateCopySafe({ text: 'The scope was described differently.' }), true);
   assert.equal(candidateCopySafe({ text: 'That was inconsistent.' }), false);
   assert.equal(candidateCopySafe({ text: 'Clear answer — weak result.' }), false);
+  assert.equal(candidateCopySafe({ text: 'This is the MVP V2 flow.' }), false);
 });
 
 test('a confidentiality refusal can still count a directional result with scale', () => {

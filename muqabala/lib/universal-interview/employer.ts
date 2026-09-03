@@ -142,7 +142,7 @@ export function employerBrainQuestionSnapshot(question: GeneratedQuestion, turnI
 /** Candidate-safe adaptive state. Employer evidence and coverage never leave the server here. */
 export function publicEmployerBrainState(state: InterviewState) {
   return {
-    phase: state.phase,
+    stage: state.phase === 'COMPLETE' ? 'complete' as const : 'questions' as const,
     question_number: state.question_number,
     question_total: state.plan.length,
     current_question: state.current_question

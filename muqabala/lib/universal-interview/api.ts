@@ -9,7 +9,17 @@ import type {
 } from './types.ts';
 import { FRAMEWORK_CRITERIA, frameworkForQuestionType, questionQualityGate } from './questions.ts';
 
-const FORBIDDEN_CANDIDATE_COPY = /\b(?:contradiction|lie|dishonest|inconsistent)\b|—/i;
+const FORBIDDEN_CANDIDATE_COPY = /\b(?:contradiction|lie|dishonest|inconsistent|MVP|V2|beta|prototype|prompt version|model call)\b|—/i;
+const INTERNAL_PUBLIC_LABEL = /\b(?:MVP|V2|beta|prototype|proof of concept|prompt[_ ]version|model[_ ]calls?|role pack|candidate-set)\b/i;
+
+const FAMILY_LABELS = {
+  behavioural: 'Behavioural skill',
+  cognitive: 'Thinking and judgement',
+  leadership: 'Leadership',
+  commercial: 'Commercial judgement',
+  technical: 'Role knowledge',
+  motivation: 'Motivation',
+} as const;
 
 export function universalInterviewEnabled(): boolean {
   return process.env.NEXT_PUBLIC_UNIVERSAL_BRAIN_V2 === 'on';
@@ -19,17 +29,27 @@ export function candidateCopySafe(value: unknown): boolean {
   return !FORBIDDEN_CANDIDATE_COPY.test(JSON.stringify(value));
 }
 
+function publicText(value: string, fallback: string): string {
+  return INTERNAL_PUBLIC_LABEL.test(value) ? fallback : value;
+}
+
 export function publicInterviewState(state: InterviewState) {
   return {
     interview_id: state.interview_id,
-    phase: state.phase,
+    stage: state.phase === 'AWAITING_CONFIRMATION'
+      ? 'confirmation' as const
+      : state.phase === 'COMPLETE'
+        ? 'complete' as const
+        : 'interview' as const,
     question_number: state.question_number,
     question_total: state.plan.length,
     current_question: state.current_question ? { text: state.current_question.text } : null,
     retry_used: state.retry_used,
-    role_pack: {
-      assessment_type: state.role_pack.assessment_type,
-    },
+    role_caveat: state.role_pack.assessment_type === 'PRACTICAL'
+      ? 'practical' as const
+      : state.role_pack.assessment_type === 'PORTFOLIO'
+        ? 'portfolio' as const
+        : null,
   };
 }
 
@@ -40,18 +60,18 @@ export function publicDiscoveryState(
 ) {
   return {
     interview_id: state.interview_id,
-    role_summary: roleSummary,
+    role_summary: publicText(roleSummary, `Interview for ${state.profile.target_role}.`),
     competencies: state.discovery.map(({ id, name, family, source, source_text }) => ({
       id,
       name,
-      family,
-      source,
-      source_text,
+      detail: source === 'EXPLICIT'
+        ? publicText(source_text, FAMILY_LABELS[family])
+        : FAMILY_LABELS[family],
     })),
     suggested_competency_ids: state.blueprint.length
       ? state.blueprint.map((competency) => competency.id)
       : state.discovery.slice(0, 5).map((competency) => competency.id),
-    notice,
+    notice: publicText(notice, 'Your interview is ready to review.'),
   };
 }
 

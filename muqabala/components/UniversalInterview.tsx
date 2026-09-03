@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { takeHeroDraft } from '@/lib/hero-draft';
 import type {
-  DiscoveredCompetency,
   ExperienceLevel,
   FinalFeedback,
 } from '@/lib/universal-interview/types';
@@ -15,22 +14,28 @@ import { hideUniversalInterviewFooter } from '@/lib/footer-visibility';
 
 type Stage = 'SETUP' | 'CONFIRM' | 'INTERVIEW' | 'FEEDBACK_LOADING' | 'FEEDBACK' | 'DELETED';
 
+type PublicCompetency = {
+  id: string;
+  name: string;
+  detail: string;
+};
+
 type DiscoverResponse = {
   interview_id: string;
   role_summary: string;
-  competencies: DiscoveredCompetency[];
+  competencies: PublicCompetency[];
   suggested_competency_ids: string[];
   notice: string;
 };
 
 type InterviewResponse = {
   interview_id: string;
-  phase: 'AWAITING_CONFIRMATION' | 'ACTIVE' | 'COMPLETE';
+  stage: 'confirmation' | 'interview' | 'complete';
   question_number: number;
   question_total: number;
   current_question: { text: string } | null;
   retry_used: boolean;
-  role_pack: { assessment_type: 'COMPETENCY' | 'PRACTICAL' | 'PORTFOLIO' };
+  role_caveat: 'practical' | 'portfolio' | null;
 };
 
 type EvidenceBand = FinalFeedback['competencies'][number]['band'];
@@ -109,12 +114,12 @@ export function UniversalInterview() {
             setSelected(restored.discovery.suggested_competency_ids);
             setInterview(restored.interview);
             setRetryResult(restored.retry_result);
-            if (restored.interview.phase === 'AWAITING_CONFIRMATION') setStage('CONFIRM');
-            if (restored.interview.phase === 'ACTIVE') setStage('INTERVIEW');
-            if (restored.interview.phase === 'COMPLETE' && restored.feedback) {
+            if (restored.interview.stage === 'confirmation') setStage('CONFIRM');
+            if (restored.interview.stage === 'interview') setStage('INTERVIEW');
+            if (restored.interview.stage === 'complete' && restored.feedback) {
               setFeedback(restored.feedback);
               setStage('FEEDBACK');
-            } else if (restored.interview.phase === 'COMPLETE') {
+            } else if (restored.interview.stage === 'complete') {
               setStage('FEEDBACK_LOADING');
               await loadFeedback(restored.interview.interview_id);
             }
@@ -197,7 +202,7 @@ export function UniversalInterview() {
       });
       setInterview(result);
       setAnswer('');
-      if (result.phase === 'COMPLETE') {
+      if (result.stage === 'complete') {
         setStage('FEEDBACK_LOADING');
         await loadFeedback(result.interview_id);
       }
@@ -331,7 +336,7 @@ export function UniversalInterview() {
                 onChange={(event) => setSelected((current) => event.target.checked
                   ? [...current, competency.id]
                   : current.filter((id) => id !== competency.id))} />
-              <span><strong>{competency.name}</strong><small>{competency.source === 'EXPLICIT' ? competency.source_text : competency.family}</small></span>
+              <span><strong>{competency.name}</strong><small>{competency.detail}</small></span>
             </label>;
           })}
         </div>
@@ -342,8 +347,8 @@ export function UniversalInterview() {
       </section>}
 
       {stage === 'INTERVIEW' && interview?.current_question && <section className="stack-lg">
-        {interview.role_pack.assessment_type !== 'COMPETENCY' && <p className="notice tiny">
-          {interview.role_pack.assessment_type === 'PRACTICAL' ? t('brainPracticalCaveat') : t('brainPortfolioCaveat')}
+        {interview.role_caveat && <p className="notice tiny">
+          {interview.role_caveat === 'practical' ? t('brainPracticalCaveat') : t('brainPortfolioCaveat')}
         </p>}
         <div className="flow-progress" aria-label={`${t('brainQuestion')} ${interview.question_number} of ${interview.question_total}`}>
           {Array.from({ length: interview.question_total }, (_, index) => <span key={index} className={index < interview.question_number ? 'done' : ''} />)}

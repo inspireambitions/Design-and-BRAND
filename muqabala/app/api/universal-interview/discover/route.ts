@@ -84,12 +84,12 @@ export async function POST(request: Request) {
   });
 
   const notice = jdQuality.outcome === 'PASS'
-    ? 'Your blueprint uses the job description and the role pack.'
+    ? 'Your interview uses the job description and Muqabala\'s role guide.'
     : jdQuality.outcome === 'WEAK'
-      ? 'Part of this blueprint is assumed because the job description was limited.'
+      ? 'Part of this interview uses Muqabala\'s role guide because the job description was limited.'
       : rolePackFound(profile.target_role)
-        ? 'The job description could not be used, so this blueprint uses the role pack.'
-        : 'No reviewed role pack was found, so this blueprint uses the general baseline.';
+        ? 'The job description could not be used, so this interview uses Muqabala\'s role guide.'
+        : 'This interview uses Muqabala\'s general skills guide.';
 
   return Response.json(
     publicDiscoveryState(state, discovery.role_summary, notice),

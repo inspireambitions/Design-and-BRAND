@@ -164,7 +164,7 @@ type Props = {
 };
 
 type BrainPublicState = {
-  phase: 'AWAITING_CONFIRMATION' | 'ACTIVE' | 'COMPLETE';
+  stage: 'questions' | 'complete';
   question_number: number;
   question_total: number;
   current_question: null | {
@@ -297,7 +297,7 @@ export function EmployerVideoInterview({
         setCandidateName(resumed.candidateName || '');
         let status = await readStatus(resumedId);
         let resumedBrain = status.brain;
-        if (resumedBrain?.phase === 'ACTIVE' && status.currentQuestion > 0 && status.questionCount <= status.currentQuestion) {
+        if (resumedBrain?.stage === 'questions' && status.currentQuestion > 0 && status.questionCount <= status.currentQuestion) {
           const repair = await fetch(`/api/screening/interviews/${resumedId}/brain`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -342,7 +342,7 @@ export function EmployerVideoInterview({
           return;
         }
         setError(copyRef.current.resumeFound);
-        setStage(resumedBrain?.phase === 'COMPLETE' || (!resumedBrain && status.currentQuestion >= questions.length) ? 'consent' : 'intro');
+        setStage(resumedBrain?.stage === 'complete' || (!resumedBrain && status.currentQuestion >= questions.length) ? 'consent' : 'intro');
       })
       .catch(() => {
         if (!cancelled) setStage(availability === 'full' ? 'unavailable' : 'intro');
@@ -469,7 +469,7 @@ export function EmployerVideoInterview({
       const received = status.answers.filter((answer) => Boolean(answer.receivedAt));
       setSavedCount(received.length);
       setIndex(activeBrain ? Math.max(0, status.currentQuestion) : Math.max(0, Math.min(questions.length - 1, status.currentQuestion)));
-      setStage(activeBrain?.phase === 'COMPLETE' || (!activeBrain && status.currentQuestion >= questions.length) ? 'consent' : 'ready');
+      setStage(activeBrain?.stage === 'complete' || (!activeBrain && status.currentQuestion >= questions.length) ? 'consent' : 'ready');
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : c.genericError);
     }
@@ -551,7 +551,7 @@ export function EmployerVideoInterview({
         throw new Error(body.error || c.genericError);
       }
       setBrainState(body.brain);
-      complete = Boolean(body.complete || body.brain.phase === 'COMPLETE');
+      complete = Boolean(body.complete || body.brain.stage === 'complete');
       nextIndex = body.nextTurnIndex;
     } else {
       scoreInBackground(savedIndex, transcript);
