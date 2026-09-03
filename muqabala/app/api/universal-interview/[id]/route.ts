@@ -25,6 +25,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
       ...state.final_feedback,
       retry_question_text: state.plan[state.final_feedback.retry_recommended_question - 1]?.text,
     } : null,
+    retry_result: state.retry_result ?? null,
   }, { headers: privateNoStoreHeaders() });
 }
 

@@ -25,6 +25,7 @@ import { candidateCopySafe, normaliseGeneratedPlan, validateExtractionSemantics 
 import { ModelCallBudget } from '../lib/universal-interview/model-budget.ts';
 import { zodTextFormat } from 'openai/helpers/zod';
 import { ExtractionSchema } from '../lib/universal-interview/schemas.ts';
+import { buildFinalFeedback, deterministicFeedbackFallback } from '../lib/universal-interview/feedback.ts';
 
 const profile = {
   experience_level: 'PROFESSIONAL',
@@ -318,6 +319,23 @@ test('adaptive main questions update the plan used by retry', () => {
   const updated = setGeneratedFollowup(state, replacement);
   assert.equal(updated.plan[1].text, replacement.text);
   assert.deepEqual(updated.plan[1].target_competencies, ['c_complaint_handling']);
+});
+
+test('fallback feedback is grounded in recorded evidence', () => {
+  let state = stateFor();
+  state.current_question = { ...state.current_question, target_competencies: ['c_guest_service'], framework: 'STAR' };
+  state = applyExtraction(state, extraction(), 'I resolved the complaint and the guest returned.');
+  const feedback = buildFinalFeedback(state, deterministicFeedbackFallback(state));
+  const guestService = feedback.competencies.find((item) => item.id === 'c_guest_service');
+  assert.match(guestService.what_worked, /guest complaint and the guest returned/i);
+  assert.deepEqual(guestService.evidence_ids, ['E01']);
+});
+
+test('retry comparison is persisted and restored with the report', () => {
+  const retryRoute = readFileSync(new URL('../app/api/universal-interview/retry/route.ts', import.meta.url), 'utf8');
+  const getRoute = readFileSync(new URL('../app/api/universal-interview/[id]/route.ts', import.meta.url), 'utf8');
+  assert.match(retryRoute, /state\.retry_result =/);
+  assert.match(getRoute, /retry_result: state\.retry_result/);
 });
 
 test('code, not the planning model, owns slot type, target and framework', () => {

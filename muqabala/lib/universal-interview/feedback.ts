@@ -41,17 +41,32 @@ export function deterministicFeedbackFallback(state: InterviewState): FeedbackMo
   return {
     competencies: state.blueprint.map((competency) => {
       const evidenceIds = state.coverage[competency.id]?.evidence_ids ?? [];
+      const evidence = state.evidence_ledger.filter((entry) => evidenceIds.includes(entry.id));
+      const latest = evidence.at(-1);
+      const expectedCriteria = latest ? Object.entries(latest.criteria) : [];
+      const missing = expectedCriteria
+        .filter(([, status]) => status === 'MISSING' || status === 'WEAK')
+        .map(([criterion]) => criterion.replaceAll('_', ' '));
+      const summary = latest?.summary.trim().replaceAll('—', ',').slice(0, 360) ?? '';
       return {
         id: competency.id,
-        what_worked: evidenceIds.length ? 'The interview recorded relevant evidence for this area.' : '',
-        what_is_missing: evidenceIds.length ? 'The available evidence needs more detail.' : 'No usable evidence was recorded.',
-        improve_this: 'Give one clear example. State your action and the result.',
+        what_worked: summary
+          ? `Your example showed ${competency.name.toLowerCase()}: ${summary}`
+          : '',
+        what_is_missing: evidenceIds.length
+          ? (missing.length ? `The example still needs clearer ${missing.slice(0, 2).join(' and ')}.` : '')
+          : `No example yet showed ${competency.name.toLowerCase()}.`,
+        improve_this: evidenceIds.length
+          ? (missing.length
+              ? `Add the ${missing[0]} to the example you gave for ${competency.name.toLowerCase()}.`
+              : `Keep the result clear when you describe ${competency.name.toLowerCase()}.`)
+          : `Give one example that shows ${competency.name.toLowerCase()}, your action and the result.`,
         evidence_ids: evidenceIds,
       };
     }),
     patterns: [],
     single_highest_value_improvement: recommended
-      ? `Give a clearer example of ${recommended.competency.name.toLowerCase()}, including your action and result.`
+      ? `Strengthen your example of ${recommended.competency.name.toLowerCase()} with the missing action or result.`
       : 'Keep your strongest examples concise and specific.',
     retry_recommended_question: Math.max(1, Math.min(state.plan.length, recommended
       ? state.plan.find((question) => question.target_competencies.includes(recommended.competency.id))?.slot ?? 1

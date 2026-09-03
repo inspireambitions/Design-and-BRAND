@@ -242,9 +242,17 @@ export type InterviewState = {
   decision_log: DecisionLogEntry[];
   role_pack: RolePack;
   retry_used: boolean;
+  retry_result: RetryComparison | null;
   final_feedback: FinalFeedback | null;
   phase: InterviewPhase;
   status: 'ACTIVE' | 'COMPLETE';
+};
+
+export type RetryComparison = {
+  question_number: number;
+  before: Record<string, CoverageStatus>;
+  after: Record<string, CoverageStatus>;
+  feedback: FinalFeedback['competencies'];
 };
 
 export type PrecheckResult = {

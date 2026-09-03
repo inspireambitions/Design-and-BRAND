@@ -47,6 +47,7 @@ export async function POST(request: Request) {
     instructions: FEEDBACK_INSTRUCTIONS,
     prompt: feedbackInput(state),
     budget,
+    allowValidationRetry: false,
   });
   const safeOutput = generated && validFeedbackSemantics(state, generated)
     ? generated

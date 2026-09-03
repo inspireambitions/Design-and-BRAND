@@ -94,10 +94,12 @@ export function UniversalInterview() {
               interview: InterviewResponse;
               discovery: DiscoverResponse;
               feedback: FeedbackResponse | null;
+              retry_result: RetryResponse | null;
             };
             setDiscovery(restored.discovery);
             setSelected(restored.discovery.suggested_competency_ids);
             setInterview(restored.interview);
+            setRetryResult(restored.retry_result);
             if (restored.interview.phase === 'AWAITING_CONFIRMATION') setStage('CONFIRM');
             if (restored.interview.phase === 'ACTIVE') setStage('INTERVIEW');
             if (restored.interview.phase === 'COMPLETE' && restored.feedback) {

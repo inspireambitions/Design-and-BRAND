@@ -62,6 +62,7 @@ Blueprint: ${JSON.stringify(state.blueprint)}
 Coverage: ${JSON.stringify(state.coverage)}
 Earlier evidence summaries: ${JSON.stringify(ledger)}
 Current question: ${JSON.stringify(state.current_question)}
+Allowed evidence competency ids: ${JSON.stringify(state.current_question?.target_competencies ?? [])}
 Required evidence criteria: ${JSON.stringify(FRAMEWORK_CRITERIA[state.current_question?.framework ?? 'STAR'])}
 Candidate-set seniority: ${state.seniority}
 Short-answer flag: ${shortAnswer}

@@ -136,6 +136,7 @@ export function createInterviewState(input: {
     decision_log: [],
     role_pack: input.rolePack,
     retry_used: false,
+    retry_result: null,
     final_feedback: null,
     phase: 'AWAITING_CONFIRMATION',
     status: 'ACTIVE',

@@ -46,22 +46,33 @@ export async function POST(request: Request) {
   const extractionState = structuredClone(completedState);
   extractionState.current_question = fromPlannedQuestion(planned);
   extractionState.question_number = parsed.data.question_number;
-  const generatedExtraction = await callStructured({
-    stage: 'T1',
-    schemaName: 'retry_evidence',
-    schema: ExtractionSchema,
-    instructions: EXTRACTION_INSTRUCTIONS,
-    prompt: extractionInput(extractionState, precheck.cleaned_answer, precheck.short_answer),
-    budget,
-    allowValidationRetry: false,
-  });
-  const criteriaEntries = generatedExtraction?.evidence.criteria ?? [];
-  const criteria = Object.fromEntries(criteriaEntries.map((item) => [item.criterion, item.status]));
-  const extraction = generatedExtraction
-    ? { ...generatedExtraction, evidence: { ...generatedExtraction.evidence, criteria } }
-    : null;
-  const duplicateCriteria = new Set(criteriaEntries.map((item) => item.criterion)).size !== criteriaEntries.length;
-  if (!extraction || duplicateCriteria || validateExtractionSemantics(extractionState, extraction)) {
+  const extractionPrompt = extractionInput(extractionState, precheck.cleaned_answer, precheck.short_answer);
+  let extraction = null;
+  let semanticFailure = '';
+  while (budget.remaining > 0 && !extraction) {
+    const generated = await callStructured({
+      stage: 'T1',
+      schemaName: 'retry_evidence',
+      schema: ExtractionSchema,
+      instructions: EXTRACTION_INSTRUCTIONS,
+      prompt: semanticFailure ? `${extractionPrompt}\n\nYour previous output failed validation: ${semanticFailure}.` : extractionPrompt,
+      budget,
+      allowValidationRetry: false,
+    });
+    if (!generated) {
+      semanticFailure = 'schema validation failed';
+      continue;
+    }
+    const criteriaEntries = generated.evidence.criteria;
+    const criteria = Object.fromEntries(criteriaEntries.map((item) => [item.criterion, item.status]));
+    const normalised = { ...generated, evidence: { ...generated.evidence, criteria } };
+    const duplicateCriteria = new Set(criteriaEntries.map((item) => item.criterion)).size !== criteriaEntries.length;
+    semanticFailure = duplicateCriteria
+      ? 'duplicate framework criterion'
+      : validateExtractionSemantics(extractionState, normalised) ?? '';
+    if (!semanticFailure) extraction = normalised;
+  }
+  if (!extraction) {
     await releaseInterviewClaim(state.interview_id, claim);
     await recordStageMetric({
       interviewId: state.interview_id,
@@ -97,8 +108,29 @@ export async function POST(request: Request) {
     && generatedFeedback.competencies.every((item) => knownCompetencies.has(item.id)
       && item.evidence_ids.every((id) => knownEvidence.has(id)));
   const output = feedbackSafe ? generatedFeedback : deterministicFeedbackFallback(state);
-  state.final_feedback = buildFinalFeedback(state, output);
+  const rebuiltFeedback = buildFinalFeedback(state, output);
+  const earlierFeedback = completedState.final_feedback;
+  if (earlierFeedback) {
+    const updatedById = new Map(rebuiltFeedback.competencies.map((item) => [item.id, item]));
+    state.final_feedback = {
+      ...earlierFeedback,
+      competencies: earlierFeedback.competencies.map((item) => (
+        targetIds.includes(item.id) ? updatedById.get(item.id) ?? item : item
+      )),
+      single_highest_value_improvement: feedbackSafe
+        ? rebuiltFeedback.single_highest_value_improvement
+        : earlierFeedback.single_highest_value_improvement,
+    };
+  } else {
+    state.final_feedback = rebuiltFeedback;
+  }
   const after = Object.fromEntries(targetIds.map((id) => [id, state.coverage[id]?.status ?? 'NO_EVIDENCE']));
+  state.retry_result = {
+    question_number: parsed.data.question_number,
+    before,
+    after,
+    feedback: state.final_feedback.competencies.filter((competency) => targetIds.includes(competency.id)),
+  };
   await saveClaimedInterview(state, claim);
   await recordStageMetric({
     interviewId: state.interview_id,
@@ -111,9 +143,6 @@ export async function POST(request: Request) {
   });
 
   return Response.json({
-    question_number: parsed.data.question_number,
-    before,
-    after,
-    feedback: state.final_feedback.competencies.filter((competency) => targetIds.includes(competency.id)),
+    ...state.retry_result,
   }, { headers: privateNoStoreHeaders() });
 }
