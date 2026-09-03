@@ -278,9 +278,10 @@ test('section 4: shortlist email subject, snippet, ordering and magic link', asy
 
 test('section 4: decisions are logged with reviewer, undo deletes the row, and the review screen is one candidate', () => {
   const actions = read('app/employer/actions.ts');
-  assert.match(actions, /from\('employer_decisions'\)\s*\.insert\(\{ interview_id: owned\.interviewId, role_id: owned\.roleId, reviewer_id: owned\.userId, decision: input\.decision, note \}\)/);
+  assert.match(actions, /\.rpc\('record_employer_decision'/);
   assert.match(actions, /export async function undoDecision/);
-  assert.match(actions, /from\('employer_decisions'\)\s*\.delete\(\)/);
+  assert.match(actions, /\.rpc\('undo_employer_decision'/);
+  assert.doesNotMatch(actions, /export async function setEmployerDecision/);
   assert.match(actions, /export async function createCandidateShare/);
   assert.match(actions, /7 \* 24 \* 60 \* 60 \* 1000/);
   assert.match(actions, /\/c\/\$\{token\}/);
@@ -291,6 +292,11 @@ test('section 4: decisions are logged with reviewer, undo deletes the row, and t
   assert.match(review, /start - end > 80\) goNext\(\)/, 'swipe left advances');
   assert.match(review, /maxLength=\{280\}/);
   assert.doesNotMatch(review, /\/100/);
+  const dashboardActions = read('components/DashboardDecisionActions.tsx');
+  assert.match(dashboardActions, /recordDecision\(\{ interviewId, decision \}\)/);
+  assert.match(dashboardActions, /selected === normalised/);
+  assert.match(dashboardActions, /router\.refresh\(\)/);
+  assert.match(dashboardActions, /role=\{error \? 'alert' : 'status'\}/);
   const css = read('components/CandidateReview.module.css');
   assert.match(css, /\.decisionBar \{[\s\S]*position: fixed;[\s\S]*bottom: 0;/);
   assert.match(css, /width: min\(100% - 2rem, 40rem\)/, 'centred at 640px on desktop');
@@ -301,6 +307,13 @@ test('section 4: decisions are logged with reviewer, undo deletes the row, and t
   assert.match(migration, /create table if not exists public\.candidate_shares/);
   assert.match(migration, /response in \('recommend', 'not_this_one'\)/);
   assert.match(migration, /revoke all on public\.candidate_shares from public, anon, authenticated/);
+
+  const consistencyMigration = read('supabase/migrations/20260903170412_employer_decision_consistency.sql');
+  assert.match(consistencyMigration, /create or replace function public\.record_employer_decision/);
+  assert.match(consistencyMigration, /when 'shortlist' then 'shortlisted'/);
+  assert.match(consistencyMigration, /when 'pass' then 'not_proceeding'/);
+  assert.match(consistencyMigration, /create or replace function public\.undo_employer_decision/);
+  assert.match(consistencyMigration, /grant execute on function public\.record_employer_decision[\s\S]*to service_role/);
 });
 
 test('section 4: shared page is public, shows no contact details and closes when revoked', () => {

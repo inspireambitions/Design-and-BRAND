@@ -107,19 +107,18 @@ export async function recordDecision(input: { interviewId: string; decision: Vol
   const admin = createAdminClient();
   if (!admin) return { error: 'Decision storage is not configured.' };
   const note = input.note?.replace(/\s+/g, ' ').trim().slice(0, 280) || null;
-  const now = new Date().toISOString();
   const { data, error } = await admin
-    .from('employer_decisions')
-    .insert({ interview_id: owned.interviewId, role_id: owned.roleId, reviewer_id: owned.userId, decision: input.decision, note })
-    .select('id')
-    .single();
-  if (error || !data) return { error: 'The decision could not be saved.' };
-  await admin
-    .from('interviews')
-    .update({ employer_reviewed_at: now, employer_decision: input.decision, employer_decided_at: now })
-    .eq('id', owned.interviewId);
+    .rpc('record_employer_decision', {
+      p_interview_id: owned.interviewId,
+      p_role_id: owned.roleId,
+      p_reviewer_id: owned.userId,
+      p_decision: input.decision,
+      p_note: note,
+    });
+  if (error || typeof data !== 'string') return { error: 'The decision could not be saved. Try again.' };
   revalidatePath('/employer');
-  return { id: data.id as string };
+  revalidatePath(`/employer/interviews/${owned.interviewId}`);
+  return { id: data };
 }
 
 /** Undo deletes the log row and restores the previous decision, if any, on the legacy column. */
@@ -129,26 +128,15 @@ export async function undoDecision(input: { interviewId: string; decisionId: str
   if (!owned) return { error: 'This candidate is not available.' };
   const admin = createAdminClient();
   if (!admin) return { error: 'Decision storage is not configured.' };
-  const { data: removed } = await admin
-    .from('employer_decisions')
-    .delete()
-    .eq('id', input.decisionId)
-    .eq('interview_id', owned.interviewId)
-    .eq('reviewer_id', owned.userId)
-    .select('id');
-  if (!removed?.length) return { error: 'Nothing to undo.' };
-  const { data: previous } = await admin
-    .from('employer_decisions')
-    .select('decision,created_at')
-    .eq('interview_id', owned.interviewId)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  await admin
-    .from('interviews')
-    .update({ employer_decision: previous?.decision ?? null, employer_decided_at: previous?.created_at ?? null })
-    .eq('id', owned.interviewId);
+  const { data: removed, error } = await admin.rpc('undo_employer_decision', {
+    p_interview_id: owned.interviewId,
+    p_decision_id: input.decisionId,
+    p_reviewer_id: owned.userId,
+  });
+  if (error) return { error: 'The decision could not be restored. Try again.' };
+  if (removed !== true) return { error: 'Nothing to undo.' };
   revalidatePath('/employer');
+  revalidatePath(`/employer/interviews/${owned.interviewId}`);
   return { ok: true };
 }
 
@@ -196,28 +184,5 @@ export async function setMinutesPerCv(formData: FormData) {
   const client = await createClient();
   if (!client) return;
   await client.from('screening_packs').update({ minutes_per_cv: minutes }).eq('id', roleId);
-  revalidatePath('/employer');
-}
-
-export async function setEmployerDecision(formData: FormData) {
-  const interviewId = String(formData.get('interviewId') ?? '');
-  const decision = String(formData.get('decision') ?? '');
-  if (decision !== 'shortlisted' && decision !== 'not_proceeding') return;
-
-  const owned = await ownedSubmittedInterview(interviewId);
-  if (!owned) return;
-
-  const admin = createAdminClient();
-  if (!admin) throw new Error('Employer decision storage is not configured.');
-  const now = new Date().toISOString();
-  await admin
-    .from('interviews')
-    .update({
-      employer_reviewed_at: now,
-      employer_decision: decision,
-      employer_decided_at: now,
-    })
-    .eq('id', owned.interviewId);
-
   revalidatePath('/employer');
 }

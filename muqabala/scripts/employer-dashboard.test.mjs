@@ -7,6 +7,7 @@ import {
   candidatePage,
   dashboardSummary,
   formatDuration,
+  normaliseEmployerDecision,
   packHealth,
 } from '../lib/employer-dashboard.ts';
 
@@ -65,6 +66,25 @@ test('dashboard journey uses employer decisions only when a person records them'
   assert.equal(summary.waitingForReview, 1);
   assert.equal(summary.shortlistedTotal, 1);
   assert.equal(summary.notProceedingTotal, 1);
+});
+
+test('dashboard normalises review and legacy decision vocabularies', () => {
+  assert.equal(normaliseEmployerDecision('shortlist'), 'shortlisted');
+  assert.equal(normaliseEmployerDecision('shortlisted'), 'shortlisted');
+  assert.equal(normaliseEmployerDecision('pass'), 'not_proceeding');
+  assert.equal(normaliseEmployerDecision('not_proceeding'), 'not_proceeding');
+  assert.equal(normaliseEmployerDecision('later'), null);
+
+  const submissions = [
+    { screening_pack_id: 'active', submitted_at: '2026-08-29T10:00:00.000Z', employer_reviewed_at: '2026-08-29T11:00:00.000Z', employer_decision: 'shortlist' },
+    { screening_pack_id: 'active', submitted_at: '2026-08-29T10:30:00.000Z', employer_reviewed_at: '2026-08-29T11:30:00.000Z', employer_decision: 'pass' },
+    { screening_pack_id: 'active', submitted_at: '2026-08-29T11:00:00.000Z', employer_reviewed_at: '2026-08-29T12:00:00.000Z', employer_decision: 'later' },
+  ];
+  const summary = dashboardSummary([pack({ id: 'active', starts_used: 3 })], submissions, now);
+  assert.equal(summary.reviewedTotal, 3);
+  assert.equal(summary.shortlistedTotal, 1);
+  assert.equal(summary.notProceedingTotal, 1);
+  assert.equal(summary.waitingForReview, 0);
 });
 
 test('candidate evidence is ordered and never invents a recording', () => {

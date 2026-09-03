@@ -11,11 +11,18 @@ import {
   Plus,
   VideoCamera,
   Warning,
-  X,
 } from '@phosphor-icons/react/dist/ssr';
+import { DashboardDecisionActions } from '@/components/DashboardDecisionActions';
 import { EmployerLinkActions } from '@/components/EmployerLinkActions';
 import { SignOutButton } from '@/components/SignOutButton';
-import { candidatePage, dashboardSummary, packHealth, type DashboardAnswer } from '@/lib/employer-dashboard';
+import {
+  candidatePage,
+  dashboardSummary,
+  normaliseEmployerDecision,
+  packHealth,
+  type DashboardAnswer,
+  type EmployerDecisionValue,
+} from '@/lib/employer-dashboard';
 import { employerVolumeEnabled, whatsAppEnabled } from '@/lib/employer-volume';
 import { reminderOutcome, reminderOutcomeLine } from '@/lib/employer-volume/reminders';
 import { DEFAULT_MINUTES_PER_CV, actionLabel, responseRateLine, timeSavedLine } from '@/lib/employer-volume/strip';
@@ -26,7 +33,7 @@ import { configuredOrigin } from '@/lib/server/security';
 import { processScreeningNotifications } from '@/lib/server/screening-notifications';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient, currentUser } from '@/lib/supabase/server';
-import { reviewInterview, setEmployerDecision, setMinutesPerCv, setRemindersEnabled } from './actions';
+import { reviewInterview, setMinutesPerCv, setRemindersEnabled } from './actions';
 import styles from './EmployerDashboard.module.css';
 
 export const dynamic = 'force-dynamic';
@@ -62,7 +69,7 @@ type SubmissionIndex = {
   screening_pack_id: string;
   submitted_at: string;
   employer_reviewed_at: string | null;
-  employer_decision: 'shortlisted' | 'not_proceeding' | null;
+  employer_decision: EmployerDecisionValue | null;
 };
 
 // One page of submissions with the columns a candidate row needs.
@@ -137,8 +144,9 @@ function currentDate() {
 }
 
 function decisionCopy(submission: SubmissionIndex) {
-  if (submission.employer_decision === 'shortlisted') return 'Shortlisted';
-  if (submission.employer_decision === 'not_proceeding') return 'Not proceeding';
+  const decision = normaliseEmployerDecision(submission.employer_decision);
+  if (decision === 'shortlisted') return 'Shortlisted';
+  if (decision === 'not_proceeding') return 'Not proceeding';
   return submission.employer_reviewed_at ? 'Reviewed' : 'Waiting for review';
 }
 
@@ -310,10 +318,11 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
                     <span className={styles.avatar} aria-hidden="true">{initials(submission.candidate_name)}</span>
                     <div><h3>{submission.candidate_name || 'Candidate'} · {submission.role_title}</h3><p>{pack?.workplace || 'Employer'} · submitted {relativeTime(submission.submitted_at)} · {candidateAnswers.length} answers, {duration} min</p></div>
                     <form action={reviewInterview}><input type="hidden" name="interviewId" value={submission.id} /><button className={styles.watchButton} type="submit"><Play aria-hidden="true" weight="fill" /> Watch</button></form>
-                    <div className={styles.decisionActions}>
-                      <form action={setEmployerDecision}><input type="hidden" name="interviewId" value={submission.id} /><input type="hidden" name="decision" value="shortlisted" /><button type="submit" aria-label={`Shortlist ${submission.candidate_name || 'candidate'}`}><Check aria-hidden="true" /></button></form>
-                      <form action={setEmployerDecision}><input type="hidden" name="interviewId" value={submission.id} /><input type="hidden" name="decision" value="not_proceeding" /><button type="submit" aria-label={`Mark ${submission.candidate_name || 'candidate'} as not proceeding`}><X aria-hidden="true" /></button></form>
-                    </div>
+                    <DashboardDecisionActions
+                      interviewId={submission.id}
+                      candidateLabel={submission.candidate_name || 'candidate'}
+                      currentDecision={submission.employer_decision}
+                    />
                   </article>
                 );
               })}
@@ -336,7 +345,7 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
               const role = verifyInterview(pack.signed_token)?.title
                 || detailRows.find((submission) => submission.screening_pack_id === pack.id)?.role_title
                 || 'Role work sample';
-              const shortlisted = packSubmissions.filter((submission) => submission.employer_decision === 'shortlisted').length;
+              const shortlisted = packSubmissions.filter((submission) => normaliseEmployerDecision(submission.employer_decision) === 'shortlisted').length;
               const unreviewed = packSubmissions.filter((submission) => !submission.employer_reviewed_at).length;
               const url = `${origin}/s/${pack.public_code}`;
               const nextInterview = packSubmissions.find((item) => !item.employer_reviewed_at);
@@ -433,10 +442,11 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
                     <p>{pack?.workplace || 'Employer'} · submitted {relativeTime(submission.submitted_at)} · {candidateAnswers.length} answers, {duration} min · {decisionCopy(submission)}</p>
                   </div>
                   <form action={reviewInterview}><input type="hidden" name="interviewId" value={submission.id} /><button className={styles.watchButton} type="submit"><Play aria-hidden="true" weight="fill" /> {submission.employer_reviewed_at ? 'Open' : 'Watch'}</button></form>
-                  <div className={styles.decisionActions}>
-                    <form action={setEmployerDecision}><input type="hidden" name="interviewId" value={submission.id} /><input type="hidden" name="decision" value="shortlisted" /><button type="submit" aria-label={`Shortlist ${submission.candidate_name || 'candidate'}`}><Check aria-hidden="true" /></button></form>
-                    <form action={setEmployerDecision}><input type="hidden" name="interviewId" value={submission.id} /><input type="hidden" name="decision" value="not_proceeding" /><button type="submit" aria-label={`Mark ${submission.candidate_name || 'candidate'} as not proceeding`}><X aria-hidden="true" /></button></form>
-                  </div>
+                  <DashboardDecisionActions
+                    interviewId={submission.id}
+                    candidateLabel={submission.candidate_name || 'candidate'}
+                    currentDecision={submission.employer_decision}
+                  />
                 </article>
               );
             })}

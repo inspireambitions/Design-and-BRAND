@@ -9,8 +9,18 @@ export type DashboardSubmission = {
   screening_pack_id: string;
   submitted_at: string;
   employer_reviewed_at?: string | null;
-  employer_decision?: 'shortlisted' | 'not_proceeding' | null;
+  employer_decision?: EmployerDecisionValue | null;
 };
+
+export type EmployerDecisionValue = 'shortlist' | 'shortlisted' | 'pass' | 'not_proceeding' | 'later';
+export type DashboardDecision = 'shortlisted' | 'not_proceeding' | null;
+
+/** Normalises both decision vocabularies while older rows are still readable. */
+export function normaliseEmployerDecision(value: string | null | undefined): DashboardDecision {
+  if (value === 'shortlist' || value === 'shortlisted') return 'shortlisted';
+  if (value === 'pass' || value === 'not_proceeding') return 'not_proceeding';
+  return null;
+}
 
 export type DashboardAnswer = {
   question_index: number;
@@ -51,8 +61,8 @@ export function dashboardSummary(
     submittedTotal: submissions.length,
     reviewedTotal: submissions.filter((submission) => Boolean(submission.employer_reviewed_at)).length,
     waitingForReview: submissions.filter((submission) => !submission.employer_reviewed_at).length,
-    shortlistedTotal: submissions.filter((submission) => submission.employer_decision === 'shortlisted').length,
-    notProceedingTotal: submissions.filter((submission) => submission.employer_decision === 'not_proceeding').length,
+    shortlistedTotal: submissions.filter((submission) => normaliseEmployerDecision(submission.employer_decision) === 'shortlisted').length,
+    notProceedingTotal: submissions.filter((submission) => normaliseEmployerDecision(submission.employer_decision) === 'not_proceeding').length,
     activeLinks: activePacks.length,
     placesRemaining,
     submissionRate: totalStarts > 0 ? Math.round((submissions.length / totalStarts) * 100) : 0,
