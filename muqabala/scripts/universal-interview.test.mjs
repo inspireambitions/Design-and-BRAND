@@ -312,7 +312,7 @@ test('the model-call budget makes a third call impossible', () => {
 });
 
 test('persistence is encrypted, identity-separated, retention-bound and concurrency-claimed', () => {
-  const migration = readFileSync(new URL('../supabase/migrations/20260902120000_universal_interview_brain_v2.sql', import.meta.url), 'utf8');
+  const migration = readFileSync(new URL('../supabase/migrations/20260903032306_universal_interview_brain_v2.sql', import.meta.url), 'utf8');
   assert.match(migration, /state_ciphertext text not null/);
   assert.match(migration, /universal_interview_accounts/);
   assert.match(migration, /interval '90 days'/);

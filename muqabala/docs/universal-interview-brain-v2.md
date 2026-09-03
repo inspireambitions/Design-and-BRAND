@@ -37,7 +37,7 @@ All mutating routes require the same origin, ownership, shared rate limits and a
 
 Keep the feature flag off until all of these are complete:
 
-1. Apply `20260902120000_universal_interview_brain_v2.sql` to an isolated staging Supabase project.
+1. Apply `20260903032306_universal_interview_brain_v2.sql` to an isolated staging Supabase project.
 2. Add `UNIVERSAL_INTERVIEW_DATA_KEY` as a server-only secret.
 3. Add a named reviewer and review date to every role pack.
 4. Build at least 300 human-reviewed turns with two independent raters.
@@ -69,6 +69,9 @@ The repository contains four starter cases only. The gate fails by design until 
 
 ## Current verification
 
+- migration `20260903032306` is applied to the Muqabala Supabase project
+- live database checks confirm 90-day retention, RLS, revoked candidate-role access, metrics views and the daily deletion job
+- `UNIVERSAL_INTERVIEW_DATA_KEY` is stored as a production-only Vercel secret
 - focused V2 tests pass
 - the complete repository regression suite passes
 - TypeScript passes
