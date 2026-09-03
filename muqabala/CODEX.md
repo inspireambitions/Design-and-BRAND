@@ -301,7 +301,7 @@ are met, missing, or not yet applicable:
 | Advisor | Vantage point | Cares about |
 |---|---|---|
 | **Mariam Al-Suwaidi** | Group HR Director, Riyadh | Arabic parity, nationalization (Nitaqat/Emiratisation), data residency, no extra logins |
-| **Rohit Menon** | Dubai volume-recruitment agency | Bulk/agency workflows, WhatsApp journey, resumable low-bandwidth uploads |
+| **Rohit Menon** | Dubai volume-recruitment agency | Bulk/agency workflows, WhatsApp journey, resilient low-bandwidth uploads |
 | **Layla Haddad** | Candidate-experience researcher | Practice-until-ready, transparency up front, feedback to everyone, candidate dignity |
 | **Priya Nair** | AI product lead | Accent robustness, scoring consistency, quoted evidence, anti-cheat as signals not rejections |
 | **Daniel Chen** | SaaS go-to-market | Free top-of-funnel hook, pilot playbook, publishable proof metrics, self-serve pricing |

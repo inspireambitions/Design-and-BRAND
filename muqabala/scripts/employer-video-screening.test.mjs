@@ -82,7 +82,7 @@ test('employer dashboard separates recorded evidence from AI analysis', () => {
 test('private playback cache is shorter than the signed employer link', () => {
   const upload = read('lib/screening-video-upload.ts');
   const actions = read('app/employer/actions.ts');
-  assert.match(upload, /cacheControl: '60'/);
+  assert.match(upload, /body\.append\('cacheControl', '60'\)/);
   assert.match(actions, /createSignedUrl\(answer\.video_path, 15 \* 60\)/);
 });
 
@@ -111,10 +111,17 @@ test('employer report renders evidence text first and signs video only on play',
   assert.match(actions, /export async function signEmployerVideo/);
   assert.match(actions, /const owned = await ownedSubmittedInterview\(interviewId\);\s*if \(!owned\) return \{ error/);
 
-  // Video bytes go from the browser to Supabase Storage; no Next route reads them.
-  assert.match(upload, /new tus\.Upload\(file, \{\s*endpoint: grant\.endpoint/);
-  assert.match(uploadRoute, /storage\.supabase\.co\/storage\/v1\/upload\/resumable/);
-  assert.match(uploadRoute, /createSignedUploadUrl\(path\)/);
+  // Video bytes go from the browser to a one-file Supabase signed URL; no Next route reads them.
+  assert.match(upload, /new XMLHttpRequest\(\)/);
+  assert.match(upload, /request\.open\('PUT', grant\.signedUrl\)/);
+  assert.match(upload, /request\.setRequestHeader\('x-upsert', 'true'\)/);
+  assert.match(upload, /body\.append\('cacheControl', '60'\)/);
+  assert.match(upload, /body\.append\('', file\)/);
+  assert.match(upload, /const retryDelays = \[0, 1_000, 3_000\]/);
+  assert.match(upload, /request\.status === 429/);
+  assert.doesNotMatch(upload, /tus-js-client|upload\/resumable/);
+  assert.match(uploadRoute, /createSignedUploadUrl\(path, \{ upsert: true \}\)/);
+  assert.match(uploadRoute, /signedUrl: signed\.signedUrl/);
 });
 
 test('submitting writes the one-row report summary the employer page reads', () => {
@@ -216,7 +223,10 @@ test('completed recordings survive interruption and only advance after server re
   assert.match(flow, /await readStatus\(interviewId\)/);
   assert.match(flow, /await deleteScreeningRecordingDraft/);
   assert.match(flow, /error !== c\.recoveredRecording/);
-  assert.match(uploader, /muqabala-screening:\$\{grant\.path\}/);
+  assert.match(uploader, /file\.size > grant\.maxBytes/);
+  assert.match(uploader, /request\.upload\.onprogress/);
+  assert.match(uploader, /secure video upload was interrupted/i);
+  assert.match(uploader, /caught instanceof ScreeningUploadError && caught\.retryable/);
   assert.match(flow, /Recorded on this device/);
   assert.match(flow, /Received by Muqabala/);
   assert.match(statusRoute, /question_index,video_upload_status,response_saved_at/);

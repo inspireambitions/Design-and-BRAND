@@ -70,17 +70,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const { data: signed, error } = await access.admin!.storage
     .from(VIDEO_BUCKET)
-    .createSignedUploadUrl(path);
-  if (error || !signed?.token) return Response.json({ error: 'The upload could not be prepared.' }, { status: 503 });
+    .createSignedUploadUrl(path, { upsert: true });
+  if (error || !signed?.signedUrl) return Response.json({ error: 'The upload could not be prepared.' }, { status: 503 });
 
-  const projectUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!projectUrl) return Response.json({ configured: false }, { status: 503 });
-  const projectRef = new URL(projectUrl).hostname.split('.')[0];
   return Response.json({
     path,
-    token: signed.token,
-    endpoint: `https://${projectRef}.storage.supabase.co/storage/v1/upload/resumable`,
-    bucket: VIDEO_BUCKET,
+    signedUrl: signed.signedUrl,
     maxBytes: 50 * 1024 * 1024,
   }, { headers: privateNoStoreHeaders() });
 }

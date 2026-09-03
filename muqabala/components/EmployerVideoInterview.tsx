@@ -517,7 +517,7 @@ export function EmployerVideoInterview({
         }
         return;
       }
-      if (!grantResponse.ok || !grantBody.path || !grantBody.token) {
+      if (!grantResponse.ok || !grantBody.path || !grantBody.signedUrl) {
         throw new Error(grantBody.error || c.genericError);
       }
       await uploadScreeningVideo(grantBody, toSave.recording.blob, toSave.recording.mimeType, setUploadProgress);
