@@ -128,9 +128,11 @@ test('answer prechecks run before model extraction', () => {
 
 test('turn and retry routes reject evidence answers shorter than five words', () => {
   const turnRoute = readFileSync(new URL('../app/api/universal-interview/turn/route.ts', import.meta.url), 'utf8');
+  const turnProcessor = readFileSync(new URL('../lib/universal-interview/process-turn.ts', import.meta.url), 'utf8');
   const retryRoute = readFileSync(new URL('../app/api/universal-interview/retry/route.ts', import.meta.url), 'utf8');
-  assert.match(turnRoute, /precheck\.kind === 'NONE' && precheck\.word_count < 5/);
-  assert.match(turnRoute, /answer_too_short/);
+  assert.match(turnRoute, /processUniversalTurn\(state, parsed\.data\.answer\)/);
+  assert.match(turnProcessor, /precheck\.kind === 'NONE' && precheck\.word_count < 5/);
+  assert.match(turnProcessor, /answer_too_short/);
   assert.match(retryRoute, /precheck\.kind !== 'NONE' \|\| precheck\.word_count < 5/);
 });
 

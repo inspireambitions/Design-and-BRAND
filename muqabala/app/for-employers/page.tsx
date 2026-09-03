@@ -8,7 +8,7 @@ import { SCREENING_STORAGE_REGION } from '@/lib/marketing-content';
 import { currentUser } from '@/lib/supabase/server';
 
 const DESCRIPTION =
-  'Turn any job advert into a three-question, 12-minute work sample. Candidates answer in their own words. You review every answer and make every decision. No automatic rejection.';
+  'Turn any job advert into an adaptive video interview. Candidates answer in their own words. You review every answer and make every decision. No automatic rejection.';
 
 export const metadata: Metadata = {
   title: 'Work samples for hiring teams',

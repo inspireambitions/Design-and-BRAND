@@ -113,7 +113,7 @@ export function EmployerProofCreate({
           <dl className={styles.facts}>
             <div><dt>{ar ? 'وظائف مغطاة' : 'Roles covered'}</dt><dd>{formatCount(stats.roles, lang)}</dd></div>
             <div><dt>{ar ? 'أسئلة في البنك' : 'Questions in the bank'}</dt><dd>{formatCount(stats.questions, lang)}</dd></div>
-            <div><dt>{ar ? 'لكل مرشح' : 'Per candidate'}</dt><dd>{ar ? '١٢ دقيقة' : '12 minutes'}</dd></div>
+            <div><dt>{ar ? 'لكل مرشح' : 'Per candidate'}</dt><dd>{ar ? 'نحو ٢٥ دقيقة' : 'About 25 minutes'}</dd></div>
           </dl>
         </section>
 
@@ -368,7 +368,7 @@ function EmployerCreateForm({ volume }: { volume: boolean }) {
       }
       setLinkDetails(packBody as LinkDetails);
       track('role_created', employerVolumeProps(volume, packBody.id ? { role_id: packBody.id } : {}));
-      // Volume flow: the role's three questions are confirmed, so go straight to Add candidates.
+      // Volume flow: the role plan is confirmed, so go straight to Add candidates.
       if (volume && packBody.id) router.push(`/employer/roles/${packBody.id}/candidates/add`);
     } catch {
       setError('create');

@@ -34,6 +34,11 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     if (storageError) return Response.json({ error: 'The recordings could not be deleted.' }, { status: 503 });
   }
 
+  const { error: brainDeleteError } = await admin.from('universal_interviews')
+    .delete()
+    .eq('id', interview.id);
+  if (brainDeleteError) return Response.json({ error: 'The interview analysis could not be deleted.' }, { status: 503 });
+
   const { error: deleteError } = await admin.from('interviews')
     .delete()
     .eq('id', interview.id)

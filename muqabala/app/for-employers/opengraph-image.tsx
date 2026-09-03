@@ -50,7 +50,7 @@ export default function EmployerOpenGraphImage() {
               See who can do the job.
             </div>
             <div style={{ maxWidth: 650, color: '#52645E', fontSize: 28, lineHeight: 1.28 }}>
-              Create a focused 12-minute work sample from any job description.
+              Create an adaptive video interview from any job description.
             </div>
           </div>
 

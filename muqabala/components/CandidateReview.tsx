@@ -218,7 +218,7 @@ export function CandidateReview(props: Props) {
               ))}
             </ul>
           )}
-          <p className={styles.small}>The shared page shows this candidate only: name or reference, rubric ticks and the three answers. No contact details.</p>
+          <p className={styles.small}>The shared page shows this candidate only: name or reference, rubric ticks and recorded answers. No contact details.</p>
         </section>
       </main>
 

@@ -1,12 +1,12 @@
 'use client';
 
 /**
- * Audio-only capture for the transcription fallback.
+ * Audio-only capture for reliable transcription.
  *
- * Used only when the browser has no Web Speech API. The stream is requested
- * with `video: false`, so no camera frame can ever enter this recorder. Chunks
- * live in memory for the length of one answer and are released by `discard()`.
- * Nothing here touches IndexedDB, localStorage or any other storage.
+ * It can reuse an existing camera stream or request an audio-only stream. No
+ * camera frame can enter this recorder. Chunks live in memory for the length of
+ * one answer and are released by `discard()`. Nothing here touches IndexedDB,
+ * localStorage or any other storage.
  */
 
 /** Ordered by size at a given quality; Opus first, MP4 (AAC) for Safari. */

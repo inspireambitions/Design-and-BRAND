@@ -48,8 +48,13 @@ test('candidate consent and receipt match the approved wording', () => {
 test('candidate APIs do not expose employer analysis or reports', () => {
   const scoreRoute = read('app/api/score/route.ts');
   const reportRoute = read('app/api/interviews/[id]/report/route.ts');
+  const brainRoute = read('app/api/screening/interviews/[id]/brain/route.ts');
+  const employerBrain = read('lib/universal-interview/employer.ts');
   assert.match(scoreRoute, /mode === 'screening'[\s\S]*saved: true/);
   assert.match(reportRoute, /mode === 'screening'[\s\S]*status: 404/);
+  assert.match(brainRoute, /publicEmployerBrainState\(state\)/);
+  assert.doesNotMatch(brainRoute, /publicInterviewState\(state\)/);
+  assert.doesNotMatch(employerBrain.match(/export function publicEmployerBrainState[\s\S]*?\n\}/)?.[0] ?? '', /coverage|evidence_ledger|final_feedback/);
 });
 
 test('employer ownership, final consent and private video storage are enforced in the migration', () => {
@@ -72,10 +77,11 @@ test('employer dashboard separates recorded evidence from AI analysis', () => {
   assert.match(report, /not a verified fact or an automatic decision/);
   assert.match(actions, /createSignedUrl/);
   assert.match(report, /Kept for up to 90 days/);
-  assert.match(deleteControl, /Delete this interview and all three recordings/);
+  assert.match(deleteControl, /Delete this interview and all its recordings/);
   assert.match(deleteRoute, /currentUser/);
   assert.match(deleteRoute, /not\('submitted_at', 'is', null\)/);
   assert.match(deleteRoute, /storage\.from\('screening-videos'\)\.remove/);
+  assert.match(deleteRoute, /from\('universal_interviews'\)[\s\S]*\.delete\(\)/);
   assert.match(deleteRoute, /\.eq\('screening_pack_id', interview\.screening_pack_id\)/);
 });
 
@@ -133,17 +139,32 @@ test('submitting writes the one-row report summary the employer page reads', () 
   assert.doesNotMatch(migration, /create policy/);
 });
 
-test('screening questions are generated once per link and never on the candidate page', () => {
+test('screening questions are signed once per link and the adaptive engine owns follow-ups', () => {
   const packRoute = read('app/api/screening/packs/route.ts');
   const packLookup = read('lib/screening-pack.ts');
   const candidatePage = read('app/s/[code]/page.tsx');
-  assert.match(packRoute, /const questions = proofQuestions\(role\);/);
+  const brainRoute = read('app/api/screening/interviews/[id]/brain/route.ts');
+  assert.match(packRoute, /const questions = role\.questions\.slice\(0, 8\);/);
   assert.match(packRoute, /signProofPack\(\{[\s\S]*questions,/);
   assert.match(packRoute, /insert\(\{[\s\S]*signed_token: signedToken/);
   assert.match(packLookup, /select\('(id, )?signed_token/);
   assert.match(packLookup, /verifyInterview\(data\.signed_token\)/);
   assert.doesNotMatch(packLookup, /proofQuestions|signProofPack/);
   assert.doesNotMatch(candidatePage, /proofQuestions|signProofPack/);
+  assert.match(brainRoute, /processUniversalTurn\(state, answer\.transcript/);
+  assert.match(brainRoute, /employerBrainQuestionSnapshot\(state\.current_question/);
+  assert.match(brainRoute, /processed_answer_count/);
+});
+
+test('adaptive screening resumes safely after an answer was uploaded but the next question was interrupted', () => {
+  const flow = read('components/EmployerVideoInterview.tsx');
+  const brainRoute = read('app/api/screening/interviews/[id]/brain/route.ts');
+  assert.match(flow, /status\.questionCount <= status\.currentQuestion/);
+  assert.match(flow, /questionIndex: status\.currentQuestion - 1/);
+  assert.match(flow, /draft\.questionIndex < nextIndex/);
+  assert.match(brainRoute, /if \(questionIndex === processed\)/);
+  assert.match(brainRoute, /if \(questionIndex > processed\)/);
+  assert.match(brainRoute, /snapshot\.length === current\.current_question/);
 });
 
 test('employer creation form generates the description before unlocking the link action', () => {

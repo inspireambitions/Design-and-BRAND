@@ -1,7 +1,7 @@
 /**
  * Rubric coverage: up to four ticks or crosses per candidate, never a number.
  *
- * A tick means at least one of the three answers has non-null competency
+ * A tick means at least one recorded answer has non-null competency
  * evidence for that rubric item, as stored by the scorer. Items are the role's
  * first four competencies in order. Roles with fewer show fewer.
  */

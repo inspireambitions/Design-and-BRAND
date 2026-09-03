@@ -60,6 +60,13 @@ export async function createStoredInterview(state: InterviewState): Promise<void
   });
 }
 
+/** Removes a just-created state when the matching employer interview could not start. */
+export async function discardStoredInterview(interviewId: string): Promise<void> {
+  const admin = createAdminClient();
+  if (!admin) return;
+  await admin.from('universal_interviews').delete().eq('id', interviewId);
+}
+
 export async function loadStoredInterview(interviewId: string): Promise<InterviewState | null> {
   const admin = createAdminClient();
   if (!admin) return null;

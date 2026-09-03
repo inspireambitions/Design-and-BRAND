@@ -101,11 +101,11 @@ test('section 2: 250 pasted emails parse well inside the budget', async () => {
 test('section 2: invite copy fits the channel and stays bilingual', async () => {
   const { inviteSubject, inviteText, inviteWhatsApp } = await import('../lib/employer-volume/invite-message.ts');
   const input = { employerName: 'Nour Clinic', roleTitle: 'Receptionist', link: 'https://trymuqabala.com/s/abc123?i=' + 'x'.repeat(43) };
-  assert.equal(inviteSubject(input), 'Nour Clinic: three questions for the Receptionist role');
+  assert.equal(inviteSubject(input), 'Nour Clinic: adaptive interview for the Receptionist role');
   const text = inviteText(input);
-  assert.match(text, /About 12 minutes\. No account needed\. Your video stays on your device/);
+  assert.match(text, /Allow about 25 minutes\. Verify your email/);
   assert.match(text, /----------/);
-  assert.match(text, /نحو ١٢ دقيقة/);
+  assert.match(text, /نحو ٢٥ دقيقة/);
   assert.ok(inviteWhatsApp(input).length <= 300);
   const long = { ...input, roleTitle: 'Senior Front Office and Guest Relations Supervisor (Night Shift, Palm Jumeirah Resort and Residences)' };
   assert.ok(inviteWhatsApp(long).length <= 300);

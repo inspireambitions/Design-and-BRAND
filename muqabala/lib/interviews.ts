@@ -23,15 +23,16 @@ export const CreateInterviewSchema = z.object({
   focusQuestionId: z.string().min(1).max(160).optional(),
   candidateName: z.string().trim().min(2).max(100).optional(),
   inviteToken: z.string().regex(/^[A-Za-z0-9_-]{20,120}$/).optional(),
+  adaptive: z.boolean().default(false),
 });
 
 export const ScreeningUploadRequestSchema = z.object({
-  questionIndex: z.number().int().min(0).max(19),
+  questionIndex: z.number().int().min(0).max(49),
   mimeType: z.enum(['video/webm', 'video/mp4', 'video/quicktime']),
 }).strict();
 
 export const ScreeningAnswerSchema = z.object({
-  questionIndex: z.number().int().min(0).max(19),
+  questionIndex: z.number().int().min(0).max(49),
   transcript: z.string().max(6000).default(''),
   videoPath: z.string().min(8).max(500),
   mimeType: z.enum(['video/webm', 'video/mp4', 'video/quicktime']),

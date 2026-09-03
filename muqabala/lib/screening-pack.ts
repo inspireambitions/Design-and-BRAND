@@ -21,7 +21,7 @@ export const getScreeningPack = cache(async (code: string) => {
   if (new Date(data.expires_at).getTime() <= Date.now()) return { status: 'expired' as const };
 
   const payload = verifyInterview(data.signed_token);
-  if (!payload || payload.kind !== 'proof' || payload.questions.length !== 3) {
+  if (!payload || payload.kind !== 'proof' || (payload.questions.length !== 3 && payload.questions.length !== 8)) {
     return { status: 'unavailable' as const };
   }
 

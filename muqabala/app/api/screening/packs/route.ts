@@ -1,6 +1,5 @@
 import { randomBytes } from 'node:crypto';
 import { roleFromToken, signProofPack, verifyInterview } from '@/lib/interview-token';
-import { proofQuestions } from '@/lib/proof-questions';
 import { configuredOrigin, hasTrustedOrigin } from '@/lib/server/security';
 import { limitInterviewGeneration } from '@/lib/rate-limit';
 import { ScreeningPackRequestSchema } from '@/lib/screening-pack-request';
@@ -37,8 +36,8 @@ export async function POST(request: Request) {
     return Response.json({ error: 'The tailored interview could not be verified.' }, { status: 400 });
   }
   const role = roleFromToken(verified);
-  const questions = proofQuestions(role);
-  if (!questions) return Response.json({ error: 'That job does not have enough questions for a work sample.' }, { status: 400 });
+  const questions = role.questions.slice(0, 8);
+  if (questions.length !== 8) return Response.json({ error: 'That job does not have enough questions for an adaptive interview.' }, { status: 400 });
 
   const workplace = (parsed.data.companyName || parsed.data.workplace || '').trim();
   const recruiterName = (parsed.data.recruiterName || '').trim();

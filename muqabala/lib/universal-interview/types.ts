@@ -244,6 +244,13 @@ export type InterviewState = {
   retry_used: boolean;
   retry_result: RetryComparison | null;
   final_feedback: FinalFeedback | null;
+  /** Present only when the adaptive engine is powering an employer interview. */
+  screening?: {
+    pack_id: string;
+    processed_answer_count: number;
+    evidence_after_answers: number[];
+    competency_id_map: Record<string, string>;
+  };
   phase: InterviewPhase;
   status: 'ACTIVE' | 'COMPLETE';
 };

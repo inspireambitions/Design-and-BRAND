@@ -63,16 +63,16 @@ export const STRINGS = {
     proofBeforeStartRecruiter:
       '{recruiter} from {company} sent this work sample. A person will read what you said. We do not score your face or your accent.',
     proofBeforeStartBody:
-      'This is an employer work sample. You will record three video answers. The employer can open your recordings only after you consent and submit. You will not see scores or analysis. A person makes the hiring decision.',
+      'This is an employer interview. You will record up to eight main video answers. Muqabala may ask a short follow-up when evidence is unclear. The employer can open your recordings only after you consent and submit. You will not see scores or analysis. A person makes the hiring decision.',
     proofCompanyFallback: 'this hiring team',
     proofLinkTitle: 'Work sample',
     proofLinkReady: 'Up to {count} candidates can start. This link closes on {date}.',
     proofCreateTitle: 'See who can do the job.',
     proofCreateBody:
-      'Create a secure link for a three-question work sample.',
-    proofCreatePromise: 'Send one WhatsApp. Review the same three answers. You shortlist.',
+      'Create a secure link for an adaptive video interview.',
+    proofCreatePromise: 'Send one WhatsApp. Review role-specific evidence. You shortlist.',
     proofCreateStepsLabel: 'What candidates can expect',
-    proofOutcomeTime: '12 minutes',
+    proofOutcomeTime: 'About 25 minutes',
     proofOutcomeWords: 'Candidate’s own words',
     proofOutcomeHuman: 'Human decision',
     proofStepVacancy: 'Vacancy details',
@@ -106,15 +106,15 @@ export const STRINGS = {
     proofPracticeStaysPrivate:
       'Nothing is auto-rejected. Practice on Coach stays private.',
     proofRecruiterValue:
-      'Learn how each candidate would approach the role before you shortlist. Review the same three role-specific answers in one place.',
+      'Learn how each candidate would approach the role before you shortlist. Muqabala asks follow-ups when an answer needs clearer evidence.',
     proofTrustLabel: 'Why hiring teams use this',
     proofTrustPrivate: 'Private link',
-    proofTrustSame: 'Same three questions',
+    proofTrustSame: 'Same role blueprint',
     proofTrustWatch: 'You watch the video',
     proofTrustClose: 'Closes on its own',
     proofPreviewKicker: 'Evidence desk',
     proofPreviewTitle: 'What you review',
-    proofPreviewBody: 'Every candidate records the same three answers. You open the videos. You decide.',
+    proofPreviewBody: 'Every candidate follows the same role blueprint. Follow-ups respond to the evidence they give. You open the videos. You decide.',
     proofPreviewQ1: 'How they would start the work',
     proofPreviewQ2: 'How they handle a real problem in this role',
     proofPreviewQ3: 'Why this job, in their own words',
@@ -126,14 +126,14 @@ export const STRINGS = {
     proofShareKitTitle: 'Ready to send on WhatsApp',
     proofShareKitBody: 'Copy the candidate message. Forward it as it is.',
     proofCandidateInvite:
-      '{company} is hiring a {title}.\n\nPlease complete this 12-minute work sample. Three video questions. A person will review your answers. We do not score your face or accent.\n\n{link}',
+      '{company} is hiring a {title}.\n\nPlease complete this adaptive video interview. Allow about 25 minutes. You will answer up to eight main questions, with short follow-ups when evidence needs clarity. A person will review your answers. We do not score your face or accent.\n\n{link}',
     proofCopyInvite: 'Copy WhatsApp message',
     proofCopiedInvite: 'Message copied.',
     proofWhatsAppInvite: 'Open WhatsApp',
     proofRecommendTitle: 'Tell another hiring manager',
     proofRecommendBody: 'One message. They see why this is better than a CV pile.',
     proofRecommendMessage:
-      'I used Muqabala for {title} at {company}. Same three questions for every candidate. I watch the videos. Nothing is auto-rejected.\n\nCreate a link: {home}',
+      'I used Muqabala for {title} at {company}. Every candidate follows the same role blueprint, with evidence-based follow-ups. I watch the videos. Nothing is auto-rejected.\n\nCreate a link: {home}',
     proofCopyRecommend: 'Copy recommend note',
     proofCopiedRecommend: 'Note copied.',
     proofOpenDashboard: 'Open dashboard',
@@ -146,7 +146,7 @@ export const STRINGS = {
     proofMessageLabel: 'Message',
     proofEmailSubject: 'Work sample for the {title} role at {company}',
     proofEmailBody:
-      'Hello,\n\nThank you for your interest in the {title} role at {company}.\n\nThe next step is a short work sample. It takes about 12 minutes. There are three questions and you record a video answer to each one, up to two minutes per question.\n\nStart here:\n{link}\n\nA person from our team will review your answers. We do not score your face, your accent or your personality. No application is rejected automatically.\n\nKind regards,\n{signature}',
+      'Hello,\n\nThank you for your interest in the {title} role at {company}.\n\nThe next step is an adaptive video interview. Allow about 25 minutes. You will answer up to eight main questions, with short follow-ups when evidence needs clarity. Each video answer can take up to two minutes.\n\nStart here:\n{link}\n\nA person from our team will review your answers. We do not score your face, your accent or your personality. No application is rejected automatically.\n\nKind regards,\n{signature}',
     proofOpenEmail: 'Open in your email',
     proofCopyEmail: 'Copy email',
     proofCopiedEmail: 'Email copied.',
@@ -170,8 +170,8 @@ export const STRINGS = {
     proofResultsBody: 'Your interview has been submitted successfully. The employer will review your responses and contact you directly if there is a next step.',
     proofSendWhatsApp: 'Submit to employer',
     proofStartFailed: 'This work sample could not be started. Ask the hiring team for a new link.',
-    expectProofTime: 'About 12 minutes',
-    expectProofQuestions: '3-question work sample',
+    expectProofTime: 'About 25 minutes',
+    expectProofQuestions: 'Adaptive video interview',
     modeProofExpect:
       'Questions appear one at a time. Record video and audio for up to two minutes per question. The employer reviews the submitted evidence.',
     proofHiddenNote:
@@ -840,16 +840,16 @@ export const STRINGS = {
     proofBeforeStartRecruiter:
       'أرسل {recruiter} من {company} عينة العمل هذه. سيقرأ شخص ما قلته. لا نقيّم وجهك ولا لهجتك.',
     proofBeforeStartBody:
-      'هذه عينة عمل لصاحب عمل. ستسجل ثلاث إجابات بالفيديو. لا يستطيع صاحب العمل فتح التسجيلات إلا بعد موافقتك وإرسالها. لن ترى درجات أو تحليلاً. يتخذ شخص قرار التوظيف.',
+      'هذه مقابلة فيديو لصاحب عمل. ستسجل ثماني إجابات بالفيديو. لا يستطيع صاحب العمل فتح التسجيلات إلا بعد موافقتك وإرسالها. لن ترى درجات أو تحليلاً. يتخذ شخص قرار التوظيف.',
     proofCompanyFallback: 'فريق التوظيف هذا',
     proofLinkTitle: 'عينة العمل',
     proofLinkReady: 'يمكن لما يصل إلى {count} مرشحاً البدء. يُغلق هذا الرابط في {date}.',
     proofCreateTitle: 'اعرف من يستطيع أداء الوظيفة.',
     proofCreateBody:
-      'أنشئ رابطاً آمناً لعينة عمل من ثلاثة أسئلة.',
-    proofCreatePromise: 'أرسل واتساباً واحداً. راجع الإجابات الثلاث نفسها. أنت تختار القائمة المختصرة.',
+      'أنشئ رابطاً آمناً لمقابلة فيديو من ثمانية أسئلة.',
+    proofCreatePromise: 'أرسل واتساباً واحداً. راجع أدلة خاصة بالوظيفة. أنت تختار القائمة المختصرة.',
     proofCreateStepsLabel: 'ما الذي يتوقعه المرشحون',
-    proofOutcomeTime: '١٢ دقيقة',
+    proofOutcomeTime: 'نحو ٢٥ دقيقة',
     proofOutcomeWords: 'بكلمات المرشح',
     proofOutcomeHuman: 'قرار بشري',
     proofStepVacancy: 'تفاصيل الوظيفة',
@@ -883,15 +883,15 @@ export const STRINGS = {
     proofPracticeStaysPrivate:
       'لا يوجد رفض تلقائي. يبقى التدريب على المدرب خاصاً.',
     proofRecruiterValue:
-      'تعرّف على كيفية تعامل كل مرشح مع الدور قبل إعداد القائمة المختصرة. راجع الإجابات الثلاث نفسها الخاصة بالدور في مكان واحد.',
+      'تعرّف على كيفية تعامل كل مرشح مع الدور قبل إعداد القائمة المختصرة. راجع ثماني إجابات خاصة بالدور في مكان واحد.',
     proofTrustLabel: 'لماذا تستخدم فرق التوظيف هذا',
     proofTrustPrivate: 'رابط خاص',
-    proofTrustSame: 'الأسئلة الثلاثة نفسها',
+    proofTrustSame: 'مخطط الوظيفة نفسه',
     proofTrustWatch: 'أنت تشاهد الفيديو',
     proofTrustClose: 'يُغلق من تلقاء نفسه',
     proofPreviewKicker: 'مكتب الأدلة',
     proofPreviewTitle: 'ما الذي تراجعه',
-    proofPreviewBody: 'يسجل كل مرشح الإجابات الثلاث نفسها. تفتح الفيديوهات. أنت تقرر.',
+    proofPreviewBody: 'يتبع كل مرشح مخطط الوظيفة نفسه. تفتح الفيديوهات. أنت تقرر.',
     proofPreviewQ1: 'كيف سيبدأ العمل',
     proofPreviewQ2: 'كيف يتعامل مع مشكلة حقيقية في هذا الدور',
     proofPreviewQ3: 'لماذا هذه الوظيفة، بكلماته',
@@ -903,14 +903,14 @@ export const STRINGS = {
     proofShareKitTitle: 'جاهز للإرسال على واتساب',
     proofShareKitBody: 'انسخ رسالة المرشح. أرسلها كما هي.',
     proofCandidateInvite:
-      '{company} توظّف لوظيفة {title}.\n\nيرجى إكمال عينة العمل هذه خلال ١٢ دقيقة. ثلاثة أسئلة بالفيديو. سيراجع شخص إجاباتك. لا نقيّم وجهك ولا لهجتك.\n\n{link}',
+      '{company} توظّف لوظيفة {title}.\n\nيرجى إكمال مقابلة الفيديو هذه. تستغرق نحو ٢٥ دقيقة وتتضمن ثمانية أسئلة. سيراجع شخص إجاباتك. لا نقيّم وجهك ولا لهجتك.\n\n{link}',
     proofCopyInvite: 'نسخ رسالة واتساب',
     proofCopiedInvite: 'تم نسخ الرسالة.',
     proofWhatsAppInvite: 'فتح واتساب',
     proofRecommendTitle: 'أخبر مدير توظيف آخر',
     proofRecommendBody: 'رسالة واحدة. يرون لماذا هذا أفضل من كومة السير الذاتية.',
     proofRecommendMessage:
-      'استخدمت Muqabala لوظيفة {title} في {company}. الأسئلة الثلاثة نفسها لكل مرشح. أشاهد الفيديوهات. لا يوجد رفض تلقائي.\n\nأنشئ رابطاً: {home}',
+      'استخدمت Muqabala لوظيفة {title} في {company}. يتبع كل مرشح مخطط الوظيفة نفسه. أشاهد الفيديوهات. لا يوجد رفض تلقائي.\n\nأنشئ رابطاً: {home}',
     proofCopyRecommend: 'نسخ ملاحظة التوصية',
     proofCopiedRecommend: 'تم نسخ الملاحظة.',
     proofOpenDashboard: 'فتح لوحة التحكم',
@@ -923,7 +923,7 @@ export const STRINGS = {
     proofMessageLabel: 'الرسالة',
     proofEmailSubject: 'عينة عمل لوظيفة {title} في {company}',
     proofEmailBody:
-      'مرحباً،\n\nشكراً لاهتمامك بوظيفة {title} في {company}.\n\nالخطوة التالية هي عينة عمل قصيرة. تستغرق نحو ١٢ دقيقة. هناك ثلاثة أسئلة، وتسجل إجابة بالفيديو عن كل سؤال لمدة تصل إلى دقيقتين.\n\nابدأ من هنا:\n{link}\n\nسيراجع شخص من فريقنا إجاباتك. لا نقيّم وجهك ولا لهجتك ولا شخصيتك. لا يُرفض أي طلب تلقائياً.\n\nمع التحية،\n{signature}',
+      'مرحباً،\n\nشكراً لاهتمامك بوظيفة {title} في {company}.\n\nالخطوة التالية هي مقابلة فيديو. تستغرق نحو ٢٥ دقيقة وتتضمن ثمانية أسئلة. تسجل إجابة لمدة تصل إلى دقيقتين لكل سؤال.\n\nابدأ من هنا:\n{link}\n\nسيراجع شخص من فريقنا إجاباتك. لا نقيّم وجهك ولا لهجتك ولا شخصيتك. لا يُرفض أي طلب تلقائياً.\n\nمع التحية،\n{signature}',
     proofOpenEmail: 'افتح في بريدك',
     proofCopyEmail: 'نسخ البريد',
     proofCopiedEmail: 'تم نسخ البريد.',
@@ -947,8 +947,8 @@ export const STRINGS = {
     proofResultsBody: 'تم إرسال مقابلتك بنجاح. سيراجع صاحب العمل إجاباتك وسيتواصل معك مباشرة إذا كانت هناك خطوة تالية.',
     proofSendWhatsApp: 'أرسل إلى صاحب العمل',
     proofStartFailed: 'تعذر بدء عينة العمل. اطلب من فريق التوظيف رابطاً جديداً.',
-    expectProofTime: 'نحو ١٢ دقيقة',
-    expectProofQuestions: 'عينة عمل من ثلاثة أسئلة',
+    expectProofTime: 'نحو ٢٥ دقيقة',
+    expectProofQuestions: 'مقابلة فيديو من ثمانية أسئلة',
     modeProofExpect:
       'تظهر الأسئلة واحداً تلو الآخر. سجّل الفيديو والصوت لمدة تصل إلى دقيقتين لكل سؤال. يراجع صاحب العمل الأدلة المرسلة.',
     proofHiddenNote:
