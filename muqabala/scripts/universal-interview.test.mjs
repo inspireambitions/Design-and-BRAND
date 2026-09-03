@@ -230,6 +230,22 @@ test('the decision table enforces two probes and the executive ownership limit',
   assert.equal(decision.override_reason, 'executive_ownership_probe_limit');
 });
 
+test('an off-topic answer gets one redirect and then moves on', () => {
+  let state = stateFor();
+  const offTopic = extraction({
+    answered_the_question: false,
+    recommended_action: 'REDIRECT',
+    probe_target: 'the question asked',
+  });
+  const first = decideTurn(state, precheckAnswer('This answer discusses something unrelated to the interview question.'), offTopic);
+  assert.equal(first.action, 'REDIRECT');
+  assert.equal(first.counts_as_probe, true);
+  state = applyImmediateDecision(state, first, offTopic);
+  assert.equal(state.probe_count_current, 1);
+  const second = decideTurn(state, precheckAnswer('This answer is still unrelated to the interview question.'), offTopic);
+  assert.equal(second.action, 'MOVE_ON');
+});
+
 test('no-example offers one hypothetical and then moves on', () => {
   let state = stateFor();
   const precheck = precheckAnswer('No example');

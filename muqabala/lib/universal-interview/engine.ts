@@ -240,7 +240,7 @@ export function decideTurn(
   }
   if (!extraction) return { action: 'MOVE_ON', probe_target: '', counts_as_probe: false, override_reason: 'missing_extraction' };
   if (!extraction.answered_the_question && state.probe_count_current === 0) {
-    return { action: 'REDIRECT', probe_target: extraction.probe_target, counts_as_probe: false, override_reason: null };
+    return { action: 'REDIRECT', probe_target: extraction.probe_target, counts_as_probe: true, override_reason: null };
   }
   if (extraction.possible_inconsistency) {
     const key = `${extraction.possible_inconsistency.earlier_evidence_id}|${extraction.possible_inconsistency.what_differs}`;
