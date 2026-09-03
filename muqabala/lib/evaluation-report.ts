@@ -59,7 +59,7 @@ export const CandidateEvaluationReportSchema = z.object({
   role_title: z.string().trim().min(1).max(200),
   workplace: z.string().trim().min(1).max(200),
   employer_id: z.string().uuid(),
-  interviewer_of_record: z.string().trim().min(1).max(100),
+  interviewer_of_record: z.string().trim().max(100),
   interview_datetime: z.string().datetime(),
   duration_seconds: z.number().int().min(0).max(10_000),
   question_count: z.number().int().min(1).max(50),

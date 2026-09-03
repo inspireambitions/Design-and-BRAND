@@ -28,7 +28,13 @@ export function evaluationPdfLines(report: CandidateEvaluationReport): PdfLine[]
     { text: report.candidate_name, size: 17, bold: true, gapBefore: 3, lineHeight: 21 },
     { text: `${report.role_title} | ${report.workplace}`, size: 9, lineHeight: 12 },
     { text: `${report.report_id} | Version ${report.report_version} | ${new Date(report.interview_datetime).toLocaleDateString('en-GB')} | ${report.question_count} questions | ${Math.floor(report.duration_seconds / 60)} min ${report.duration_seconds % 60} sec`, size: 7, lineHeight: 10 },
-    { text: `Interviewer of record: ${report.interviewer_of_record} | Rubric: ${report.rubric_version} | Seniority: ${report.seniority_band}`, size: 7, lineHeight: 10 },
+    {
+      text: report.interviewer_of_record
+        ? `Seniority: ${report.seniority_band} | Interviewed by: ${report.interviewer_of_record}`
+        : `Seniority: ${report.seniority_band}`,
+      size: 7,
+      lineHeight: 10,
+    },
   ];
 
   for (const competency of report.competencies) {

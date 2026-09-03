@@ -1,4 +1,11 @@
 .controls { display: grid; grid-template-columns: 1.2fr .8fr 1fr; gap: 1rem; width: min(100%, 74rem); margin: 1rem auto 0; }
+.signatureBlock { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 1.25rem; padding: 1rem 1.1rem; border: 1px solid #cbd9d4; border-radius: .85rem; background: linear-gradient(125deg, #f3f8f6 0%, #fff 68%); }
+.signatureInput { display: grid; grid-template-columns: auto minmax(12rem, 20rem) auto; align-items: center; gap: .65rem; }
+.signatureInput label { color: #53635d; font-size: .72rem; font-weight: 750; }
+.signatureInput input { min-height: 2.5rem; border: 1px solid #b9cbc4; border-radius: .55rem; background: #fff; padding: .55rem .7rem; color: #14241f; font: inherit; }
+.signatureInput input:focus-visible { outline: 3px solid rgb(8 112 94 / 18%); outline-offset: 1px; border-color: #08705e; }
+.signatureInput button { min-height: 2.5rem; border: 0; border-radius: 999px; background: #08705e; color: #fff; padding: .55rem 1rem; font: 750 .74rem/1 var(--font-body); cursor: pointer; }
+.signatureInput button:disabled { cursor: not-allowed; opacity: .48; }
 .block { display: flex; min-width: 0; flex-direction: column; align-items: start; gap: .7rem; padding: 1rem; border: 1px solid #d8ddd9; border-radius: .85rem; background: #fff; }
 .heading { display: flex; gap: .7rem; }
 .heading > svg { flex: 0 0 auto; width: 1.15rem; height: 1.15rem; margin-top: .1rem; color: #08705e; }
@@ -24,5 +31,11 @@
 .versionBlock span { color: #68756f; font-size: .7rem; }
 .versionBlock button { min-height: 2.35rem; flex: 0 0 auto; border: 1px solid #9fb7ae; border-radius: 999px; background: #fff; color: #075d4d; padding-inline: .9rem; font-weight: 750; cursor: pointer; }
 .versionBlock button:disabled { opacity: .5; }
-@media (max-width: 850px) { .controls { grid-template-columns: 1fr; } }
+@media (max-width: 850px) {
+  .controls { grid-template-columns: 1fr; }
+  .signatureBlock { display: grid; }
+  .signatureInput { grid-template-columns: 1fr; }
+  .signatureInput input { width: 100%; }
+  .signatureInput button { justify-self: start; }
+}
 @media print { .controls { display: none; } }

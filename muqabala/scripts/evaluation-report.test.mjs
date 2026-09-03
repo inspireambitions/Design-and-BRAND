@@ -17,7 +17,7 @@ const {
 } = await import('../lib/server/evaluation-report-language.ts');
 const { evaluationPdfLines, buildEvaluationPdf, evaluationPdfFilename } = await import('../lib/evaluation-report-pdf.ts');
 const { sampleEvaluationReport } = await import('../lib/fixtures/evaluation-report.ts');
-const [generatorSource, pdfRouteSource, shareRouteSource, actionSource, pageSource, playbackSource, migrationSource, marketingSource] = await Promise.all([
+const [generatorSource, pdfRouteSource, shareRouteSource, actionSource, pageSource, playbackSource, migrationSource, marketingSource, reportViewSource, interviewerMigrationSource] = await Promise.all([
   readFile(new URL('../lib/server/evaluation-report.ts', import.meta.url), 'utf8'),
   readFile(new URL('../app/api/employer/candidates/[id]/evaluation/pdf/route.ts', import.meta.url), 'utf8'),
   readFile(new URL('../app/api/evaluation-share/[token]/route.ts', import.meta.url), 'utf8'),
@@ -26,6 +26,8 @@ const [generatorSource, pdfRouteSource, shareRouteSource, actionSource, pageSour
   readFile(new URL('../components/EvidencePlayback.tsx', import.meta.url), 'utf8'),
   readFile(new URL('../supabase/migrations/20260903181735_candidate_evaluation_reports.sql', import.meta.url), 'utf8'),
   readFile(new URL('../components/EmployerProofCreate.tsx', import.meta.url), 'utf8'),
+  readFile(new URL('../components/EvaluationReportView.tsx', import.meta.url), 'utf8'),
+  readFile(new URL('../supabase/migrations/20260903191312_add_manual_evaluation_interviewer.sql', import.meta.url), 'utf8'),
 ]);
 
 const record = {
@@ -96,7 +98,7 @@ function report(overrides = {}) {
     role_title: 'Housekeeping Attendant',
     workplace: 'Al Reef Beach Resort',
     employer_id: '44444444-4444-4444-8444-444444444444',
-    interviewer_of_record: 'R. Haddad',
+    interviewer_of_record: '',
     interview_datetime: '2026-08-28T10:10:00.000Z',
     duration_seconds: 1260,
     question_count: 8,
@@ -207,6 +209,29 @@ test('workflow labels, sample link and PDF filename follow the report contract',
   assert.match(pageSource, /Record the hiring decision/);
   assert.match(marketingSource, /href="\/for-employers\/sample-report"/);
   assert.equal(evaluationPdfFilename(sampleEvaluationReport), 'Muqabala-Evaluation-Okello-Housekeeping-Attendant-2026-08-28.pdf');
+});
+
+test('rubric version remains stored for audit but never appears in a shared report or PDF', () => {
+  assert.match(generatorSource, /rubric_version: state\.prompt_version/);
+  assert.match(migrationSource, /rubric_version text not null/);
+  assert.doesNotMatch(reportViewSource, /Rubric version|report\.rubric_version/);
+  const renderedPdf = evaluationPdfLines(sampleEvaluationReport).map((line) => line.text).join('\n');
+  assert.doesNotMatch(renderedPdf, /Rubric:|universal-brain-v/i);
+});
+
+test('interviewer name is optional, manually saved and owner scoped', () => {
+  assert.equal(CandidateEvaluationReportSchema.safeParse(report({ interviewer_of_record: '' })).success, true);
+  assert.match(actionSource, /updateEvaluationInterviewer/);
+  assert.match(actionSource, /interviewer_name: interviewerName \|\| null/);
+  assert.match(actionSource, /\.eq\('employer_id', user\.id\)/);
+  assert.match(interviewerMigrationSource, /interviewer_name text/);
+  assert.match(reportViewSource, /report\.interviewer_of_record &&/);
+});
+
+test('a manually entered interviewer appears in the PDF without exposing rubric metadata', () => {
+  const renderedPdf = evaluationPdfLines(report({ interviewer_of_record: 'Samira Khan' })).map((line) => line.text).join('\n');
+  assert.match(renderedPdf, /Interviewed by: Samira Khan/);
+  assert.doesNotMatch(renderedPdf, /Rubric:|universal-brain-v/i);
 });
 
 test('quoted fallback keeps the citation and never exceeds 25 transcript words', () => {

@@ -59,7 +59,7 @@ export async function loadEvaluationShare(rawToken: string): Promise<EvaluationS
   if (!share) return { status: 'not_found' };
   if (share.revoked_at || new Date(share.expires_at).getTime() <= Date.now()) return { status: 'closed' };
   const { data: row } = await admin.from('candidate_evaluation_reports')
-    .select('id,report_id,version,payload,employer_id,created_at')
+    .select('id,report_id,version,payload,interviewer_name,employer_id,created_at')
     .eq('id', share.report_id)
     .maybeSingle();
   if (!row) return { status: 'not_found' };

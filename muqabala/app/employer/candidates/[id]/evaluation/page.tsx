@@ -62,6 +62,7 @@ export default async function CandidateEvaluationPage({ params, searchParams }: 
       {viewingCurrent && <EvaluationControls
         interviewId={id}
         decisionRecorded={Boolean(current.report.decision)}
+        interviewerName={current.report.interviewer_of_record}
         shares={(shareRows ?? []).map((row) => ({ id: row.id, expiresAt: row.expires_at, revokedAt: row.revoked_at }))}
       />}
       <section className={styles.audit}>

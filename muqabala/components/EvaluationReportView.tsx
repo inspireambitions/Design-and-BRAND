@@ -28,6 +28,7 @@ export function EvaluationReportView({
           <p className={styles.kicker}>Muqabala · Stored evidence report</p>
           <h1>{report.candidate_name}</h1>
           <p>{report.role_title} · {report.workplace}</p>
+          {report.interviewer_of_record && <p className={styles.interviewer}>Interviewed by {report.interviewer_of_record}</p>}
         </div>
         <div className={styles.identity}>
           <span>Report</span><strong>{report.report_id}</strong>
@@ -40,8 +41,6 @@ export function EvaluationReportView({
         <div><dt>Recorded time</dt><dd>{Math.floor(report.duration_seconds / 60)} min {report.duration_seconds % 60} sec</dd></div>
         <div><dt>Questions</dt><dd>{report.question_count}</dd></div>
         <div><dt>Seniority band</dt><dd>{report.seniority_band}</dd></div>
-        <div><dt>Interviewer of record</dt><dd>{report.interviewer_of_record}</dd></div>
-        <div><dt>Rubric version</dt><dd>{report.rubric_version}</dd></div>
       </dl>
 
       <section className={styles.legend} aria-label="Evidence band key">

@@ -19,6 +19,7 @@ type ReportRow = {
   report_id: string;
   version: number;
   payload: unknown;
+  interviewer_name: string | null;
   employer_id: string;
   created_at: string;
 };
@@ -90,14 +91,19 @@ export async function hydrateEvaluationReport(row: ReportRow): Promise<Candidate
     notesForReport(admin, row.id),
     decisionForReport(admin, parsed.data.interview_id),
   ]);
-  return CandidateEvaluationReportSchema.parse({ ...parsed.data, employer_notes: notes, decision });
+  return CandidateEvaluationReportSchema.parse({
+    ...parsed.data,
+    interviewer_of_record: row.interviewer_name?.replace(/\s+/g, ' ').trim() ?? '',
+    employer_notes: notes,
+    decision,
+  });
 }
 
 export async function loadCurrentEvaluationReport(interviewId: string): Promise<{ databaseId: string; report: CandidateEvaluationReport } | null> {
   const admin = createAdminClient();
   if (!admin) return null;
   const { data } = await admin.from('candidate_evaluation_reports')
-    .select('id,report_id,version,payload,employer_id,created_at')
+    .select('id,report_id,version,payload,interviewer_name,employer_id,created_at')
     .eq('interview_id', interviewId)
     .is('superseded_at', null)
     .maybeSingle<ReportRow>();
@@ -115,7 +121,7 @@ export async function loadOwnedEvaluationReportVersion(interviewId: string, empl
   const admin = createAdminClient();
   if (!admin || !Number.isInteger(version) || version < 1 || version > 100) return null;
   const { data } = await admin.from('candidate_evaluation_reports')
-    .select('id,report_id,version,payload,employer_id,created_at')
+    .select('id,report_id,version,payload,interviewer_name,employer_id,created_at')
     .eq('interview_id', interviewId)
     .eq('employer_id', employerId)
     .eq('version', version)
@@ -221,10 +227,7 @@ export async function generateCandidateEvaluationReport(
     };
   }));
 
-  const [{ data: employer }, decision] = await Promise.all([
-    admin.auth.admin.getUserById(pack.employer_id),
-    decisionForReport(admin, interviewId),
-  ]);
+  const decision = await decisionForReport(admin, interviewId);
   const now = new Date();
   const reportVersion = Number(versionRows?.[0]?.version ?? 0) + 1;
   const report = CandidateEvaluationReportSchema.parse({
@@ -239,7 +242,7 @@ export async function generateCandidateEvaluationReport(
     role_title: interview.role_title,
     workplace: pack.workplace || 'Hiring team',
     employer_id: pack.employer_id,
-    interviewer_of_record: personName(employer.user),
+    interviewer_of_record: '',
     interview_datetime: interview.submitted_at,
     duration_seconds: (answers ?? []).reduce((total, answer) => total + Number(answer.video_duration_seconds ?? 0), 0),
     question_count: answers.length,

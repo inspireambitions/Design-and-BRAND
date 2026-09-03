@@ -139,4 +139,6 @@ The attached sample and the written rules conflict in three places:
 
 The report schema allows no overall measure, rank or numeric assessment field. Code maps stored rubric statuses to the three permitted evidence bands. A model receives only a competency name and up to three stored evidence records. Every returned line passes the citation, timestamp, word-count, wording, number and proper-noun checks. A double failure falls back to a cited transcript excerpt. A prohibited term within the candidate's own excerpt is replaced with `[omitted]` before rendering.
 
+The rubric version remains stored in the report payload and database column for audit, band computation and regeneration. It is internal metadata and is not rendered on the employer screen, private share or PDF. The interviewer name is optional and controlled by the employer. It is stored separately from the immutable generated payload, owner-scoped, and appears only after the employer saves it.
+
 PDF and private sharing both require a current human decision. Shares default to seven days, accept one to 30 days, require a viewer email, can be closed by the employer and never expose a raw email in the URL or database. Access rows record the report version, action, user or encrypted viewer email, and time.

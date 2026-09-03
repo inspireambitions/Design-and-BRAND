@@ -52,7 +52,7 @@ export const sampleEvaluationReport: CandidateEvaluationReport = CandidateEvalua
   role_title: 'Housekeeping Attendant',
   workplace: 'Al Noor Beach Hotel',
   employer_id: '10000000-0000-4000-8000-000000000003',
-  interviewer_of_record: 'R. Haddad',
+  interviewer_of_record: '',
   interview_datetime: '2026-08-28T10:10:00.000Z',
   duration_seconds: 621,
   question_count: 8,

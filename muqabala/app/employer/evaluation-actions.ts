@@ -36,6 +36,30 @@ export async function addEvaluationNote(input: { interviewId: string; text: stri
   return { ok: true };
 }
 
+export async function updateEvaluationInterviewer(input: { interviewId: string; interviewerName: string }): Promise<{ ok: true } | { error: string }> {
+  const parsed = z.object({
+    interviewId: UUID,
+    interviewerName: z.string().trim().max(100),
+  }).strict().safeParse(input);
+  if (!parsed.success) return { error: 'Enter an interviewer name of 100 characters or fewer.' };
+  const user = await currentUser();
+  if (!user) return { error: 'Sign in again to update the report.' };
+  const current = await loadOwnedEvaluationReport(parsed.data.interviewId, user.id);
+  if (!current) return { error: 'This evaluation is not available.' };
+  const admin = createAdminClient();
+  if (!admin) return { error: 'Report details are not configured.' };
+  const interviewerName = parsed.data.interviewerName.replace(/\s+/g, ' ').trim();
+  const { data, error } = await admin.from('candidate_evaluation_reports')
+    .update({ interviewer_name: interviewerName || null })
+    .eq('id', current.databaseId)
+    .eq('employer_id', user.id)
+    .select('id')
+    .maybeSingle();
+  if (error || !data) return { error: 'The interviewer name could not be saved. Try again.' };
+  revalidatePath(`/employer/candidates/${parsed.data.interviewId}/evaluation`);
+  return { ok: true };
+}
+
 export async function createEvaluationShare(input: { interviewId: string; days: number }): Promise<{ url: string; id: string; expiresAt: string } | { error: string }> {
   const parsed = ShareInput.safeParse(input);
   if (!parsed.success) return { error: 'Choose between 1 and 30 days.' };

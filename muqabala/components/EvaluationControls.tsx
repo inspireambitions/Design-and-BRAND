@@ -2,23 +2,34 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Copy, FilePdf, LinkSimple, NotePencil, Prohibit } from '@phosphor-icons/react';
-import { addEvaluationNote, createEvaluationShare, regenerateEvaluationReport, revokeEvaluationShare } from '@/app/employer/evaluation-actions';
+import { Copy, FilePdf, IdentificationCard, LinkSimple, NotePencil, Prohibit } from '@phosphor-icons/react';
+import { addEvaluationNote, createEvaluationShare, regenerateEvaluationReport, revokeEvaluationShare, updateEvaluationInterviewer } from '@/app/employer/evaluation-actions';
 import styles from './EvaluationControls.module.css';
 
 type Share = { id: string; expiresAt: string; revokedAt: string | null };
 
-export function EvaluationControls({ interviewId, decisionRecorded, shares }: {
+export function EvaluationControls({ interviewId, decisionRecorded, interviewerName: initialInterviewerName, shares }: {
   interviewId: string;
   decisionRecorded: boolean;
+  interviewerName: string;
   shares: Share[];
 }) {
   const router = useRouter();
   const [note, setNote] = useState('');
+  const [interviewerName, setInterviewerName] = useState(initialInterviewerName);
   const [days, setDays] = useState(7);
   const [shareUrl, setShareUrl] = useState('');
   const [busy, setBusy] = useState('');
   const [message, setMessage] = useState('');
+
+  async function saveInterviewer() {
+    setBusy('interviewer'); setMessage('');
+    const cleanName = interviewerName.replace(/\s+/g, ' ').trim();
+    const result = await updateEvaluationInterviewer({ interviewId, interviewerName: cleanName });
+    setBusy('');
+    setMessage('error' in result ? result.error : cleanName ? 'Interviewer name saved.' : 'Interviewer name removed.');
+    if (!('error' in result)) { setInterviewerName(cleanName); router.refresh(); }
+  }
 
   async function addNote() {
     setBusy('note'); setMessage('');
@@ -54,6 +65,14 @@ export function EvaluationControls({ interviewId, decisionRecorded, shares }: {
 
   return (
     <section className={styles.controls} aria-label="Evaluation actions">
+      <div className={styles.signatureBlock}>
+        <div className={styles.heading}><IdentificationCard aria-hidden="true" /><div><h2>Interviewer name</h2><p>Optional. Add the name you want shown on the shared report and PDF.</p></div></div>
+        <div className={styles.signatureInput}>
+          <label htmlFor="evaluation-interviewer">Interviewer</label>
+          <input id="evaluation-interviewer" value={interviewerName} onChange={(event) => setInterviewerName(event.target.value)} maxLength={100} placeholder="Enter interviewer name" />
+          <button type="button" onClick={() => void saveInterviewer()} disabled={Boolean(busy) || interviewerName === initialInterviewerName}>{busy === 'interviewer' ? 'Saving…' : 'Save name'}</button>
+        </div>
+      </div>
       <div className={styles.block}>
         <div className={styles.heading}><NotePencil aria-hidden="true" /><div><h2>Add employer note</h2><p>Each note is attributed and permanent. Add a new note for later context.</p></div></div>
         <textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={1000} placeholder="Add factual context for the hiring team" />

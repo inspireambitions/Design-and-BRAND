@@ -13,10 +13,11 @@
 .kicker { margin: 0 0 .5rem; color: #08705e; font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
 .header h1 { margin: 0; font: 800 clamp(2rem, 4vw, 3.6rem)/.95 var(--font-display); letter-spacing: -.055em; }
 .header p:last-child { margin: .65rem 0 0; color: #5b6a64; }
+.header .interviewer { margin: .8rem 0 0; color: #08705e; font-size: .76rem; font-weight: 700; letter-spacing: .015em; }
 .identity { display: grid; grid-template-columns: auto auto; flex: 0 0 auto; gap: .25rem .7rem; padding: .8rem 1rem; border: 1px solid #cbd9d4; border-radius: .7rem; background: #eff6f3; font-size: .7rem; }
 .identity span { color: #61716b; }
 .identity strong { color: #0b5d4f; font-family: ui-monospace, monospace; }
-.meta { display: grid; grid-template-columns: repeat(3, 1fr); margin: 0; padding: 0 2rem; border-bottom: 1px solid #dfe5e1; }
+.meta { display: grid; grid-template-columns: repeat(4, 1fr); margin: 0; padding: 0 2rem; border-bottom: 1px solid #dfe5e1; }
 .meta div { min-width: 0; padding: 1rem 1rem 1rem 0; }
 .meta dt { margin-bottom: .25rem; color: #78847f; font-size: .66rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
 .meta dd { margin: 0; overflow-wrap: anywhere; font-size: .83rem; font-weight: 650; }
