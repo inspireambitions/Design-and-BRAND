@@ -92,6 +92,7 @@ function extraction(overrides = {}) {
     answered_the_question: true,
     evidence: {
       summary: 'The candidate owned a guest complaint and the guest returned.',
+      segment_ids: [],
       example_key: 'late-room-guest',
       competencies: [{ id: 'c_guest_service', strength: 'STRONG', evidence_type: 'EMPLOYMENT' }],
       criteria: { situation: 'PRESENT', task: 'PRESENT', action: 'STRONG', result: 'PRESENT' },
@@ -245,6 +246,26 @@ test('evidence can credit only competencies targeted by the current question', (
   });
   assert.match(validateExtractionSemantics(state, unrelated), /not targeted/);
   assert.equal(validateExtractionSemantics(state, extraction()), null);
+});
+
+test('timed evidence accepts only supplied, continuous transcript segment ids', () => {
+  const state = stateFor();
+  state.current_question = { ...state.current_question, target_competencies: ['c_guest_service'], framework: 'STAR' };
+  const segments = [
+    { id: 'S001', startMs: 0, endMs: 900, text: 'A guest arrived early.' },
+    { id: 'S002', startMs: 950, endMs: 2100, text: 'I checked the available rooms.' },
+    { id: 'S003', startMs: 2150, endMs: 3400, text: 'The guest thanked me.' },
+  ];
+  assert.equal(validateExtractionSemantics(state, extraction({
+    evidence: { ...extraction().evidence, segment_ids: ['S001', 'S002'] },
+  }), segments), null);
+  assert.match(validateExtractionSemantics(state, extraction({
+    evidence: { ...extraction().evidence, segment_ids: ['S001', 'S099'] },
+  }), segments), /unknown timed evidence/);
+  assert.match(validateExtractionSemantics(state, extraction({
+    evidence: { ...extraction().evidence, segment_ids: ['S001', 'S003'] },
+  }), segments), /continuous/);
+  assert.match(validateExtractionSemantics(state, extraction(), segments), /require a timed transcript span/);
 });
 
 test('the decision table enforces two probes and the executive ownership limit', () => {

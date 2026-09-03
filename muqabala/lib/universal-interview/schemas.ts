@@ -81,6 +81,7 @@ export const ExtractionSchema = z.object({
   answered_the_question: z.boolean(),
   evidence: z.object({
     summary: z.string().trim().max(600),
+    segment_ids: z.array(z.string().regex(/^S\d{3}$/)).max(12),
     example_key: z.string().trim().max(120),
     competencies: z.array(z.object({
       id: z.string().regex(/^c_[a-z0-9_]{2,60}$/),

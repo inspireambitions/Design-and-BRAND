@@ -45,13 +45,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   const questionText = interview.language === 'ar' ? question.textAr : question.text;
-  const { data: saved, error } = await access.admin!.rpc('save_screening_video_answer', {
+  const { data: saved, error } = await access.admin!.rpc('save_screening_video_answer_v2', {
     p_interview_id: id,
     p_anonymous_token_hash: interview.anonymous_token_hash,
     p_question_index: parsed.data.questionIndex,
     p_question_id: question.id,
     p_question_text: questionText,
     p_transcript: parsed.data.transcript,
+    p_transcript_segments: parsed.data.transcriptSegments,
+    p_transcript_timing_version: parsed.data.transcriptTimingVersion,
     p_video_path: parsed.data.videoPath,
     p_video_mime_type: parsed.data.mimeType,
     p_video_size_bytes: parsed.data.sizeBytes,

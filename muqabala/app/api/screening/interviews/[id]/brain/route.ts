@@ -12,12 +12,51 @@ import { interviewAccess } from '@/lib/server/interview-access';
 import { hasTrustedOrigin, privateNoStoreHeaders } from '@/lib/server/security';
 import { limitScoring } from '@/lib/rate-limit';
 import type { Question } from '@/lib/roles';
+import { TranscriptSegmentsSchema, type TranscriptSegment } from '@/lib/interviews';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
 
 const RequestSchema = z.object({ questionIndex: z.number().int().min(0).max(49) }).strict();
+
+async function syncTimedEvidence(input: {
+  state: InterviewState;
+  answerId: string;
+  questionIndex: number;
+  evidenceStart: number;
+  segments: TranscriptSegment[];
+  admin: NonNullable<Awaited<ReturnType<typeof interviewAccess>>['admin']>;
+}) {
+  if (input.segments.length === 0) return;
+  const byId = new Map(input.segments.map((segment) => [segment.id, segment]));
+  const records = input.state.evidence_ledger.slice(input.evidenceStart).flatMap((entry) => {
+    const selected = (Array.isArray(entry.segment_ids) ? entry.segment_ids : [])
+      .map((id) => byId.get(id))
+      .filter((segment): segment is TranscriptSegment => Boolean(segment));
+    if (selected.length === 0) return [];
+    const transcriptSpan = selected.map((segment) => segment.text).join(' ').trim().slice(0, 1200);
+    if (!transcriptSpan) return [];
+    return Object.entries(entry.competencies).map(([competencyId, evidenceStrength]) => ({
+      interview_id: input.state.interview_id,
+      answer_id: input.answerId,
+      question_index: input.questionIndex,
+      evidence_key: entry.id,
+      competency_id: competencyId,
+      transcript_span: transcriptSpan,
+      start_ms: selected[0].startMs,
+      end_ms: selected.at(-1)!.endMs,
+      evidence_strength: evidenceStrength,
+      criterion_results: entry.criteria,
+      pipeline_version: input.state.prompt_version,
+    }));
+  });
+  if (records.length === 0) return;
+  const { error } = await input.admin.from('interview_evidence_records').upsert(records, {
+    onConflict: 'interview_id,evidence_key,competency_id',
+  });
+  if (error) throw new Error('timed_evidence_not_saved');
+}
 
 function questionFromSnapshot(question: Question, seniority: InterviewState['seniority']): GeneratedQuestion {
   return makeBankQuestion({
@@ -91,13 +130,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const questionIndex = parsed.data.questionIndex;
   const question = interview.question_snapshot[questionIndex];
   const { data: answer } = await access.admin!.from('interview_answers')
-    .select('transcript,response_saved_at')
+    .select('id,transcript,transcript_segments,transcript_timing_version,response_saved_at')
     .eq('interview_id', id)
     .eq('question_index', questionIndex)
     .maybeSingle();
   if (!question || !answer?.response_saved_at) {
     return Response.json({ error: 'Save the recorded response before continuing.' }, { status: 409 });
   }
+  const parsedSegments = answer.transcript_timing_version === 'openai-whisper-segment-v1'
+    ? TranscriptSegmentsSchema.safeParse(answer.transcript_segments)
+    : null;
+  const timedSegments = parsedSegments?.success ? parsedSegments.data : [];
   let state = await loadStoredInterview(id);
   if (!state?.screening || state.screening.pack_id !== interview.screening_pack_id) {
     return Response.json({ error: 'The adaptive interview state was not found.' }, { status: 409 });
@@ -119,6 +162,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     try {
       const result = await processUniversalTurn(state, answer.transcript || '', {
         allowDeterministicExtractionFallback: true,
+        timedSegments,
       });
       result.state.screening!.processed_answer_count += 1;
       result.state.screening!.evidence_after_answers.push(result.state.evidence_ledger.length);
@@ -143,6 +187,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         code: 'analysis_unavailable',
       }, { status: 503 });
     }
+  }
+  const evidenceStart = questionIndex > 0 ? state.screening!.evidence_after_answers[questionIndex - 1] ?? 0 : 0;
+  const timedEvidenceSaved = await syncTimedEvidence({
+    state,
+    answerId: answer.id,
+    questionIndex,
+    evidenceStart,
+    segments: timedSegments,
+    admin: access.admin!,
+  }).then(() => true, () => false);
+  if (!timedEvidenceSaved) {
+    return Response.json({ error: 'Your response is safe, but its evidence link is not ready. Retry to continue.' }, { status: 503 });
   }
   const settled = await settleAnswer(state, question, questionIndex, access.admin!).then(() => true, () => false);
   if (!settled) {

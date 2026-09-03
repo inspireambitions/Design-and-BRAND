@@ -13,6 +13,7 @@ import { rejectedQuestionLog, validateQuestionObject } from './candidate-questio
 import { ExtractionSchema, GeneratedQuestionSchema } from './schemas.ts';
 import { precheckAnswer } from './sanitise.ts';
 import type { ExtractionResult, GeneratedQuestion, InterviewState, TurnAction } from './types.ts';
+import type { TranscriptSegment } from '../interviews.ts';
 
 export class UniversalTurnError extends Error {
   status: number;
@@ -25,8 +26,14 @@ export class UniversalTurnError extends Error {
   }
 }
 
-async function extractAnswer(state: InterviewState, answer: string, shortAnswer: boolean, budget: ModelCallBudget) {
-  const basePrompt = extractionInput(state, answer, shortAnswer);
+async function extractAnswer(
+  state: InterviewState,
+  answer: string,
+  shortAnswer: boolean,
+  budget: ModelCallBudget,
+  timedSegments: TranscriptSegment[],
+) {
+  const basePrompt = extractionInput(state, answer, shortAnswer, timedSegments);
   let semanticFailure = '';
   for (let attempt = 0; attempt < 2 && budget.remaining > 0; attempt += 1) {
     const result = await callStructured({
@@ -44,7 +51,7 @@ async function extractAnswer(state: InterviewState, answer: string, shortAnswer:
     const criteria = Object.fromEntries(criteriaEntries.map((item) => [item.criterion, item.status]));
     const normalised: ExtractionResult = { ...result, evidence: { ...result.evidence, criteria } };
     const duplicate = new Set(criteriaEntries.map((item) => item.criterion)).size !== criteriaEntries.length;
-    const failure = duplicate ? 'duplicate framework criterion' : validateExtractionSemantics(state, normalised);
+    const failure = duplicate ? 'duplicate framework criterion' : validateExtractionSemantics(state, normalised, timedSegments);
     if (!failure) return normalised;
     semanticFailure = failure;
     if (budget.remaining > 0) budget.markRetry();
@@ -105,7 +112,10 @@ export async function generateQuestionWithRetry(input: {
 export async function processUniversalTurn(
   state: InterviewState,
   answer: string,
-  options: { allowDeterministicExtractionFallback?: boolean } = {},
+  options: {
+    allowDeterministicExtractionFallback?: boolean;
+    timedSegments?: TranscriptSegment[];
+  } = {},
 ) {
   const started = Date.now();
   if (state.phase !== 'ACTIVE' || !state.current_question) {
@@ -119,7 +129,13 @@ export async function processUniversalTurn(
   let fallbackUsed = false;
   let extraction: ExtractionResult | null = null;
   if (precheck.kind === 'NONE') {
-    const generatedExtraction = await extractAnswer(state, precheck.cleaned_answer, precheck.short_answer, budget);
+    const generatedExtraction = await extractAnswer(
+      state,
+      precheck.cleaned_answer,
+      precheck.short_answer,
+      budget,
+      options.timedSegments ?? [],
+    );
     fallbackUsed = !generatedExtraction;
     if (!generatedExtraction && !options.allowDeterministicExtractionFallback) {
       throw new UniversalTurnError(503, 'answer_processing_unavailable', 'We could not read that answer. Please send it again.');

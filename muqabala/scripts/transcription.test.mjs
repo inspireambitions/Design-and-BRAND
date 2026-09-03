@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import { pickAudioMimeType } from '../lib/audio-capture.ts';
@@ -7,6 +8,9 @@ import {
   audioFileExtension,
   validateTranscriptionUpload,
 } from '../lib/transcription-upload.ts';
+import { ScreeningAnswerSchema, TranscriptSegmentsSchema } from '../lib/interviews.ts';
+
+const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('pickAudioMimeType prefers Opus in WebM, then Opus in Ogg, then MP4', () => {
   assert.equal(pickAudioMimeType(() => true), 'audio/webm;codecs=opus');
@@ -90,4 +94,41 @@ test('audioFileExtension gives the provider an extension it recognises', () => {
   assert.equal(audioFileExtension('audio/mp4'), 'm4a');
   assert.equal(audioFileExtension('audio/mpeg'), 'mp3');
   assert.equal(audioFileExtension('audio/wav'), 'wav');
+});
+
+test('timed transcript segments are ordered, bounded and tied to the recording duration', () => {
+  const segments = [
+    { id: 'S001', startMs: 250, endMs: 1800, text: 'I checked the room first.' },
+    { id: 'S002', startMs: 1850, endMs: 3200, text: 'Then I called the supervisor.' },
+  ];
+  assert.equal(TranscriptSegmentsSchema.safeParse(segments).success, true);
+  assert.equal(TranscriptSegmentsSchema.safeParse([...segments].reverse()).success, false);
+  const base = {
+    questionIndex: 0,
+    transcript: 'I checked the room first. Then I called the supervisor.',
+    transcriptSegments: segments,
+    transcriptTimingVersion: 'openai-whisper-segment-v1',
+    videoPath: 'pack/interview/0-video.webm',
+    mimeType: 'video/webm',
+    sizeBytes: 1024,
+    durationSeconds: 4,
+  };
+  assert.equal(ScreeningAnswerSchema.safeParse(base).success, true);
+  assert.equal(ScreeningAnswerSchema.safeParse({ ...base, transcriptTimingVersion: null }).success, false);
+  assert.equal(ScreeningAnswerSchema.safeParse({
+    ...base,
+    transcriptSegments: [{ ...segments[0], endMs: 8000 }],
+  }).success, false);
+});
+
+test('employer transcription asks Whisper for segment timestamps without changing practice transcription', () => {
+  const route = read('app/api/transcribe/route.ts');
+  const flow = read('components/EmployerVideoInterview.tsx');
+  assert.match(route, /const TIMED_MODEL = 'whisper-1'/);
+  assert.match(route, /response_format: 'verbose_json'/);
+  assert.match(route, /timestamp_granularities: \['segment'\]/);
+  assert.match(route, /form\.get\('timestamps'\) === 'segment'/);
+  assert.match(flow, /form\.append\('timestamps', 'segment'\)/);
+  assert.match(flow, /transcriptSegments/);
+  assert.match(flow, /transcriptTimingVersion/);
 });

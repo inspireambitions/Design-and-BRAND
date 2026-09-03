@@ -7,6 +7,7 @@ import type {
   PlannedQuestion,
   RetryComparison,
 } from './types.ts';
+import type { TranscriptSegment } from '../interviews.ts';
 import {
   fixedRephrase,
   rejectedQuestionLog,
@@ -117,7 +118,11 @@ export function publicRetryComparison(comparison: RetryComparison) {
   };
 }
 
-export function validateExtractionSemantics(state: InterviewState, extraction: ExtractionResult): string | null {
+export function validateExtractionSemantics(
+  state: InterviewState,
+  extraction: ExtractionResult,
+  timedSegments: TranscriptSegment[] = [],
+): string | null {
   const allowedCompetencies = new Set(state.current_question?.target_competencies ?? []);
   if (extraction.evidence.competencies.some((competency) => !allowedCompetencies.has(competency.id))) {
     return 'competency was not targeted by the current question';
@@ -132,6 +137,21 @@ export function validateExtractionSemantics(state: InterviewState, extraction: E
   }
   if (extraction.possible_inconsistency && !evidenceIds.has(extraction.possible_inconsistency.earlier_evidence_id)) {
     return 'possible_inconsistency references unknown evidence';
+  }
+  const segmentOrder = new Map(timedSegments.map((segment, index) => [segment.id, index]));
+  const selected = extraction.evidence.segment_ids.map((id) => segmentOrder.get(id));
+  if (selected.some((index) => index === undefined)) return 'segment_ids reference unknown timed evidence';
+  if (timedSegments.length === 0 && extraction.evidence.segment_ids.length > 0) {
+    return 'segment_ids were supplied without timed evidence';
+  }
+  if (timedSegments.length > 0
+    && extraction.evidence.competencies.length > 0
+    && extraction.evidence.segment_ids.length === 0) {
+    return 'evidence competencies require a timed transcript span';
+  }
+  const indices = selected.filter((index): index is number => index !== undefined).sort((left, right) => left - right);
+  if (indices.length > 1 && indices.at(-1)! - indices[0] + 1 !== indices.length) {
+    return 'segment_ids must form one continuous transcript span';
   }
   return null;
 }

@@ -142,6 +142,7 @@ export type ExtractionResult = {
   answered_the_question: boolean;
   evidence: {
     summary: string;
+    segment_ids: string[];
     example_key: string;
     competencies: ExtractedCompetency[];
     criteria: Record<string, CriterionStatus>;
@@ -159,6 +160,7 @@ export type EvidenceLedgerEntry = {
   id: string;
   question_number: number;
   summary: string;
+  segment_ids: string[];
   example_key: string;
   competencies: Record<string, EvidenceStrength>;
   criteria: Record<string, CriterionStatus>;

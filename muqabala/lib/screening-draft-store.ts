@@ -1,6 +1,7 @@
 'use client';
 
 import type { RecordedVideo } from './media';
+import type { TranscriptSegment } from './interviews';
 
 const DATABASE_NAME = 'muqabala-screening-recovery';
 const STORE_NAME = 'recordings';
@@ -14,6 +15,8 @@ export type ScreeningRecordingDraft = {
   mimeType: RecordedVideo['mimeType'];
   durationSeconds: number;
   transcript: string;
+  transcriptSegments: TranscriptSegment[];
+  transcriptTimingVersion: 'openai-whisper-segment-v1' | null;
   savedOnDeviceAt: string;
 };
 
@@ -63,6 +66,8 @@ export async function saveScreeningRecordingDraft(
   questionIndex: number,
   recording: RecordedVideo,
   transcript: string,
+  transcriptSegments: TranscriptSegment[] = [],
+  transcriptTimingVersion: 'openai-whisper-segment-v1' | null = null,
 ): Promise<ScreeningRecordingDraft> {
   const draft: ScreeningRecordingDraft = {
     key: draftKey(interviewId, questionIndex),
@@ -72,6 +77,8 @@ export async function saveScreeningRecordingDraft(
     mimeType: recording.mimeType,
     durationSeconds: recording.durationSeconds,
     transcript,
+    transcriptSegments,
+    transcriptTimingVersion,
     savedOnDeviceAt: new Date().toISOString(),
   };
   await runRequest('readwrite', (store) => store.put(draft));

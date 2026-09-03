@@ -16,9 +16,17 @@ import { useLang } from './LanguageProvider';
 import { FocusedInterviewFooterGuard } from './FooterVisibility';
 import { hideEmployerInterviewFooter } from '@/lib/footer-visibility';
 import styles from './EmployerVideoInterview.module.css';
+import type { TranscriptSegment } from '@/lib/interviews';
 
 type Stage = 'resuming' | 'unavailable' | 'intro' | 'device' | 'ready' | 'recording' | 'saving' | 'consent' | 'submitting' | 'complete';
 type SaveFailureKind = 'upload' | 'analysis' | null;
+type PendingResponse = {
+  recording: RecordedVideo;
+  transcript: string;
+  transcriptSegments: TranscriptSegment[];
+  transcriptTimingVersion: 'openai-whisper-segment-v1' | null;
+  questionIndex: number;
+};
 
 const ANSWER_SECONDS = 120;
 const CONSENT_VERSION = 'employer-video-v1' as const;
@@ -233,7 +241,7 @@ export function EmployerVideoInterview({
   const [error, setError] = useState('');
   const [saveFailureKind, setSaveFailureKind] = useState<SaveFailureKind>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [pending, setPending] = useState<{ recording: RecordedVideo; transcript: string; questionIndex: number } | null>(null);
+  const [pending, setPending] = useState<PendingResponse | null>(null);
   const [consent, setConsent] = useState(false);
   const [savedCount, setSavedCount] = useState(0);
   const [receipt, setReceipt] = useState<{ submittedAt: string; reference: string } | null>(null);
@@ -346,6 +354,10 @@ export function EmployerVideoInterview({
               durationSeconds: recovered.durationSeconds,
             },
             transcript: recovered.transcript,
+            transcriptSegments: recovered.transcriptSegments ?? [],
+            transcriptTimingVersion: recovered.transcriptTimingVersion === 'openai-whisper-segment-v1'
+              ? recovered.transcriptTimingVersion
+              : null,
             questionIndex: recovered.questionIndex,
           });
           setError(copyRef.current.recoveredRecording);
@@ -578,7 +590,7 @@ export function EmployerVideoInterview({
     }
   }, [brainMode, c.genericError, interviewId, questions.length, scoreInBackground]);
 
-  const savePending = useCallback(async (toSave: { recording: RecordedVideo; transcript: string; questionIndex: number }) => {
+  const savePending = useCallback(async (toSave: PendingResponse) => {
     if (!interviewId) return;
     let responseConfirmed = false;
     setStage('saving');
@@ -594,6 +606,8 @@ export function EmployerVideoInterview({
         toSave.questionIndex,
         toSave.recording,
         toSave.transcript,
+        toSave.transcriptSegments,
+        toSave.transcriptTimingVersion,
       );
 
       const beforeUpload = await readStatus(interviewId);
@@ -635,6 +649,8 @@ export function EmployerVideoInterview({
         body: JSON.stringify({
           questionIndex: toSave.questionIndex,
           transcript: toSave.transcript,
+          transcriptSegments: toSave.transcriptSegments,
+          transcriptTimingVersion: toSave.transcriptTimingVersion,
           videoPath: grantBody.path,
           mimeType: toSave.recording.mimeType,
           sizeBytes: toSave.recording.blob.size,
@@ -689,14 +705,27 @@ export function EmployerVideoInterview({
       ]);
       if (!recording) throw new Error(c.genericError);
       let transcript = transcriptRef.current.trim();
+      let transcriptSegments: TranscriptSegment[] = [];
+      let transcriptTimingVersion: 'openai-whisper-segment-v1' | null = null;
       if (audio) {
         try {
           const form = new FormData();
           form.append('audio', audio, 'answer');
           form.append('lang', lang);
+          form.append('timestamps', 'segment');
           const response = await fetch('/api/transcribe', { method: 'POST', body: form });
-          const body = await response.json().catch(() => ({})) as { transcript?: string };
-          if (response.ok && body.transcript?.trim()) transcript = body.transcript.trim();
+          const body = await response.json().catch(() => ({})) as {
+            transcript?: string;
+            segments?: TranscriptSegment[];
+            timingVersion?: 'openai-whisper-segment-v1' | null;
+          };
+          if (response.ok && body.transcript?.trim()) {
+            transcript = body.transcript.trim();
+            transcriptSegments = Array.isArray(body.segments) ? body.segments : [];
+            transcriptTimingVersion = body.timingVersion === 'openai-whisper-segment-v1'
+              ? body.timingVersion
+              : null;
+          }
         } catch {
           // Browser speech remains available as a fallback.
         }
@@ -707,7 +736,7 @@ export function EmployerVideoInterview({
         setStage('ready');
         return;
       }
-      const captured = { recording, transcript, questionIndex: index };
+      const captured = { recording, transcript, transcriptSegments, transcriptTimingVersion, questionIndex: index };
       setPending(captured);
       await savePending(captured);
     } catch (caught) {

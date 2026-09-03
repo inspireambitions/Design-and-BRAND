@@ -31,14 +31,54 @@ export const ScreeningUploadRequestSchema = z.object({
   mimeType: z.enum(['video/webm', 'video/mp4', 'video/quicktime']),
 }).strict();
 
+export const TranscriptSegmentSchema = z.object({
+  id: z.string().regex(/^S\d{3}$/),
+  startMs: z.number().int().min(0).max(125_000),
+  endMs: z.number().int().min(1).max(128_000),
+  text: z.string().trim().min(1).max(1000),
+}).strict().refine((segment) => segment.endMs > segment.startMs, {
+  message: 'A transcript segment must end after it starts.',
+});
+
+export const TranscriptSegmentsSchema = z.array(TranscriptSegmentSchema).max(240).superRefine((segments, context) => {
+  for (let index = 1; index < segments.length; index += 1) {
+    if (segments[index].startMs < segments[index - 1].startMs) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Transcript segments must be ordered by start time.',
+        path: [index, 'startMs'],
+      });
+    }
+  }
+});
+
+export type TranscriptSegment = z.infer<typeof TranscriptSegmentSchema>;
+
 export const ScreeningAnswerSchema = z.object({
   questionIndex: z.number().int().min(0).max(49),
   transcript: z.string().max(6000).default(''),
+  transcriptSegments: TranscriptSegmentsSchema.default([]),
+  transcriptTimingVersion: z.literal('openai-whisper-segment-v1').nullable().default(null),
   videoPath: z.string().min(8).max(500),
   mimeType: z.enum(['video/webm', 'video/mp4', 'video/quicktime']),
   sizeBytes: z.number().int().min(1).max(50 * 1024 * 1024),
   durationSeconds: z.number().int().min(1).max(125),
-}).strict();
+}).strict().superRefine((answer, context) => {
+  if (answer.transcriptSegments.length > 0 && answer.transcriptTimingVersion === null) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Timed transcript segments require a timing version.',
+      path: ['transcriptTimingVersion'],
+    });
+  }
+  if (answer.transcriptSegments.some((segment) => segment.endMs > (answer.durationSeconds * 1000) + 3000)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Transcript timing exceeds the recording duration.',
+      path: ['transcriptSegments'],
+    });
+  }
+});
 
 export const ScreeningSubmitSchema = z.object({
   consent: z.literal(true),
@@ -67,6 +107,8 @@ export type StoredAnswer = {
   question_id: string;
   question_text: string;
   transcript: string;
+  transcript_segments?: TranscriptSegment[];
+  transcript_timing_version?: 'openai-whisper-segment-v1' | null;
   feedback: AnswerFeedback | null;
   scoring_status: 'pending' | 'scored' | 'unscored' | 'failed';
   video_path?: string | null;

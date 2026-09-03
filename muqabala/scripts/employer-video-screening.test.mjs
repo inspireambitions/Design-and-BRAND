@@ -259,6 +259,8 @@ test('completed recordings survive interruption and only advance after server re
   assert.match(draftStore, /indexedDB\.open/);
   assert.match(draftStore, /probeScreeningRecordingStore/);
   assert.match(draftStore, /blob: Blob/);
+  assert.match(draftStore, /transcriptSegments: TranscriptSegment\[\]/);
+  assert.match(draftStore, /transcriptTimingVersion/);
   assert.match(flow, /await saveScreeningRecordingDraft/);
   assert.match(flow, /await readStatus\(interviewId\)/);
   assert.match(flow, /await deleteScreeningRecordingDraft/);
@@ -272,6 +274,26 @@ test('completed recordings survive interruption and only advance after server re
   assert.match(statusRoute, /question_index,video_upload_status,response_saved_at/);
   assert.doesNotMatch(statusRoute, /transcript|video_path|feedback/);
   assert.match(uploadRoute, /state: 'received'/);
+});
+
+test('timed evidence storage is private and rolls out through a compatible save function', () => {
+  const migration = read('supabase/migrations/20260903175653_timed_interview_evidence.sql');
+  const answerRoute = read('app/api/screening/interviews/[id]/answers/route.ts');
+  const brainRoute = read('app/api/screening/interviews/[id]/brain/route.ts');
+  assert.match(migration, /add column if not exists transcript_segments jsonb/);
+  assert.match(migration, /create table public\.interview_evidence_records/);
+  assert.match(migration, /alter table public\.interview_evidence_records enable row level security/);
+  assert.match(migration, /revoke all on public\.interview_evidence_records from public, anon, authenticated/);
+  assert.match(migration, /create or replace function public\.save_screening_video_answer_v2/);
+  assert.match(answerRoute, /rpc\('save_screening_video_answer_v2'/);
+  assert.match(answerRoute, /p_transcript_segments/);
+  assert.match(answerRoute, /p_transcript_timing_version/);
+  assert.match(brainRoute, /TranscriptSegmentsSchema\.safeParse/);
+  assert.match(brainRoute, /entry\.segment_ids/);
+  assert.match(brainRoute, /selected\.map\(\(segment\) => segment\.text\)\.join\(' '\)/);
+  assert.match(brainRoute, /start_ms: selected\[0\]\.startMs/);
+  assert.match(brainRoute, /end_ms: selected\.at\(-1\)!\.endMs/);
+  assert.doesNotMatch(brainRoute, /start_ms:\s*entry|end_ms:\s*entry/);
 });
 
 test('screening retries keep one capacity place and return a durable receipt', () => {

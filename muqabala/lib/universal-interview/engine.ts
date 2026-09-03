@@ -200,6 +200,7 @@ export function applyExtraction(
     id: evidenceId,
     question_number: next.question_number,
     summary: normalisedExtraction.evidence.summary || 'No usable evidence extracted.',
+    segment_ids: normalisedExtraction.evidence.segment_ids,
     example_key: normalisedExtraction.evidence.example_key,
     competencies: entryCompetencies,
     criteria: normalisedExtraction.evidence.criteria,
@@ -410,6 +411,7 @@ export function deterministicExtractionFallback(): ExtractionResult {
     answered_the_question: true,
     evidence: {
       summary: 'extraction failed',
+      segment_ids: [],
       example_key: '',
       competencies: [],
       criteria: {},
