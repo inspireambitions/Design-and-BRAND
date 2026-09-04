@@ -3,6 +3,7 @@ import { zodTextFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
 import { buildCustomRole, ROLES } from '@/lib/roles';
 import type { Competency, Question, Role } from '@/lib/roles';
+import { drawMockQuestions } from '@/lib/interview-draw';
 import { signInterview } from '@/lib/interview-token';
 import {
   limitInterviewGeneration,
@@ -141,15 +142,18 @@ function reviewedFallbackRole(jobTitle: string): Role {
   const requested = normaliseTitle(jobTitle);
   const matched = requested
     ? ROLES
-      .filter((role) => role.questions.length >= 8)
-      .sort((left, right) => right.title.length - left.title.length)
-      .find((role) => requested.includes(normaliseTitle(role.title)))
+      .flatMap((role) => {
+        const questions = drawMockQuestions(role, 0);
+        return questions ? [{ role, questions }] : [];
+      })
+      .sort((left, right) => right.role.title.length - left.role.title.length)
+      .find(({ role }) => requested.includes(normaliseTitle(role.title)))
     : undefined;
   if (!matched) return buildCustomRole(jobTitle);
   return {
-    ...matched,
-    title: jobTitle.trim() || matched.title,
-    questions: matched.questions.slice(0, 8),
+    ...matched.role,
+    title: jobTitle.trim() || matched.role.title,
+    questions: matched.questions,
   };
 }
 
