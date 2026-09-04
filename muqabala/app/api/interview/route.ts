@@ -134,6 +134,32 @@ function generationModel(): string {
 }
 
 /**
+ * A provider delay must not stop an employer creating a candidate link. The
+ * fallback uses the reviewed eight-question general interview and signs it on
+ * the server, so the browser still cannot author questions or rubric data.
+ */
+function signedFallbackResponse(jobTitle: string, reason: string): Response {
+  const role = buildCustomRole(jobTitle);
+  const token = signInterview({
+    title: role.title,
+    industry: role.industry,
+    level: role.level,
+    competencies: role.competencies,
+    questions: role.questions,
+  });
+  if (!token) {
+    reportOperationalFailure('interview_fallback_signing_failed', {
+      area: 'screening',
+      route: '/api/interview',
+      code: 'signing_unavailable',
+      status: 503,
+    });
+    return Response.json({ error: { code: 'signing_unavailable', message: 'The interview could not be prepared.' } }, { status: 503 });
+  }
+  return Response.json({ role, tailored: false, fallback: true, token, reason });
+}
+
+/**
  * Turn a validated interview (fresh or cached) into the signed response. The
  * token is always signed now, so a cached interview expires from the
  * candidate's point of view exactly as a fresh one does. Returns null when the
@@ -207,9 +233,9 @@ export async function POST(request: Request) {
   const jobTitle = (parsedRequest.data.jobTitle ?? '').trim().slice(0, 120);
   const jobText = (parsedRequest.data.jobText ?? '').trim();
 
-  // Nothing usable to tailor from: the caller should use the generic interview.
+  // Nothing usable to tailor from: return the signed reviewed fallback.
   if (jobText.length < MIN_JOB_TEXT_CHARS) {
-    return Response.json({ role: buildCustomRole(jobTitle), tailored: false });
+    return signedFallbackResponse(jobTitle, 'job_text_short');
   }
 
   const candidateSession = request.headers.get('x-candidate-session');
@@ -236,17 +262,16 @@ export async function POST(request: Request) {
   const cached = await readCachedInterview(cacheKey);
   if (cached) {
     return tailoredResponse(cached, jobTitle)
-      ?? Response.json({ role: buildCustomRole(jobTitle), tailored: false, reason: 'invalid' });
+      ?? signedFallbackResponse(jobTitle, 'invalid');
   }
 
   if ((await limitInterviewGenerationDaily()).limited) {
     // Budget ceiling reached for the day: still give a usable interview.
-    return Response.json({ role: buildCustomRole(jobTitle), tailored: false, reason: 'busy' });
+    return signedFallbackResponse(jobTitle, 'busy');
   }
 
   if (!process.env.OPENAI_API_KEY) {
-    // Honest degradation: a generic interview, clearly flagged as not tailored.
-    return Response.json({ role: buildCustomRole(jobTitle), tailored: false });
+    return signedFallbackResponse(jobTitle, 'provider_unavailable');
   }
 
   try {
@@ -297,7 +322,7 @@ ${CANDIDATE_TEXT_CONTRACT}`,
     }
 
     if (!parsed) {
-      return Response.json({ role: buildCustomRole(jobTitle), tailored: false });
+      return signedFallbackResponse(jobTitle, 'invalid');
     }
 
     // ---- semantic validation: a schema-valid interview can still be unusable ----
@@ -314,11 +339,11 @@ ${CANDIDATE_TEXT_CONTRACT}`,
 
     if (FORBIDDEN.some((re) => re.test(generatedText))) {
       console.warn('Generated interview rejected: protected-characteristic content.');
-      return Response.json({ role: buildCustomRole(jobTitle), tailored: false, reason: 'unsafe' });
+      return signedFallbackResponse(jobTitle, 'unsafe');
     }
     if (PROMPT_ECHO.some((re) => re.test(generatedText))) {
       console.warn('Generated interview rejected: model echoed its instructions.');
-      return Response.json({ role: buildCustomRole(jobTitle), tailored: false, reason: 'invalid' });
+      return signedFallbackResponse(jobTitle, 'invalid');
     }
 
     const competencies: Competency[] = [];
@@ -327,13 +352,13 @@ ${CANDIDATE_TEXT_CONTRACT}`,
       const id = slug(c.id);
       // A duplicate id would make scoring ambiguous about which rubric applies.
       if (!id || seen.has(id)) {
-        return Response.json({ role: buildCustomRole(jobTitle), tailored: false, reason: 'invalid' });
+        return signedFallbackResponse(jobTitle, 'invalid');
       }
       seen.add(id);
       competencies.push({ id, label: c.label, labelAr: c.label_ar, anchor: c.anchor, anchorAr: c.anchor_ar });
     }
     if (competencies.length < 3) {
-      return Response.json({ role: buildCustomRole(jobTitle), tailored: false, reason: 'invalid' });
+      return signedFallbackResponse(jobTitle, 'invalid');
     }
 
     const questions: Question[] = [];
@@ -344,7 +369,7 @@ ${CANDIDATE_TEXT_CONTRACT}`,
       const ids = [...new Set(q.competency_ids.map(slug))];
       if (ids.length === 0 || ids.some((id) => !seen.has(id))) {
         console.warn('Generated interview rejected: question names an unknown competency.');
-        return Response.json({ role: buildCustomRole(jobTitle), tailored: false, reason: 'invalid' });
+        return signedFallbackResponse(jobTitle, 'invalid');
       }
 
       questions.push({
@@ -362,7 +387,7 @@ ${CANDIDATE_TEXT_CONTRACT}`,
     }
 
     if (questions.length !== 8) {
-      return Response.json({ role: buildCustomRole(jobTitle), tailored: false, reason: 'invalid' });
+      return signedFallbackResponse(jobTitle, 'invalid');
     }
 
     const generated: CachedInterview = {
@@ -373,7 +398,7 @@ ${CANDIDATE_TEXT_CONTRACT}`,
     };
     const tailored = tailoredResponse(generated, jobTitle);
     if (!tailored) {
-      return Response.json({ role: buildCustomRole(jobTitle), tailored: false, reason: 'invalid' });
+      return signedFallbackResponse(jobTitle, 'invalid');
     }
 
     // Every check passed and the rubric is signed, so this interview is worth
@@ -392,10 +417,6 @@ ${CANDIDATE_TEXT_CONTRACT}`,
       code: timedOut ? 'timeout' : providerError.code || providerError.name || 'provider_error',
       status: providerError.status,
     });
-    return Response.json({
-      role: buildCustomRole(jobTitle),
-      tailored: false,
-      reason: timedOut ? 'timeout' : 'error',
-    });
+    return signedFallbackResponse(jobTitle, timedOut ? 'timeout' : 'error');
   }
 }

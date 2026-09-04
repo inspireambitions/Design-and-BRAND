@@ -289,6 +289,16 @@ test('current OpenAI models receive no unsupported temperature option', () => {
   assert.match(read('app/api/screening/packs/route.ts'), /reportOperationalFailure\('screening_pack_creation_failed'/);
 });
 
+test('a model timeout still returns a signed reviewed interview for the employer link', () => {
+  const advertRoute = read('app/api/interview/route.ts');
+  const form = read('components/EmployerProofCreate.tsx');
+  assert.match(advertRoute, /function signedFallbackResponse[\s\S]*signInterview\(\{[\s\S]*questions: role\.questions/);
+  assert.match(advertRoute, /return signedFallbackResponse\(jobTitle, timedOut \? 'timeout' : 'error'\)/);
+  assert.match(advertRoute, /tailored: false, fallback: true, token, reason/);
+  assert.match(form, /if \(!generated\.ok \|\| !generatedBody\.token\)/);
+  assert.doesNotMatch(form, /!generatedBody\.tailored \|\| !generatedBody\.token/);
+});
+
 test('timed evidence storage is private and rolls out through a compatible save function', () => {
   const migration = read('supabase/migrations/20260903175653_timed_interview_evidence.sql');
   const answerRoute = read('app/api/screening/interviews/[id]/answers/route.ts');

@@ -342,10 +342,11 @@ function EmployerCreateForm({ volume }: { volume: boolean }) {
       });
       const generatedBody = await generated.json().catch(() => ({})) as {
         tailored?: boolean;
+        fallback?: boolean;
         token?: string;
         role?: { title?: string };
       };
-      if (!generated.ok || !generatedBody.tailored || !generatedBody.token) {
+      if (!generated.ok || !generatedBody.token) {
         setError('create');
         return;
       }
