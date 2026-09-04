@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 import { zodTextFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
-import { buildCustomRole } from '@/lib/roles';
+import { buildCustomRole, ROLES } from '@/lib/roles';
 import type { Competency, Question, Role } from '@/lib/roles';
 import { signInterview } from '@/lib/interview-token';
 import {
@@ -133,13 +133,33 @@ function generationModel(): string {
   return process.env.INTERVIEW_MODEL || process.env.OPENAI_SCORING_MODEL || 'gpt-5.6-sol';
 }
 
+function reviewedFallbackRole(jobTitle: string): Role {
+  const normaliseTitle = (value: string) => value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+  const requested = normaliseTitle(jobTitle);
+  const matched = requested
+    ? ROLES
+      .filter((role) => role.questions.length >= 8)
+      .sort((left, right) => right.title.length - left.title.length)
+      .find((role) => requested.includes(normaliseTitle(role.title)))
+    : undefined;
+  if (!matched) return buildCustomRole(jobTitle);
+  return {
+    ...matched,
+    title: jobTitle.trim() || matched.title,
+    questions: matched.questions.slice(0, 8),
+  };
+}
+
 /**
  * A provider delay must not stop an employer creating a candidate link. The
  * fallback uses the reviewed eight-question general interview and signs it on
  * the server, so the browser still cannot author questions or rubric data.
  */
 function signedFallbackResponse(jobTitle: string, reason: string): Response {
-  const role = buildCustomRole(jobTitle);
+  const role = reviewedFallbackRole(jobTitle);
   const token = signInterview({
     title: role.title,
     industry: role.industry,

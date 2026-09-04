@@ -292,6 +292,7 @@ test('current OpenAI models receive no unsupported temperature option', () => {
 test('a model timeout still returns a signed reviewed interview for the employer link', () => {
   const advertRoute = read('app/api/interview/route.ts');
   const form = read('components/EmployerProofCreate.tsx');
+  assert.match(advertRoute, /function reviewedFallbackRole[\s\S]*ROLES[\s\S]*requested\.includes\(normaliseTitle\(role\.title\)\)/);
   assert.match(advertRoute, /function signedFallbackResponse[\s\S]*signInterview\(\{[\s\S]*questions: role\.questions/);
   assert.match(advertRoute, /return signedFallbackResponse\(jobTitle, timedOut \? 'timeout' : 'error'\)/);
   assert.match(advertRoute, /tailored: false, fallback: true, token, reason/);
