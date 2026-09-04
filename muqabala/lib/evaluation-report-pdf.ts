@@ -1,6 +1,20 @@
+import { join } from 'node:path';
+import PDFDocument from 'pdfkit';
 import type { CandidateEvaluationReport } from '@/lib/evaluation-report';
-import { formatPlaybackTime } from '@/lib/evaluation-report';
-import { buildPdf, type PdfLine } from '@/lib/employer-volume/pdf';
+import {
+  formatPlaybackTime,
+  formatReportDateTime,
+  reportDecisionLabel,
+  reportFilenameDate,
+} from '@/lib/evaluation-report';
+import type { PdfLine } from '@/lib/employer-volume/pdf';
+
+const FONT_REGULAR = join(process.cwd(), 'node_modules', 'dejavu-fonts-ttf', 'ttf', 'DejaVuSans.ttf');
+const FONT_BOLD = join(process.cwd(), 'node_modules', 'dejavu-fonts-ttf', 'ttf', 'DejaVuSans-Bold.ttf');
+const PAGE_MARGIN = 48;
+const PAGE_BOTTOM = 780;
+const CONTENT_WIDTH = 499;
+const RTL_TEXT = /[\u0590-\u08FF\uFB1D-\uFDFD\uFE70-\uFEFC]/u;
 
 const BAND_LABEL = {
   EVIDENCE_FOUND: 'Evidence found',
@@ -21,71 +35,211 @@ function wrap(value: string, limit: number): string[] {
   return lines;
 }
 
+/** Plain text representation used by policy tests and accessible fallbacks. */
 export function evaluationPdfLines(report: CandidateEvaluationReport): PdfLine[] {
   const decision = report.decision;
   const lines: PdfLine[] = [
-    { text: 'MUQABALA  |  STORED EVIDENCE REPORT', size: 8, bold: true, lineHeight: 10 },
-    { text: report.candidate_name, size: 17, bold: true, gapBefore: 3, lineHeight: 21 },
-    { text: `${report.role_title} | ${report.workplace}`, size: 9, lineHeight: 12 },
-    { text: `${report.report_id} | Version ${report.report_version} | ${new Date(report.interview_datetime).toLocaleDateString('en-GB')} | ${report.question_count} questions | ${Math.floor(report.duration_seconds / 60)} min ${report.duration_seconds % 60} sec`, size: 7, lineHeight: 10 },
+    { text: 'MUQABALA  |  STORED EVIDENCE REPORT', size: 9, bold: true, lineHeight: 12 },
+    { text: report.candidate_name, size: 18, bold: true, gapBefore: 4, lineHeight: 23 },
+    { text: `${report.role_title} | ${report.workplace}`, size: 10, lineHeight: 14 },
+    { text: `${report.report_id} | Version ${report.report_version} | Started ${formatReportDateTime(report.interview_datetime)} | ${report.question_count} questions | ${Math.floor(report.duration_seconds / 60)} min ${report.duration_seconds % 60} sec`, size: 8.5, lineHeight: 12 },
     {
       text: report.interviewer_of_record
         ? `Seniority: ${report.seniority_band} | Interviewed by: ${report.interviewer_of_record}`
         : `Seniority: ${report.seniority_band}`,
-      size: 7,
-      lineHeight: 10,
+      size: 8.5,
+      lineHeight: 12,
     },
   ];
 
   for (const competency of report.competencies) {
     lines.push({
       text: `${String(competency.rubric_order).padStart(2, '0')}  ${competency.name}  |  ${BAND_LABEL[competency.band]}`,
-      size: 8,
+      size: 10,
       bold: true,
-      gapBefore: 3,
-      lineHeight: 10,
+      gapBefore: 6,
+      lineHeight: 13,
     });
     if (competency.evidence_lines.length === 0) {
-      lines.push({ text: 'No stored evidence line for this competency.', size: 6.5, indent: 12, lineHeight: 8 });
+      lines.push({ text: 'No stored evidence line for this competency.', size: 8.5, indent: 12, lineHeight: 11 });
     }
     for (const evidence of competency.evidence_lines) {
       const prefix = `Q${evidence.question_number} ${formatPlaybackTime(evidence.timestamp_seconds)} [${evidence.evidence_id}] `;
-      wrap(`${prefix}${evidence.text}`, 118).forEach((text, index) => lines.push({ text, size: 6.5, indent: index ? 24 : 12, lineHeight: 7.5 }));
+      wrap(`${prefix}${evidence.text}`, 94).forEach((text, index) => lines.push({ text, size: 8.5, indent: index ? 24 : 12, lineHeight: 11.5 }));
     }
     if (competency.followup_question) {
-      wrap(`Follow-up: ${competency.followup_question}`, 118).forEach((text, index) => lines.push({ text, size: 6.5, indent: index ? 24 : 12, lineHeight: 7.5 }));
+      wrap(`Follow-up: ${competency.followup_question}`, 94).forEach((text, index) => lines.push({ text, size: 8.5, indent: index ? 24 : 12, lineHeight: 11.5 }));
     }
   }
 
-  lines.push({ text: 'EMPLOYER NOTES', size: 8, bold: true, gapBefore: 4, lineHeight: 10 });
-  if (report.employer_notes.length === 0) lines.push({ text: 'No employer note has been added.', size: 6.5, lineHeight: 8 });
+  lines.push({ text: 'EMPLOYER NOTES', size: 10, bold: true, gapBefore: 7, lineHeight: 13 });
+  if (report.employer_notes.length === 0) lines.push({ text: 'No employer note has been added.', size: 8.5, lineHeight: 11.5 });
   report.employer_notes.slice(-2).forEach((note) => {
-    wrap(`${note.author_name}, ${new Date(note.created_at).toLocaleDateString('en-GB')}: ${note.text}`, 118)
-      .slice(0, 2)
-      .forEach((text) => lines.push({ text, size: 6.5, lineHeight: 7.5 }));
+    wrap(`${note.author_name}, ${formatReportDateTime(note.created_at)}: ${note.text}`, 94)
+      .slice(0, 3)
+      .forEach((text) => lines.push({ text, size: 8.5, lineHeight: 11.5 }));
   });
-  if (report.employer_notes.length > 2) lines.push({ text: 'Earlier notes remain available in the private online report.', size: 6.5, lineHeight: 8 });
+  if (report.employer_notes.length > 2) lines.push({ text: 'Earlier notes remain available in the private online report.', size: 8.5, lineHeight: 11.5 });
 
-  lines.push({ text: 'DECISION RECORD', size: 8, bold: true, gapBefore: 3, lineHeight: 10 });
+  lines.push({ text: 'DECISION RECORD', size: 10, bold: true, gapBefore: 6, lineHeight: 13 });
   lines.push({
     text: decision
-      ? `${decision.outcome} | ${decision.decided_by_name} | ${new Date(decision.decided_at).toLocaleString('en-GB')}`
+      ? `${reportDecisionLabel(decision.outcome)} | ${decision.decided_by_name} | ${formatReportDateTime(decision.decided_at)}`
       : 'No decision recorded.',
-    size: 7,
+    size: 9,
     bold: Boolean(decision),
-    lineHeight: 9,
+    lineHeight: 12,
   });
-  wrap(`This summary records evidence heard in a structured interview against the employer's rubric. It contains no overall measure or ranking. The decision above was made by the named person. Every evidence line carries a recording time and stored evidence ID. The candidate may request a copy. Generated by Muqabala, format v${report.report_format_version}.`, 130)
-    .forEach((text) => lines.push({ text, size: 5.8, gapBefore: 1, lineHeight: 7 }));
+  wrap(`This summary records evidence heard in a structured interview against the employer's rubric. It contains no overall measure or ranking. The decision above was made by the named person. Every evidence line carries a recording time and stored evidence ID. The candidate may request a copy. Generated by Muqabala, format v${report.report_format_version}.`, 105)
+    .forEach((text) => lines.push({ text, size: 7.5, gapBefore: 1, lineHeight: 10 }));
   return lines;
 }
 
-export function buildEvaluationPdf(report: CandidateEvaluationReport): Blob {
-  return buildPdf(evaluationPdfLines(report));
+function textOptions(value: string, options: PDFKit.Mixins.TextOptions = {}): PDFKit.Mixins.TextOptions {
+  return {
+    ...options,
+    align: RTL_TEXT.test(value) ? 'right' : options.align,
+    features: RTL_TEXT.test(value) ? ['rtla', 'rlig', 'liga'] : options.features,
+  };
+}
+
+function ensureSpace(doc: PDFKit.PDFDocument, minimum: number) {
+  if (doc.y + minimum > PAGE_BOTTOM) doc.addPage();
+}
+
+function writeText(
+  doc: PDFKit.PDFDocument,
+  value: string,
+  options: { size?: number; bold?: boolean; colour?: string; width?: number; gapAfter?: number } = {},
+) {
+  const width = options.width ?? CONTENT_WIDTH;
+  doc
+    .font(options.bold ? 'MuqabalaBold' : 'MuqabalaRegular')
+    .fontSize(options.size ?? 9)
+    .fillColor(options.colour ?? '#17211f')
+    .text(value, PAGE_MARGIN, doc.y, textOptions(value, { width, lineGap: 1.6 }));
+  if (options.gapAfter) doc.moveDown(options.gapAfter);
+}
+
+function renderEvaluationPdf(doc: PDFKit.PDFDocument, report: CandidateEvaluationReport) {
+  doc.registerFont('MuqabalaRegular', FONT_REGULAR);
+  doc.registerFont('MuqabalaBold', FONT_BOLD);
+  doc.on('pageAdded', () => {
+    doc.rect(0, 0, doc.page.width, 7).fill('#08705e');
+    doc.y = 28;
+    writeText(doc, 'MUQABALA  |  EVIDENCE REPORT CONTINUED', { size: 7.5, bold: true, colour: '#08705e' });
+    doc.moveTo(PAGE_MARGIN, doc.y).lineTo(PAGE_MARGIN + CONTENT_WIDTH, doc.y).strokeColor('#d8e1dd').stroke();
+    doc.y += 10;
+  });
+
+  doc.rect(0, 0, doc.page.width, 10).fill('#08705e');
+  doc.y = 43;
+  writeText(doc, 'MUQABALA  |  STORED EVIDENCE REPORT', { size: 9, bold: true, colour: '#08705e', gapAfter: 0.35 });
+  writeText(doc, report.candidate_name, { size: 22, bold: true, gapAfter: 0.15 });
+  writeText(doc, `${report.role_title}  |  ${report.workplace}`, { size: 10.5, colour: '#43534e', gapAfter: 0.35 });
+
+  const duration = `${Math.floor(report.duration_seconds / 60)} min ${report.duration_seconds % 60} sec`;
+  writeText(doc, `${report.report_id}  |  Version ${report.report_version}`, { size: 8.5, colour: '#53635e' });
+  writeText(doc, `Interview started: ${formatReportDateTime(report.interview_datetime)}  |  ${report.question_count} questions  |  ${duration}`, { size: 8.5, colour: '#53635e' });
+  writeText(doc, report.interviewer_of_record
+    ? `Seniority: ${report.seniority_band}  |  Interviewed by: ${report.interviewer_of_record}`
+    : `Seniority: ${report.seniority_band}`, { size: 8.5, colour: '#53635e', gapAfter: 0.35 });
+  doc.moveTo(PAGE_MARGIN, doc.y).lineTo(PAGE_MARGIN + CONTENT_WIDTH, doc.y).strokeColor('#cbd9d4').stroke();
+  doc.moveDown(0.55);
+
+  for (const competency of report.competencies) {
+    ensureSpace(doc, 76);
+    doc.moveTo(PAGE_MARGIN, doc.y).lineTo(PAGE_MARGIN + CONTENT_WIDTH, doc.y).strokeColor('#e0e6e3').stroke();
+    doc.moveDown(0.4);
+    const order = RTL_TEXT.test(competency.name)
+      ? String(competency.rubric_order)
+      : String(competency.rubric_order).padStart(2, '0');
+    writeText(doc, `${order}  ${competency.name}`, { size: 10.5, bold: true });
+    writeText(doc, BAND_LABEL[competency.band], {
+      size: 8,
+      bold: true,
+      colour: competency.band === 'EVIDENCE_FOUND' ? '#08705e' : competency.band === 'PARTIAL' ? '#8a6112' : '#7b4234',
+      gapAfter: 0.15,
+    });
+    if (competency.evidence_lines.length === 0) {
+      writeText(doc, 'No stored evidence line for this competency.', { size: 8.5, colour: '#63736e', gapAfter: 0.2 });
+    }
+    for (const evidence of competency.evidence_lines) {
+      ensureSpace(doc, 42);
+      writeText(doc, evidence.text, { size: 8.7 });
+      writeText(doc, `Q${evidence.question_number}  ${formatPlaybackTime(evidence.timestamp_seconds)}  |  ${evidence.evidence_id}`, { size: 7.4, colour: '#62746e', gapAfter: 0.25 });
+    }
+    if (competency.followup_question) {
+      ensureSpace(doc, 34);
+      writeText(doc, 'FOLLOW-UP', { size: 7.5, bold: true, colour: '#8a6112' });
+      writeText(doc, competency.followup_question, { size: 8.7, colour: '#5a4417', gapAfter: 0.25 });
+    }
+  }
+
+  ensureSpace(doc, 94);
+  doc.moveDown(0.4);
+  writeText(doc, 'EMPLOYER NOTES', { size: 10, bold: true, colour: '#08705e', gapAfter: 0.15 });
+  if (report.employer_notes.length === 0) writeText(doc, 'No employer note has been added.', { size: 8.5, colour: '#63736e' });
+  for (const note of report.employer_notes.slice(-2)) {
+    writeText(doc, note.text, { size: 8.7 });
+    writeText(doc, note.author_name, { size: 7.5, colour: '#63736e' });
+    writeText(doc, formatReportDateTime(note.created_at), { size: 7.5, colour: '#63736e', gapAfter: 0.2 });
+  }
+  if (report.employer_notes.length > 2) writeText(doc, 'Earlier notes remain available in the private online report.', { size: 8, colour: '#63736e' });
+
+  ensureSpace(doc, 88);
+  doc.moveDown(0.45);
+  writeText(doc, 'DECISION RECORD', { size: 10, bold: true, colour: '#08705e', gapAfter: 0.15 });
+  if (report.decision) {
+    writeText(doc, reportDecisionLabel(report.decision.outcome), { size: 14, bold: true, colour: '#075d4d' });
+    writeText(doc, report.decision.decided_by_name, { size: 8.2, colour: '#53635e' });
+    writeText(doc, formatReportDateTime(report.decision.decided_at), { size: 8.2, colour: '#53635e' });
+  } else {
+    writeText(doc, 'No decision recorded.', { size: 8.7, colour: '#63736e' });
+  }
+
+  ensureSpace(doc, 72);
+  doc.moveDown(0.5);
+  writeText(doc, `This summary records evidence heard in a structured interview against the employer's rubric. It contains no overall measure or ranking. The decision above was made by the named person. Every evidence line carries a recording time and stored evidence ID. The candidate may request a copy. Generated by Muqabala, format v${report.report_format_version}.`, { size: 7.5, colour: '#63736e' });
+
+  const pages = doc.bufferedPageRange();
+  for (let pageIndex = pages.start; pageIndex < pages.start + pages.count; pageIndex += 1) {
+    doc.switchToPage(pageIndex);
+    doc.font('MuqabalaRegular').fontSize(7.2).fillColor('#6a7773');
+    doc.text(`Muqabala evidence report  |  ${report.report_id}`, PAGE_MARGIN, 807, { width: 390, lineBreak: false });
+    doc.text(`Page ${pageIndex + 1} of ${pages.count}`, 422, 807, { width: 125, align: 'right', lineBreak: false });
+  }
+}
+
+export function buildEvaluationPdf(report: CandidateEvaluationReport): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    const doc = new PDFDocument({
+      size: 'A4',
+      margins: { top: 46, right: PAGE_MARGIN, bottom: 24, left: PAGE_MARGIN },
+      bufferPages: true,
+      compress: true,
+      info: {
+        Title: `Muqabala evaluation for ${report.candidate_name}`,
+        Author: 'Muqabala',
+        Subject: 'Structured interview evidence report',
+      },
+    });
+    doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+    doc.on('error', reject);
+    doc.on('end', () => resolve(new Blob([new Uint8Array(Buffer.concat(chunks))], { type: 'application/pdf' })));
+    try {
+      renderEvaluationPdf(doc, report);
+      doc.end();
+    } catch (error) {
+      doc.destroy();
+      reject(error);
+    }
+  });
 }
 
 export function evaluationPdfFilename(report: CandidateEvaluationReport): string {
   const surname = report.candidate_name.trim().split(/\s+/).at(-1) || 'Candidate';
   const safe = (value: string) => value.normalize('NFKD').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50) || 'Report';
-  return `Muqabala-Evaluation-${safe(surname)}-${safe(report.role_title)}-${new Date(report.interview_datetime).toISOString().slice(0, 10)}.pdf`;
+  return `Muqabala-Evaluation-${safe(surname)}-${safe(report.role_title)}-${reportFilenameDate(report.interview_datetime)}.pdf`;
 }

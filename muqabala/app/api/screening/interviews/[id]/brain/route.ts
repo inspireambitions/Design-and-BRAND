@@ -13,6 +13,7 @@ import { hasTrustedOrigin, privateNoStoreHeaders } from '@/lib/server/security';
 import { limitScoring } from '@/lib/rate-limit';
 import type { Question } from '@/lib/roles';
 import { TranscriptSegmentsSchema, type TranscriptSegment } from '@/lib/interviews';
+import { reportOperationalFailure } from '@/lib/sentry-server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -181,7 +182,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       const internalCode = error instanceof Error && /^[a-z0-9_]+(?::[a-z0-9_]+)?$/i.test(error.message)
         ? error.message.split(':')[0]
         : 'unexpected_turn_error';
-      console.warn('screening_brain_turn_failed', { code: internalCode });
+      reportOperationalFailure('screening_brain_turn_failed', { area: 'screening', code: internalCode, route: '/api/screening/interviews/[id]/brain', status: 503 });
       return Response.json({
         error: 'Your response is saved. Its analysis needs another try.',
         code: 'analysis_unavailable',
@@ -198,14 +199,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     admin: access.admin!,
   }).then(() => true, () => false);
   if (!timedEvidenceSaved) {
+    reportOperationalFailure('screening_brain_evidence_failed', { area: 'screening', code: 'timed_evidence_not_saved', route: '/api/screening/interviews/[id]/brain', status: 503 });
     return Response.json({ error: 'Your response is safe, but its evidence link is not ready. Retry to continue.' }, { status: 503 });
   }
   const settled = await settleAnswer(state, question, questionIndex, access.admin!).then(() => true, () => false);
   if (!settled) {
+    reportOperationalFailure('screening_brain_settlement_failed', { area: 'screening', code: 'answer_analysis_not_saved', route: '/api/screening/interviews/[id]/brain', status: 503 });
     return Response.json({ error: 'Your response is safe, but its analysis is not ready. Retry to continue.' }, { status: 503 });
   }
   const nextTurnIndex = await syncNextQuestion(state, access.admin!).catch(() => null);
   if (nextTurnIndex === null) {
+    reportOperationalFailure('screening_brain_next_question_failed', { area: 'screening', code: 'next_question_not_saved', route: '/api/screening/interviews/[id]/brain', status: 503 });
     return Response.json({ error: 'Your response is safe, but the next question is not ready. Retry to continue.' }, { status: 503 });
   }
   return Response.json({

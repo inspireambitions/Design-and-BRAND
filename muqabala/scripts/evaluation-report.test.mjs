@@ -6,7 +6,10 @@ import {
   CandidateEvaluationReportSchema,
   bandFromEvidence,
   formatPlaybackTime,
+  formatReportDateTime,
   quotedEvidenceFallback,
+  reportDecisionLabel,
+  reportFilenameDate,
   validateEvidenceLine,
 } from '../lib/evaluation-report.ts';
 
@@ -17,7 +20,7 @@ const {
 } = await import('../lib/server/evaluation-report-language.ts');
 const { evaluationPdfLines, buildEvaluationPdf, evaluationPdfFilename } = await import('../lib/evaluation-report-pdf.ts');
 const { sampleEvaluationReport } = await import('../lib/fixtures/evaluation-report.ts');
-const [generatorSource, pdfRouteSource, shareRouteSource, actionSource, pageSource, playbackSource, migrationSource, marketingSource, reportViewSource, interviewerMigrationSource] = await Promise.all([
+const [generatorSource, pdfRouteSource, shareRouteSource, actionSource, pageSource, playbackSource, migrationSource, marketingSource, reportViewSource, interviewerMigrationSource, candidateReviewSource, dashboardActionsSource, mediaCheckSource, reportCssSource, cronAuthSource, instrumentationSource] = await Promise.all([
   readFile(new URL('../lib/server/evaluation-report.ts', import.meta.url), 'utf8'),
   readFile(new URL('../app/api/employer/candidates/[id]/evaluation/pdf/route.ts', import.meta.url), 'utf8'),
   readFile(new URL('../app/api/evaluation-share/[token]/route.ts', import.meta.url), 'utf8'),
@@ -28,6 +31,12 @@ const [generatorSource, pdfRouteSource, shareRouteSource, actionSource, pageSour
   readFile(new URL('../components/EmployerProofCreate.tsx', import.meta.url), 'utf8'),
   readFile(new URL('../components/EvaluationReportView.tsx', import.meta.url), 'utf8'),
   readFile(new URL('../supabase/migrations/20260903191312_add_manual_evaluation_interviewer.sql', import.meta.url), 'utf8'),
+  readFile(new URL('../components/CandidateReview.tsx', import.meta.url), 'utf8'),
+  readFile(new URL('../components/DashboardDecisionActions.tsx', import.meta.url), 'utf8'),
+  readFile(new URL('../scripts/verify-browser-media.mjs', import.meta.url), 'utf8'),
+  readFile(new URL('../components/EvaluationReportView.module.css', import.meta.url), 'utf8'),
+  readFile(new URL('../lib/server/cron-auth.ts', import.meta.url), 'utf8'),
+  readFile(new URL('../instrumentation.ts', import.meta.url), 'utf8'),
 ]);
 
 const record = {
@@ -142,7 +151,7 @@ test('full report renderer contains no prohibited assessment wording or numeric 
   assert.doesNotMatch(rendered, /\b(?:strengths?|weakness(?:es)?|concerns?|red flags?|risks?|fit|personality|attitude|confident|nervous|articulate|fluent|accent|native|age|nationality|gender|religion|appearance|recommend\w*|hire\w*|reject\w*|scores?|ratings?)\b|%|\/10|\bout of\b/iu);
 });
 
-test('maximum fixture produces exactly one A4 PDF page', async () => {
+test('maximum fixture uses readable multi-page A4 output', async () => {
   let nextId = 100;
   const maximum = CandidateEvaluationReportSchema.parse({
     ...sampleEvaluationReport,
@@ -159,9 +168,80 @@ test('maximum fixture produces exactly one A4 PDF page', async () => {
       })),
     })),
   });
-  const bytes = Buffer.from(await buildEvaluationPdf(maximum).arrayBuffer()).toString('latin1');
-  assert.match(bytes, /\/Type \/Pages[\s\S]*\/Count 1\b/);
-  assert.doesNotMatch(bytes, /\/Count 2\b/);
+  const bytes = Buffer.from(await (await buildEvaluationPdf(maximum)).arrayBuffer()).toString('latin1');
+  const pageCount = bytes.match(/\/Type \/Pages[\s\S]{0,120}\/Count (\d+)\b/)?.[1];
+  assert.ok(pageCount, 'PDF page tree should include a page count');
+  assert.ok(Number(pageCount) >= 2 && Number(pageCount) <= 4, `expected 2 to 4 readable pages, received ${pageCount}`);
+});
+
+test('Arabic and mixed-script report text uses an embedded Unicode font', async () => {
+  const arabic = CandidateEvaluationReportSchema.parse(report({
+    candidate_name: 'أمينة Okello',
+    role_title: 'مشرفة Housekeeping',
+    workplace: 'فندق النور',
+    competencies: [{
+      ...report().competencies[0],
+      name: 'خدمة الضيوف',
+      evidence_lines: [{
+        ...report().competencies[0].evidence_lines[0],
+        text: 'شرحت أمينة كيف جهزت 14 غرفة وفحصت القائمة مع المشرف.',
+        transcript_span: 'شرحت أمينة كيف جهزت 14 غرفة وفحصت القائمة مع المشرف.',
+      }],
+      followup_question: 'ماذا فعلت عندما طلب الضيف المساعدة؟',
+    }],
+  }));
+  const bytes = Buffer.from(await (await buildEvaluationPdf(arabic)).arrayBuffer()).toString('latin1');
+  assert.match(bytes, /\/ToUnicode\b/);
+  assert.match(bytes, /\/FontFile2\b/);
+  assert.doesNotMatch(bytes, /\/BaseFont \/Helvetica\b/);
+});
+
+test('decision vocabulary means the same thing in every employer surface', () => {
+  assert.equal(reportDecisionLabel('SHORTLIST'), 'Shortlisted');
+  assert.equal(reportDecisionLabel('NOT_PROCEEDING'), 'Not proceeding');
+  assert.equal(reportDecisionLabel('PASS'), 'Not proceeding');
+  assert.match(candidateReviewSource, /pass: 'Not proceeding'/);
+  assert.match(candidateReviewSource, />Not proceeding<\/button>/);
+  assert.match(dashboardActionsSource, /'not_proceeding'\) return 'Not proceeding'/);
+  assert.doesNotMatch(reportViewSource, /['"]Pass(?:ed)?['"]/);
+  const rendered = evaluationPdfLines(report({ decision: {
+    outcome: 'PASS',
+    decided_by_id: '44444444-4444-4444-8444-444444444444',
+    decided_by_name: 'Hiring team',
+    decided_at: '2026-08-28T12:30:00.000Z',
+  } })).map((line) => line.text).join('\n');
+  assert.match(rendered, /Not proceeding/);
+  assert.doesNotMatch(rendered, /\bPass(?:ed)?\b/);
+});
+
+test('report dates use interview start time and show Gulf Standard Time', () => {
+  assert.match(generatorSource, /screening_pack_id,started_at,submitted_at/);
+  assert.match(generatorSource, /interview_datetime: interview\.started_at \|\| interview\.submitted_at/);
+  assert.equal(formatReportDateTime('2026-08-28T10:10:00.000Z'), '28 Aug 2026, 14:10 GST');
+  assert.equal(reportFilenameDate('2026-08-27T21:30:00.000Z'), '2026-08-28');
+  assert.match(reportViewSource, /Interview started/);
+});
+
+test('media browser gate rejects error pages before testing recording', () => {
+  assert.match(mediaCheckSource, /mainDocumentStatus === 200/);
+  assert.match(mediaCheckSource, /expectedInterviewHeading/);
+  assert.match(mediaCheckSource, /pageNotFound/);
+  assert.match(mediaCheckSource, /Build an interview that listens/);
+});
+
+test('server failures have structured monitoring without candidate content', () => {
+  assert.match(instrumentationSource, /onRequestError/);
+  assert.match(instrumentationSource, /context\.routePath/);
+  assert.match(cronAuthSource, /cron_secret_missing/);
+  assert.match(cronAuthSource, /status: 503/);
+  assert.doesNotMatch(cronAuthSource, /interviewId|candidate|transcript/i);
+});
+
+test('online and print report text remains readable', () => {
+  assert.match(reportCssSource, /\.meta dd[^}]*font-size: \.875rem/);
+  assert.match(reportCssSource, /\.evidenceList p[^}]*font-size: \.875rem/);
+  assert.match(reportCssSource, /@media print[\s\S]*font-size: 8\.5pt/);
+  assert.match(reportCssSource, /@media print[\s\S]*font-size: 7\.5pt/);
 });
 
 test('report generation fails closed until the complete timed rubric state exists', () => {

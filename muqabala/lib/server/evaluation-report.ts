@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { randomUUID } from 'node:crypto';
+import { reportOperationalFailure } from '@/lib/sentry-server';
 import {
   CandidateEvaluationReportSchema,
   REPORT_FORMAT_VERSION,
@@ -54,7 +55,7 @@ async function decisionForReport(
     .maybeSingle<DecisionRow>();
   if (!data) return null;
   const { data: reviewer } = await admin.auth.admin.getUserById(data.reviewer_id);
-  const outcome = data.decision === 'shortlist' ? 'SHORTLIST' : data.decision === 'pass' ? 'PASS' : 'HOLD';
+  const outcome = data.decision === 'shortlist' ? 'SHORTLIST' : data.decision === 'pass' ? 'NOT_PROCEEDING' : 'HOLD';
   return {
     outcome,
     decided_by_id: data.reviewer_id,
@@ -84,7 +85,7 @@ export async function hydrateEvaluationReport(row: ReportRow): Promise<Candidate
   if (!admin) return null;
   const parsed = CandidateEvaluationReportSchema.safeParse(row.payload);
   if (!parsed.success) {
-    console.warn('evaluation_report_payload_invalid', { reportId: row.report_id });
+    reportOperationalFailure('evaluation_report_payload_invalid', { area: 'evaluation', code: 'schema_invalid' });
     return null;
   }
   const [notes, decision] = await Promise.all([
@@ -149,7 +150,7 @@ export async function recordEvaluationAccess(input: {
     viewer_email_hash: input.viewerEmailHash ?? null,
     viewer_email_ciphertext: input.viewerEmailCiphertext ?? null,
   });
-  if (error) console.warn('evaluation_access_log_failed', { code: error.code, action: input.action });
+  if (error) reportOperationalFailure('evaluation_access_log_failed', { area: 'evaluation', code: error.code });
 }
 
 export async function generateCandidateEvaluationReport(
@@ -162,7 +163,7 @@ export async function generateCandidateEvaluationReport(
   if (!admin) return null;
 
   const { data: interview } = await admin.from('interviews')
-    .select('id,candidate_user_id,candidate_name,role_id,role_title,screening_pack_id,submitted_at,question_snapshot')
+    .select('id,candidate_user_id,candidate_name,role_id,role_title,screening_pack_id,started_at,submitted_at,question_snapshot')
     .eq('id', interviewId)
     .eq('mode', 'screening')
     .not('submitted_at', 'is', null)
@@ -190,7 +191,7 @@ export async function generateCandidateEvaluationReport(
     || !answers.every((answer) => answer.transcript_timing_version === 'openai-whisper-segment-v1')
     || !answers.every((answer) => answer.scoring_status === 'scored' || answer.scoring_status === 'unscored')
   ) {
-    console.warn('evaluation_report_waiting_for_timed_answers', { interviewId });
+    reportOperationalFailure('evaluation_report_not_ready', { area: 'evaluation', code: 'timed_answers_incomplete' });
     return null;
   }
 
@@ -243,7 +244,7 @@ export async function generateCandidateEvaluationReport(
     workplace: pack.workplace || 'Hiring team',
     employer_id: pack.employer_id,
     interviewer_of_record: '',
-    interview_datetime: interview.submitted_at,
+    interview_datetime: interview.started_at || interview.submitted_at,
     duration_seconds: (answers ?? []).reduce((total, answer) => total + Number(answer.video_duration_seconds ?? 0), 0),
     question_count: answers.length,
     seniority_band: seniorityLabel(state.seniority),
@@ -266,6 +267,6 @@ export async function generateCandidateEvaluationReport(
   });
   if (!error && typeof storedId === 'string') return report;
   if (!error || error.code === '23505') return (await loadCurrentEvaluationReport(interviewId))?.report ?? null;
-  console.warn('evaluation_report_store_failed', { interviewId, code: error.code });
+  reportOperationalFailure('evaluation_report_store_failed', { area: 'evaluation', code: error.code });
   return null;
 }

@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const REPORT_FORMAT_VERSION = '1.0';
 export const REPORT_PIPELINE_VERSION = 'candidate-evaluation-v1';
 export const REPORT_BANDS = ['EVIDENCE_FOUND', 'PARTIAL', 'EVIDENCE_NOT_FOUND'] as const;
+export const REPORT_TIME_ZONE = 'Asia/Dubai';
 
 export type ReportBand = typeof REPORT_BANDS[number];
 
@@ -41,7 +42,9 @@ export const EmployerNoteSchema = z.object({
 }).strict();
 
 export const EvaluationDecisionSchema = z.object({
-  outcome: z.enum(['SHORTLIST', 'PASS', 'HOLD']),
+  // PASS is accepted only so reports stored before v2 can still be opened.
+  // It has always meant "not proceeding" in the employer workflow.
+  outcome: z.enum(['SHORTLIST', 'NOT_PROCEEDING', 'HOLD', 'PASS']),
   decided_by_id: z.string().uuid(),
   decided_by_name: z.string().trim().min(1).max(100),
   decided_at: z.string().datetime(),
@@ -73,6 +76,46 @@ export const CandidateEvaluationReportSchema = z.object({
 
 export type CandidateEvaluationReport = z.infer<typeof CandidateEvaluationReportSchema>;
 export type ReportEvidenceLine = z.infer<typeof EvidenceLineSchema>;
+export type EvaluationDecisionOutcome = NonNullable<CandidateEvaluationReport['decision']>['outcome'];
+
+const REPORT_DECISION_LABEL: Record<EvaluationDecisionOutcome, string> = {
+  SHORTLIST: 'Shortlisted',
+  NOT_PROCEEDING: 'Not proceeding',
+  HOLD: 'Hold',
+  PASS: 'Not proceeding',
+};
+
+export function reportDecisionLabel(outcome: EvaluationDecisionOutcome): string {
+  return REPORT_DECISION_LABEL[outcome];
+}
+
+export function formatReportDateTime(value: string): string {
+  return `${new Intl.DateTimeFormat('en-GB', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: REPORT_TIME_ZONE,
+  }).format(new Date(value))} GST`;
+}
+
+export function formatReportDate(value: string): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    timeZone: REPORT_TIME_ZONE,
+  }).format(new Date(value));
+}
+
+export function reportFilenameDate(value: string): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: REPORT_TIME_ZONE,
+  }).formatToParts(new Date(value));
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value ?? '';
+  return `${part('year')}-${part('month')}-${part('day')}`;
+}
 
 export type StoredEvidenceRecord = {
   id: string;

@@ -202,7 +202,10 @@ test('section 3: hourly cron is registered, gated by the flag and the toggle is 
   assert.ok(cron, 'employer volume cron registered');
   assert.match(cron.schedule, /^\d+ \* \* \* \*$/, 'runs hourly');
   const route = read('app/api/cron/employer-volume/route.ts');
-  assert.match(route, /Bearer \$\{secret\}/);
+  const cronAuth = read('lib/server/cron-auth.ts');
+  assert.match(route, /rejectUnauthorisedCron\(request, 'employer_volume'\)/);
+  assert.match(cronAuth, /Bearer \$\{secret\}/);
+  assert.match(cronAuth, /cron_secret_missing/);
   assert.match(route, /if \(!employerVolumeEnabled\(\)\) return Response\.json\(\{ enabled: false \}/);
   const migration = read('supabase/migrations/20260902130000_employer_volume_reminders.sql');
   assert.match(migration, /reminders_enabled boolean not null default true/);

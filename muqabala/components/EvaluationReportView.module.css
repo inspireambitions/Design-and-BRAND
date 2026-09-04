@@ -10,19 +10,19 @@
 }
 .sample { padding: .56rem 1.5rem; background: #f2c865; color: #3c2b08; font: 850 .72rem/1 var(--font-display); letter-spacing: .14em; text-align: center; text-transform: uppercase; }
 .header { display: flex; align-items: start; justify-content: space-between; gap: 2rem; padding: 2rem 2rem 1.5rem; border-bottom: 1px solid #dfe5e1; background: linear-gradient(130deg, #f8fbf9 0%, #fffefb 62%); }
-.kicker { margin: 0 0 .5rem; color: #08705e; font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.kicker { margin: 0 0 .5rem; color: #08705e; font-size: .8rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
 .header h1 { margin: 0; font: 800 clamp(2rem, 4vw, 3.6rem)/.95 var(--font-display); letter-spacing: -.055em; }
 .header p:last-child { margin: .65rem 0 0; color: #5b6a64; }
-.header .interviewer { margin: .8rem 0 0; color: #08705e; font-size: .76rem; font-weight: 700; letter-spacing: .015em; }
-.identity { display: grid; grid-template-columns: auto auto; flex: 0 0 auto; gap: .25rem .7rem; padding: .8rem 1rem; border: 1px solid #cbd9d4; border-radius: .7rem; background: #eff6f3; font-size: .7rem; }
+.header .interviewer { margin: .8rem 0 0; color: #08705e; font-size: .875rem; font-weight: 700; letter-spacing: .015em; }
+.identity { display: grid; grid-template-columns: auto auto; flex: 0 0 auto; gap: .25rem .7rem; padding: .8rem 1rem; border: 1px solid #cbd9d4; border-radius: .7rem; background: #eff6f3; font-size: .8rem; }
 .identity span { color: #61716b; }
 .identity strong { color: #0b5d4f; font-family: ui-monospace, monospace; }
 .meta { display: grid; grid-template-columns: repeat(4, 1fr); margin: 0; padding: 0 2rem; border-bottom: 1px solid #dfe5e1; }
 .meta div { min-width: 0; padding: 1rem 1rem 1rem 0; }
-.meta dt { margin-bottom: .25rem; color: #78847f; font-size: .66rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
-.meta dd { margin: 0; overflow-wrap: anywhere; font-size: .83rem; font-weight: 650; }
+.meta dt { margin-bottom: .25rem; color: #78847f; font-size: .75rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+.meta dd { margin: 0; overflow-wrap: anywhere; font-size: .875rem; font-weight: 650; }
 .legend { display: flex; gap: .65rem; padding: 1.1rem 2rem .3rem; }
-.legend span, .band { display: inline-flex; align-items: center; min-height: 1.75rem; padding: .25rem .65rem; border-radius: 999px; font-size: .65rem; font-weight: 800; white-space: nowrap; }
+.legend span, .band { display: inline-flex; align-items: center; min-height: 1.75rem; padding: .25rem .65rem; border-radius: 999px; font-size: .75rem; font-weight: 800; white-space: nowrap; }
 .report [data-band="EVIDENCE_FOUND"] { background: #dff3ea; color: #075d4d; }
 .report [data-band="PARTIAL"] { background: #fff0c7; color: #714c06; }
 .report [data-band="EVIDENCE_NOT_FOUND"] { background: #f6dfd8; color: #88351f; }
@@ -33,23 +33,23 @@
 .competency h2 { margin: 0; font: 780 1rem/1.15 var(--font-display); letter-spacing: -.02em; }
 .evidenceList { display: grid; gap: .75rem; margin: .9rem 0 0; padding: 0; list-style: none; }
 .evidenceList li { display: grid; gap: .45rem; padding-top: .65rem; border-top: 1px solid #edf0ee; }
-.evidenceList p, .followup p { margin: 0; font-size: .8rem; line-height: 1.48; }
+.evidenceList p, .followup p { margin: 0; font-size: .875rem; line-height: 1.48; }
 .staticTicket { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: .55rem; padding: .42rem .55rem; border: 1px solid #cbd9d4; border-radius: .5rem; background: #f4f8f6; color: #0d5f50; }
-.staticTicket strong { white-space: nowrap; font-size: .68rem; }
-.staticTicket code { overflow: hidden; color: #62746e; font-size: .56rem; text-overflow: ellipsis; white-space: nowrap; }
+.staticTicket strong { white-space: nowrap; font-size: .78rem; }
+.staticTicket code { overflow: hidden; color: #62746e; font-size: .7rem; text-overflow: ellipsis; white-space: nowrap; }
 .followup { margin-top: .8rem; padding: .75rem; border-left: 3px solid #d9a732; border-radius: 0 .55rem .55rem 0; background: #fff8e7; }
-.followup span { display: block; margin-bottom: .3rem; color: #805b0e; font-size: .62rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-.empty { margin: .8rem 0 0; color: #72807b; font-size: .78rem; line-height: 1.45; }
+.followup span { display: block; margin-bottom: .3rem; color: #805b0e; font-size: .75rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.empty { margin: .8rem 0 0; color: #72807b; font-size: .875rem; line-height: 1.45; }
 .lowerGrid { display: grid; grid-template-columns: 1.5fr .8fr; gap: 1rem; padding: 1.5rem 2rem; border-top: 1px solid #dfe5e1; background: #f8f9f7; }
 .lowerGrid h2 { margin: 0 0 .8rem; font: 780 1rem/1 var(--font-display); }
 .notes { display: grid; gap: .65rem; margin: 0; padding: 0; list-style: none; }
 .notes li { padding: .7rem; border: 1px solid #dfe5e1; border-radius: .55rem; background: #fff; }
-.notes p { margin: 0 0 .35rem; font-size: .8rem; }
-.notes small, .decision small { color: #6b7873; font-size: .65rem; }
+.notes p { margin: 0 0 .35rem; font-size: .875rem; }
+.notes small, .decision small { color: #6b7873; font-size: .75rem; }
 .decision { padding: 1rem; border: 1px solid #bed4cc; border-radius: .7rem; background: #edf6f2; }
 .decision > strong { display: block; color: #075d4d; font: 850 1.45rem/1 var(--font-display); }
-.decision p { margin: .45rem 0 .15rem; font-size: .8rem; }
-.footer { padding: 1rem 2rem 1.2rem; border-top: 1px solid #dfe5e1; color: #66736e; font-size: .64rem; line-height: 1.5; }
+.decision p { margin: .45rem 0 .15rem; font-size: .875rem; }
+.footer { padding: 1rem 2rem 1.2rem; border-top: 1px solid #dfe5e1; color: #66736e; font-size: .75rem; line-height: 1.5; }
 @media (max-width: 700px) {
   .report { border-radius: .7rem; }
   .header { display: grid; padding: 1.25rem; }
@@ -72,9 +72,9 @@
   .competency { padding: 2.5mm; }
   .evidenceList { gap: 1.5mm; margin-top: 2mm; }
   .evidenceList li { gap: 1mm; padding-top: 1.5mm; }
-  .evidenceList p, .followup p { font-size: 6.8pt; line-height: 1.28; }
+  .evidenceList p, .followup p { font-size: 8.5pt; line-height: 1.35; }
   .staticTicket { padding: 1mm 1.5mm; }
   .followup { margin-top: 1.5mm; padding: 1.5mm; }
   .lowerGrid { padding: 3mm 9mm; }
-  .footer { padding: 2.5mm 9mm; font-size: 5.8pt; }
+  .footer { padding: 2.5mm 9mm; font-size: 7.5pt; }
 }

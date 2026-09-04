@@ -21,7 +21,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     action: 'DOWNLOAD',
     actorUserId: user.id,
   });
-  return new Response(buildEvaluationPdf(current.report), {
+  const pdf = await buildEvaluationPdf(current.report);
+  return new Response(pdf, {
     headers: {
       ...privateNoStoreHeaders(),
       'Content-Type': 'application/pdf',

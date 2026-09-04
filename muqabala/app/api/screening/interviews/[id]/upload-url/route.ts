@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { ScreeningUploadRequestSchema } from '@/lib/interviews';
 import { interviewAccess } from '@/lib/server/interview-access';
 import { hasTrustedOrigin, privateNoStoreHeaders } from '@/lib/server/security';
+import { reportOperationalFailure } from '@/lib/sentry-server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -66,12 +67,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     video_mime_type: parsed.data.mimeType,
     video_upload_status: 'pending',
   }, { onConflict: 'interview_id,question_index' });
-  if (pendingError) return Response.json({ error: 'The upload could not be prepared.' }, { status: 503 });
+  if (pendingError) {
+    reportOperationalFailure('screening_upload_prepare_failed', { area: 'upload', code: pendingError.code, route: '/api/screening/interviews/[id]/upload-url', status: 503 });
+    return Response.json({ error: 'The upload could not be prepared.' }, { status: 503 });
+  }
 
   const { data: signed, error } = await access.admin!.storage
     .from(VIDEO_BUCKET)
     .createSignedUploadUrl(path, { upsert: true });
-  if (error || !signed?.signedUrl) return Response.json({ error: 'The upload could not be prepared.' }, { status: 503 });
+  if (error || !signed?.signedUrl) {
+    reportOperationalFailure('screening_upload_sign_failed', { area: 'upload', code: error?.name || 'signed_url_missing', route: '/api/screening/interviews/[id]/upload-url', status: 503 });
+    return Response.json({ error: 'The upload could not be prepared.' }, { status: 503 });
+  }
 
   return Response.json({
     path,

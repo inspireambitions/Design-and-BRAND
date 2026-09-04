@@ -40,3 +40,44 @@ export function reportScoringFailure(details: {
     // Observability must never break candidate scoring or retry responses.
   }
 }
+
+type OperationalDetails = {
+  area: 'screening' | 'upload' | 'evaluation' | 'cron' | 'server';
+  code: string;
+  route?: string;
+  job?: string;
+  status?: number;
+  count?: number;
+};
+
+function safeOperationalPayload(event: string, level: 'info' | 'error', details: OperationalDetails) {
+  const safe = (value: string | undefined) => value?.replace(/[^a-zA-Z0-9_./\[\]-]/g, '_').slice(0, 100);
+  return {
+    event: safe(event) || 'operational_event',
+    level,
+    area: details.area,
+    code: safe(details.code) || 'unknown',
+    ...(details.route ? { route: safe(details.route) } : {}),
+    ...(details.job ? { job: safe(details.job) } : {}),
+    ...(Number.isFinite(details.status) ? { status: details.status } : {}),
+    ...(Number.isFinite(details.count) ? { count: details.count } : {}),
+  };
+}
+
+export function reportOperationalEvent(event: string, details: OperationalDetails): void {
+  console.info(JSON.stringify(safeOperationalPayload(event, 'info', details)));
+}
+
+export function reportOperationalFailure(event: string, details: OperationalDetails): void {
+  const payload = safeOperationalPayload(event, 'error', details);
+  console.error(JSON.stringify(payload));
+  if (!dsn) return;
+  try {
+    Sentry.withScope((scope) => {
+      for (const [key, value] of Object.entries(payload)) scope.setTag(key, String(value));
+      Sentry.captureMessage(payload.event, 'error');
+    });
+  } catch {
+    // Reporting must never interrupt an interview, upload or scheduled job.
+  }
+}

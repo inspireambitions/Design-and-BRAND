@@ -1,6 +1,7 @@
 import { ScreeningAnswerSchema } from '@/lib/interviews';
 import { interviewAccess } from '@/lib/server/interview-access';
 import { hasTrustedOrigin, privateNoStoreHeaders } from '@/lib/server/security';
+import { reportOperationalFailure } from '@/lib/sentry-server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -37,10 +38,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     .list(folder, { search: filename, limit: 2 });
   const uploaded = objects?.find((object) => object.name === filename);
   if (objectError || !uploaded) {
+    reportOperationalFailure('screening_upload_verify_failed', { area: 'upload', code: objectError?.name || 'object_missing', route: '/api/screening/interviews/[id]/answers', status: 409 });
     return Response.json({ error: 'The video upload has not finished.' }, { status: 409 });
   }
   const storedSize = Number(uploaded.metadata?.size ?? 0);
   if (storedSize <= 0 || storedSize !== parsed.data.sizeBytes) {
+    reportOperationalFailure('screening_upload_size_failed', { area: 'upload', code: 'stored_size_mismatch', route: '/api/screening/interviews/[id]/answers', status: 409 });
     return Response.json({ error: 'The uploaded video could not be verified.' }, { status: 409 });
   }
 
@@ -59,13 +62,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     p_video_size_bytes: parsed.data.sizeBytes,
     p_video_duration_seconds: parsed.data.durationSeconds,
   });
-  if (error || saved !== true) return Response.json({ error: 'The response could not be saved.' }, { status: 503 });
+  if (error || saved !== true) {
+    reportOperationalFailure('screening_answer_save_failed', { area: 'upload', code: error?.code || 'rpc_not_confirmed', route: '/api/screening/interviews/[id]/answers', status: 503 });
+    return Response.json({ error: 'The response could not be saved.' }, { status: 503 });
+  }
   const { data: confirmed } = await access.admin!.from('interview_answers')
     .select('response_saved_at')
     .eq('interview_id', id)
     .eq('question_index', parsed.data.questionIndex)
     .maybeSingle();
   if (!confirmed?.response_saved_at) {
+    reportOperationalFailure('screening_answer_confirm_failed', { area: 'upload', code: 'response_timestamp_missing', route: '/api/screening/interviews/[id]/answers', status: 503 });
     return Response.json({ error: 'The response could not be confirmed.' }, { status: 503 });
   }
   return Response.json({ saved: true, receivedAt: confirmed.response_saved_at }, { headers: privateNoStoreHeaders() });

@@ -49,6 +49,7 @@ async function findPage() {
 let socket;
 let nextId = 0;
 const pending = new Map();
+let mainDocumentStatus = null;
 
 function command(method, params = {}) {
   const id = ++nextId;
@@ -65,6 +66,11 @@ try {
   });
   socket.addEventListener('message', (event) => {
     const message = JSON.parse(event.data);
+    if (message.method === 'Network.responseReceived'
+      && message.params?.type === 'Document'
+      && message.params.response?.url?.startsWith(target)) {
+      mainDocumentStatus = message.params.response.status;
+    }
     if (!message.id || !pending.has(message.id)) return;
     const request = pending.get(message.id);
     pending.delete(message.id);
@@ -74,6 +80,7 @@ try {
 
   await command('Runtime.enable');
   await command('Page.enable');
+  await command('Network.enable');
   await command('Page.navigate', { url: target });
   for (let attempt = 0; attempt < 60; attempt += 1) {
     const readiness = await command('Runtime.evaluate', {
@@ -89,11 +96,13 @@ try {
     returnByValue: true,
     expression: `(async () => {
       const pageHasContent = document.body.innerText.trim().length > 0;
+      const expectedInterviewHeading = document.body.innerText.includes('Build an interview that listens');
+      const pageNotFound = document.body.innerText.toUpperCase().includes('PAGE NOT FOUND');
       const errorOverlay = Boolean(document.querySelector('[data-nextjs-dialog], .vite-error-overlay, #webpack-dev-server-client-overlay'));
       const getUserMediaPresent = typeof navigator.mediaDevices?.getUserMedia === 'function';
       const mediaRecorderPresent = typeof MediaRecorder !== 'undefined';
       if (!window.isSecureContext || !getUserMediaPresent || !mediaRecorderPresent) {
-        return { href: location.href, pageHasContent, errorOverlay, secureContext: window.isSecureContext, getUserMediaPresent, mediaRecorderPresent, recordedBytes: 0 };
+        return { href: location.href, pageHasContent, expectedInterviewHeading, pageNotFound, errorOverlay, secureContext: window.isSecureContext, getUserMediaPresent, mediaRecorderPresent, recordedBytes: 0 };
       }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
       const chunks = [];
@@ -109,6 +118,8 @@ try {
       return {
         href: location.href,
         pageHasContent,
+        expectedInterviewHeading,
+        pageNotFound,
         errorOverlay,
         secureContext: window.isSecureContext,
         getUserMediaPresent,
@@ -121,8 +132,11 @@ try {
     })()`,
   });
   const result = evaluation.result?.value;
-  console.log(JSON.stringify({ target, ...result }, null, 2));
-  const passed = result?.pageHasContent
+  console.log(JSON.stringify({ target, httpStatus: mainDocumentStatus, ...result }, null, 2));
+  const passed = mainDocumentStatus === 200
+    && result?.pageHasContent
+    && result?.expectedInterviewHeading
+    && !result?.pageNotFound
     && !result?.errorOverlay
     && result?.secureContext
     && result?.getUserMediaPresent

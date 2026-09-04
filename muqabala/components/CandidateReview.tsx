@@ -46,8 +46,8 @@ const UNDO_MS = 10_000;
 
 const DECISION_LABEL: Record<ReviewDecision['decision'], string> = {
   shortlist: 'Shortlisted',
-  pass: 'Passed',
-  later: 'Saved for later',
+  pass: 'Not proceeding',
+  later: 'Hold',
 };
 
 export function CandidateReview(props: Props) {
@@ -236,8 +236,8 @@ export function CandidateReview(props: Props) {
         />
         <div className={styles.decisions}>
           <button type="button" className={styles.shortlist} disabled={busy} onClick={() => void decide('shortlist')}>Shortlist</button>
-          <button type="button" className={styles.pass} disabled={busy} onClick={() => void decide('pass')}>Pass</button>
-          <button type="button" className={styles.later} disabled={busy} onClick={() => void decide('later')}>Later</button>
+          <button type="button" className={styles.pass} disabled={busy} onClick={() => void decide('pass')}>Not proceeding</button>
+          <button type="button" className={styles.later} disabled={busy} onClick={() => void decide('later')}>Hold</button>
         </div>
       </footer>
 

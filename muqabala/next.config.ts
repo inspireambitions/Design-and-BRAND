@@ -2,6 +2,12 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  outputFileTracingIncludes: {
+    '/api/employer/candidates/[id]/evaluation/pdf': [
+      './node_modules/dejavu-fonts-ttf/ttf/DejaVuSans.ttf',
+      './node_modules/dejavu-fonts-ttf/ttf/DejaVuSans-Bold.ttf',
+    ],
+  },
   async headers() {
     const baseline = [
       { key: 'X-Content-Type-Options', value: 'nosniff' },

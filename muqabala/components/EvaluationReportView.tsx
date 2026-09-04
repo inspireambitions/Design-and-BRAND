@@ -1,5 +1,5 @@
 import type { CandidateEvaluationReport, ReportBand } from '@/lib/evaluation-report';
-import { formatPlaybackTime } from '@/lib/evaluation-report';
+import { formatPlaybackTime, formatReportDateTime, reportDecisionLabel } from '@/lib/evaluation-report';
 import { EvidencePlayback } from './EvidencePlayback';
 import styles from './EvaluationReportView.module.css';
 
@@ -8,8 +8,6 @@ const BAND_LABEL: Record<ReportBand, string> = {
   PARTIAL: 'Partial',
   EVIDENCE_NOT_FOUND: 'Evidence not found',
 };
-
-const DECISION_LABEL = { SHORTLIST: 'Shortlist', PASS: 'Pass', HOLD: 'Hold' } as const;
 
 export function EvaluationReportView({
   report,
@@ -37,7 +35,7 @@ export function EvaluationReportView({
       </header>
 
       <dl className={styles.meta}>
-        <div><dt>Interview</dt><dd>{new Date(report.interview_datetime).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</dd></div>
+        <div><dt>Interview started</dt><dd>{formatReportDateTime(report.interview_datetime)}</dd></div>
         <div><dt>Recorded time</dt><dd>{Math.floor(report.duration_seconds / 60)} min {report.duration_seconds % 60} sec</dd></div>
         <div><dt>Questions</dt><dd>{report.question_count}</dd></div>
         <div><dt>Seniority band</dt><dd>{report.seniority_band}</dd></div>
@@ -91,7 +89,7 @@ export function EvaluationReportView({
             <ol className={styles.notes}>{report.employer_notes.map((note, index) => (
               <li key={`${note.created_at}-${index}`}>
                 <p>{note.text}</p>
-                <small>{note.author_name} · {new Date(note.created_at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</small>
+                <small>{note.author_name} · {formatReportDateTime(note.created_at)}</small>
               </li>
             ))}</ol>
           ) : <p className={styles.empty}>No employer note has been added.</p>}
@@ -100,9 +98,9 @@ export function EvaluationReportView({
           <h2>Decision record</h2>
           {report.decision ? (
             <>
-              <strong>{DECISION_LABEL[report.decision.outcome]}</strong>
+              <strong>{reportDecisionLabel(report.decision.outcome)}</strong>
               <p>{report.decision.decided_by_name}</p>
-              <small>{new Date(report.decision.decided_at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</small>
+              <small>{formatReportDateTime(report.decision.decided_at)}</small>
             </>
           ) : <p className={styles.empty}>No decision recorded.</p>}
         </div>

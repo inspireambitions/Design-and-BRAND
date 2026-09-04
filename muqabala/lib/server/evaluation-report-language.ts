@@ -8,6 +8,7 @@ import {
   type ReportEvidenceLine,
   type StoredEvidenceRecord,
 } from '@/lib/evaluation-report';
+import { reportOperationalFailure } from '@/lib/sentry-server';
 
 const EVIDENCE_PROMPT = `For each evidence record, write one line of under 25 words that restates only what the transcript span says. Do not add facts, interpretations, adjectives about the person, or conclusions. Do not merge records. Return JSON: [{ "evidence_id": "", "text": "" }]. British English. If a span contains no usable evidence, return text "" for that record.`;
 const FOLLOWUP_PROMPT = `Write one interview question, addressed to "you", under 30 words, British English, one question mark at the end, that would help an interviewer gather evidence for this competency. No preamble.`;
@@ -83,7 +84,7 @@ export async function generateEvidenceLines(
       rejectionReasons = ['MODEL_CALL_FAILED'];
     }
   }
-  console.warn('evidence_line_rejected', { reasons: rejectionReasons });
+  reportOperationalFailure('evidence_line_rejected', { area: 'evaluation', code: rejectionReasons[0] || 'validation_failed' });
   return { lines: records.map(quotedEvidenceFallback), rejected: rejectionReasons };
 }
 
