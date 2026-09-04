@@ -86,11 +86,12 @@ export function diffAddedWords(first: string, next: string, locale = 'en'): Diff
       push(token.text, !known.has(token.key));
       continue;
     }
-    // Whitespace between two added words belongs to the highlighted phrase.
+    // Spaces and punctuation between two added words belong to the same
+    // highlighted phrase. This keeps terms such as "four-star" intact.
     const previous = segments[segments.length - 1];
     const following = tokens.slice(index + 1).find((item) => item.key);
     const bridges = Boolean(previous?.added)
-      && /^\s+$/.test(token.text)
+      && /^[\s\p{P}\p{S}]+$/u.test(token.text)
       && Boolean(following && !known.has(following.key as string));
     push(token.text, bridges);
   }

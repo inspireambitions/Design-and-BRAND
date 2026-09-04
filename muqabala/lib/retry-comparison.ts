@@ -15,6 +15,13 @@ export type RetryComparison =
   | { compatible: false; reason: IncompatibleReason }
   | {
       compatible: true;
+      scoreDelta: { before: number; after: number };
+      criterionDeltas: Array<{
+        id: string;
+        label: string;
+        before: number;
+        after: number;
+      }>;
       evidenceAdded: CompetencyScore[];
       evidenceChanged: CompetencyScore[];
       stillMissing: CompetencyScore[];
@@ -52,6 +59,15 @@ export function compareRetries(before: AnswerFeedback, after: AnswerFeedback): R
   if (reason) return { compatible: false, reason };
 
   const previous = new Map(before.competencies.map((item) => [item.id, evidence(item.evidence)]));
+  const previousScores = new Map(before.competencies.map((item) => [item.id, item.score]));
+  const criterionDeltas = after.competencies
+    .map((item) => ({
+      id: item.id,
+      label: item.label,
+      before: previousScores.get(item.id) ?? item.score,
+      after: item.score,
+    }))
+    .filter((item) => item.before !== item.after);
   const evidenceAdded = after.competencies.filter((item) => !previous.get(item.id) && evidence(item.evidence));
   const evidenceChanged = after.competencies.filter((item) => {
     const earlier = previous.get(item.id);
@@ -59,5 +75,26 @@ export function compareRetries(before: AnswerFeedback, after: AnswerFeedback): R
     return Boolean(earlier && latest && earlier !== latest);
   });
   const stillMissing = after.competencies.filter((item) => !evidence(item.evidence));
-  return { compatible: true, evidenceAdded, evidenceChanged, stillMissing };
+  return {
+    compatible: true,
+    scoreDelta: { before: before.score, after: after.score },
+    criterionDeltas,
+    evidenceAdded,
+    evidenceChanged,
+    stillMissing,
+  };
+}
+
+/**
+ * The email invitation is earned only after the candidate sees a real scored
+ * improvement. An unscored or weaker answer is never used as a capture moment.
+ */
+export function hasScoredImprovement(
+  before: AnswerFeedback | null | undefined,
+  after: AnswerFeedback | null | undefined,
+): boolean {
+  if (!before || !after || before.status !== 'scored' || after.status !== 'scored') return false;
+  if (after.score > before.score) return true;
+  const previousScores = new Map(before.competencies.map((item) => [item.id, item.score]));
+  return after.competencies.some((item) => item.score > (previousScores.get(item.id) ?? item.score));
 }

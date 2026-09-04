@@ -4187,6 +4187,10 @@ body:has([data-footer-visibility='focused']) .site-footer {
   gap: 0.65rem;
 }
 
+.setup-start-actions .btn-primary {
+  flex: 1 1 100%;
+}
+
 .method-card {
   min-height: 118px;
 }

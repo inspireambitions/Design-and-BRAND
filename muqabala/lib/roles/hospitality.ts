@@ -23,7 +23,7 @@ export const hospitalityRoles: Role[] = [
       opener,
       qt(['uae_hotel', 'gulf_general'],
         'angry_guest',
-        'Tell me about a time an angry guest complained directly to you?',
+        'How did you handle an angry guest who complained directly to you?',
         'حدثني عن موقف اشتكى فيه نزيل غاضب لك مباشرة. ماذا حدث؟',
         ['customer_focus', 'ownership', 'problem_solving', 'evidence'],
       ),
