@@ -18,6 +18,7 @@ import {
 } from '@/lib/advert-cache';
 import { validateCandidateText } from '@/lib/universal-interview/candidate-question';
 import { CANDIDATE_TEXT_CONTRACT } from '@/lib/universal-interview/prompts';
+import { reportOperationalFailure } from '@/lib/sentry-server';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -258,7 +259,6 @@ export async function POST(request: Request) {
       const abort = AbortSignal.timeout(22_000);
       const response = await client.responses.parse({
         model,
-        temperature: 0.3,
         instructions: SYSTEM_PROMPT,
         input: `The person is interviewing for: ${jobTitle || '(not stated)'}
 
@@ -385,12 +385,13 @@ ${CANDIDATE_TEXT_CONTRACT}`,
   } catch (error) {
     const timedOut =
       error instanceof Error && /abort|timeout|timed out/i.test(`${error.name} ${error.message}`);
-    console.error(
-      timedOut
-        ? 'Interview generation exceeded its budget; returning the general interview.'
-        : 'Interview generation failed; returning the general interview:',
-      error,
-    );
+    const providerError = error as { status?: number; code?: string | null; name?: string };
+    reportOperationalFailure('interview_generation_failed', {
+      area: 'screening',
+      route: '/api/interview',
+      code: timedOut ? 'timeout' : providerError.code || providerError.name || 'provider_error',
+      status: providerError.status,
+    });
     return Response.json({
       role: buildCustomRole(jobTitle),
       tailored: false,

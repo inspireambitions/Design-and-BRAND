@@ -46,7 +46,6 @@ export async function callStructured<Schema extends z.ZodType>(input: {
     try {
       const response = await client.responses.parse({
         model: modelFor(input.stage),
-        ...(input.stage === 'P2' || input.stage === 'T2' ? { temperature: 0.3 } : {}),
         instructions: input.instructions,
         input: validationError ? `${input.prompt}\n\nYour previous output failed validation: ${validationError}. Return a corrected object.` : input.prompt,
         reasoning: { effort: effortFor(input.stage) },

@@ -208,6 +208,8 @@ test('employer creation form generates the description before unlocking the link
   assert.match(form, /proofEmailSubject/);
   assert.match(form, /mailto:\?subject=/);
   assert.match(copy, /Learn how each candidate would approach the role before you shortlist\./);
+  assert.match(copy, /Your job description is saved\. Please try again\./);
+  assert.doesNotMatch(copy, /Check the job description and try again\./);
   assert.match(copy, /I used Muqabala for \{title\} at \{company\}\./);
   assert.doesNotMatch(read('components/EmailSignIn.tsx'), /Promotions or Spam|emailDeliveryHelp/);
   assert.match(form, /\{hasReportShot \? \(/);
@@ -274,6 +276,17 @@ test('completed recordings survive interruption and only advance after server re
   assert.match(statusRoute, /question_index,video_upload_status,response_saved_at/);
   assert.doesNotMatch(statusRoute, /transcript|video_path|feedback/);
   assert.match(uploadRoute, /state: 'received'/);
+});
+
+test('current OpenAI models receive no unsupported temperature option', () => {
+  const advertRoute = read('app/api/interview/route.ts');
+  const adaptiveModel = read('lib/universal-interview/model.ts');
+  const reportLanguage = read('lib/server/evaluation-report-language.ts');
+  for (const source of [advertRoute, adaptiveModel, reportLanguage]) {
+    assert.doesNotMatch(source, /temperature\s*:/);
+  }
+  assert.match(advertRoute, /reportOperationalFailure\('interview_generation_failed'/);
+  assert.match(read('app/api/screening/packs/route.ts'), /reportOperationalFailure\('screening_pack_creation_failed'/);
 });
 
 test('timed evidence storage is private and rolls out through a compatible save function', () => {

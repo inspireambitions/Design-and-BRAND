@@ -101,7 +101,7 @@ export const STRINGS = {
     proofLinkSettingsSummaryEnd: '.',
     proofCopyLink: 'Copy link',
     proofCopied: 'Link copied.',
-    proofCreateFailed: 'The work sample could not be created. Check the job description and try again.',
+    proofCreateFailed: 'Muqabala could not create the candidate link just now. Your job description is saved. Please try again.',
     proofHiringKicker: 'For hiring teams',
     proofPracticeStaysPrivate:
       'Nothing is auto-rejected. Practice on Coach stays private.',
@@ -878,7 +878,7 @@ export const STRINGS = {
     proofLinkSettingsSummaryEnd: '.',
     proofCopyLink: 'نسخ الرابط',
     proofCopied: 'تم نسخ الرابط.',
-    proofCreateFailed: 'تعذر إنشاء عينة العمل. تحقق من الوصف الوظيفي وحاول مرة أخرى.',
+    proofCreateFailed: 'تعذر على مقابلة إنشاء رابط المرشح الآن. تم حفظ الوصف الوظيفي. حاول مرة أخرى.',
     proofHiringKicker: 'لفرق التوظيف',
     proofPracticeStaysPrivate:
       'لا يوجد رفض تلقائي. يبقى التدريب على المدرب خاصاً.',

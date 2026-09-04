@@ -3,6 +3,7 @@ import { roleFromToken, signProofPack, verifyInterview } from '@/lib/interview-t
 import { configuredOrigin, hasTrustedOrigin } from '@/lib/server/security';
 import { limitInterviewGeneration } from '@/lib/rate-limit';
 import { ScreeningPackRequestSchema } from '@/lib/screening-pack-request';
+import { reportOperationalEvent, reportOperationalFailure } from '@/lib/sentry-server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { currentUser } from '@/lib/supabase/server';
 
@@ -64,6 +65,12 @@ export async function POST(request: Request) {
       max_candidates: parsed.data.maxCandidates,
     }).select('id').single();
     if (!error) {
+      reportOperationalEvent('screening_pack_created', {
+        area: 'screening',
+        route: '/api/screening/packs',
+        code: 'ok',
+        status: 201,
+      });
       return Response.json({
         id: created?.id,
         url: `${configuredOrigin()}/s/${code}`,
@@ -75,7 +82,22 @@ export async function POST(request: Request) {
         maxCandidates: parsed.data.maxCandidates,
       }, { status: 201 });
     }
+    if (error.code !== '23505') {
+      reportOperationalFailure('screening_pack_creation_failed', {
+        area: 'screening',
+        route: '/api/screening/packs',
+        code: error.code || 'database_error',
+        status: 503,
+      });
+      return Response.json({ error: 'The work sample could not be saved.' }, { status: 503 });
+    }
     code = publicCode();
   }
+  reportOperationalFailure('screening_pack_creation_failed', {
+    area: 'screening',
+    route: '/api/screening/packs',
+    code: 'public_code_collision',
+    status: 503,
+  });
   return Response.json({ error: 'The work sample could not be saved.' }, { status: 503 });
 }
