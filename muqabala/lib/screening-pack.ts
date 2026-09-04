@@ -11,12 +11,33 @@ export const getScreeningPack = cache(async (code: string) => {
 
   const admin = createAdminClient();
   if (!admin) return { status: 'unavailable' as const };
-  const { data } = await admin
+  const columns = 'id, signed_token, workplace, expires_at, max_candidates, starts_used';
+  const openedAt = new Date().toISOString();
+
+  // Freeze the signed questions before returning them. This conditional update
+  // races safely with the conditional AI enhancement update: one wins the row
+  // lock, and every candidate then receives that same immutable token.
+  const opened = await admin
     .from('screening_packs')
-    .select('id, signed_token, workplace, expires_at, max_candidates, starts_used')
+    .update({ first_opened_at: openedAt })
     .eq('public_code', code)
+    .is('first_opened_at', null)
     .not('employer_id', 'is', null)
+    .select(columns)
     .maybeSingle();
+  if (opened.error) return { status: 'unavailable' as const };
+
+  let data = opened.data;
+  if (!data) {
+    const existing = await admin
+      .from('screening_packs')
+      .select(columns)
+      .eq('public_code', code)
+      .not('employer_id', 'is', null)
+      .maybeSingle();
+    if (existing.error) return { status: 'unavailable' as const };
+    data = existing.data;
+  }
   if (!data) return { status: 'unavailable' as const };
   if (new Date(data.expires_at).getTime() <= Date.now()) return { status: 'expired' as const };
 

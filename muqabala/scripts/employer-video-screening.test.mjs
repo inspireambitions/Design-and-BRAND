@@ -147,7 +147,7 @@ test('screening questions are signed once per link and the adaptive engine owns 
   assert.match(packRoute, /const questions = role\.questions\.slice\(0, 8\);/);
   assert.match(packRoute, /signProofPack\(\{[\s\S]*questions,/);
   assert.match(packRoute, /insert\(\{[\s\S]*signed_token: signedToken/);
-  assert.match(packLookup, /select\('(id, )?signed_token/);
+  assert.match(packLookup, /const columns = 'id, signed_token/);
   assert.match(packLookup, /verifyInterview\(data\.signed_token\)/);
   assert.doesNotMatch(packLookup, /proofQuestions|signProofPack/);
   assert.doesNotMatch(candidatePage, /proofQuestions|signProofPack/);
@@ -285,19 +285,30 @@ test('current OpenAI models receive no unsupported temperature option', () => {
   for (const source of [advertRoute, adaptiveModel, reportLanguage]) {
     assert.doesNotMatch(source, /temperature\s*:/);
   }
-  assert.match(advertRoute, /reportOperationalFailure\('interview_generation_failed'/);
+  assert.match(advertRoute, /reportOperationalEvent\('interview_generation_degraded'/);
   assert.match(read('app/api/screening/packs/route.ts'), /reportOperationalFailure\('screening_pack_creation_failed'/);
 });
 
-test('a model timeout still returns a signed reviewed interview for the employer link', () => {
+test('a model timeout still leaves an immediate signed catalogue interview for the employer link', () => {
   const advertRoute = read('app/api/interview/route.ts');
+  const catalogue = read('lib/interview-catalogue.ts');
+  const packRoute = read('app/api/screening/packs/route.ts');
+  const packLookup = read('lib/screening-pack.ts');
+  const migration = read('supabase/migrations/20260904164022_lock_screening_pack_question_version.sql');
   const form = read('components/EmployerProofCreate.tsx');
-  assert.match(advertRoute, /function reviewedFallbackRole[\s\S]*ROLES[\s\S]*drawMockQuestions\(role, 0\)[\s\S]*requested\.includes\(normaliseTitle\(role\.title\)\)/);
+  assert.match(catalogue, /function catalogueInterviewRole[\s\S]*ROLES[\s\S]*drawMockQuestions\(role, 0\)[\s\S]*requested\.includes\(normaliseTitle\(role\.title\)\)/);
   assert.match(advertRoute, /function signedFallbackResponse[\s\S]*signInterview\(\{[\s\S]*questions: role\.questions/);
   assert.match(advertRoute, /return signedFallbackResponse\(jobTitle, timedOut \? 'timeout' : 'error'\)/);
   assert.match(advertRoute, /tailored: false, fallback: true, token, reason/);
-  assert.match(form, /if \(!generated\.ok \|\| !generatedBody\.token\)/);
-  assert.doesNotMatch(form, /!generatedBody\.tailored \|\| !generatedBody\.token/);
+  assert.doesNotMatch(form, /fetch\('\/api\/interview'/);
+  assert.match(form, /fetch\('\/api\/screening\/packs'/);
+  assert.match(packRoute, /catalogueInterviewRole\(parsed\.data\.jobTitle/);
+  assert.match(packRoute, /after\(\(\) => enhanceScreeningPack/);
+  assert.match(packRoute, /ENHANCEMENT_DEADLINE_MS = 10_000/);
+  assert.match(packRoute, /\.eq\('starts_used', 0\)[\s\S]*\.is\('first_opened_at', null\)/);
+  assert.match(packLookup, /update\(\{ first_opened_at: openedAt \}\)[\s\S]*\.is\('first_opened_at', null\)/);
+  assert.match(migration, /question_source in \('legacy', 'catalogue', 'ai'\)/);
+  assert.match(migration, /signed question pack is immutable/);
 });
 
 test('timed evidence storage is private and rolls out through a compatible save function', () => {

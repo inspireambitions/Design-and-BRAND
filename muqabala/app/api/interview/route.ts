@@ -1,10 +1,9 @@
 import OpenAI from 'openai';
 import { zodTextFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
-import { buildCustomRole, ROLES } from '@/lib/roles';
 import type { Competency, Question, Role } from '@/lib/roles';
-import { drawMockQuestions } from '@/lib/interview-draw';
 import { signInterview } from '@/lib/interview-token';
+import { catalogueInterviewRole } from '@/lib/interview-catalogue';
 import {
   limitInterviewGeneration,
   limitInterviewGenerationDaily,
@@ -19,7 +18,7 @@ import {
 } from '@/lib/advert-cache';
 import { validateCandidateText } from '@/lib/universal-interview/candidate-question';
 import { CANDIDATE_TEXT_CONTRACT } from '@/lib/universal-interview/prompts';
-import { reportOperationalFailure } from '@/lib/sentry-server';
+import { reportOperationalEvent, reportOperationalFailure } from '@/lib/sentry-server';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -134,36 +133,13 @@ function generationModel(): string {
   return process.env.INTERVIEW_MODEL || process.env.OPENAI_SCORING_MODEL || 'gpt-5.6-sol';
 }
 
-function reviewedFallbackRole(jobTitle: string): Role {
-  const normaliseTitle = (value: string) => value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
-  const requested = normaliseTitle(jobTitle);
-  const matched = requested
-    ? ROLES
-      .flatMap((role) => {
-        const questions = drawMockQuestions(role, 0);
-        return questions ? [{ role, questions }] : [];
-      })
-      .sort((left, right) => right.role.title.length - left.role.title.length)
-      .find(({ role }) => requested.includes(normaliseTitle(role.title)))
-    : undefined;
-  if (!matched) return buildCustomRole(jobTitle);
-  return {
-    ...matched.role,
-    title: jobTitle.trim() || matched.role.title,
-    questions: matched.questions,
-  };
-}
-
 /**
  * A provider delay must not stop an employer creating a candidate link. The
- * fallback uses the reviewed eight-question general interview and signs it on
+ * fallback uses the validated eight-question catalogue interview and signs it on
  * the server, so the browser still cannot author questions or rubric data.
  */
 function signedFallbackResponse(jobTitle: string, reason: string): Response {
-  const role = reviewedFallbackRole(jobTitle);
+  const role = catalogueInterviewRole(jobTitle);
   const token = signInterview({
     title: role.title,
     industry: role.industry,
@@ -435,11 +411,13 @@ ${CANDIDATE_TEXT_CONTRACT}`,
     const timedOut =
       error instanceof Error && /abort|timeout|timed out/i.test(`${error.name} ${error.message}`);
     const providerError = error as { status?: number; code?: string | null; name?: string };
-    reportOperationalFailure('interview_generation_failed', {
+    // The catalogue response is complete and signed, so this is a handled
+    // degradation rather than a broken employer journey.
+    reportOperationalEvent('interview_generation_degraded', {
       area: 'screening',
       route: '/api/interview',
       code: timedOut ? 'timeout' : providerError.code || providerError.name || 'provider_error',
-      status: providerError.status,
+      status: 200,
     });
     return signedFallbackResponse(jobTitle, timedOut ? 'timeout' : 'error');
   }

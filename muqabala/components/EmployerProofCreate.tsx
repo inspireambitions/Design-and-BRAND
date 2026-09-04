@@ -335,29 +335,14 @@ function EmployerCreateForm({ volume }: { volume: boolean }) {
     setTooShort(false);
     setCopied(null);
     try {
-      const generated = await fetch('/api/interview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobTitle, jobText }),
-      });
-      const generatedBody = await generated.json().catch(() => ({})) as {
-        tailored?: boolean;
-        fallback?: boolean;
-        token?: string;
-        role?: { title?: string };
-      };
-      if (!generated.ok || !generatedBody.token) {
-        setError('create');
-        return;
-      }
       const pack = await fetch('/api/screening/packs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           companyName: companyName.trim(),
           recruiterName: recruiterName.trim() || undefined,
-          jobTitle: jobTitle || generatedBody.role?.title,
-          interviewToken: generatedBody.token,
+          jobTitle: jobTitle.trim(),
+          jobText: jobText.trim(),
           maxCandidates,
           expiryDays,
         }),
