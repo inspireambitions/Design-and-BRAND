@@ -18,6 +18,7 @@ import { diffAddedWords, hasAddedWords, tokenise } from '../lib/flow/answer-diff
 import { compareRetries } from '../lib/retry-comparison.ts';
 import { hasScoredImprovement } from '../lib/retry-comparison.ts';
 import { modelAnswerFor } from '../lib/flow/model-answers.ts';
+import { structureCheck } from '../lib/scoring.ts';
 
 /** Question ids of the two hospitality roles, kept in step with lib/roles/hospitality.ts. */
 const HOSPITALITY_QUESTIONS = {
@@ -202,6 +203,35 @@ test('the setup and answer fields protect accessibility and fast typed input', (
   assert.match(flow, /t\('startPracticeButton'\)/);
   assert.doesNotMatch(flow, /<textarea[\s\S]{0,400}value=\{transcript\}/);
   assert.match(flow, /<textarea[\s\S]{0,400}defaultValue=\{transcript\}[\s\S]{0,300}onInput=/);
+  assert.match(flow, /addEventListener\('popstate', onPopState\)/);
+  assert.match(flow, /addEventListener\('beforeunload', onBeforeUnload\)/);
+  assert.match(flow, /window\.confirm\(t\('leavePracticeConfirm'\)\)/);
+});
+
+test('an unscored answer shows no zero readiness dial or share card', () => {
+  const readiness = readFileSync(new URL('../components/ReadinessScore.tsx', import.meta.url), 'utf8');
+  const panel = readFileSync(new URL('../components/ReadinessPanel.tsx', import.meta.url), 'utf8');
+  const share = readFileSync(new URL('../components/ShareProgressCard.tsx', import.meta.url), 'utf8');
+  assert.match(readiness, /snapshot\.questionsPractised === 0/);
+  assert.match(readiness, /readinessNotScored/);
+  assert.match(panel, /snapshot\.questionsPractised > 0/);
+  assert.match(share, /snapshot\.questionsPractised === 0/);
+});
+
+test('answer length is not scored and concise evidence beats fluent padding', () => {
+  const question = { id: 'angry_guest' };
+  const substantive = structureCheck(question,
+    'Last month at a hotel in Deira, an angry guest complained because his room was not ready. I apologised, checked Opera, called housekeeping, and updated him every ten minutes. The room was ready in twenty minutes, and in the end he thanked me at checkout.');
+  const padded = structureCheck(question,
+    'Customer service is very important in every hotel. I am hardworking and passionate about hospitality. Guests are always important and teamwork is important. We always try our best and follow every policy. I believe communication, service, quality, professionalism and a positive attitude are important. I always want every guest to be happy, comfortable and satisfied. In hospitality we must smile, listen, understand, communicate, support the team, solve problems and provide excellent five star service at all times for every guest.');
+  assert.equal(substantive.status, 'scored');
+  assert.ok(substantive.score > padded.score, `${substantive.score} should beat ${padded.score}`);
+  assert.doesNotMatch(JSON.stringify(substantive.competencies), /Answer length/);
+
+  const route = readFileSync(new URL('../app/api/score/route.ts', import.meta.url), 'utf8');
+  assert.match(route, /Answer length is not a scoring criterion/);
+  assert.match(route, /A longer answer must receive the same score as a shorter answer/);
+  assert.match(route, /coach-content-rubric-2026-09-04/);
 });
 
 test('the rubric stays visible while answering and reviewing, and retry copy uses the real attempt', () => {

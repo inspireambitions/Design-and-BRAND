@@ -348,6 +348,8 @@ export function InterviewFlow({
   const advancingRef = useRef(false);
   const scoringSessionRef = useRef<string | null>(null);
   const automaticRetriesRef = useRef(0);
+  const practiceHistoryGuardRef = useRef(false);
+  const leavingPracticeRef = useRef(false);
   const [savedAttempt, setSavedAttempt] = useState<Attempt | null>(null);
 
   useEffect(() => {
@@ -368,6 +370,56 @@ export function InterviewFlow({
     }));
     setStarGuideOn(readStarGuide(window.localStorage));
   }, []);
+
+  useEffect(() => {
+    const active = stage !== 'check' && stage !== 'done';
+    if (active && !practiceHistoryGuardRef.current) {
+      window.history.pushState(
+        { ...(window.history.state ?? {}), muqabalaPracticeGuard: true },
+        '',
+        window.location.href,
+      );
+      practiceHistoryGuardRef.current = true;
+    }
+
+    const onPopState = () => {
+      if (!practiceHistoryGuardRef.current) return;
+      if (!active) {
+        // The sitting is complete. Consume the same-page guard entry, then
+        // honour the candidate's single Back action without another prompt.
+        practiceHistoryGuardRef.current = false;
+        leavingPracticeRef.current = true;
+        window.history.back();
+        return;
+      }
+      if (window.confirm(t('leavePracticeConfirm'))) {
+        practiceHistoryGuardRef.current = false;
+        leavingPracticeRef.current = true;
+        window.history.back();
+        return;
+      }
+      // Back already moved from the guard entry to the original page entry.
+      // Put the guard back only when the candidate chooses to stay.
+      window.history.pushState(
+        { ...(window.history.state ?? {}), muqabalaPracticeGuard: true },
+        '',
+        window.location.href,
+      );
+    };
+
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!active || leavingPracticeRef.current) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    window.addEventListener('popstate', onPopState);
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => {
+      window.removeEventListener('popstate', onPopState);
+      window.removeEventListener('beforeunload', onBeforeUnload);
+    };
+  }, [stage, t]);
 
   const voiceAvailable = speechOk || audioFallbackAvailable;
   const selectedAnswerMethod: AnswerMode = voiceAvailable ? answerMethod : 'type';

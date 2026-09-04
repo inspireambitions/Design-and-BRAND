@@ -4857,6 +4857,23 @@ body[dir='rtl'] .readiness-label {
   font-variant-numeric: tabular-nums;
 }
 
+.readiness-unscored {
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunk);
+}
+
+.readiness-not-scored {
+  margin: 0.3rem 0 0;
+  color: var(--jade);
+  font-size: 1rem;
+}
+
+.readiness-unscored .readiness-how {
+  margin-top: 0.35rem;
+}
+
 .readiness-compact .readiness-label {
   font-size: 0.98rem;
 }

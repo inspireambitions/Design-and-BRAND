@@ -300,25 +300,18 @@ export function structureCheck(question: Question, transcript: string): AnswerFe
     2,
     10,
   );
-  const detailScore = clamp((2 + Math.min(numbers, 4) * 1.6 + (wordCount > 90 ? 1 : 0)) * prose, 2, 10);
+  const detailScore = clamp((2 + Math.min(numbers, 4) * 1.6) * prose, 2, 10);
   const outcomeScore = clamp((hasOutcome ? 6 + Math.min(outcomes, 2) : 2) * prose, 2, 10);
-  const lengthScore =
-    wordCount < 45
-      ? clamp(3 + (wordCount / 45) * 4, 2, 10)
-      : wordCount <= 320
-        ? 9
-        : clamp(9 - (wordCount - 320) / 60, 4, 9);
 
   const dimensions: { id: string; label: string; score: number; re: RegExp }[] = [
     { id: 'situation', label: 'Names a real situation', score: situationScore, re: SITUATION },
     { id: 'own_actions', label: 'Says what you personally did', score: ownActionsScore, re: ACTION },
     { id: 'detail', label: 'Gives concrete detail', score: detailScore, re: NUMBERS },
     { id: 'outcome', label: 'Finishes the story', score: outcomeScore, re: OUTCOME },
-    { id: 'length', label: 'Answer length', score: lengthScore, re: SITUATION },
   ];
 
   const competencies: CompetencyScore[] = dimensions.map((d) => {
-    const quote = d.id === 'length' ? null : bestSentence(text, d.re);
+    const quote = bestSentence(text, d.re);
     return {
       id: d.id,
       label: d.label,
@@ -356,8 +349,8 @@ export function structureCheck(question: Question, transcript: string): AnswerFe
     improvements.push('Finish the story. End with what the outcome was and what changed because of you.');
   if (wordCount > 320)
     improvements.push('Tighten it. Strong answers land in 60\u2013120 seconds; long answers lose the interviewer.');
-  if (wordCount < 45)
-    improvements.push('Give more. This answer was short. Add the situation and the outcome.');
+  if (wordCount < 45 && (!hasSituation || actions === 0 || !hasOutcome))
+    improvements.push('Add the missing part of the story: the situation, your action, or the outcome. Do not add filler.');
   if (improvements.length === 0)
     improvements.push('The structure is solid. Try it once more and make the outcome even more specific.');
 

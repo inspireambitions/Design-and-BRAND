@@ -10,6 +10,7 @@ import test from 'node:test';
 register('./test-hooks/ts-paths.mjs', import.meta.url);
 
 const { ROLES } = await import('../lib/roles/index.ts');
+const { rubricForQuestion } = await import('../lib/question-rubric.ts');
 const { QUESTION_TAGS } = await import('../lib/roles/question-tags.ts');
 const { STRINGS } = await import('../lib/i18n.ts');
 
@@ -41,6 +42,17 @@ test('every role, question, competency and model answer field exists in English 
     }
   }
   assert.deepEqual(problems, []);
+});
+
+test('every catalogue question resolves its complete candidate-visible rubric', () => {
+  const missing = [];
+  for (const role of ROLES) {
+    for (const question of [...role.questions, ...(role.bank ?? [])]) {
+      const rubric = rubricForQuestion(role, question);
+      if (rubric.length !== question.competencies.length) missing.push(`${role.id}/${question.id}`);
+    }
+  }
+  assert.deepEqual(missing, []);
 });
 
 test('question tags carry both labels', () => {

@@ -110,9 +110,22 @@ function ReadinessDial({
   const shown = useAnimatedNumber(snapshot.score, previous ?? snapshot.score);
   const label = fill(t('readinessFor'), { role: snapshot.roleTitle });
   const aria = fill(t('readinessAria'), { role: snapshot.roleTitle, score: snapshot.score });
+  const notScoredAria = fill(t('readinessNotScoredAria'), { role: snapshot.roleTitle });
   const covered = snapshot.coverage.filter((item) => item.covered);
   const notYet = snapshot.coverage.filter((item) => !item.covered);
   const competencyLabel = (item: { label: string; labelAr: string }) => (lang === 'ar' ? item.labelAr : item.label);
+
+  if (snapshot.questionsPractised === 0) {
+    return (
+      <section className={`readiness readiness-${size} readiness-unscored`} aria-label={notScoredAria}>
+        <div className="readiness-text">
+          <p className="readiness-label">{label}</p>
+          <p className="readiness-not-scored"><strong>{t('readinessNotScored')}</strong></p>
+          <p className="muted tiny readiness-how">{t('readinessNotScoredBody')}</p>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className={`readiness readiness-${size}`} aria-label={aria}>

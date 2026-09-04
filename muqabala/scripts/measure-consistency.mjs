@@ -9,6 +9,7 @@
  *
  * Usage:
  *   node scripts/measure-consistency.mjs                    # against localhost:3000
+ *   node scripts/measure-consistency.mjs https://preview.example.com
  *   BASE_URL=https://your-app.vercel.app node scripts/measure-consistency.mjs
  *   RUNS=10 node scripts/measure-consistency.mjs            # more repeats per answer
  *
@@ -21,7 +22,7 @@
  * spread exceeds MAX_SPREAD, so it can run in CI.
  */
 
-const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3000';
+const BASE_URL = (process.argv[2] ?? process.env.BASE_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 const RUNS = Number(process.env.RUNS ?? 5);
 /** Maximum acceptable max-min spread on the 0-100 scale, per answer. */
 const MAX_SPREAD = Number(process.env.MAX_SPREAD ?? 10);
@@ -94,13 +95,41 @@ const CORPUS = [
   },
 ];
 
+function cookieHeader(response) {
+  const values = typeof response.headers.getSetCookie === 'function'
+    ? response.headers.getSetCookie()
+    : [response.headers.get('set-cookie')].filter(Boolean);
+  return values.map((value) => value.split(';', 1)[0]).join('; ');
+}
+
 async function scoreOnce(item) {
+  const create = await fetch(`${BASE_URL}/api/interviews`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Origin: BASE_URL },
+    body: JSON.stringify({
+      roleId: item.roleId,
+      roleTitle: item.roleId === 'waiter' ? 'Waiter' : 'Front Office Agent',
+      language: item.lang,
+      mode: 'guided',
+      focusQuestionId: item.questionId,
+      questions: [{ id: item.questionId }],
+    }),
+  });
+  if (create.status !== 201) throw new Error(`Interview start HTTP ${create.status} for ${item.id}`);
+  const interview = await create.json();
   const response = await fetch(`${BASE_URL}/api/score`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Origin: BASE_URL,
+      Cookie: cookieHeader(create),
+      'X-Scoring-Session': `consistency-${item.id}-${crypto.randomUUID()}`,
+    },
     body: JSON.stringify({
       roleId: item.roleId,
       questionId: item.questionId,
+      questionIndex: 0,
+      interviewId: interview.id,
       transcript: item.transcript,
       lang: item.lang,
     }),
