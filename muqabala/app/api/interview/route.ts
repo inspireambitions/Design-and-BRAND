@@ -281,7 +281,10 @@ export async function POST(request: Request) {
     let parsed: z.infer<typeof GeneratedInterview> | null = null;
     let candidateValidationReasons: string[] = [];
     for (let attempt = 0; attempt < 2 && !parsed; attempt += 1) {
-      const abort = AbortSignal.timeout(22_000);
+      // The public route allows a full generation window. Internal callers can
+      // supply a shorter signal, so a background enhancement never outlives
+      // the catalogue-first deadline.
+      const abort = AbortSignal.any([request.signal, AbortSignal.timeout(22_000)]);
       const response = await client.responses.parse({
         model,
         instructions: SYSTEM_PROMPT,

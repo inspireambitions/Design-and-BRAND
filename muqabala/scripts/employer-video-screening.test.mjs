@@ -300,11 +300,16 @@ test('a model timeout still leaves an immediate signed catalogue interview for t
   assert.match(advertRoute, /function signedFallbackResponse[\s\S]*signInterview\(\{[\s\S]*questions: role\.questions/);
   assert.match(advertRoute, /return signedFallbackResponse\(jobTitle, timedOut \? 'timeout' : 'error'\)/);
   assert.match(advertRoute, /tailored: false, fallback: true, token, reason/);
+  assert.match(advertRoute, /export async function POST/);
+  assert.match(advertRoute, /AbortSignal\.any\(\[request\.signal, AbortSignal\.timeout\(22_000\)\]\)/);
   assert.doesNotMatch(form, /fetch\('\/api\/interview'/);
   assert.match(form, /fetch\('\/api\/screening\/packs'/);
   assert.match(packRoute, /catalogueInterviewRole\(parsed\.data\.jobTitle/);
   assert.match(packRoute, /after\(\(\) => enhanceScreeningPack/);
   assert.match(packRoute, /ENHANCEMENT_DEADLINE_MS = 10_000/);
+  assert.match(packRoute, /import \{ POST as generateInterviewResponse \} from '@\/app\/api\/interview\/route'/);
+  assert.match(packRoute, /generateInterviewResponse\(new Request\('https:\/\/muqabala\.internal\/api\/interview'/);
+  assert.doesNotMatch(packRoute, /fetch\(`\$\{configuredOrigin\(\)\}\/api\/interview/);
   assert.match(packRoute, /\.eq\('starts_used', 0\)[\s\S]*\.is\('first_opened_at', null\)/);
   assert.match(packLookup, /update\(\{ first_opened_at: openedAt \}\)[\s\S]*\.is\('first_opened_at', null\)/);
   assert.match(migration, /question_source in \('legacy', 'catalogue', 'ai'\)/);

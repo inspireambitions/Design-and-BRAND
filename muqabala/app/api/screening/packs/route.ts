@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { after } from 'next/server';
+import { POST as generateInterviewResponse } from '@/app/api/interview/route';
 import { ADVERT_CACHE_VERSION } from '@/lib/advert-cache';
 import { CATALOGUE_INTERVIEW_VERSION, catalogueInterviewRole } from '@/lib/interview-catalogue';
 import { roleFromToken, signProofPack, verifyInterview } from '@/lib/interview-token';
@@ -28,16 +29,17 @@ async function enhanceScreeningPack(input: {
   jobText: string;
 }) {
   try {
-    const response = await fetch(`${configuredOrigin()}/api/interview`, {
+    // Run the shared server generator directly. A self-fetch is rejected by
+    // protected preview deployments and adds an avoidable network hop.
+    const response = await generateInterviewResponse(new Request('https://muqabala.internal/api/interview', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-Candidate-Session': input.packId,
       },
       body: JSON.stringify({ jobTitle: input.jobTitle, jobText: input.jobText }),
-      cache: 'no-store',
       signal: AbortSignal.timeout(ENHANCEMENT_DEADLINE_MS),
-    });
+    }));
     const body = await response.json().catch(() => ({})) as {
       tailored?: boolean;
       token?: string;
