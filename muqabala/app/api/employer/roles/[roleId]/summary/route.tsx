@@ -49,12 +49,12 @@ export async function GET(_request: Request, context: { params: Promise<{ roleId
           {numbers.map(([label, value]) => (
             <div key={label} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', borderBottom: '3px solid #d5ded8', paddingBottom: 18 }}>
               <div style={{ fontSize: 40, color: '#536860' }}>{label}</div>
-              <div style={{ fontSize: 96, fontWeight: 800, letterSpacing: -3 }}>{value}</div>
+              <div style={{ fontSize: 96, fontWeight: 800, letterSpacing: -3 }}>{String(value)}</div>
             </div>
           ))}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 12 }}>
             <div style={{ fontSize: 40, color: '#536860' }}>Time saved</div>
-            <div style={{ fontSize: 64, fontWeight: 800, color: '#07564b' }}>{hours.toFixed(1)} hours</div>
+            <div style={{ fontSize: 64, fontWeight: 800, color: '#07564b' }}>{`${hours.toFixed(1)} hours`}</div>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
