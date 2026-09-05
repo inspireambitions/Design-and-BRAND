@@ -33,3 +33,13 @@ Production has RESEND_FEEDBACK_API_KEY. Preview does not. Do not copy production
 The migration 20260905061702_employer_invite_delivery_reliability.sql is local only. Apply it with explicit production approval before deploying the changed invitation and scheduler routes. Apply the neutral sign-in template separately through the authorised Auth configuration. Confirm actual provider acceptance, inbox arrival, scheduler execution and deletion of controlled expired records after approval. Do not treat local simulations as proof of those live operations.
 
 The tester's existing immutable preview link remains unchanged. Phone recording, submission, playback and report review still await the controlled tester journey.
+
+## Completed preview scoring gate
+
+Preview dpl_EEnLYkKRCPTdpSQu8ik6RnDKbaZm at https://muqabala-qy50aqi19-inspire14.vercel.app passed with SCORING_REASONING=low. All 25 attempts returned AI scores. Five-repeat spreads were 2, 3, 5, 7 and 7 for strong English, medium English, weak English, strong imperfect English and strong Arabic. The maximum permitted spread was 10. The semantic gate also passed: concise evidence 93, the same evidence padded 88, fluent generic claims 10 and imperfect English evidence 90.
+
+The earlier medium-reasoning preview failed with one HTTP 504 among five strong-English requests. Do not describe that configuration as passing. The 12-second feedback timeout, model and evidence integrity checks were preserved in the low-reasoning trial.
+
+Application defaults remain medium. An approved release must explicitly set SCORING_REASONING=low to match the tested preview and re-run both live scoring gates. No production configuration was changed during this review.
+
+The original tester deployment required Vercel authentication for external visitors. A deployment-specific, 23-hour shareable link was created and verified from a fresh HTTP session. Corrected access links were privately emailed to the authorised testers. Global deployment protection remains enabled. Share tokens and authenticated URLs are omitted from repository files.
