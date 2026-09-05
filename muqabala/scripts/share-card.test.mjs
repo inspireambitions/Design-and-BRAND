@@ -92,7 +92,7 @@ test('never draws anything that is not a role title, a number, a label or the si
   for (const secret of ['Fatima', 'passport', 'embassy', 'apologised', 'upgrade', 'data:image']) {
     assert.ok(!drawn.includes(secret), `card leaked "${secret}"`);
   }
-  const allowed = new Set(['م', 'Muqabala', 'INTERVIEW READINESS', 'Front office agent', '63', '/ 100', 'Questions practised: 5 of 8', 'trymuqabala.com']);
+  const allowed = new Set(['م', 'Muqabala', 'PRACTICE COVERAGE', 'Front office agent', '63', '/ 100', 'Questions practised: 5 of 8', 'trymuqabala.com']);
   for (const text of texts().map((c) => c.args[0])) assert.ok(allowed.has(text), `unexpected text "${text}"`);
 });
 

@@ -78,9 +78,9 @@ export default async function SharedCandidatePage({ params }: { params: Promise<
         <h1>{displayName}</h1>
         <ul className={styles.rubric} aria-label="Rubric coverage">
           {coverage.items.map((item) => (
-            <li key={item.id} className={item.covered ? styles.tick : styles.cross}>
-              <span aria-hidden="true">{item.covered ? '\u2713' : '\u2717'}</span>
-              <span>{item.label}</span>
+            <li key={item.id} className={item.status === 'unavailable' ? undefined : item.covered ? styles.tick : styles.cross}>
+              <span aria-hidden="true">{item.status === 'unavailable' ? '?' : item.covered ? '\u2713' : '\u2717'}</span>
+              <span>{item.label}{item.status === 'unavailable' ? ': analysis unavailable, review the recording' : ''}</span>
             </li>
           ))}
         </ul>

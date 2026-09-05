@@ -130,6 +130,15 @@ export function FeedbackCard({
 
   return (
     <div className="card stack">
+      {scored ? (
+        <div className="score-head">
+          <ScoreRing value={feedback.score} />
+          <div>
+            <p className="eyebrow">{t('practiceScore')}</p>
+            <p className="tiny">{t('scoreEvidenceNote')}</p>
+          </div>
+        </div>
+      ) : <p className="eyebrow">{t('readinessNotScored')}</p>}
       <div>
         <h3 style={{ fontSize: '1.2rem' }} dir="auto">{feedback.headline}</h3>
         <div className="row" style={{ marginTop: '0.45rem', gap: '0.4rem' }}>
@@ -169,13 +178,6 @@ export function FeedbackCard({
         <details className="disclosure feedback-details">
           <summary>{t('seeFullFeedback')}</summary>
           <div className="stack" style={{ marginTop: '1rem' }}>
-            <div className="score-head">
-              <ScoreRing value={feedback.score} />
-              <div>
-                <p className="eyebrow">{t('practiceScore')}</p>
-                <p className="tiny">{t('scoreEvidenceNote')}</p>
-              </div>
-            </div>
             {feedback.competencies.length > 0 && (
               <div>
                 {feedback.competencies.map((competency) => (

@@ -11,10 +11,11 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   if (process.env.NODE_ENV === 'production') notFound();
   const coverage = (marks: boolean[]) => ({
-    items: marks.map((covered, index) => ({ id: `c${index}`, label: ['Communication', 'Ownership', 'Problem solving', 'Specific evidence'][index], labelAr: '', covered })),
+    items: marks.map((covered, index) => ({ id: `c${index}`, label: ['Communication', 'Ownership', 'Problem solving', 'Specific evidence'][index], labelAr: '', covered, status: covered ? 'evidence' as const : 'missing' as const })),
     covered: marks.filter(Boolean).length,
     total: marks.length,
     full: marks.every(Boolean),
+    analysisComplete: true,
   });
   const sample: ShortlistInput = {
     roleTitle: 'Receptionist',

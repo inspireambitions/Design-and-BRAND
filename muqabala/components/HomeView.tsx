@@ -95,7 +95,7 @@ export function HomeView({ roles }: { roles: RoleCard[] }) {
                   {lang === 'ar' ? role.blurbAr : role.blurb}
                 </p>
                 <p className="tiny" style={{ margin: 0 }}>
-                  {role.questionCount} {t('landingRoleQuestions')} · {t('expectQuickTime')}
+                  {t('landingPracticeOptions')}
                 </p>
               </Link>
             </li>

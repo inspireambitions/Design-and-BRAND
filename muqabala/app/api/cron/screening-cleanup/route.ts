@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { rejectUnauthorisedCron } from '@/lib/server/cron-auth';
 import { reportOperationalEvent, reportOperationalFailure } from '@/lib/sentry-server';
+import { deleteExpiredScreeningInterview } from '@/lib/screening-cleanup';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -28,22 +29,21 @@ export async function GET(request: Request) {
   }
 
   let deleted = 0;
+  let failed = 0;
   for (const interview of expired ?? []) {
-    const { data: answers } = await admin.from('interview_answers')
-      .select('video_path')
-      .eq('interview_id', interview.id)
-      .not('video_path', 'is', null);
-    const paths = (answers ?? []).map((answer) => answer.video_path).filter((path): path is string => Boolean(path));
-    if (paths.length > 0) {
-      const { error: storageError } = await admin.storage.from('screening-videos').remove(paths);
-      if (storageError) {
-        reportOperationalFailure('screening_cleanup_item_failed', { area: 'cron', job: 'screening_cleanup', code: storageError.name || 'storage_delete_failed' });
-        continue;
-      }
+    const result = await deleteExpiredScreeningInterview({
+      readPaths: () => admin.from('interview_answers').select('video_path')
+        .eq('interview_id', interview.id).not('video_path', 'is', null),
+      removeVideos: (paths) => admin.storage.from('screening-videos').remove(paths),
+      removeInterview: () => admin.from('interviews').delete().eq('id', interview.id),
+    });
+    if (!result.deleted) {
+      failed += 1;
+      reportOperationalFailure('screening_cleanup_item_failed', { area: 'cron', job: 'screening_cleanup', code: result.code || 'cleanup_failed' });
+    } else {
+      deleted += 1;
     }
-    const { error: deleteError } = await admin.from('interviews').delete().eq('id', interview.id);
-    if (!deleteError) deleted += 1;
   }
-  reportOperationalEvent('cron_job_completed', { area: 'cron', job: 'screening_cleanup', code: 'ok', status: 200, count: deleted });
-  return Response.json({ deleted });
+  reportOperationalEvent('cron_job_completed', { area: 'cron', job: 'screening_cleanup', code: failed ? 'partial_failure' : 'ok', status: failed ? 503 : 200, count: deleted });
+  return Response.json({ deleted, failed }, { status: failed ? 503 : 200 });
 }

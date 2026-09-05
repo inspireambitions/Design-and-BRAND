@@ -179,9 +179,9 @@ function ReadinessDial({
               </ul>
             </div>
           )}
-          <p className="muted tiny readiness-how">{t('readinessHow')}</p>
         </div>
       )}
+      <p className="muted tiny readiness-how">{t('readinessHow')}</p>
     </section>
   );
 }

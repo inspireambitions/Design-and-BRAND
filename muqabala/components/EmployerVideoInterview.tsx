@@ -229,7 +229,7 @@ export function EmployerVideoInterview({
   inviteToken,
   brainEnabled = false,
 }: Props) {
-  const { lang, setLang, dir } = useLang();
+  const { lang, setLang, dir, t } = useLang();
   const c = COPY[lang];
   const [stage, setStage] = useState<Stage>('resuming');
   const [candidateName, setCandidateName] = useState('');
@@ -863,6 +863,7 @@ export function EmployerVideoInterview({
             <div className={styles.assurance}>{c.privacy}</div>
             <p className={styles.footnote}>{c.uploadDisclosure}</p>
             <p className={styles.footnote}>{c.transcriptDisclosure}</p>
+            {recoveryReady && <p className={styles.footnote}>{t('screeningRecoveryCopy')}</p>}
             <div className={styles.savedBanner} role="status">✓ {c.emailReceipt} {maskEmail(candidateEmail)}</div>
             <button type="button" className={styles.secondary} onClick={async () => {
               await fetch('/api/auth/sign-out', { method: 'POST' });

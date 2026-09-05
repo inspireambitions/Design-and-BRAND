@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { createCandidateShare, recordDecision, revokeCandidateShare, undoDecision } from '@/app/employer/actions';
 import { employerVolumeProps, track } from '@/lib/analytics';
 import { EmployerReportVideo } from '@/components/EmployerReportVideo';
+import { EmployerDeleteInterview } from '@/components/EmployerDeleteInterview';
+import { useLang } from './LanguageProvider';
 import type { Coverage } from '@/lib/employer-volume/coverage';
 import type { ReportAnswer } from '@/lib/report-summary';
 import styles from './CandidateReview.module.css';
@@ -52,6 +54,7 @@ const DECISION_LABEL: Record<ReviewDecision['decision'], string> = {
 
 export function CandidateReview(props: Props) {
   const router = useRouter();
+  const { t } = useLang();
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -59,7 +62,6 @@ export function CandidateReview(props: Props) {
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState<number>(0);
-  const touchStart = useRef<number | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => () => { if (undoTimer.current) clearTimeout(undoTimer.current); }, []);
@@ -74,32 +76,52 @@ export function CandidateReview(props: Props) {
     if (busy) return;
     setBusy(true);
     setError('');
-    const result = await recordDecision({ interviewId: props.interviewId, decision, note });
-    setBusy(false);
-    if ('error' in result) { setError(result.error); return; }
-    track('decision_made', employerVolumeProps(true, { role_id: props.roleId, type: decision }));
-    if (undoTimer.current) clearTimeout(undoTimer.current);
-    setUndo({ decisionId: result.id, label: DECISION_LABEL[decision], until: Date.now() + UNDO_MS });
-    undoTimer.current = setTimeout(() => { setUndo(null); goNext(); }, UNDO_MS);
+    try {
+      const result = await recordDecision({ interviewId: props.interviewId, decision, note });
+      if ('error' in result) { setError(result.error); return; }
+      track('decision_made', employerVolumeProps(true, { role_id: props.roleId, type: decision }));
+      if (undoTimer.current) clearTimeout(undoTimer.current);
+      setUndo({ decisionId: result.id, label: DECISION_LABEL[decision], until: Date.now() + UNDO_MS });
+      undoTimer.current = setTimeout(() => { setUndo(null); goNext(); }, UNDO_MS);
+    } catch {
+      setError(t('employerActionInterrupted'));
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function undoLast() {
-    if (!undo) return;
+    if (!undo || busy) return;
+    setBusy(true);
     if (undoTimer.current) clearTimeout(undoTimer.current);
-    const result = await undoDecision({ interviewId: props.interviewId, decisionId: undo.decisionId });
-    setUndo(null);
-    if ('error' in result) setError(result.error);
-    else router.refresh();
+    try {
+      const result = await undoDecision({ interviewId: props.interviewId, decisionId: undo.decisionId });
+      if ('error' in result) setError(result.error);
+      else { setUndo(null); router.refresh(); }
+    } catch {
+      setError(t('employerActionInterrupted'));
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function share() {
+    if (busy) return;
     setBusy(true);
-    const result = await createCandidateShare(props.interviewId);
-    setBusy(false);
-    if ('error' in result) { setError(result.error); return; }
-    track('candidate_shared', employerVolumeProps(true, { role_id: props.roleId }));
-    setShareUrl(result.url);
-    router.refresh();
+    try {
+      const result = await createCandidateShare(props.interviewId);
+      if ('error' in result) { setError(result.error); return; }
+      track('candidate_shared', employerVolumeProps(true, { role_id: props.roleId }));
+      setShareUrl(result.url);
+      router.refresh();
+    } catch {
+      setError(t('employerActionInterrupted'));
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function copyShare() {
@@ -108,22 +130,18 @@ export function CandidateReview(props: Props) {
   }
 
   async function revoke(shareId: string) {
-    const result = await revokeCandidateShare({ interviewId: props.interviewId, shareId });
-    if ('error' in result) setError(result.error);
-    else { setShareUrl(null); router.refresh(); }
+    try {
+      const result = await revokeCandidateShare({ interviewId: props.interviewId, shareId });
+      if ('error' in result) setError(result.error);
+      else { setShareUrl(null); router.refresh(); }
+    } catch {
+      setError(t('employerActionInterrupted'));
+      router.refresh();
+    }
   }
 
   return (
-    <div
-      className={[styles.page, 'employer-light-theme'].join(' ')}
-      onTouchStart={(event) => { touchStart.current = event.touches[0]?.clientX ?? null; }}
-      onTouchEnd={(event) => {
-        const start = touchStart.current;
-        touchStart.current = null;
-        const end = event.changedTouches[0]?.clientX;
-        if (start !== null && end !== undefined && start - end > 80) goNext();
-      }}
-    >
+    <div className={[styles.page, 'employer-light-theme'].join(' ')}>
       <header className={styles.header}>
         <Link href="/employer" className={styles.back}>All roles</Link>
         <Link href={`/employer/candidates/${props.interviewId}/evaluation`} className={styles.evaluation}>View evaluation</Link>
@@ -138,10 +156,12 @@ export function CandidateReview(props: Props) {
           <p className={styles.meta}>Submitted {new Date(props.submittedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</p>
           <ul className={styles.rubric} aria-label="Rubric coverage">
             {props.coverage.items.map((item) => (
-              <li key={item.id} className={item.covered ? styles.tick : styles.cross}>
-                <span aria-hidden="true">{item.covered ? '\u2713' : '\u2717'}</span>
+              <li key={item.id} className={item.status === 'unavailable' ? undefined : item.covered ? styles.tick : styles.cross}>
+                <span aria-hidden="true">{item.status === 'unavailable' ? '?' : item.covered ? '\u2713' : '\u2717'}</span>
                 <span>{item.label}</span>
-                <span className={styles.srOnly}>{item.covered ? 'evidence found' : 'no evidence found'}</span>
+                {item.status === 'unavailable'
+                  ? <small>{t('employerAnalysisUnavailable')}</small>
+                  : <span className={styles.srOnly}>{item.covered ? 'evidence found' : 'no evidence found'}</span>}
               </li>
             ))}
           </ul>
@@ -221,6 +241,7 @@ export function CandidateReview(props: Props) {
           )}
           <p className={styles.small}>The shared page shows this candidate only: name or reference, rubric ticks and recorded answers. No contact details.</p>
         </section>
+        <EmployerDeleteInterview interviewId={props.interviewId} />
       </main>
 
       <footer className={styles.decisionBar}>
@@ -244,7 +265,7 @@ export function CandidateReview(props: Props) {
       {undo && (
         <div className={styles.toast} role="status">
           <span>{undo.label}. Moving on.</span>
-          <button type="button" onClick={() => void undoLast()}>Undo</button>
+          <button type="button" disabled={busy} onClick={() => void undoLast()}>Undo</button>
         </div>
       )}
     </div>

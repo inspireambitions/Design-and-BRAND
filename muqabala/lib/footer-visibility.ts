@@ -1,6 +1,6 @@
 export type PracticeFooterStage = 'check' | 'prep' | 'record' | 'review' | 'feedback' | 'done';
 export type EmployerInterviewFooterStage = 'resuming' | 'unavailable' | 'intro' | 'device' | 'ready' | 'recording' | 'saving' | 'consent' | 'submitting' | 'complete';
-export type UniversalInterviewFooterStage = 'SETUP' | 'CONFIRM' | 'INTERVIEW' | 'FEEDBACK_LOADING' | 'FEEDBACK' | 'DELETED';
+export type UniversalInterviewFooterStage = 'RESTORING' | 'SETUP' | 'CONFIRM' | 'INTERVIEW' | 'FEEDBACK_LOADING' | 'FEEDBACK' | 'DELETED';
 
 export function hidePracticeFooter(
   stage: PracticeFooterStage,
@@ -23,5 +23,5 @@ export function hideEmployerInterviewFooter(stage: EmployerInterviewFooterStage)
 }
 
 export function hideUniversalInterviewFooter(stage: UniversalInterviewFooterStage): boolean {
-  return stage === 'INTERVIEW' || stage === 'FEEDBACK_LOADING';
+  return stage === 'RESTORING' || stage === 'INTERVIEW' || stage === 'FEEDBACK_LOADING';
 }

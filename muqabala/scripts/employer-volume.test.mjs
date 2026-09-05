@@ -253,7 +253,7 @@ test('section 4: rubric coverage is ticks from stored evidence, never a number, 
 
 test('section 4: shortlist email subject, snippet, ordering and magic link', async () => {
   const { shortlistSubject, shortlistText, shortlistHtml, firstAnswerSnippet, pickShortlistRows } = await import('../lib/employer-volume/shortlist-message.ts');
-  const cov = (n) => ({ items: Array.from({ length: 4 }, (_, i) => ({ id: String(i), label: 'x', labelAr: 'x', covered: i < n })), covered: n, total: 4, full: n === 4 });
+  const cov = (n) => ({ items: Array.from({ length: 4 }, (_, i) => ({ id: String(i), label: 'x', labelAr: 'x', covered: i < n, status: i < n ? 'evidence' : 'missing' })), covered: n, total: 4, full: n === 4, analysisComplete: true });
   const input = {
     roleTitle: 'Receptionist', employerName: 'Nour Clinic', invited: 223, answered: 41, fullCoverage: 7,
     rows: [{ displayName: 'Aisha R.', coverage: cov(4), firstAnswer: 'Hello there', openUrl: 'https://trymuqabala.com/auth/confirm?token_hash=abc&type=magiclink&next=%2Femployer%2Finterviews%2F1' }],
@@ -292,7 +292,8 @@ test('section 4: decisions are logged with reviewer, undo deletes the row, and t
   const review = read('components/CandidateReview.tsx');
   assert.match(review, /const UNDO_MS = 10_000/);
   assert.match(review, /decide\('shortlist'\)[\s\S]*decide\('pass'\)[\s\S]*decide\('later'\)/);
-  assert.match(review, /start - end > 80\) goNext\(\)/, 'swipe left advances');
+  assert.doesNotMatch(review, /onTouchStart|onTouchEnd/, 'review content does not capture media and text gestures');
+  assert.match(review, /onClick=\{goNext\}/, 'explicit Next remains available');
   assert.match(review, /maxLength=\{280\}/);
   assert.doesNotMatch(review, /\/100/);
   const dashboardActions = read('components/DashboardDecisionActions.tsx');
@@ -371,7 +372,7 @@ test('section 5: export of 500 candidates builds in well under the budget and is
   const lines = csv.trim().split('\r\n');
   assert.equal(lines.length, 501);
   assert.equal(lines[0], EXPORT_COLUMNS.join(','));
-  assert.match(lines[1], /,true,false,true,true,shortlist,kim@example\.com,/);
+  assert.match(lines[1], /,true,false,true,true,Shortlisted,kim@example\.com,/);
   assert.match(lines[4], /'=HYPERLINK/, 'formula prefix neutralised');
   assert.match(lines[1], /"Strong, ""quoted"" note"/);
 

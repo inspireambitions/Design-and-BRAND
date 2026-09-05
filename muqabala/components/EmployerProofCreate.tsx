@@ -94,7 +94,7 @@ export function EmployerProofCreate({
             >
               {ar ? 'English' : 'العربية'}
             </button>
-            <a href="#create" className={styles.headerSignIn}>{signedIn ? translate(lang, 'proofOpenDashboard') : (ar ? 'تسجيل الدخول' : 'Sign in')}</a>
+            <a href={signedIn ? '/employer' : '#create'} className={styles.headerSignIn}>{signedIn ? translate(lang, 'proofOpenDashboard') : (ar ? 'تسجيل الدخول' : 'Sign in')}</a>
           </nav>
         </div>
       </header>

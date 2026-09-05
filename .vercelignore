@@ -1,0 +1,9 @@
+.cursor/
+.github/
+studies/
+*.log
+dependency-audit.json
+**/node_modules/
+**/.next/
+**/.env*
+!**/.env.example

@@ -66,7 +66,7 @@ export async function loadExportRows(client: SupabaseClient, roleId: string, rev
       first_reminder_at: invite?.first_reminder_at ?? null,
       second_reminder_at: invite?.second_reminder_at ?? null,
       submitted_at: candidate?.submittedAt ?? invite?.submitted_at ?? null,
-      rubric: candidate ? candidate.coverage.items.map((item) => item.covered) : [],
+      rubric: candidate ? candidate.coverage.items.map((item) => item.status === 'unavailable' ? 'Unknown' as const : item.covered) : [],
       decision: decision?.decision ?? candidate?.decision ?? null,
       reviewer: decision ? reviewerEmails.get(decision.reviewer_id) ?? decision.reviewer_id : null,
       decided_at: decision?.created_at ?? null,

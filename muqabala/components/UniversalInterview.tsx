@@ -12,7 +12,7 @@ import { UniversalVideoAnswer } from './UniversalVideoAnswer';
 import { FocusedInterviewFooterGuard } from './FooterVisibility';
 import { hideUniversalInterviewFooter } from '@/lib/footer-visibility';
 
-type Stage = 'SETUP' | 'CONFIRM' | 'INTERVIEW' | 'FEEDBACK_LOADING' | 'FEEDBACK' | 'DELETED';
+type Stage = 'RESTORING' | 'SETUP' | 'CONFIRM' | 'INTERVIEW' | 'FEEDBACK_LOADING' | 'FEEDBACK' | 'DELETED';
 
 type PublicCompetency = {
   id: string;
@@ -76,7 +76,7 @@ async function postJson<T>(url: string, body: unknown): Promise<T> {
 
 export function UniversalInterview() {
   const { t } = useLang();
-  const [stage, setStage] = useState<Stage>('SETUP');
+  const [stage, setStage] = useState<Stage>('RESTORING');
   const [targetRole, setTargetRole] = useState('');
   const [level, setLevel] = useState<ExperienceLevel>('PROFESSIONAL');
   const [years, setYears] = useState(3);
@@ -95,13 +95,62 @@ export function UniversalInterview() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const errorRef = useRef<HTMLParagraphElement>(null);
+  const historyGuard = useRef(false);
+  const leaving = useRef(false);
+  const active = stage === 'CONFIRM' || stage === 'INTERVIEW' || stage === 'FEEDBACK_LOADING'
+    || (stage === 'SETUP' && Boolean(targetRole || previousRole || industry || jobDescription))
+    || (stage === 'FEEDBACK' && !interview?.retry_used && Boolean(retryAnswer.trim()));
+
+  useEffect(() => {
+    if (active && !historyGuard.current) {
+      window.history.pushState({ ...(window.history.state ?? {}), muqabalaUniversalGuard: true }, '', window.location.href);
+      historyGuard.current = true;
+    }
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      if (!active || leaving.current) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    const popState = () => {
+      if (!historyGuard.current) return;
+      if (!active || window.confirm(t('brainLeaveUnsaved'))) {
+        historyGuard.current = false;
+        leaving.current = true;
+        window.history.back();
+      } else {
+        window.history.pushState({ ...(window.history.state ?? {}), muqabalaUniversalGuard: true }, '', window.location.href);
+      }
+    };
+    const linkClick = (event: MouseEvent) => {
+      if (!active || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const anchor = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>('a[href]') : null;
+      if (!anchor || anchor.target === '_blank' || anchor.hasAttribute('download')) return;
+      const destination = new URL(anchor.href, window.location.href);
+      const current = new URL(window.location.href);
+      if (destination.pathname === current.pathname && destination.search === current.search && destination.origin === current.origin) return;
+      if (!window.confirm(t('brainLeaveUnsaved'))) {
+        event.preventDefault();
+        event.stopPropagation();
+      } else leaving.current = true;
+    };
+    window.addEventListener('beforeunload', beforeUnload);
+    window.addEventListener('popstate', popState);
+    document.addEventListener('click', linkClick, true);
+    return () => {
+      window.removeEventListener('beforeunload', beforeUnload);
+      window.removeEventListener('popstate', popState);
+      document.removeEventListener('click', linkClick, true);
+    };
+  }, [active, t]);
 
   useEffect(() => {
     if (error) errorRef.current?.focus();
   }, [error]);
 
-  useEffect(() => {
-    const restore = async () => {
+  const restore = async () => {
+      setBusy(true);
+      setError('');
+      try {
       const savedId = window.localStorage.getItem(SAVED_INTERVIEW_KEY);
       if (savedId) {
         try {
@@ -128,23 +177,39 @@ export function UniversalInterview() {
             }
             return;
           }
-        } catch {
-          // A saved interview must never prevent a fresh start.
-        }
-        window.localStorage.removeItem(SAVED_INTERVIEW_KEY);
+        } catch { /* Keep the saved pointer for a later retry. */ }
+        // Even a not-found response can reflect unavailable storage or expired auth.
+        setError(t('brainRestoreError'));
+        return;
       }
+      setStage('SETUP');
       const draft = takeHeroDraft();
       if (!draft) return;
       setTargetRole(draft.jobTitle);
       setJobDescription(draft.jobText);
+      } catch {
+        setStage('SETUP');
+      } finally {
+        setBusy(false);
+      }
     };
+
+  useEffect(() => {
     void restore();
   }, []);
 
   const loadFeedback = async (interviewId: string) => {
-    const result = await postJson<FeedbackResponse>('/api/universal-interview/feedback', { interview_id: interviewId });
-    setFeedback(result);
-    setStage('FEEDBACK');
+    setBusy(true);
+    setError('');
+    try {
+      const result = await postJson<FeedbackResponse>('/api/universal-interview/feedback', { interview_id: interviewId });
+      setFeedback(result);
+      setStage('FEEDBACK');
+    } catch (caught) {
+      setError(caught instanceof Error && caught.message ? caught.message : t('brainError'));
+    } finally {
+      setBusy(false);
+    }
   };
 
   const buildBlueprint = async () => {
@@ -257,6 +322,8 @@ export function UniversalInterview() {
   const displayBand = (band: FinalFeedback['competencies'][number]['band']) => band;
 
   const startNew = () => {
+    if (active && !window.confirm(t('brainLeaveUnsaved'))) return;
+    leaving.current = true;
     window.localStorage.removeItem(SAVED_INTERVIEW_KEY);
     window.location.reload();
   };
@@ -274,6 +341,11 @@ export function UniversalInterview() {
       </header>}
 
       {error && <p ref={errorRef} className="notice notice-warn" role="alert" tabIndex={-1}>{error}</p>}
+
+      {stage === 'RESTORING' && <section className="card stack" aria-live="polite">
+        <button type="button" className="btn btn-primary" disabled={busy} onClick={() => void restore()}>{t('brainRestoreRetry')}</button>
+        {error && <button type="button" className="btn btn-ghost" disabled={busy} onClick={startNew}>{t('brainStartNew')}</button>}
+      </section>}
 
       {stage === 'SETUP' && <form className="card stack" onSubmit={(event) => { event.preventDefault(); void buildBlueprint(); }}>
         <label className="stack-sm" htmlFor="brain-target-role">
@@ -320,6 +392,7 @@ export function UniversalInterview() {
             onChange={(event) => setJobDescription(event.target.value)} />
           <span className="tiny">{t('brainJobDescriptionHint')}</span>
         </label>
+        <p className="notice tiny">{t('brainDataNotice')}</p>
         <button type="submit" className="btn btn-primary" disabled={busy || targetRole.trim().length < 2}>
           {busy ? t('brainBuildingBlueprint') : t('brainBuildBlueprint')}
         </button>
@@ -378,6 +451,8 @@ export function UniversalInterview() {
       {stage === 'FEEDBACK_LOADING' && <section className="card stack" aria-live="polite">
         <h2>{t('brainPreparingFeedback')}</h2>
         <p className="muted">{t('brainReadingAnswer')}</p>
+        {error && interview && <button type="button" className="btn btn-primary" disabled={busy}
+          onClick={() => void loadFeedback(interview.interview_id)}>{t('brainFeedbackRetry')}</button>}
       </section>}
 
       {stage === 'FEEDBACK' && feedback && interview && <section className="stack-lg" aria-labelledby="brain-feedback-heading">
@@ -398,8 +473,11 @@ export function UniversalInterview() {
           <div><p className="eyebrow">{t('brainRetryTitle')}</p><h3>{t('brainQuestion')} {feedback.retry_recommended_question}</h3></div>
           <p className="muted">{feedback.retry_question_text || t('brainRetryBody')}</p>
           <UniversalVideoAnswer key={`retry:${feedback.retry_recommended_question}`} disabled={busy} onTranscript={setRetryAnswer} />
-          <textarea className="answer-box" value={retryAnswer} placeholder={t('brainAnswerPlaceholder')}
-            onChange={(event) => setRetryAnswer(event.target.value)} />
+          <label className="stack-sm" htmlFor="brain-retry-answer">
+            <span className="rate-label">{t('brainAnswerLabel')}</span>
+            <textarea id="brain-retry-answer" className="answer-box" value={retryAnswer} placeholder={t('brainAnswerPlaceholder')}
+              onChange={(event) => setRetryAnswer(event.target.value)} />
+          </label>
           <button type="button" className="btn btn-primary" disabled={busy || !retryAnswer.trim()} onClick={() => void retry()}>
             {busy ? t('brainRetrying') : t('brainRetrySend')}
           </button>

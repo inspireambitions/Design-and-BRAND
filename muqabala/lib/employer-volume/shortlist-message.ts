@@ -1,8 +1,8 @@
-import type { Coverage } from './coverage';
+import { orderCandidates, type Coverage } from './coverage.ts';
 
 /** Plain-text ticks for the text part: "✓ ✓ ✗ ✓". Mirrors coverageMarks in coverage.ts, kept local so Node can import this module without a bundler. */
 function coverageMarks(coverage: Coverage): string {
-  return coverage.items.map((item) => (item.covered ? '\u2713' : '\u2717')).join(' ');
+  return coverage.items.map((item) => (item.status === 'unavailable' ? '?' : item.covered ? '\u2713' : '\u2717')).join(' ');
 }
 
 export type ShortlistRow = {
@@ -52,6 +52,7 @@ export function shortlistText(input: ShortlistInput): string {
     lines.push('');
   }
   lines.push('You decide. Nothing is rejected automatically. Ticks show which rubric items the candidate gave evidence for; they are not a score.');
+  lines.push('? means analysis is unavailable. Review the recording.');
   return lines.join('\n');
 }
 
@@ -60,7 +61,8 @@ export function shortlistHtml(input: ShortlistInput): string {
 <tr>
   <td style="padding:12px 0;border-top:1px solid #e3e8e4;vertical-align:top">
     <div style="font-weight:700">${escapeHtml(row.displayName)}</div>
-    <div style="margin:4px 0;font-size:15px;letter-spacing:.15em">${row.coverage.items.map((item) => item.covered
+    <div style="margin:4px 0;font-size:15px;letter-spacing:.15em">${row.coverage.items.map((item) => item.status === 'unavailable'
+      ? '<span aria-label="analysis unavailable">?</span>' : item.covered
       ? '<span style="color:#087662" aria-label="covered">&#10003;</span>'
       : '<span style="color:#a33f2c" aria-label="not covered">&#10007;</span>').join(' ')}</div>
     <div style="color:#536860;font-size:14px">&ldquo;${escapeHtml(row.firstAnswer)}&rdquo;</div>
@@ -77,7 +79,7 @@ export function shortlistHtml(input: ShortlistInput): string {
 <h1 style="margin:0 0 8px;font-size:22px;line-height:1.3">${escapeHtml(input.roleTitle)}</h1>
 <p style="margin:0 0 20px;color:#536860">${input.invited} invited. ${input.answered} answered. ${input.fullCoverage} with full rubric coverage.</p>
 <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse">${rows}</table>
-<p style="margin:24px 0 0;color:#65766f;font-size:13px">You decide. Nothing is rejected automatically. Ticks show which rubric items the candidate gave evidence for; they are not a score. Each Open link signs you in and lands on that candidate.</p>
+<p style="margin:24px 0 0;color:#65766f;font-size:13px">You decide. Nothing is rejected automatically. Ticks show which rubric items the candidate gave evidence for; they are not a score. ? means analysis is unavailable. Review the recording. Each Open link signs you in and lands on that candidate.</p>
 </div></div></body></html>`;
 }
 
@@ -87,7 +89,5 @@ export function shortlistHtml(input: ShortlistInput): string {
  * which the same ordering already achieves.
  */
 export function pickShortlistRows<T extends { coverage: Coverage; submittedAt: string }>(candidates: T[]): T[] {
-  return [...candidates]
-    .sort((a, b) => (b.coverage.covered - a.coverage.covered) || (new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime()))
-    .slice(0, 10);
+  return orderCandidates(candidates).slice(0, 10);
 }

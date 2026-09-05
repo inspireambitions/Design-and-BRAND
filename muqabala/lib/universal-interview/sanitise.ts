@@ -140,7 +140,9 @@ export function assessJobDescription(raw: string): JDQualityResult {
   };
 }
 
-const NO_EXAMPLE = /\b(?:i don['’]?t know|no example|never happened to me)\b/i;
+// Only explicit standalone refusals bypass extraction. Quoted uncertainty or
+// an opening admission followed by a real example must still be assessed.
+const NO_EXAMPLE = /^(?:(?:sorry|well)[, ]+)?(?:i don['’]?t know|i do not know|no example|(?:it has )?never happened to me)[.!?\s]*$/i;
 const REPHRASE = /^(?:(?:please|could you)\s+)?(?:repeat|rephrase)(?:\s+(?:that|the question|it))?[?.!]*$|^what do you mean[?.!]*$/i;
 const SKIP = /^(?:please\s+)?(?:skip|next question)[?.!]*$/i;
 
