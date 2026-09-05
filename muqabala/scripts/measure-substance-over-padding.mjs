@@ -8,6 +8,7 @@
  * route is measured rather than a private helper.
  */
 
+import { gateFetch } from './live-gate-fetch.mjs';
 const BASE_URL = (process.argv[2] ?? process.env.BASE_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 const MAX_PADDING_GAIN = Number(process.env.MAX_PADDING_GAIN ?? 3);
 const MIN_SUBSTANCE_MARGIN = Number(process.env.MIN_SUBSTANCE_MARGIN ?? 12);
@@ -42,7 +43,7 @@ function cookieHeader(response) {
 }
 
 async function score(item) {
-  const create = await fetch(`${BASE_URL}/api/interviews`, {
+  const create = await gateFetch(`${BASE_URL}/api/interviews`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Origin: BASE_URL },
     body: JSON.stringify({
@@ -65,7 +66,7 @@ async function score(item) {
   });
   if (create.status !== 201) throw new Error(`${item.id}: interview start returned HTTP ${create.status}`);
   const interview = await create.json();
-  const response = await fetch(`${BASE_URL}/api/score`, {
+  const response = await gateFetch(`${BASE_URL}/api/score`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

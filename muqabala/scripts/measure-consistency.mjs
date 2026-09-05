@@ -23,6 +23,7 @@
  */
 
 import { register } from 'node:module';
+import { gateFetch } from './live-gate-fetch.mjs';
 register('./test-hooks/ts-paths.mjs', import.meta.url);
 const { getRole } = await import('../lib/roles');
 const { CreateInterviewSchema } = await import('../lib/interviews.ts');
@@ -115,14 +116,14 @@ async function scoreOnce(item) {
     roleId: item.roleId, roleTitle: role.title, language: item.lang,
     mode: 'guided', focusQuestionId: item.questionId, questions: [question],
   });
-  const create = await fetch(`${BASE_URL}/api/interviews`, {
+  const create = await gateFetch(`${BASE_URL}/api/interviews`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Origin: BASE_URL },
     body: JSON.stringify(payload),
   });
   if (create.status !== 201) throw new Error(`Interview start HTTP ${create.status} for ${item.id}`);
   const interview = await create.json();
-  const response = await fetch(`${BASE_URL}/api/score`, {
+  const response = await gateFetch(`${BASE_URL}/api/score`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
