@@ -29,7 +29,10 @@ export default async function CandidateEvaluationPage({ params, searchParams }: 
   const { data: owned } = await client!.from('interviews').select('id,candidate_name,employer_decision').eq('id', id).not('submitted_at', 'is', null).maybeSingle();
   if (!owned) notFound();
 
-  const { current, failed } = await loadEvaluationForEmployer(id, user.id);
+  const { current, failed, legacy } = await loadEvaluationForEmployer(id, user.id);
+  if (!current && legacy) {
+      return <main className={styles.unavailable}><Link href="/employer"><ArrowLeft aria-hidden="true" /> Employer dashboard</Link><div><p>Candidate evaluation</p><h1>Review this earlier interview</h1><p>This interview was submitted before timestamped evaluation reports were introduced. Its saved recordings and answer review are still available. A new timestamped report will not appear by retrying this page.</p><Link href={`/employer/interviews/${id}`}>Open recordings and answer review</Link></div></main>;
+  }
   if (!current) {
     return <main className={styles.unavailable}><Link href="/employer"><ArrowLeft aria-hidden="true" /> Employer dashboard</Link><div><p>Candidate evaluation</p><h1>{failed ? 'We could not open this evaluation' : 'Evaluation not yet available'}</h1><p>{failed ? 'The saved interview has not been changed. You can review the recordings while we resolve the report problem.' : 'The interview evidence is still being prepared. No incomplete report is shown.'}</p><Link href={`/employer/interviews/${id}`}>Review saved recordings</Link><p><Link href={`/employer/candidates/${id}/evaluation`}>Try the evaluation again</Link></p></div></main>;
   }

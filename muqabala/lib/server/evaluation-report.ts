@@ -2,6 +2,7 @@ import 'server-only';
 
 import { randomUUID } from 'node:crypto';
 import { reportOperationalFailure } from '@/lib/sentry-server';
+import { isLegacyUntimedEvaluation, LegacyEvaluationUnavailableError } from '@/lib/evaluation-availability';
 import {
   CandidateEvaluationReportSchema,
   REPORT_FORMAT_VERSION,
@@ -184,6 +185,9 @@ export async function generateCandidateEvaluationReport(
     loadStoredInterviewForReporting(interviewId),
   ]);
   if (!pack?.employer_id || !state?.screening || state.screening.pack_id !== interview.screening_pack_id) return null;
+  if (answers && isLegacyUntimedEvaluation(interview.submitted_at, answers)) {
+    throw new LegacyEvaluationUnavailableError();
+  }
   if (
     !answers?.length
     || state.status !== 'COMPLETE'
