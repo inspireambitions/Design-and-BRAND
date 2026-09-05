@@ -29,6 +29,7 @@ Date: 5 September 2026. Three specialist agents reviewed employer experience, as
 | E4 | P2 | Hold appears merely reviewed; exports expose pass/later | Dashboard and actual CSV/PDF tests | Shared Shortlisted / Not proceeding / Hold labels |
 | E5 | P1 | Interrupted decision leaves buttons stuck | Component action rejection reproduction | Catch/finally, preserve notes, refresh saved state, clear error |
 | E6 | P2 | Playback errors have no retry | Component signing/media failure reproduction | Fresh signed URL on retry |
+| E7 | P2 | Employer copy suggests an unverified 48-hour hiring outcome and Arabic still promises three answers | Rendered enabled employer page and bilingual copy | Remove numeric outcome promise, label sample report, align Arabic with eight main questions |
 | S1 | P1 | Quoted I don't know discards a valid detailed answer | Executed sanitise/engine path | Match a complete no-example response only |
 | S2 | P1 | Missing adaptive evidence earns 40 points and full coverage | Executed adapter and coverage reproduction | No invented credit or shared-summary evidence for absent competency |
 | S3 | P1 | AI failure becomes no evidence and lowers review order | Executed coverage model and ordering | Explicit unavailable state; chronological cohort order until analysis completes; preserve Unknown in share/export/email |

@@ -39,9 +39,9 @@ test('section 1: employer page hero and sample block change only behind the flag
   assert.match(component, /volume && !production \?/);
   assert.match(component, /hidden in production/);
 
-  assert.match(copy, /volumeTitle: '223 applications\. Seven worth your time\. 48 hours\.'/);
+  assert.match(copy, /volumeTitle: 'Review the evidence before you shortlist\.'/);
   assert.match(copy, /volumePrimary: 'Start a shortlist, free'/);
-  assert.match(copy, /volumeSecondary: 'See a real report'/);
+  assert.match(copy, /volumeSecondary: 'See a sample report'/);
   assert.match(copy, /volumeTrust: 'No automatic rejection\. No accent, face or personality scoring\. You decide\.'/);
   assert.match(copy, /volumeSampleTitle: 'What you get after a candidate answers'/);
 
