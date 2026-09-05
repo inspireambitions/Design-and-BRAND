@@ -162,19 +162,19 @@ export function AddCandidates({
       <section className={styles.card}>
         <p className={styles.eyebrow}>{workplace}: {roleTitle}</p>
         <h1>Add candidates</h1>
-        <p className={styles.lede}>Paste emails or phone numbers, or upload a CSV from your applicant system.</p>
+        <p className={styles.lede}>Paste email addresses, or upload a CSV from your applicant system. Each candidate needs an email address to receive an invitation.</p>
         {deliveryPanel}
 
         {closed && <p className={styles.warning}>This role has closed. Reopen it or create a new role before adding candidates.</p>}
 
         <div className={styles.inputRow}>
           <label className={styles.field}>
-            <span className={styles.srOnly}>Emails or phone numbers</span>
+            <span className={styles.srOnly}>Email addresses</span>
             <textarea
               value={text}
               onChange={(event) => { setText(event.target.value); setCsv(null); setFixes({}); }}
               rows={8}
-              placeholder={'amina@example.com\n+971 50 123 4567\nfarid@example.com, yusuf@example.com'}
+              placeholder={'amina@example.com\nfarid@example.com\nyusuf@example.com'}
               disabled={Boolean(csv)}
               aria-describedby="contact-summary"
             />
@@ -201,7 +201,7 @@ export function AddCandidates({
                   <input
                     type="text"
                     inputMode="email"
-                    placeholder="Corrected email or +phone"
+                    placeholder="Corrected email address"
                     aria-label={`Fix for ${row.raw.slice(0, 40)}`}
                     value={fixes[row.index] ?? ''}
                     onChange={(event) => setFixes((current) => ({ ...current, [row.index]: event.target.value }))}

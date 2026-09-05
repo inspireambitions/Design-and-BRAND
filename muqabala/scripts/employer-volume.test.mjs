@@ -148,7 +148,7 @@ test('section 2: invites table is owner-scoped, tokens are hashed and the candid
 
 test('section 2: add candidates screen renders the channel row only behind the WhatsApp flag', () => {
   const screen = read('components/AddCandidates.tsx');
-  assert.match(screen, /Paste emails or phone numbers, or upload a CSV from your applicant system\./);
+  assert.match(screen, /Paste email addresses, or upload a CSV from your applicant system\./);
   assert.match(screen, /\{whatsApp && \(\s*<fieldset/);
   assert.match(screen, /hasPhone \? 'both' : 'email'/);
   assert.match(screen, /disabled=\{!canSend\}/);

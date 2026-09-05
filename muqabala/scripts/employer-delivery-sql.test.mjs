@@ -24,6 +24,7 @@ test('employer delivery SQL executes against an isolated PostgreSQL engine', asy
     `);
     await db.exec(read('supabase/migrations/20260902120000_employer_volume_invites.sql'));
     await db.exec(read('supabase/migrations/20260905061702_employer_invite_delivery_reliability.sql'));
+    await db.exec(read('supabase/migrations/20260905130942_employer_message_acceptance_atomic.sql'));
     const reset = async () => {
       await db.exec('truncate public.employer_message_outbox, public.role_invites, public.interviews, public.screening_packs cascade');
       await db.query("insert into public.screening_packs(id,employer_id,expires_at) values ($1,$2,now()+interval '14 days')", [role, owner]);
@@ -90,7 +91,7 @@ test('employer delivery SQL executes against an isolated PostgreSQL engine', asy
     });
     await t.test('delivery summary is owner scoped and distinguishes provider acceptance from queued', async () => {
       await reset(); await queue([contact(), contact(1)]);
-      await db.exec("update public.employer_message_outbox set status='accepted' where invite_id=(select id from public.role_invites where email='test0@example.test')");
+      await db.exec("update public.employer_message_outbox set status='accepted', accepted_at=now() where invite_id=(select id from public.role_invites where email='test0@example.test')");
       const result = (await db.query('select public.employer_invite_delivery_status($1,$2) as result', [role, owner])).rows[0].result;
       assert.deepEqual(result, { queued: 1, accepted: 1, failed: 0, cancelled: 0 });
       await assert.rejects(db.query('select public.employer_invite_delivery_status($1,$2)', [role, other]), /Role not found/);
@@ -105,6 +106,29 @@ test('employer delivery SQL executes against an isolated PostgreSQL engine', asy
       assert.equal(await remind(), 0);
       await db.exec("update public.screening_packs set reminders_enabled=true; update public.role_invites set status='submitted'");
       assert.equal(await remind(), 0);
+    });
+    await t.test('acceptance and its timestamp roll back together when the invite update fails', async () => {
+      await reset(); await queue([contact()]); await claim();
+      await db.exec(`create trigger reject_test_stamp before update on public.role_invites for each row execute function public.reject_test_job()`);
+      await assert.rejects(db.exec("update public.employer_message_outbox set status='accepted', accepted_at=now(), lease_token=null"), /synthetic outage/);
+      const pending = (await db.query('select status, accepted_at, lease_token from public.employer_message_outbox')).rows[0];
+      assert.equal(pending.status, 'processing'); assert.equal(pending.accepted_at, null); assert.ok(pending.lease_token);
+      await db.exec('drop trigger reject_test_stamp on public.role_invites');
+      await db.exec("update public.employer_message_outbox set status='accepted', accepted_at=now(), lease_token=null");
+      const stamps = (await db.query('select i.invited_at=o.accepted_at as same from public.role_invites i join public.employer_message_outbox o on o.invite_id=i.id')).rows[0];
+      assert.equal(stamps.same, true);
+    });
+    await t.test('each reminder stamps its own clock and duplicate acceptance preserves it', async () => {
+      await reset(); await queue([contact()]);
+      await db.exec("update public.employer_message_outbox set status='accepted', accepted_at=now()");
+      for (const [kind, column] of [['reminder_1', 'first_reminder_at'], ['reminder_2', 'second_reminder_at'], ['completion', 'completion_reminder_at']]) {
+        await db.query('insert into public.employer_message_outbox(role_id,invite_id,kind,channel) select role_id,id,$1,\'email\' from public.role_invites', [kind]);
+        await db.query("update public.employer_message_outbox set status='accepted', accepted_at=now() where kind=$1", [kind]);
+        const stamp = (await db.query(`select ${column} as stamp from public.role_invites`)).rows[0].stamp;
+        assert.ok(stamp);
+        await db.query("update public.employer_message_outbox set status='accepted', accepted_at=now()+interval '1 day' where kind=$1", [kind]);
+        assert.deepEqual((await db.query(`select ${column} as stamp from public.role_invites`)).rows[0].stamp, stamp);
+      }
     });
     await t.test('shortlist marker rolls back on outage; each schedule queues once', async () => {
       await reset(); await queue([contact()]);
