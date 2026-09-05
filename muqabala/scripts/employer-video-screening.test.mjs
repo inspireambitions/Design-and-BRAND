@@ -177,7 +177,7 @@ test('adaptive screening never presents a saved response as a failed upload', ()
   assert.match(brainRoute, /allowDeterministicExtractionFallback: true/);
   assert.match(brainRoute, /code: 'analysis_unavailable'/);
   assert.doesNotMatch(brainRoute, /Retry without recording again/);
-  assert.match(flow, /type SaveFailureKind = 'upload' \| 'analysis' \| null/);
+  assert.match(flow, /type SaveFailureKind = 'upload' \| 'analysis' \| 'transcription' \| null/);
   assert.match(flow, /responseConfirmed \? 'analysis' : 'upload'/);
   assert.match(flow, /analysisFailed: 'Your response is saved\. Its analysis needs another try\.'/);
   assert.match(flow, /retryAnalysis: 'Retry analysis'/);

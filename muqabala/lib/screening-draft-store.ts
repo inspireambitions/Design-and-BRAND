@@ -19,6 +19,8 @@ export type ScreeningRecordingDraft = {
   transcriptSegments: TranscriptSegment[];
   transcriptTimingVersion: 'openai-whisper-segment-v1' | null;
   savedOnDeviceAt: string;
+  transcriptionAudio?: Blob | null;
+  needsTranscription?: boolean;
 };
 
 function draftKey(interviewId: string, questionIndex: number): string {
@@ -76,6 +78,7 @@ export async function saveScreeningRecordingDraft(
   transcript: string,
   transcriptSegments: TranscriptSegment[] = [],
   transcriptTimingVersion: 'openai-whisper-segment-v1' | null = null,
+  recovery: { transcriptionAudio?: Blob | null; needsTranscription?: boolean } = {},
 ): Promise<ScreeningRecordingDraft> {
   const draft: ScreeningRecordingDraft = {
     key: draftKey(interviewId, questionIndex),
@@ -88,6 +91,7 @@ export async function saveScreeningRecordingDraft(
     transcriptSegments,
     transcriptTimingVersion,
     savedOnDeviceAt: new Date().toISOString(),
+    ...recovery,
   };
   await runRequest('readwrite', (store) => store.put(draft));
   return draft;

@@ -5,5 +5,7 @@ studies/
 dependency-audit.json
 **/node_modules/
 **/.next/
+**/out/
+**/.playwright-cli/
 **/.env*
 !**/.env.example

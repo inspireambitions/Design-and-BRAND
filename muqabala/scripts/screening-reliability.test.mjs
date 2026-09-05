@@ -154,6 +154,21 @@ test('recording save resolves only after its recovery copy is committed', async 
   } finally { database.restore(); }
 });
 
+test('the recovery copy retains separate audio and its pending transcription marker', async () => {
+  const database = installDatabase();
+  try {
+    await saveScreeningRecordingDraft('synthetic', 0, {
+      blob: new Blob(['video']), mimeType: 'video/webm', durationSeconds: 5,
+    }, '', [], null, { transcriptionAudio: new Blob(['audio'], { type: 'audio/mp4' }), needsTranscription: true });
+    const draft = [...database.records.values()][0];
+    assert.equal(await draft.blob.text(), 'video');
+    assert.equal(await draft.transcriptionAudio.text(), 'audio');
+    assert.equal(draft.needsTranscription, true);
+    await clearScreeningRecordingDrafts();
+    assert.equal(database.records.size, 0);
+  } finally { database.restore(); }
+});
+
 test('sign-out purge rejects a late abort instead of reporting local evidence removed', async () => {
   const database = installDatabase({ abort: true, rows: [{ key: 'synthetic', transcript: 'synthetic' }] });
   try {
