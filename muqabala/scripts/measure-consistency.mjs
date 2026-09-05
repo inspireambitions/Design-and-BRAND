@@ -22,6 +22,11 @@
  * spread exceeds MAX_SPREAD, so it can run in CI.
  */
 
+import { register } from 'node:module';
+register('./test-hooks/ts-paths.mjs', import.meta.url);
+const { getRole } = await import('../lib/roles');
+const { CreateInterviewSchema } = await import('../lib/interviews.ts');
+
 const BASE_URL = (process.argv[2] ?? process.env.BASE_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 const RUNS = Number(process.env.RUNS ?? 5);
 /** Maximum acceptable max-min spread on the 0-100 scale, per answer. */
@@ -103,17 +108,17 @@ function cookieHeader(response) {
 }
 
 async function scoreOnce(item) {
+  const role = getRole(item.roleId);
+  const question = [...(role?.questions ?? []), ...(role?.bank ?? [])].find(q => q.id === item.questionId);
+  if (!question) throw new Error(`Unknown frozen question: ${item.questionId}`);
+  const payload = CreateInterviewSchema.parse({
+    roleId: item.roleId, roleTitle: role.title, language: item.lang,
+    mode: 'guided', focusQuestionId: item.questionId, questions: [question],
+  });
   const create = await fetch(`${BASE_URL}/api/interviews`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Origin: BASE_URL },
-    body: JSON.stringify({
-      roleId: item.roleId,
-      roleTitle: item.roleId === 'waiter' ? 'Waiter' : 'Front Office Agent',
-      language: item.lang,
-      mode: 'guided',
-      focusQuestionId: item.questionId,
-      questions: [{ id: item.questionId }],
-    }),
+    body: JSON.stringify(payload),
   });
   if (create.status !== 201) throw new Error(`Interview start HTTP ${create.status} for ${item.id}`);
   const interview = await create.json();
@@ -158,9 +163,12 @@ for (const item of CORPUS) {
   for (let i = 0; i < RUNS; i += 1) {
     try {
       const feedback = await scoreOnce(item);
+      console.log(JSON.stringify({ case: item.id, run: i + 1, status: feedback.status,
+        score: feedback.status === 'scored' ? feedback.score : null, source: feedback.source,
+        reason: feedback.unscoredReason ?? null }));
       statuses.add(feedback.status);
       sources.add(feedback.source);
-      if (feedback.status === 'scored') scores.push(feedback.score);
+      if (feedback.status === 'scored' && Number.isFinite(feedback.score)) scores.push(feedback.score);
     } catch (error) {
       console.error(`  ${item.id} run ${i + 1}: ${error.message}`);
       failed = true;
@@ -177,6 +185,7 @@ for (const item of CORPUS) {
   }
 
   if (EXPECT_AI) {
+    if (scores.length !== RUNS) failed = true;
     // Item-level live-gate checks: no fallback results, and no declined Arabic.
     if (!row.sources.every((src) => src === 'ai') || row.sources.length === 0) {
       console.error(`  FAIL: ${item.id} was served by [${row.sources.join(',') || 'nothing'}], expected the AI path only.`);

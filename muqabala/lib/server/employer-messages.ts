@@ -101,14 +101,18 @@ async function buildShortlistForRole(
 }
 
 /** Drains the employer message outbox. The invite link is rebuilt from the sealed token on each send. */
-export async function processEmployerMessages(options: { roleId?: string; limit?: number; fetchImpl?: typeof fetch } = {}) {
-  const admin = createAdminClient();
+export function employerEmailConfigured(): boolean {
+  return Boolean(process.env.RESEND_TRANSACTIONAL_API_KEY || process.env.RESEND_FEEDBACK_API_KEY);
+}
+
+export async function processEmployerMessages(options: { roleId?: string; limit?: number; fetchImpl?: typeof fetch; adminClient?: ReturnType<typeof createAdminClient> } = {}) {
+  const admin = options.adminClient ?? createAdminClient();
   const apiKey = process.env.RESEND_TRANSACTIONAL_API_KEY || process.env.RESEND_FEEDBACK_API_KEY;
   if (!admin || !apiKey) return { configured: false, claimed: 0, accepted: 0, failed: 0 };
 
   const leaseToken = randomUUID();
   const { data, error } = await admin.rpc('claim_employer_messages', {
-    p_limit: options.limit ?? 20,
+    p_limit: Math.min(options.limit ?? 5, 5),
     p_lease_token: leaseToken,
     p_role_id: options.roleId ?? null,
   });
@@ -117,8 +121,11 @@ export async function processEmployerMessages(options: { roleId?: string; limit?
   let accepted = 0;
   let failed = 0;
 
-  const mark = (job: OutboxRow, patch: Record<string, unknown>) =>
-    admin.from('employer_message_outbox').update({ ...patch, updated_at: new Date().toISOString() }).eq('id', job.id).eq('lease_token', leaseToken);
+  const mark = async (job: OutboxRow, patch: Record<string, unknown>) => {
+    const { data, error } = await admin.from('employer_message_outbox')
+      .update({ ...patch, updated_at: new Date().toISOString() }).eq('id', job.id).eq('lease_token', leaseToken).select('id');
+    if (error || !data?.length) throw new Error('employer_message_state_not_saved');
+  };
 
   const retry = (job: OutboxRow, status: number | null, code: string) => {
     const plan = notificationRetry(status, job.attempt_count);
@@ -145,10 +152,15 @@ export async function processEmployerMessages(options: { roleId?: string; limit?
       continue;
     }
 
-    const [{ data: pack }, { data: invite }] = await Promise.all([
+    const [{ data: pack, error: packError }, { data: invite, error: inviteError }] = await Promise.all([
       admin.from('screening_packs').select('id,public_code,workplace,signed_token,expires_at').eq('id', job.role_id).maybeSingle(),
-      job.invite_id ? admin.from('role_invites').select('id,candidate_ref,email,phone,name,status,token_cipher').eq('id', job.invite_id).maybeSingle() : Promise.resolve({ data: null }),
+      job.invite_id ? admin.from('role_invites').select('id,candidate_ref,email,phone,name,status,token_cipher').eq('id', job.invite_id).eq('role_id', job.role_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
     ]);
+    if (packError || inviteError) {
+      await retry(job, null, 'scope_lookup_failed');
+      failed += 1;
+      continue;
+    }
     const inviteRow = invite as InviteRow | null;
     const rawToken = inviteRow ? openToken(inviteRow.token_cipher) : null;
     const link = pack && rawToken ? { link: inviteLink(pack.public_code, rawToken) } : null;

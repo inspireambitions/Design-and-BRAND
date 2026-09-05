@@ -77,6 +77,7 @@ export type EmployerVolumeEventName =
   | 'sample_report_opened'
   | 'role_created'
   | 'invites_sent'
+  | 'invites_queued'
   | 'reminder_sent'
   | 'candidate_answered'
   | 'shortlist_email_opened'

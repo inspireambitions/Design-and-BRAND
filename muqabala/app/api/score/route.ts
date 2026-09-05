@@ -44,7 +44,7 @@ export const maxDuration = 60;
  * candidate practising: it is someone using a public endpoint as a free model.
  */
 const MAX_TRANSCRIPT_CHARS = 6000;
-const RUBRIC_VERSION = 'coach-content-rubric-2026-09-04';
+const RUBRIC_VERSION = 'coach-content-rubric-2026-09-05';
 
 const openRouterStarts: number[] = [];
 const configuredOpenRouterLimit = Number(process.env.OPENROUTER_RPM_LIMIT || 9);
@@ -217,6 +217,8 @@ Your job is to make the candidate feel capable and clear about what to do next. 
 Write strengths, improvements and coach_tip in plain words a 12 year old could read. Each strength, each improvement and the coach_tip is at most two short sentences. No lists inside a sentence, no jargon, no long clauses. Say the one thing that matters and stop.
 
 Score each listed competency 0-10 against its rubric anchor, using the exact competency ids given to you and no others. Treat repeated or rephrased evidence as one piece of evidence. Quote the candidate's actual words as evidence for each one, and quote a DIFFERENT part of the answer for each competency: the same line must never appear as evidence twice. If no part of the answer demonstrates a competency, set its evidence to an empty string rather than quoting an unrelated line.
+
+Every non-empty evidence field must be one short, continuous extract copied exactly from the transcript. Do not correct grammar, translate, spell out numbers, summarise, combine separate extracts, or add an ellipsis. Preserve the language and wording of the original even when the report language is different. Before returning, check that each evidence string can be found as a continuous substring in the transcript. If it cannot, replace it with an exact extract that supports the score, or use an empty string and a score below 6 when no supporting extract exists.
 
 Set unscorable to true only when the transcript is too garbled or too short to judge fairly. Set unscorable_reason to too_short or unclear to record which one you found. Otherwise set it to none. When an answer is unscorable, explain why in the headline and improvements, and do not invent scores.`;
 

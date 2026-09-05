@@ -152,7 +152,7 @@ test('section 2: add candidates screen renders the channel row only behind the W
   assert.match(screen, /\{whatsApp && \(\s*<fieldset/);
   assert.match(screen, /hasPhone \? 'both' : 'email'/);
   assert.match(screen, /disabled=\{!canSend\}/);
-  assert.match(screen, /Sent to \{sent\.sent\}/);
+  assert.match(screen, /Invites queued for \{sent\.queued\}/);
   const page = read('app/employer/roles/[roleId]/candidates/add/page.tsx');
   assert.match(page, /if \(!flags\.volume\) notFound\(\)/);
 });
@@ -414,7 +414,7 @@ test('section 7: every brief event exists and no event carries a name, email or 
 
   const fired = [
     ['components/EmployerProofCreate.tsx', ['employer_landing_viewed', 'sample_report_opened', 'role_created']],
-    ['components/AddCandidates.tsx', ['invites_sent']],
+    ['components/AddCandidates.tsx', ['invites_queued']],
     ['lib/server/employer-messages.ts', ['reminder_sent']],
     ['app/api/screening/interviews/[id]/submit/route.ts', ['candidate_answered']],
     ['app/auth/confirm/route.ts', ['shortlist_email_opened']],
@@ -426,7 +426,7 @@ test('section 7: every brief event exists and no event carries a name, email or 
     for (const event of events) assert.match(source, new RegExp(`'${event}'`), `${event} fired from ${file}`);
   }
   const invites = read('components/AddCandidates.tsx');
-  assert.match(invites, /track\('invites_sent', employerVolumeProps\(true, \{ role_id: roleId, channel: 'email', count: body\.byEmail \}\)\)/);
+  assert.match(invites, /track\('invites_queued', employerVolumeProps\(true, \{ role_id: roleId, channel: 'email', count: body\.byEmail \}\)\)/);
   assert.doesNotMatch(invites, /track\([^)]*(email:|phone:|name:)/, 'no contact details in invite events');
 });
 

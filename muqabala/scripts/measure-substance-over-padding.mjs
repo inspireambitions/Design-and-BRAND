@@ -86,7 +86,7 @@ async function score(item) {
   const body = await response.json();
   const feedback = body.feedback;
   if (feedback?.status !== 'scored' || feedback?.source !== 'ai') {
-    throw new Error(`${item.id}: expected a scored AI response`);
+    throw new Error(`${item.id}: expected a scored AI response (${feedback?.status}, ${feedback?.source}, ${feedback?.unscoredReason ?? 'unknown'})`);
   }
   return feedback.score;
 }

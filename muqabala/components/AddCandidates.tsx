@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { employerVolumeProps, track } from '@/lib/analytics';
 import {
@@ -15,7 +15,8 @@ import styles from './AddCandidates.module.css';
 
 type Channel = 'email' | 'whatsapp' | 'both';
 
-type SentSummary = { sent: number; byEmail: number; byWhatsApp: number; duplicates: number; invalid: number };
+type SentSummary = { queued: number; byEmail: number; byWhatsApp: number; duplicates: number; invalid: number };
+type DeliveryStatus = { queued: number; accepted: number; failed: number; cancelled: number; configured: boolean };
 
 const REASON_COPY: Record<InvalidRow['reason'], string> = {
   no_contact: 'No email or phone number found',
@@ -43,6 +44,25 @@ export function AddCandidates({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState<SentSummary | null>(null);
+  const [delivery, setDelivery] = useState<DeliveryStatus | null>(null);
+  const [deliveryError, setDeliveryError] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
+  const refreshDelivery = useCallback(async () => {
+    setChecking(true);
+    try {
+      const response = await fetch(`/api/employer/roles/${roleId}/invites`, { cache: 'no-store' });
+      if (!response.ok) throw new Error('unavailable');
+      const body = await response.json() as DeliveryStatus;
+      if (![body.queued, body.accepted, body.failed, body.cancelled].every(n => Number.isInteger(n) && n >= 0)) throw new Error('invalid');
+      setDelivery(body);
+      setDeliveryError(null);
+    } catch {
+      setDeliveryError('Could not refresh delivery status. Try checking again.');
+    } finally {
+      setChecking(false);
+    }
+  }, [roleId]);
+  useEffect(() => { void refreshDelivery(); }, [refreshDelivery, sent]);
 
   const parsed: ParseResult = useMemo(() => {
     const base = csv ? parseContacts(csv.content, 'csv') : parseContacts(text, 'text');
@@ -85,19 +105,35 @@ export function AddCandidates({
         body: JSON.stringify({ contacts: parsed.valid satisfies Contact[], channel: effectiveChannel }),
       });
       const body = await response.json().catch(() => ({})) as Partial<SentSummary> & { error?: string };
-      if (!response.ok || typeof body.sent !== 'number') {
+      if (!response.ok || typeof body.queued !== 'number') {
         setError(body.error ?? 'Invites could not be sent. Try again.');
         return;
       }
       setSent(body as SentSummary);
-      if (body.byEmail) track('invites_sent', employerVolumeProps(true, { role_id: roleId, channel: 'email', count: body.byEmail }));
-      if (body.byWhatsApp) track('invites_sent', employerVolumeProps(true, { role_id: roleId, channel: 'whatsapp', count: body.byWhatsApp }));
+      if (body.byEmail) track('invites_queued', employerVolumeProps(true, { role_id: roleId, channel: 'email', count: body.byEmail }));
+      if (body.byWhatsApp) track('invites_queued', employerVolumeProps(true, { role_id: roleId, channel: 'whatsapp', count: body.byWhatsApp }));
     } catch {
       setError('Invites could not be sent. Try again.');
     } finally {
       setSending(false);
     }
   }
+
+  const deliveryPanel = (
+    <section aria-label="Invitation delivery" aria-live="polite">
+      <h2>Invitation delivery for this role</h2>
+      {delivery && <>
+        <p>{delivery.queued} queued · {delivery.accepted} sent to email service · {delivery.failed} failed · {delivery.cancelled} cancelled</p>
+        <p className={styles.note}>Sent to the email service does not confirm arrival in the candidate&apos;s inbox.</p>
+        {!delivery.configured && <p className={styles.warning}>Email invitations are temporarily unavailable.</p>}
+        {delivery.failed > 0 && <p className={styles.warning}>Some invitations could not be sent. Contact support before sending them again.</p>}
+      </>}
+      {deliveryError && <p className={styles.warning} role="alert">{deliveryError}</p>}
+      <button type="button" className={styles.secondary} disabled={checking} onClick={() => void refreshDelivery()}>
+        {checking ? 'Checking delivery…' : 'Check delivery status'}
+      </button>
+    </section>
+  );
 
   if (sent) {
     const channels = [`${sent.byEmail} by email`];
@@ -106,14 +142,15 @@ export function AddCandidates({
       <main className={[styles.page, 'employer-light-theme'].join(' ')}>
         <section className={styles.card} aria-live="polite">
           <p className={styles.eyebrow}>{workplace}</p>
-          <h1>Sent to {sent.sent} {sent.sent === 1 ? 'candidate' : 'candidates'}.</h1>
-          <p className={styles.lede}>{channels.join(', ')}.</p>
+          <h1>Invites queued for {sent.queued} {sent.queued === 1 ? 'candidate' : 'candidates'}.</h1>
+          <p className={styles.lede}>{channels.join(', ')}. Delivery is not yet confirmed.</p>
           {(sent.duplicates > 0 || sent.invalid > 0) && (
             <p className={styles.note}>
               {sent.duplicates > 0 ? `${sent.duplicates} already invited. ` : ''}
               {sent.invalid > 0 ? `${sent.invalid} could not be used.` : ''}
             </p>
           )}
+          {deliveryPanel}
           <Link href="/employer" className={styles.primary}>Back to {roleTitle}</Link>
         </section>
       </main>
@@ -126,6 +163,7 @@ export function AddCandidates({
         <p className={styles.eyebrow}>{workplace}: {roleTitle}</p>
         <h1>Add candidates</h1>
         <p className={styles.lede}>Paste emails or phone numbers, or upload a CSV from your applicant system.</p>
+        {deliveryPanel}
 
         {closed && <p className={styles.warning}>This role has closed. Reopen it or create a new role before adding candidates.</p>}
 
