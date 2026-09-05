@@ -5,7 +5,8 @@ import { ArrowLeft } from '@phosphor-icons/react/dist/ssr';
 import { EvaluationControls } from '@/components/EvaluationControls';
 import { EvaluationReportView } from '@/components/EvaluationReportView';
 import { DashboardDecisionActions } from '@/components/DashboardDecisionActions';
-import { generateCandidateEvaluationReport, loadOwnedEvaluationReport, loadOwnedEvaluationReportVersion, recordEvaluationAccess } from '@/lib/server/evaluation-report';
+import { loadOwnedEvaluationReportVersion, recordEvaluationAccess } from '@/lib/server/evaluation-report';
+import { loadEvaluationForEmployer } from '@/lib/server/evaluation-load';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient, currentUser } from '@/lib/supabase/server';
 import { openPrivateText } from '@/lib/server/private-data';
@@ -28,13 +29,9 @@ export default async function CandidateEvaluationPage({ params, searchParams }: 
   const { data: owned } = await client!.from('interviews').select('id,candidate_name,employer_decision').eq('id', id).not('submitted_at', 'is', null).maybeSingle();
   if (!owned) notFound();
 
-  let current = await loadOwnedEvaluationReport(id, user.id);
+  const { current, failed } = await loadEvaluationForEmployer(id, user.id);
   if (!current) {
-    await generateCandidateEvaluationReport(id);
-    current = await loadOwnedEvaluationReport(id, user.id);
-  }
-  if (!current) {
-    return <main className={styles.unavailable}><Link href="/employer"><ArrowLeft aria-hidden="true" /> Employer dashboard</Link><div><p>Candidate evaluation</p><h1>Evaluation not yet available</h1><span>The interview evidence is still being prepared. No incomplete report is shown.</span></div></main>;
+    return <main className={styles.unavailable}><Link href="/employer"><ArrowLeft aria-hidden="true" /> Employer dashboard</Link><div><p>Candidate evaluation</p><h1>{failed ? 'We could not open this evaluation' : 'Evaluation not yet available'}</h1><p>{failed ? 'The saved interview has not been changed. You can review the recordings while we resolve the report problem.' : 'The interview evidence is still being prepared. No incomplete report is shown.'}</p><Link href={`/employer/interviews/${id}`}>Review saved recordings</Link><p><Link href={`/employer/candidates/${id}/evaluation`}>Try the evaluation again</Link></p></div></main>;
   }
 
   const requestedVersion = Number((await searchParams).version);
