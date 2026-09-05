@@ -4766,10 +4766,12 @@ textarea.landing-advert-box {
 
 .landing-role-list > li {
   display: flex;
+  min-width: 0;
 }
 
 .landing-role-card {
   flex: 1 1 auto;
+  min-width: 0;
   gap: 0.4rem;
   align-items: flex-start;
 }

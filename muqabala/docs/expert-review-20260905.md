@@ -22,6 +22,7 @@ Date: 5 September 2026. Three specialist agents reviewed employer experience, as
 | A5 | P1 | Temporary restore error discards the saved interview pointer | UniversalInterview source | Preserve pointer and offer retry |
 | A6 | P1 | Feedback failure leaves a loading dead end | UniversalInterview source | Retry feedback without resubmitting answers; label retry answer field |
 | A7 | P2 | Adaptive profile/JD submission lacks upfront data notice | Live adaptive setup | Notice before blueprint action |
+| A8 | P2 | Arabic role cards create horizontal scrolling on a narrow phone screen | Browser measured scroll width 454px for client width 375px | Allow flex cards and grid items to shrink within the viewport |
 | E1 | P2 | Signed-in dashboard button opens creation section | EmployerProofCreate source | Direct link to employer dashboard |
 | E2 | P2 | Seeking a video can navigate to another candidate | CandidateReview page-wide touch handler | Remove page-wide swipe, keep explicit Next |
 | E3 | P2 | Enabled employer dashboard omits early deletion | Volume flag confirmed live; conditional review source | Restore existing controlled delete action |
