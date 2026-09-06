@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { track } from '@/lib/analytics';
 import type { StringKey } from '@/lib/i18n';
 import { useLang } from './LanguageProvider';
-import { MuqabalaMark } from './MarketingSite';
+import { Brand } from './Brand';
+import { usePathname } from 'next/navigation';
 
 type InternalLink = { id: string; label: StringKey; href: string; external?: false };
 type ExternalLink = { id: string; label: StringKey; href: string; external: true };
@@ -98,15 +99,33 @@ function FooterGroup({ group, mobile = false }: { group: (typeof groups)[number]
 }
 
 export function SiteFooter() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
+  const path = usePathname();
+  const employer = path === '/for-employers' || path.startsWith('/for-employers/') || path === '/employer' || path.startsWith('/employer/');
   const trackSupport = (id: string) => track('footer_link_clicked', { link_id: id });
+
+  if (employer) return (
+    <footer className="site-footer site-footer-employer">
+      <div className="site-footer-inner">
+        <div className="site-footer-intro">
+          <div><Brand inverse /><p>{lang === 'ar' ? 'عينات عمل لفرق التوظيف في الخليج.' : 'Work samples for Gulf hiring teams.'}</p><p className="site-footer-owner">Muqabala by Inspire Ambitions</p></div>
+          <nav className="employer-footer-links" aria-label={lang === 'ar' ? 'روابط التذييل' : 'Footer navigation'}>
+            <Link href="/">{lang === 'ar' ? 'للمرشحين' : 'For candidates'}</Link>
+            <Link href="/privacy">{t('footerPrivacy')}</Link>
+            <Link href="/terms">{t('footerTerms')}</Link>
+            <Link href="/contact">{t('footerContact')}</Link>
+          </nav>
+        </div>
+      </div>
+    </footer>
+  );
 
   return (
     <footer className="site-footer">
       <div className="site-footer-inner">
         <div className="site-footer-intro">
           <div className="site-footer-brand-block">
-            <div className="site-footer-brand"><MuqabalaMark inverse /><span>Muqabala</span></div>
+            <Brand inverse className="site-footer-brand" />
             <p>{t('footerPromise')}</p>
             <p className="site-footer-owner">Muqabala by Inspire Ambitions</p>
           </div>

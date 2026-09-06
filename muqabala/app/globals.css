@@ -29,6 +29,10 @@
 
   --radius: 12px;
   --radius-lg: 18px;
+  --control-radius: 0.75rem;
+  --control-height: 3rem;
+  --control-weight: 750;
+  --header-height: 4.5rem;
   --shadow: 0 1px 2px rgba(22, 36, 31, 0.06), 0 8px 24px -12px rgba(22, 36, 31, 0.18);
   --shadow-lift: 0 2px 4px rgba(22, 36, 31, 0.08), 0 16px 36px -16px rgba(22, 36, 31, 0.28);
 
@@ -300,10 +304,11 @@ body[dir='rtl'] .eyebrow {
   justify-content: center;
   gap: 0.5rem;
   padding: 0.72rem 1.25rem;
-  border-radius: 999px;
+  border-radius: var(--control-radius);
+  min-height: var(--control-height);
   border: 1px solid transparent;
   font-family: var(--font-display);
-  font-weight: 650;
+  font-weight: var(--control-weight);
   font-size: 0.95rem;
   line-height: 1;
   text-decoration: none;
@@ -353,7 +358,8 @@ body[dir='rtl'] .eyebrow {
   background: transparent;
   color: var(--ink-soft);
   padding: 0.5rem 0.75rem;
-  border-radius: 999px;
+  border-radius: var(--control-radius);
+  min-height: 44px;
   border: 1px solid var(--line);
   font-size: 0.85rem;
 }
@@ -3079,17 +3085,17 @@ body[dir='rtl'] .report-unscored-status {
 }
 
 .marketing-button {
-  min-height: 3.25rem;
+  min-height: var(--control-height);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0.78rem 1.2rem;
   border: 1px solid var(--jade);
-  border-radius: 0.72rem;
+  border-radius: var(--control-radius);
   background: var(--jade);
   box-shadow: 0 10px 28px -18px color-mix(in srgb, var(--jade) 65%, transparent);
   color: white;
-  font-weight: 800;
+  font-weight: var(--control-weight);
   line-height: 1.1;
   text-decoration: none;
   transition: transform 160ms ease-out, background 160ms ease-out;
@@ -4996,6 +5002,61 @@ body[dir='rtl'] .readiness-coverage-title {
 
 .feedback-heading-gold {
   color: var(--gold);
+}
+
+/* Shared identity and navigation, across marketing and the practice entry. */
+.brand > svg { flex: none; color: var(--jade-deep); }
+.brand-owner {
+  color: var(--ink-soft);
+  font-family: var(--font-body);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+.topbar { min-height: var(--header-height); }
+.skip-link {
+  position: fixed;
+  z-index: 1000;
+  inset-inline-start: 1rem;
+  top: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--control-radius);
+  background: var(--jade-deep);
+  color: white;
+  font-weight: 750;
+  transform: translateY(-160%);
+}
+.skip-link:focus { transform: translateY(0); }
+#main-content { scroll-margin-top: calc(var(--header-height) + 1rem); }
+.marketing-mobile-cta[hidden] { display: none; }
+.marketing-site:has(.marketing-mobile-menu[open]) .marketing-mobile-cta,
+.marketing-site:has(main :focus-visible) .marketing-mobile-cta { display: none; }
+.retry-example-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+.retry-example-grid > article { margin: 0; padding: 1.5rem; }
+.retry-example-grid .evidence-improve,
+.retry-example-grid .evidence-result { margin-top: 1.25rem; }
+.retry-example-note { margin-top: 1rem; max-width: 65ch; }
+.privacy-promises { display: grid; gap: 0.5rem; padding-inline-start: 1.2rem; margin-block: 1.5rem 0; }
+.practice-entry .hero { text-align: start; padding-top: 1.5rem; }
+.practice-advert-link { display: inline-block; margin-top: 1rem; }
+.practice-specific-vacancy { margin-top: 3rem; scroll-margin-top: 1.5rem; }
+.practice-entry .foot { display: grid; gap: 0.5rem; }
+.practice-entry .role-card { min-width: 0; }
+.practice-entry .landing-role-line { white-space: normal; overflow: visible; }
+.site-footer .brand { color: #fff; }
+.site-footer .brand > svg { color: #fff; }
+.site-footer-employer .site-footer-intro { margin-bottom: 0; }
+.employer-footer-links { display: flex; flex-wrap: wrap; gap: 1.25rem; align-items: center; }
+.employer-footer-links a { color: #fff; min-height: 44px; display: inline-flex; align-items: center; }
+@media (max-width: 700px) {
+  .brand-owner { display: none; }
+  .retry-example-grid { grid-template-columns: 1fr; }
+  .marketing-hero { gap: 1.75rem; }
+  .marketing-hero .marketing-lede { margin-top: 1rem; }
+  .marketing-hero .marketing-cta-row { margin-top: 1.25rem; }
+  .marketing-hero .marketing-trust-line { margin-top: 1rem; }
+  .marketing-site { padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); }
 }
 
 .coach-tip strong.feedback-heading-tip {

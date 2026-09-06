@@ -6,6 +6,7 @@ import { popularRoleCards, type RoleCard } from '@/lib/landing/role-cards';
 import { AdvertPasteBox } from './landing/AdvertPasteBox';
 import { useLang } from './LanguageProvider';
 import { TopBar } from './TopBar';
+import { SkipLink } from './SkipLink';
 
 /**
  * The /practice landing. Two taps to the first question: paste an advert (or
@@ -29,13 +30,16 @@ export function HomeView({ roles }: { roles: RoleCard[] }) {
     : popular;
 
   return (
-    <div className="shell">
+    <div className="shell practice-entry">
+      <SkipLink />
       <TopBar />
 
+      <main id="main-content" tabIndex={-1}>
       <section className="hero hero-compact">
         <p className="eyebrow">{t('tagline')}</p>
-        <h1>{t('heroTitle')}</h1>
-        <p className="lede">{t('heroBody')}</p>
+        <h1>{lang === 'ar' ? 'تدرّب على إجابة واحدة.' : 'Practise one answer.'}</h1>
+        <p className="lede">{lang === 'ar' ? 'اختر وظيفة، ثم أجب وراجع الملاحظات وحاول مجدداً. التدريب خاص بك.' : 'Choose a role. Give your answer, read your feedback and try again. Your practice stays private.'}</p>
+        <a className="marketing-text-link practice-advert-link" href="#job-ad">{lang === 'ar' ? 'هل تستعد لوظيفة محددة؟ استخدم إعلان الوظيفة.' : 'Preparing for a specific vacancy? Use your job advert.'}</a>
         <div className="hero-points">
           <span className="chip chip-jade">{t('point1')}</span>
           <span className="chip chip-jade">{t('point2')}</span>
@@ -43,19 +47,9 @@ export function HomeView({ roles }: { roles: RoleCard[] }) {
         </div>
       </section>
 
-      <AdvertPasteBox />
-
-      {process.env.NEXT_PUBLIC_UNIVERSAL_BRAIN_V2 === 'on' && <section className="card row-between brain-entry-card">
-        <div>
-          <h2>{t('brainTryAdaptive')}</h2>
-          <p className="muted">{t('brainTryAdaptiveBody')}</p>
-        </div>
-        <Link href="/practice/universal" className="btn btn-primary">{t('brainTryAdaptive')}</Link>
-      </section>}
-
       <section className="stack" id="popular-roles" aria-labelledby="popular-roles-heading">
         <div>
-          <h2 id="popular-roles-heading">{browseAll ? t('allRoles') : t('landingRolesHeading')}</h2>
+          <h2 id="popular-roles-heading">{browseAll ? t('allRoles') : (lang === 'ar' ? 'اختر وظيفتك' : 'Choose your role')}</h2>
           <p className="muted" style={{ marginTop: '0.35rem' }}>
             {t('pickRoleBody')}
           </p>
@@ -86,7 +80,7 @@ export function HomeView({ roles }: { roles: RoleCard[] }) {
         <ul className="grid grid-roles landing-role-list">
           {visible.map((role) => (
             <li key={role.id}>
-              <Link href={`/practice/${role.id}`} className="role-card landing-role-card">
+              <Link href={`/practice/${role.id}${role.quickQuestionId ? `?focus=${encodeURIComponent(role.quickQuestionId)}` : ''}`} className="role-card landing-role-card">
                 <span className="chip chip-jade">
                   {lang === 'ar' ? role.industryAr : role.industry}
                 </span>
@@ -95,7 +89,7 @@ export function HomeView({ roles }: { roles: RoleCard[] }) {
                   {lang === 'ar' ? role.blurbAr : role.blurb}
                 </p>
                 <p className="tiny" style={{ margin: 0 }}>
-                  {role.questionCount} {t('landingRoleQuestions')} · {t('expectQuickTime')}
+                  {lang === 'ar' ? 'تدريب سريع: سؤال واحد' : 'Quick practice: one question'}
                 </p>
               </Link>
             </li>
@@ -118,13 +112,17 @@ export function HomeView({ roles }: { roles: RoleCard[] }) {
         </div>
       </section>
 
-      <footer className="foot" style={{ flexDirection: 'column', gap: '0.5rem' }}>
-        <span>{t('scoringPolicy')}</span>
-        <div className="row-between" style={{ width: '100%' }}>
-          <span>{t('privacy')}</span>
-          <span>Muqabala · Inspire Ambitions</span>
-        </div>
-      </footer>
+      <div id="job-ad" className="practice-specific-vacancy">
+        <AdvertPasteBox />
+        {process.env.NEXT_PUBLIC_UNIVERSAL_BRAIN_V2 === 'on' && (
+          <p className="muted"><Link href="/practice/universal">{lang === 'ar' ? 'أو ابدأ مقابلة نصية كاملة' : 'Or start a full text interview'}</Link></p>
+        )}
+      </div>
+      <aside className="foot" aria-label={lang === 'ar' ? 'خصوصية التدريب' : 'Practice privacy'}>
+        <p>{t('scoringPolicy')}</p>
+        <p>{t('privacy')}</p>
+      </aside>
+      </main>
     </div>
   );
 }

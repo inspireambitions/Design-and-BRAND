@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useLang } from './LanguageProvider';
+import { Brand } from './Brand';
 
 export function TopBar({
   showProgressLink = true,
@@ -19,21 +20,7 @@ export function TopBar({
 
   return (
     <header className="topbar">
-      {locked ? (
-        <span className="brand">
-          <span className="brand-mark" aria-hidden="true">
-            م
-          </span>
-          Muqabala
-        </span>
-      ) : (
-        <Link href="/" className="brand">
-          <span className="brand-mark" aria-hidden="true">
-            م
-          </span>
-          Muqabala
-        </Link>
-      )}
+      <Brand locked={locked} owner={lang === 'ar' ? 'من إنسباير أمبيشنز' : 'by Inspire Ambitions'} />
       <div className="topbar-actions">
         {showProgressLink && (
           <Link href="/account" className="btn-ghost" style={{ textDecoration: 'none' }}>
