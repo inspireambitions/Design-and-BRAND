@@ -18,6 +18,7 @@ import { SignOutButton } from '@/components/SignOutButton';
 import {
   candidatePage,
   dashboardSummary,
+  dashboardRolePage,
   employerDecisionLabel,
   normaliseEmployerDecision,
   packHealth,
@@ -149,7 +150,7 @@ function decisionCopy(submission: SubmissionIndex) {
     ?? (submission.employer_reviewed_at ? 'Reviewed' : 'Waiting for review');
 }
 
-export default async function EmployerDashboardPage({ searchParams }: { searchParams: Promise<{ page?: string | string[] }> }) {
+export default async function EmployerDashboardPage({ searchParams }: { searchParams: Promise<{ page?: string | string[]; roles?: string | string[]; rolePage?: string | string[] }> }) {
   const user = await currentUser();
   if (!user) redirect('/sign-in?next=/employer');
   after(async () => { await processScreeningNotifications({ limit: 5 }); });
@@ -161,6 +162,8 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
     .eq('employer_id', user.id)
     .order('created_at', { ascending: false });
   const packs = (packRows ?? []) as unknown as Pack[];
+  const { page, roles, rolePage } = await searchParams;
+  const roleList = dashboardRolePage(packs, roles, rolePage);
   const packIds = packs.map((pack) => pack.id);
   const { data: inviteRows } = volume && packIds.length
     ? await client!.from('role_invites')
@@ -170,7 +173,7 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
   const invites = (inviteRows ?? []) as InviteRow[];
   const strips = new Map<string, Awaited<ReturnType<typeof loadRoleStrip>>>();
   if (volume) {
-    for (const pack of packs.slice(0, 4)) strips.set(pack.id, await loadRoleStrip(client!, pack.id));
+    for (const pack of roleList.rows) strips.set(pack.id, await loadRoleStrip(client!, pack.id));
   }
   const whatsApp = whatsAppEnabled();
 
@@ -200,8 +203,9 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
         .order('submitted_at', { ascending: false })
     : { data: [] };
   const submissions = (interviewRows ?? []) as SubmissionIndex[];
-  const { page } = await searchParams;
   const paging = candidatePage(page, submissions.length);
+  const dashboardUrl = (candidatePageNumber: number, roleFilter = roleList.filter, rolePageNumber = roleList.paging.page, anchor = 'roles') =>
+    `/employer?page=${candidatePageNumber}&roles=${roleFilter}&rolePage=${rolePageNumber}#${anchor}`;
   const { data: pageRows } = packIds.length && submissions.length
     ? await client!.from('interviews')
         .select(SUBMISSION_ROW_COLUMNS)
@@ -257,15 +261,13 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
 
       <main className={styles.main}>
         <section className={styles.intro}>
-          <div><h1>Your hiring, this week.</h1><p>Every role, from shared link to decision, in one glance.</p></div>
+          <div><h1>Your hiring overview.</h1><p>Every role, from shared link to decision, in one glance.</p></div>
           <time>{currentDate()}</time>
         </section>
 
         <section className={styles.journeyCard} aria-labelledby="journey-heading">
-          <div className={styles.cardHeading}><p id="journey-heading">The journey</p><span>This week · all roles</span></div>
+          <div className={styles.cardHeading}><p id="journey-heading">The journey</p><span>All time · all roles</span></div>
           <div className={styles.journey}>
-            <article><strong>{summary.openedLinks}</strong><h2>Opened the link</h2><p>From {packs.length} shared {packs.length === 1 ? 'link' : 'links'}</p></article>
-            <ArrowRight aria-hidden="true" />
             <article><strong>{technicalAttempts.length}</strong><h2>Started answering</h2><p>{startedLastDay} in the last 24 hours</p></article>
             <ArrowRight aria-hidden="true" />
             <article className={styles.journeyAccent}><strong>{summary.submittedTotal}</strong><h2>Submitted</h2><p>{unfinished} started but did not finish</p></article>
@@ -334,17 +336,20 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
         <section className={styles.rolesPanel} id="roles" aria-labelledby="roles-heading">
           <div className={styles.rolesHeading}>
             <h2 id="roles-heading">Your roles</h2>
-            <div className={styles.roleFilters} aria-label="Role counts"><span className={styles.filterActive}>Active · {packs.filter((pack) => ['active', 'closing'].includes(packHealth(pack))).length}</span><span>Closed · {packs.filter((pack) => ['closed', 'full'].includes(packHealth(pack))).length}</span><span>All · {packs.length}</span></div>
+            <nav className={styles.roleFilters} aria-label="Filter roles">
+              {(['active', 'closed', 'all'] as const).map((filter) => <Link key={filter} href={dashboardUrl(paging.page, filter, 1)} aria-current={roleList.filter === filter ? 'page' : undefined} className={roleList.filter === filter ? styles.filterActive : undefined}>{filter === 'active' ? 'Active' : filter === 'closed' ? 'Closed or full' : 'All'} · {roleList.counts[filter]}</Link>)}
+            </nav>
           </div>
           <div className={styles.roleTable} role="table" aria-label="Employer work samples">
             <div className={styles.roleTableHead} role="row"><span role="columnheader">Role</span><span role="columnheader">Journey</span><span role="columnheader">Status</span><span role="columnheader">Closes</span><span role="columnheader">Next step</span></div>
-            {packs.slice(0, 4).map((pack) => {
+            {roleList.rows.map((pack) => {
               const status = packHealth(pack);
               const packSubmissions = submissions.filter((submission) => submission.screening_pack_id === pack.id);
               const role = verifyInterview(pack.signed_token)?.title
                 || detailRows.find((submission) => submission.screening_pack_id === pack.id)?.role_title
                 || 'Role work sample';
               const shortlisted = packSubmissions.filter((submission) => normaliseEmployerDecision(submission.employer_decision) === 'shortlisted').length;
+              const packAttempts = technicalAttempts.filter((attempt) => attempt.screening_pack_id === pack.id).length;
               const unreviewed = packSubmissions.filter((submission) => !submission.employer_reviewed_at).length;
               const url = `${origin}/s/${pack.public_code}`;
               const nextInterview = packSubmissions.find((item) => !item.employer_reviewed_at);
@@ -396,7 +401,7 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
                       );
                     })()}
                   </div>
-                  <div role="cell" className={styles.roleJourney}><progress max={Math.max(1, pack.starts_used)} value={packSubmissions.length} aria-label={`${packSubmissions.length} of ${pack.starts_used} started interviews submitted`} /><small>{pack.starts_used} started · {packSubmissions.length} submitted{shortlisted ? ` · ${shortlisted} shortlisted` : ''}</small></div>
+                  <div role="cell" className={styles.roleJourney}><progress max={Math.max(1, packAttempts)} value={packSubmissions.length} aria-label={`${packSubmissions.length} of ${packAttempts} started interviews submitted`} /><small>{packAttempts} started · {packSubmissions.length} submitted{shortlisted ? ` · ${shortlisted} shortlisted` : ''}</small></div>
                   <div role="cell"><span className={`${styles.packStatus} ${statusClass(status)}`}>{packStatusCopy[status]}</span></div>
                   <div role="cell" className={status === 'closing' ? styles.closingDate : undefined}>{status === 'closing' && daysUntil(pack.expires_at) <= 1 ? 'Tomorrow' : formatCloseDate(pack.expires_at)}</div>
                   <div role="cell" className={styles.roleActions}>
@@ -415,8 +420,13 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
               );
             })}
             {packs.length === 0 && <div className={styles.emptyRoles}><LinkSimple aria-hidden="true" /><span><strong>No roles yet</strong><small>Create your first interview link to begin.</small></span><Link href="/for-employers">Create interview link</Link></div>}
+            {packs.length > 0 && roleList.total === 0 && <p className={styles.moreRoles}>No roles match this filter. <Link href={dashboardUrl(paging.page, 'all', 1)}>View all roles</Link></p>}
           </div>
-          {packs.length > 4 && <p className={styles.moreRoles}>{packs.length - 4} more {packs.length - 4 === 1 ? 'role' : 'roles'} <a href="#roles">Show all</a></p>}
+          {roleList.paging.lastPage && roleList.paging.lastPage > 1 && <nav className={styles.moreRoles} aria-label="Role pages">
+            {roleList.paging.hasPrevious && <Link href={dashboardUrl(paging.page, roleList.filter, roleList.paging.page - 1)}>Previous roles</Link>}
+            {' '}Page {roleList.paging.page} of {roleList.paging.lastPage}{' '}
+            {roleList.paging.hasNext && <Link href={dashboardUrl(paging.page, roleList.filter, roleList.paging.page + 1)}>Next roles</Link>}
+          </nav>}
         </section>
 
         <section className={styles.rolesPanel} id="candidates" aria-labelledby="candidates-heading">
@@ -455,9 +465,9 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
           </div>
           {(paging.hasPrevious || paging.hasNext) && (
             <nav className={styles.pagination} aria-label="Candidate pages">
-              {paging.hasPrevious ? <Link href={`/employer?page=${paging.page - 1}#candidates`}>Newer</Link> : <span aria-disabled="true">Newer</span>}
+              {paging.hasPrevious ? <Link href={dashboardUrl(paging.page - 1, roleList.filter, roleList.paging.page, 'candidates')}>Newer</Link> : <span aria-disabled="true">Newer</span>}
               <span>Page {paging.page} of {paging.lastPage}</span>
-              {paging.hasNext ? <Link href={`/employer?page=${paging.page + 1}#candidates`}>Older</Link> : <span aria-disabled="true">Older</span>}
+              {paging.hasNext ? <Link href={dashboardUrl(paging.page + 1, roleList.filter, roleList.paging.page, 'candidates')}>Older</Link> : <span aria-disabled="true">Older</span>}
             </nav>
           )}
         </section>

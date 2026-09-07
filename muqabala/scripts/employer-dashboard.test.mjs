@@ -6,6 +6,7 @@ import {
   candidateEvidence,
   candidatePage,
   dashboardSummary,
+  dashboardRolePage,
   formatDuration,
   normaliseEmployerDecision,
   packHealth,
@@ -41,8 +42,6 @@ test('dashboard pulse reports real capacity and completed submissions', () => {
     { screening_pack_id: 'closing', submitted_at: '2026-08-21T10:00:00.000Z' },
   ];
   assert.deepEqual(dashboardSummary(packs, submissions, now), {
-    openedLinks: 74,
-    startedInterviews: 74,
     submittedThisWeek: 1,
     submittedTotal: 2,
     reviewedTotal: 0,
@@ -51,7 +50,6 @@ test('dashboard pulse reports real capacity and completed submissions', () => {
     notProceedingTotal: 0,
     activeLinks: 2,
     placesRemaining: 86,
-    submissionRate: 3,
   });
 });
 
@@ -101,6 +99,22 @@ test('candidate evidence is ordered and never invents a recording', () => {
   assert.equal(formatDuration(null), 'Saved');
 });
 
+test('older roles remain reachable across every page and status filter', () => {
+  const packs = Array.from({ length: 9 }, (_, index) => pack({ id: `role-${index}` }));
+  packs[1].expires_at = '2026-08-20T12:00:00.000Z';
+  packs[3].starts_used = 100;
+  packs[8].expires_at = '2026-09-02T12:00:00.000Z';
+  const all = [1, 2, 3].flatMap((page) => dashboardRolePage(packs, 'all', String(page), now).rows);
+  assert.deepEqual(all.map((role) => role.id), packs.map((role) => role.id));
+  const active = dashboardRolePage(packs, 'active', '2', now);
+  assert.deepEqual(active.rows.map((role) => role.id), ['role-6', 'role-7', 'role-8']);
+  assert.deepEqual(active.counts, { active: 7, closed: 2, all: 9 });
+  assert.deepEqual(dashboardRolePage(packs, 'closed', '99', now).rows.map((role) => role.id), ['role-1', 'role-3']);
+  assert.equal(dashboardRolePage(packs, 'unknown', '-2', now).filter, 'all');
+  assert.equal(dashboardRolePage(packs, ['active'], ['99'], now).paging.page, 2);
+  assert.equal(dashboardRolePage([], 'active', undefined, now).total, 0);
+});
+
 test('candidate list pages at twenty and clamps bad page values', () => {
   assert.equal(CANDIDATE_PAGE_SIZE, 20);
   assert.deepEqual(candidatePage(undefined, 45), { page: 1, from: 0, to: 19, hasPrevious: false, hasNext: true, lastPage: 3 });
@@ -116,11 +130,11 @@ test('candidate list pages at twenty and clamps bad page values', () => {
 
 test('dashboard paginates submissions and shows no video elements in the list', async () => {
   const source = await readFile(new URL('../app/employer/page.tsx', import.meta.url), 'utf8');
-  assert.match(source, /searchParams: Promise<\{ page\?: string \| string\[\] \}>/);
+  assert.match(source, /searchParams: Promise<\{ page\?: string \| string\[\]; roles\?: string \| string\[\]; rolePage\?: string \| string\[\] \}>/);
   assert.match(source, /candidatePage\(page, submissions\.length\)/);
   assert.match(source, /\.order\('submitted_at', \{ ascending: false \}\)\s*\.range\(paging\.from, paging\.to\)/);
   assert.match(source, /\.in\('interview_id', detailIds\)/);
-  assert.match(source, /href=\{`\/employer\?page=\$\{paging\.page \+ 1\}#candidates`\}/);
+  assert.match(source, /dashboardUrl\(paging\.page \+ 1, roleList\.filter, roleList\.paging\.page, 'candidates'\)/);
   assert.doesNotMatch(source, /<video/);
   assert.doesNotMatch(source, /createSignedUrl/);
 });

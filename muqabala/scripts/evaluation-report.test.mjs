@@ -314,7 +314,8 @@ test('interviewer name is optional, manually saved and owner scoped', () => {
   assert.equal(CandidateEvaluationReportSchema.safeParse(report({ interviewer_of_record: '' })).success, true);
   assert.match(actionSource, /updateEvaluationInterviewer/);
   assert.match(actionSource, /interviewer_name: interviewerName \|\| null/);
-  assert.match(actionSource, /\.eq\('employer_id', user\.id\)/);
+  assert.match(actionSource, /rpc\('update_current_evaluation_interviewer'/);
+  assert.match(actionSource, /p_employer_id: user\.id/);
   assert.match(interviewerMigrationSource, /interviewer_name text/);
   assert.match(reportViewSource, /report\.interviewer_of_record &&/);
 });

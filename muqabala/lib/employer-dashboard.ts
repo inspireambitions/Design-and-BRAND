@@ -58,15 +58,12 @@ export function dashboardSummary(
 ) {
   const weekAgo = now.getTime() - 7 * DAY_MS;
   const activePacks = packs.filter((pack) => ['active', 'closing'].includes(packHealth(pack, now)));
-  const totalStarts = packs.reduce((total, pack) => total + pack.starts_used, 0);
   const placesRemaining = activePacks.reduce(
     (total, pack) => total + Math.max(0, pack.max_candidates - pack.starts_used),
     0,
   );
 
   return {
-    openedLinks: totalStarts,
-    startedInterviews: totalStarts,
     submittedThisWeek: submissions.filter((submission) => new Date(submission.submitted_at).getTime() >= weekAgo).length,
     submittedTotal: submissions.length,
     reviewedTotal: submissions.filter((submission) => Boolean(submission.employer_reviewed_at)).length,
@@ -75,7 +72,6 @@ export function dashboardSummary(
     notProceedingTotal: submissions.filter((submission) => normaliseEmployerDecision(submission.employer_decision) === 'not_proceeding').length,
     activeLinks: activePacks.length,
     placesRemaining,
-    submissionRate: totalStarts > 0 ? Math.round((submissions.length / totalStarts) * 100) : 0,
   };
 }
 
@@ -90,6 +86,22 @@ export function candidateEvidence(answers: DashboardAnswer[]) {
 }
 
 export const CANDIDATE_PAGE_SIZE = 20;
+
+export function dashboardRolePage<T extends DashboardPack>(
+  packs: T[],
+  rawFilter: string | string[] | undefined,
+  rawPage: string | string[] | undefined,
+  now = new Date(),
+) {
+  const requested = Array.isArray(rawFilter) ? rawFilter[0] : rawFilter;
+  const filter = requested === 'active' || requested === 'closed' ? requested : 'all';
+  const active = packs.filter((pack) => ['active', 'closing'].includes(packHealth(pack, now)));
+  const closed = packs.filter((pack) => ['closed', 'full'].includes(packHealth(pack, now)));
+  const filtered = filter === 'active' ? active : filter === 'closed' ? closed : packs;
+  const paging = candidatePage(rawPage, filtered.length, 4);
+  return { filter, counts: { active: active.length, closed: closed.length, all: packs.length },
+    total: filtered.length, paging, rows: filtered.slice(paging.from, paging.to + 1) };
+}
 
 /**
  * Translates a `?page=` value into the inclusive PostgREST `.range()` bounds.

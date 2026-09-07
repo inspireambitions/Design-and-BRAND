@@ -6,6 +6,7 @@ import { configuredOrigin, newOpaqueToken, tokenHash } from '@/lib/server/securi
 import { generateCandidateEvaluationReport, loadOwnedEvaluationReport, recordEvaluationAccess } from '@/lib/server/evaluation-report';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { currentUser } from '@/lib/supabase/server';
+import { closeOwnedEvaluationShare } from '@/lib/server/evaluation-share-management';
 
 const UUID = z.string().uuid();
 const ShareInput = z.object({ interviewId: UUID, days: z.number().int().min(1).max(30) }).strict();
@@ -21,17 +22,15 @@ export async function addEvaluationNote(input: { interviewId: string; text: stri
   if (!parsed.success) return { error: 'Enter a note of 1,000 characters or fewer.' };
   const user = await currentUser();
   if (!user) return { error: 'Sign in again to add a note.' };
-  const current = await loadOwnedEvaluationReport(parsed.data.interviewId, user.id);
-  if (!current) return { error: 'This evaluation is not available.' };
   const admin = createAdminClient();
   if (!admin) return { error: 'Note storage is not configured.' };
-  const { error } = await admin.from('evaluation_report_notes').insert({
-    report_id: current.databaseId,
-    author_id: user.id,
-    author_name: userName(user),
-    note_text: parsed.data.text.replace(/\s+/g, ' ').trim(),
+  const { data, error } = await admin.rpc('add_current_evaluation_note', {
+    p_interview_id: parsed.data.interviewId,
+    p_employer_id: user.id,
+    p_author_name: userName(user),
+    p_note_text: parsed.data.text.replace(/\s+/g, ' ').trim(),
   });
-  if (error) return { error: 'The note could not be added. Try again.' };
+  if (error || !data) return { error: 'The note could not be added. Try again.' };
   revalidatePath(`/employer/candidates/${parsed.data.interviewId}/evaluation`);
   return { ok: true };
 }
@@ -44,17 +43,14 @@ export async function updateEvaluationInterviewer(input: { interviewId: string; 
   if (!parsed.success) return { error: 'Enter an interviewer name of 100 characters or fewer.' };
   const user = await currentUser();
   if (!user) return { error: 'Sign in again to update the report.' };
-  const current = await loadOwnedEvaluationReport(parsed.data.interviewId, user.id);
-  if (!current) return { error: 'This evaluation is not available.' };
   const admin = createAdminClient();
   if (!admin) return { error: 'Report details are not configured.' };
   const interviewerName = parsed.data.interviewerName.replace(/\s+/g, ' ').trim();
-  const { data, error } = await admin.from('candidate_evaluation_reports')
-    .update({ interviewer_name: interviewerName || null })
-    .eq('id', current.databaseId)
-    .eq('employer_id', user.id)
-    .select('id')
-    .maybeSingle();
+  const { data, error } = await admin.rpc('update_current_evaluation_interviewer', {
+    p_interview_id: parsed.data.interviewId,
+    p_employer_id: user.id,
+    p_interviewer_name: interviewerName || null,
+  });
   if (error || !data) return { error: 'The interviewer name could not be saved. Try again.' };
   revalidatePath(`/employer/candidates/${parsed.data.interviewId}/evaluation`);
   return { ok: true };
@@ -94,20 +90,12 @@ export async function revokeEvaluationShare(input: { interviewId: string; shareI
   if (!parsed.success) return { error: 'Share not found.' };
   const user = await currentUser();
   if (!user) return { error: 'Sign in again to close this link.' };
-  const current = await loadOwnedEvaluationReport(parsed.data.interviewId, user.id);
-  if (!current) return { error: 'This evaluation is not available.' };
   const admin = createAdminClient();
   if (!admin) return { error: 'Sharing is not configured.' };
-  const { data, error } = await admin.from('evaluation_report_shares').update({ revoked_at: new Date().toISOString() })
-    .eq('id', parsed.data.shareId)
-    .eq('report_id', current.databaseId)
-    .is('revoked_at', null)
-    .select('id')
-    .maybeSingle();
-  if (error || !data) return { error: 'This link is already closed.' };
+  const closed = await closeOwnedEvaluationShare(admin, parsed.data.interviewId, user.id, parsed.data.shareId);
+  if (!closed) return { error: 'This link is unavailable or already closed.' };
   await recordEvaluationAccess({
-    reportDatabaseId: current.databaseId,
-    reportVersion: current.report.report_version,
+    ...closed,
     action: 'SHARE_REVOKED',
     actorUserId: user.id,
   });

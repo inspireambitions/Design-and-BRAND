@@ -167,7 +167,7 @@
 
 .journey {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
   gap: 1rem;
   align-items: center;
   margin-top: 1.55rem;
@@ -527,6 +527,7 @@
 }
 
 .roleFilters span,
+.roleFilters a,
 .reminderRow {
   display: grid;
   gap: 0.25rem;
@@ -730,6 +731,20 @@
   background: #e3f1ec;
   color: #087662;
   font-weight: 800;
+}
+
+.roleFilters a {
+  padding: 0.4rem 0.65rem;
+  border: 1px solid #e0ddd5;
+  border-radius: 999px;
+  color: #42564d;
+  text-decoration: none;
+  font-size: 0.75rem;
+}
+
+.roleFilters a:focus-visible {
+  outline: 2px solid #087662;
+  outline-offset: 3px;
 }
 
 .roleTableHead,

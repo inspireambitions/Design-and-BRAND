@@ -43,10 +43,14 @@ export default async function CandidateEvaluationPage({ params, searchParams }: 
     : current;
   const viewingCurrent = viewed.report.report_version === current.report.report_version;
   const admin = createAdminClient();
-  const [{ data: shareRows }, { data: versionRows }, { data: accessRows }] = await Promise.all([
-    admin!.from('evaluation_report_shares').select('id,expires_at,revoked_at').eq('report_id', current.databaseId).order('created_at', { ascending: false }),
-    admin!.from('candidate_evaluation_reports').select('id,version,created_at,superseded_at').eq('interview_id', id).order('version', { ascending: false }),
-    admin!.from('evaluation_report_access_log').select('action,created_at,actor_user_id,viewer_email_ciphertext').eq('report_id', current.databaseId).order('created_at', { ascending: false }).limit(20),
+  const { data: versionRows, error: versionsError } = await admin!.from('candidate_evaluation_reports')
+    .select('id,version,created_at,superseded_at').eq('interview_id', id).eq('employer_id', user.id).order('version', { ascending: false });
+  if (versionsError || !versionRows?.length) throw new Error('Evaluation version history could not be loaded.');
+  const reportIds = versionRows.map((row) => row.id);
+  const versionById = new Map(versionRows.map((row) => [row.id, row.version]));
+  const [{ data: shareRows, error: sharesError }, { data: accessRows }] = await Promise.all([
+    admin!.from('evaluation_report_shares').select('id,report_id,expires_at,revoked_at').in('report_id', reportIds).order('created_at', { ascending: false }),
+    admin!.from('evaluation_report_access_log').select('action,report_id,created_at,actor_user_id,viewer_email_ciphertext').in('report_id', reportIds).order('created_at', { ascending: false }).limit(20),
   ]);
   await recordEvaluationAccess({ reportDatabaseId: viewed.databaseId, reportVersion: viewed.report.report_version, action: 'VIEW', actorUserId: user.id });
 
@@ -60,11 +64,14 @@ export default async function CandidateEvaluationPage({ params, searchParams }: 
         <DashboardDecisionActions interviewId={id} candidateLabel={owned.candidate_name || 'candidate'} currentDecision={owned.employer_decision} />
       </section>
       {viewingCurrent && <EvaluationControls
+        key={current.databaseId}
         interviewId={id}
         decisionRecorded={Boolean(current.report.decision)}
         interviewerName={current.report.interviewer_of_record}
-        shares={(shareRows ?? []).map((row) => ({ id: row.id, expiresAt: row.expires_at, revokedAt: row.revoked_at }))}
+        notes={current.report.employer_notes.filter((note) => note.author_id === user.id).map(({ text, created_at }) => ({ text, created_at }))}
+        shares={(shareRows ?? []).map((row) => ({ id: row.id, version: versionById.get(row.report_id)!, expiresAt: row.expires_at, revokedAt: row.revoked_at }))}
       />}
+      {sharesError && <p role="alert">Private links could not be loaded. Reload to manage existing links.</p>}
       <section className={styles.audit}>
         <div><h2>Versions</h2><ul>{(versionRows ?? []).map((row) => <li key={row.id}><Link href={`/employer/candidates/${id}/evaluation?version=${row.version}`}>Version {row.version}</Link> · {new Date(row.created_at).toLocaleString('en-GB')}{row.superseded_at ? ' · Archived' : ' · Current'}</li>)}</ul></div>
         <div><h2>Recent access</h2><ul>{(accessRows ?? []).map((row, index) => {
@@ -72,7 +79,7 @@ export default async function CandidateEvaluationPage({ params, searchParams }: 
           if (row.viewer_email_ciphertext) {
             try { viewer = ` · ${openPrivateText(row.viewer_email_ciphertext)}`; } catch { viewer = ' · verified viewer'; }
           }
-          return <li key={`${row.created_at}-${index}`}>{String(row.action).toLocaleLowerCase().replace('_', ' ')}{viewer} · {new Date(row.created_at).toLocaleString('en-GB')}</li>;
+          return <li key={`${row.created_at}-${index}`}>Version {versionById.get(row.report_id)} · {String(row.action).toLocaleLowerCase().replace('_', ' ')}{viewer} · {new Date(row.created_at).toLocaleString('en-GB')}</li>;
         })}</ul></div>
       </section>
     </main>
