@@ -10,7 +10,7 @@ export default function NotFound() {
       <p>Return to Muqabala or choose a practice interview.</p>
       <div className="marketing-cta-row">
         <Link href="/" className="marketing-button">Go to homepage</Link>
-        <Link href="/practice" className="marketing-text-link">Start practising</Link>
+        <Link href="/practice" className="marketing-text-link">Start practicing</Link>
       </div>
     </main>
   );

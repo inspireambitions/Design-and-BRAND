@@ -61,7 +61,7 @@ test('shows the mark, wordmark, role, score, questions line and site', () => {
   assert.ok(drawn.includes('Muqabala'));
   assert.ok(drawn.includes('Front office agent'));
   assert.ok(drawn.includes('63'));
-  assert.ok(drawn.includes('Questions practised: 5 of 8'));
+  assert.ok(drawn.includes('Questions practiced: 5 of 8'));
   assert.ok(drawn.includes('trymuqabala.com'));
 });
 
@@ -92,7 +92,7 @@ test('never draws anything that is not a role title, a number, a label or the si
   for (const secret of ['Fatima', 'passport', 'embassy', 'apologised', 'upgrade', 'data:image']) {
     assert.ok(!drawn.includes(secret), `card leaked "${secret}"`);
   }
-  const allowed = new Set(['م', 'Muqabala', 'PRACTICE COVERAGE', 'Front office agent', '63', '/ 100', 'Questions practised: 5 of 8', 'trymuqabala.com']);
+  const allowed = new Set(['م', 'Muqabala', 'PRACTICE COVERAGE', 'Front office agent', '63', '/ 100', 'Questions practiced: 5 of 8', 'trymuqabala.com']);
   for (const text of texts().map((c) => c.args[0])) assert.ok(allowed.has(text), `unexpected text "${text}"`);
 });
 
@@ -149,7 +149,7 @@ test('score is clamped and rounded, and questions never exceed the total', () =>
   renderShareCard(canvas, { ...input, score: 137.6, questionsPractised: 9, questionsTotal: 8 });
   const drawn = texts().map((c) => c.args[0]);
   assert.ok(drawn.includes('100'));
-  assert.ok(drawn.includes('Questions practised: 9 of 9'));
+  assert.ok(drawn.includes('Questions practiced: 9 of 9'));
 
   const zero = stubCanvas();
   renderShareCard(zero.canvas, { ...input, score: -4 });

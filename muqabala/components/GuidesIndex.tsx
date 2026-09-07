@@ -28,7 +28,7 @@ export function GuidesIndex({ guides }: { guides: GuideListItem[] }) {
             <p>
               {lang === 'ar'
                 ? 'سننشر الأدلة هنا. يمكنك التدريب الآن.'
-                : 'Guides will appear here. You can start practising now.'}
+                : 'Guides will appear here. You can start practicing now.'}
             </p>
           ) : (
             <ul className="guides-list">

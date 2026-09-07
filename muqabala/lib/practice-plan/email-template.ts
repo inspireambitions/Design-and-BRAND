@@ -21,7 +21,7 @@ const copy = {
     strengths: 'What your answer proves',
     improvements: 'What is missing',
     coachTip: 'What to add next',
-    reportUnavailable: 'Your full feedback is on the screen where you practised. This email keeps the question, a sample answer and your plan.',
+    reportUnavailable: 'Your full feedback is on the screen where you practiced. This email keeps the question, a sample answer and your plan.',
     questionYouAnswered: 'The question you answered',
     sampleAnswer: 'A strong sample answer',
     sampleNote: 'This is the shape of a strong answer, built from the marking guide for this question. Put your own real example inside it.',
@@ -33,7 +33,7 @@ const copy = {
     whatsapp: 'Get these on WhatsApp instead',
     whatsappNote: 'One tap sends all seven links to your own WhatsApp. We do not ask for your number.',
     browserCopy: 'Open a private browser copy of your plan',
-    footer: 'You asked for these emails after practising on Muqabala. They stop after day seven. You were not added to a marketing list. Reply to this email if you want them to stop sooner.',
+    footer: 'You asked for these emails after practicing on Muqabala. They stop after day seven. You were not added to a marketing list. Reply to this email if you want them to stop sooner.',
     minutes: 'About 10 minutes.',
   },
   ar: {

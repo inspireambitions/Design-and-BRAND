@@ -32,7 +32,7 @@ const DEFAULT_LABELS: Record<Lang, ShareCardLabels> = {
   en: {
     wordmark: 'Muqabala',
     readiness: 'Practice coverage',
-    questions: 'Questions practised: {practised} of {total}',
+    questions: 'Questions practiced: {practised} of {total}',
     site: 'trymuqabala.com',
   },
   ar: {

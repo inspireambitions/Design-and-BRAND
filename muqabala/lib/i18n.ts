@@ -43,7 +43,7 @@ export const STRINGS = {
     heroTitle: 'Practice for your Gulf job interview.',
     heroBody:
       'Choose your job. Speak or type your answers. Get clear feedback and try again. No employer can see your practice.',
-    startPractice: 'Start practising',
+    startPractice: 'Start practicing',
     seeProgress: 'My progress',
     point1: 'Free, unlimited practice',
     point2: 'First feedback without sign-up',
@@ -586,7 +586,7 @@ export const STRINGS = {
     reportViewAnswer: 'View your answer',
     reportFeedbackPending: 'Feedback could not be generated for this answer',
     reportFeedbackPendingBody:
-      'Your answer is saved. Open this report on the device where you practised and try getting feedback again, or repeat the question in a new practice session.',
+      'Your answer is saved. Open this report on the device where you practiced and try getting feedback again, or repeat the question in a new practice session.',
     reportFeedbackPreparing: 'Feedback is still being prepared',
     reportFeedbackPreparingBody: 'This answer has not been scored yet. Refresh this report in a moment.',
     reportCompetencies: 'Competency breakdown',
@@ -703,7 +703,7 @@ export const STRINGS = {
     readinessNotScored: 'Not scored yet',
     readinessNotScoredBody: 'Complete one answer we can assess fairly to start tracking practice coverage.',
     readinessNotScoredAria: 'Practice coverage for {role}: not scored yet',
-    readinessQuestions: '{practised} of {total} questions practised',
+    readinessQuestions: '{practised} of {total} questions practiced',
     readinessCovered: 'Covered',
     readinessNotYet: 'Not yet',
     readinessHow: 'This tracks evidence across the role question bank, including questions you have not tried. It is not your answer score or a measure of job readiness.',
@@ -721,7 +721,7 @@ export const STRINGS = {
     shareCardSaved: 'Image saved.',
     shareCardWordmark: 'Muqabala',
     shareCardReadiness: 'Practice coverage',
-    shareCardQuestions: 'Questions practised: {practised} of {total}',
+    shareCardQuestions: 'Questions practiced: {practised} of {total}',
     shareCardSite: 'trymuqabala.com',
     shareCardShareText: 'My practice coverage for {role} on Muqabala: {score} out of 100.',
     // keep this feedback (email capture after the first full feedback)
