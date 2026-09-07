@@ -43,6 +43,8 @@ function uploadOnce(
     body.append('', file);
 
     request.open('PUT', grant.signedUrl);
+    // Allow slower mobile uploads, but never leave a saved draft waiting forever.
+    request.timeout = 120_000;
     request.setRequestHeader('x-upsert', 'true');
     request.upload.onprogress = (event) => {
       onProgress(event.lengthComputable && event.total > 0
@@ -50,6 +52,7 @@ function uploadOnce(
         : 0);
     };
     request.onerror = () => reject(new ScreeningUploadError('The secure video upload was interrupted. Check your connection and retry.', true));
+    request.ontimeout = () => reject(new ScreeningUploadError('The secure video upload took too long. Your recording is still saved on this device. Check your connection and retry.', true));
     request.onabort = () => reject(new ScreeningUploadError('The secure video upload was interrupted. Please retry.', false));
     request.onload = () => {
       if (request.status >= 200 && request.status < 300) {
