@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Play } from '@phosphor-icons/react';
 import { signEmployerVideo } from '@/app/employer/actions';
 import styles from '@/app/employer/EmployerDashboard.module.css';
+import { useLang } from './LanguageProvider';
 
 type Props = {
   interviewId: string;
@@ -24,6 +25,7 @@ function formatDuration(seconds: number | null): string {
  * transcript and AI notes never wait on media bytes.
  */
 export function EmployerReportVideo({ interviewId, questionIndex, durationSeconds, label }: Props) {
+  const { t } = useLang();
   const [url, setUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -31,15 +33,21 @@ export function EmployerReportVideo({ interviewId, questionIndex, durationSecond
   async function openRecording() {
     setLoading(true);
     setError('');
-    const result = await signEmployerVideo(interviewId, questionIndex);
-    setLoading(false);
-    if ('url' in result) setUrl(result.url);
-    else setError(result.error);
+    try {
+      const result = await signEmployerVideo(interviewId, questionIndex);
+      if ('url' in result) setUrl(result.url);
+      else setError(result.error);
+    } catch {
+      setError(t('employerVideoRetry'));
+    } finally {
+      setLoading(false);
+    }
   }
 
   if (url) {
     return (
-      <video className={styles.video} controls autoPlay playsInline preload="metadata" src={url}>
+      <video className={styles.video} controls autoPlay playsInline preload="metadata" src={url}
+        onError={() => { setUrl(null); setError(t('employerVideoRetry')); }}>
         Your browser cannot play this video.
       </video>
     );

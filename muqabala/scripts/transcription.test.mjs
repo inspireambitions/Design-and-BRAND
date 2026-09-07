@@ -128,7 +128,7 @@ test('employer transcription asks Whisper for segment timestamps without changin
   assert.match(route, /response_format: 'verbose_json'/);
   assert.match(route, /timestamp_granularities: \['segment'\]/);
   assert.match(route, /form\.get\('timestamps'\) === 'segment'/);
-  assert.match(flow, /form\.append\('timestamps', 'segment'\)/);
+  assert.match(read('lib/screening-transcription.ts'), /form\.append\('timestamps', 'segment'\)/);
   assert.match(flow, /transcriptSegments/);
   assert.match(flow, /transcriptTimingVersion/);
 });

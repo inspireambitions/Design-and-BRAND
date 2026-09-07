@@ -1,6 +1,6 @@
 import { employerVolumeEnabled } from '@/lib/employer-volume';
 import { buildPdf, type PdfLine } from '@/lib/employer-volume/pdf';
-import { exportCsv, timeSavedLine } from '@/lib/employer-volume/strip';
+import { exportCandidateSummaryLine, exportCsv, timeSavedLine } from '@/lib/employer-volume/strip';
 import { loadExportRows, loadRoleStrip } from '@/lib/server/employer-role-strip';
 import { verifyInterview } from '@/lib/interview-token';
 import { privateNoStoreHeaders } from '@/lib/server/security';
@@ -52,9 +52,7 @@ export async function GET(request: Request, context: { params: Promise<{ roleId:
     { text: 'Ticks show rubric items with evidence. They are not a score. Every decision was made by a person.', size: 9 },
   ];
   for (const candidate of candidates) {
-    const marks = candidate.coverage.items.map((item) => (item.covered ? 'Y' : 'N')).join(' ');
-    const decision = candidate.decision ?? 'no decision yet';
-    lines.push({ text: `${candidate.displayName}   rubric ${marks}   ${decision}`, size: 10, gapBefore: 2 });
+    lines.push({ text: exportCandidateSummaryLine(candidate), size: 10, gapBefore: 2 });
   }
   return new Response(buildPdf(lines), {
     headers: {

@@ -18,6 +18,7 @@ import { SignOutButton } from '@/components/SignOutButton';
 import {
   candidatePage,
   dashboardSummary,
+  employerDecisionLabel,
   normaliseEmployerDecision,
   packHealth,
   type DashboardAnswer,
@@ -144,10 +145,8 @@ function currentDate() {
 }
 
 function decisionCopy(submission: SubmissionIndex) {
-  const decision = normaliseEmployerDecision(submission.employer_decision);
-  if (decision === 'shortlisted') return 'Shortlisted';
-  if (decision === 'not_proceeding') return 'Not proceeding';
-  return submission.employer_reviewed_at ? 'Reviewed' : 'Waiting for review';
+  return employerDecisionLabel(submission.employer_decision)
+    ?? (submission.employer_reviewed_at ? 'Reviewed' : 'Waiting for review');
 }
 
 export default async function EmployerDashboardPage({ searchParams }: { searchParams: Promise<{ page?: string | string[] }> }) {

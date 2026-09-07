@@ -1,6 +1,8 @@
 # Muqabala — handover for Codex (or any AI collaborator)
 
-Read this file first. It is the single briefing that lets another agent build on this
+**Current release instructions:** Read [docs/RELEASE.md](docs/RELEASE.md) first. It supersedes the branch, deployment and unreleased-feature claims in this historical briefing. The current integration preserves both the September 5 employer fixes and the September 7 design/spelling release. Run `node scripts/check-release-ancestry.mjs` before deploying.
+
+This historical briefing lets another agent build on this
 project or supervise work without re-deriving the strategy.
 
 ---

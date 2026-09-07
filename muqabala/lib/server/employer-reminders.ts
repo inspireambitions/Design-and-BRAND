@@ -13,46 +13,51 @@ export async function scheduleEmployerReminders(now = new Date()) {
   if (!admin) return { configured: false, expired: 0, queued: 0 };
 
   const nowIso = now.toISOString();
-  const { data: closedRoles } = await admin
+  const { data: closedRoles, error: closedError } = await admin
     .from('screening_packs')
     .select('id')
     .lte('expires_at', nowIso);
+  if (closedError) throw new Error('reminder_roles_unavailable');
   const closedIds = (closedRoles ?? []).map((row) => row.id as string);
   let expired = 0;
   if (closedIds.length) {
-    const { data } = await admin
+    const { data, error } = await admin
       .from('role_invites')
       .update({ status: 'expired' })
       .in('role_id', closedIds)
       .in('status', ['invited', 'started'])
       .select('id');
+    if (error) throw new Error('invite_expiry_failed');
     expired = data?.length ?? 0;
   }
 
-  const { data: candidates } = await admin
+  const { data: candidates, error: candidateError } = await admin
     .from('role_invites')
     .select('id,role_id,email,status,invited_at,first_reminder_at,second_reminder_at,completion_reminder_at,started_at')
     .in('status', ['invited', 'started'])
     .not('invited_at', 'is', null)
     .limit(2000);
+  if (candidateError) throw new Error('reminder_candidates_unavailable');
   const invites = (candidates ?? []) as (Omit<InviteRow, 'last_activity_at'>)[];
   if (invites.length === 0) return { configured: true, expired, queued: 0 };
 
   const roleIds = Array.from(new Set(invites.map((invite) => invite.role_id)));
-  const { data: roleRows } = await admin
+  const { data: roleRows, error: roleError } = await admin
     .from('screening_packs')
     .select('id,expires_at,reminders_enabled')
     .in('id', roleIds);
+  if (roleError) throw new Error('reminder_roles_unavailable');
   const roles = new Map<string, RoleForReminder>();
   for (const row of roleRows ?? []) roles.set(row.id as string, { expires_at: row.expires_at as string, reminders_enabled: Boolean(row.reminders_enabled) });
 
   const startedIds = invites.filter((invite) => invite.status === 'started').map((invite) => invite.id);
   const activity = new Map<string, string>();
   if (startedIds.length) {
-    const { data: interviews } = await admin
+    const { data: interviews, error: activityError } = await admin
       .from('interviews')
       .select('invite_id,updated_at')
       .in('invite_id', startedIds);
+    if (activityError) throw new Error('reminder_activity_unavailable');
     for (const row of interviews ?? []) if (row.invite_id) activity.set(row.invite_id as string, row.updated_at as string);
   }
 
@@ -65,9 +70,7 @@ export async function scheduleEmployerReminders(now = new Date()) {
   }
   if (outbox.length === 0) return { configured: true, expired, queued: 0 };
 
-  const { data: queued } = await admin
-    .from('employer_message_outbox')
-    .upsert(outbox, { onConflict: 'invite_id,kind,channel', ignoreDuplicates: true })
-    .select('id');
-  return { configured: true, expired, queued: queued?.length ?? 0 };
+  const { data: queued, error } = await admin.rpc('queue_employer_reminders', { p_rows: outbox });
+  if (error) throw new Error('reminder_queue_failed');
+  return { configured: true, expired, queued: Number(queued ?? 0) };
 }

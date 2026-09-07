@@ -11,6 +11,7 @@ export type CoverageItem = {
   label: string;
   labelAr: string;
   covered: boolean;
+  status: 'evidence' | 'missing' | 'unavailable';
 };
 
 export type Coverage = {
@@ -18,6 +19,7 @@ export type Coverage = {
   covered: number;
   total: number;
   full: boolean;
+  analysisComplete: boolean;
 };
 
 type CompetencyLike = { id: string; label: string; labelAr?: string };
@@ -32,15 +34,27 @@ export function rubricItems(competencies: CompetencyLike[] | undefined | null): 
 }
 
 export function coverageFor(competencies: CompetencyLike[] | undefined | null, answers: AnswerLike[]): Coverage {
+  const hasUnavailableAnswer = answers.length === 0 || answers.some((answer) => answer.feedback?.status !== 'scored');
   const items = rubricItems(competencies).map((competency) => {
     const covered = answers.some((answer) =>
       answer.feedback?.status === 'scored'
       && (answer.feedback.competencies ?? []).some((score) => score.id === competency.id && Boolean(score.evidence?.trim())),
     );
-    return { id: competency.id, label: competency.label, labelAr: competency.labelAr ?? competency.label, covered };
+    const assessed = answers.some((answer) => answer.feedback?.status === 'scored'
+      && answer.feedback.competencies?.some((score) => score.id === competency.id));
+    const status: CoverageItem['status'] = covered ? 'evidence' : hasUnavailableAnswer || !assessed ? 'unavailable' : 'missing';
+    return { id: competency.id, label: competency.label, labelAr: competency.labelAr ?? competency.label, covered, status };
   });
   const covered = items.filter((item) => item.covered).length;
-  return { items, covered, total: items.length, full: items.length > 0 && covered === items.length };
+  return { items, covered, total: items.length, full: items.length > 0 && covered === items.length,
+    analysisComplete: !hasUnavailableAnswer && items.every((item) => item.status !== 'unavailable') };
+}
+
+/** Use one consistent ordering for the whole cohort when analysis is incomplete. */
+export function orderCandidates<T extends { coverage: Coverage; submittedAt: string }>(candidates: T[]): T[] {
+  return [...candidates].sort(candidates.some((candidate) => !candidate.coverage.analysisComplete)
+    ? (a, b) => new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime()
+    : compareCandidates);
 }
 
 /** Full coverage first, then by coverage count, then earliest submission. */
@@ -52,5 +66,5 @@ export function compareCandidates<T extends { coverage: Coverage; submittedAt: s
 
 /** Plain-text ticks for email and export: "✓ ✓ ✗ ✓". */
 export function coverageMarks(coverage: Coverage): string {
-  return coverage.items.map((item) => (item.covered ? '\u2713' : '\u2717')).join(' ');
+  return coverage.items.map((item) => (item.status === 'unavailable' ? '?' : item.covered ? '\u2713' : '\u2717')).join(' ');
 }

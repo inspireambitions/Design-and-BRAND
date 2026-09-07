@@ -188,7 +188,7 @@ export function employerBrainAnswerFeedback(input: {
       questionId: input.questionId,
       score: 0,
       status: 'unscored',
-      unscoredReason: 'question_not_answered',
+      unscoredReason: automatedAnalysisUnavailable ? 'scoring_service_unavailable' : 'question_not_answered',
       headline: 'No reliable evidence was extracted from this answer.',
       competencies: [],
       strengths: [],
@@ -201,12 +201,12 @@ export function employerBrainAnswerFeedback(input: {
   }
   const competencies = input.question.target_competencies.map((id) => {
     const competency = input.state.discovery.find((item) => item.id === id);
-    const strength = evidence.competencies[id] ?? 'WEAK';
+    const strength = evidence.competencies[id];
     return {
       id: input.state.screening?.competency_id_map[id] ?? id,
       label: competency?.name ?? id,
-      score: Math.round(strengthScore[strength] / 10),
-      evidence: evidence.summary,
+      score: strength ? Math.round(strengthScore[strength] / 10) : 0,
+      evidence: strength ? evidence.summary : null,
     };
   });
   const missing = Object.entries(evidence.criteria)
@@ -214,14 +214,14 @@ export function employerBrainAnswerFeedback(input: {
     .map(([criterion]) => criterion.replaceAll('_', ' '));
   const score = competencies.length
     ? Math.round(competencies.reduce((total, item) => total + item.score * 10, 0) / competencies.length)
-    : 35;
+    : 0;
   return {
     questionId: input.questionId,
     score,
     status: 'scored',
     headline: evidence.summary,
     competencies,
-    strengths: missing.length ? [] : ['The answer covered the expected evidence clearly.'],
+    strengths: missing.length || competencies.some((item) => !item.evidence) ? [] : ['The answer covered the expected evidence clearly.'],
     improvements: missing.length ? [`The evidence needs clearer ${missing.slice(0, 2).join(' and ')}.`] : [],
     coachTip: missing.length ? `Check the recording for ${missing[0]}.` : 'Verify this analysis against the recording.',
     source: 'ai',

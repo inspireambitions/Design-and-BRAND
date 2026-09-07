@@ -231,7 +231,7 @@ test('answer length is not scored and concise evidence beats fluent padding', ()
   const route = readFileSync(new URL('../app/api/score/route.ts', import.meta.url), 'utf8');
   assert.match(route, /Answer length is not a scoring criterion/);
   assert.match(route, /A longer answer must receive the same score as a shorter answer/);
-  assert.match(route, /coach-content-rubric-2026-09-04/);
+  assert.match(route, /coach-content-rubric-2026-09-05/);
 });
 
 test('the rubric stays visible while answering and reviewing, and retry copy uses the real attempt', () => {

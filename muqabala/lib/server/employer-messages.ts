@@ -101,14 +101,18 @@ async function buildShortlistForRole(
 }
 
 /** Drains the employer message outbox. The invite link is rebuilt from the sealed token on each send. */
-export async function processEmployerMessages(options: { roleId?: string; limit?: number; fetchImpl?: typeof fetch } = {}) {
-  const admin = createAdminClient();
+export function employerEmailConfigured(): boolean {
+  return Boolean(process.env.RESEND_TRANSACTIONAL_API_KEY || process.env.RESEND_FEEDBACK_API_KEY);
+}
+
+export async function processEmployerMessages(options: { roleId?: string; limit?: number; fetchImpl?: typeof fetch; adminClient?: ReturnType<typeof createAdminClient> } = {}) {
+  const admin = options.adminClient ?? createAdminClient();
   const apiKey = process.env.RESEND_TRANSACTIONAL_API_KEY || process.env.RESEND_FEEDBACK_API_KEY;
   if (!admin || !apiKey) return { configured: false, claimed: 0, accepted: 0, failed: 0 };
 
   const leaseToken = randomUUID();
   const { data, error } = await admin.rpc('claim_employer_messages', {
-    p_limit: options.limit ?? 20,
+    p_limit: Math.min(options.limit ?? 5, 5),
     p_lease_token: leaseToken,
     p_role_id: options.roleId ?? null,
   });
@@ -117,8 +121,11 @@ export async function processEmployerMessages(options: { roleId?: string; limit?
   let accepted = 0;
   let failed = 0;
 
-  const mark = (job: OutboxRow, patch: Record<string, unknown>) =>
-    admin.from('employer_message_outbox').update({ ...patch, updated_at: new Date().toISOString() }).eq('id', job.id).eq('lease_token', leaseToken);
+  const mark = async (job: OutboxRow, patch: Record<string, unknown>) => {
+    const { data, error } = await admin.from('employer_message_outbox')
+      .update({ ...patch, updated_at: new Date().toISOString() }).eq('id', job.id).eq('lease_token', leaseToken).select('id');
+    if (error || !data?.length) throw new Error('employer_message_state_not_saved');
+  };
 
   const retry = (job: OutboxRow, status: number | null, code: string) => {
     const plan = notificationRetry(status, job.attempt_count);
@@ -145,10 +152,15 @@ export async function processEmployerMessages(options: { roleId?: string; limit?
       continue;
     }
 
-    const [{ data: pack }, { data: invite }] = await Promise.all([
+    const [{ data: pack, error: packError }, { data: invite, error: inviteError }] = await Promise.all([
       admin.from('screening_packs').select('id,public_code,workplace,signed_token,expires_at').eq('id', job.role_id).maybeSingle(),
-      job.invite_id ? admin.from('role_invites').select('id,candidate_ref,email,phone,name,status,token_cipher').eq('id', job.invite_id).maybeSingle() : Promise.resolve({ data: null }),
+      job.invite_id ? admin.from('role_invites').select('id,candidate_ref,email,phone,name,status,token_cipher').eq('id', job.invite_id).eq('role_id', job.role_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
     ]);
+    if (packError || inviteError) {
+      await retry(job, null, 'scope_lookup_failed');
+      failed += 1;
+      continue;
+    }
     const inviteRow = invite as InviteRow | null;
     const rawToken = inviteRow ? openToken(inviteRow.token_cipher) : null;
     const link = pack && rawToken ? { link: inviteLink(pack.public_code, rawToken) } : null;
@@ -228,13 +240,9 @@ export async function processEmployerMessages(options: { roleId?: string; limit?
     if (response?.ok) {
       const provider = await response.json().catch(() => ({})) as { id?: string };
       const now = new Date().toISOString();
+      // The database trigger saves the invite's delivery timestamp in this
+      // transaction. A failed stamp leaves the leased job available for retry.
       await mark(job, { status: 'accepted', accepted_at: now, provider_message_id: provider.id?.slice(0, 200) || null, locked_until: null, lease_token: null, last_error_code: null });
-      const stamp: Record<string, string> = {};
-      if (job.kind === 'invite') stamp.invited_at = now;
-      if (job.kind === 'reminder_1') stamp.first_reminder_at = now;
-      if (job.kind === 'reminder_2') stamp.second_reminder_at = now;
-      if (job.kind === 'completion') stamp.completion_reminder_at = now;
-      if (job.invite_id && Object.keys(stamp).length) await admin.from('role_invites').update(stamp).eq('id', job.invite_id);
       if (job.kind !== 'invite' && job.kind !== 'shortlist') trackServer('reminder_sent', { role_id: job.role_id, channel: job.channel, flag_state: 'on' });
       accepted += 1;
     } else {

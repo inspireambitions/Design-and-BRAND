@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, X } from '@phosphor-icons/react';
 import { recordDecision } from '@/app/employer/actions';
 import { normaliseEmployerDecision, type DashboardDecision } from '@/lib/employer-dashboard';
 import styles from '@/app/employer/EmployerDashboard.module.css';
+import { useLang } from './LanguageProvider';
 
 type Props = {
   interviewId: string;
@@ -16,15 +17,22 @@ type Props = {
 function statusCopy(decision: DashboardDecision) {
   if (decision === 'shortlisted') return 'Shortlisted';
   if (decision === 'not_proceeding') return 'Not proceeding';
+  if (decision === 'hold') return 'Hold';
   return '';
 }
 
 export function DashboardDecisionActions({ interviewId, candidateLabel, currentDecision }: Props) {
   const router = useRouter();
+  const { t } = useLang();
   const [selected, setSelected] = useState<DashboardDecision>(() => normaliseEmployerDecision(currentDecision));
   const [busy, setBusy] = useState<DashboardDecision>(null);
   const [message, setMessage] = useState(() => statusCopy(normaliseEmployerDecision(currentDecision)));
   const [error, setError] = useState('');
+  useEffect(() => {
+    const decision = normaliseEmployerDecision(currentDecision);
+    setSelected(decision);
+    setMessage(statusCopy(decision));
+  }, [currentDecision]);
 
   async function decide(decision: 'shortlist' | 'pass') {
     const normalised = decision === 'shortlist' ? 'shortlisted' : 'not_proceeding';
@@ -33,18 +41,23 @@ export function DashboardDecisionActions({ interviewId, candidateLabel, currentD
     setBusy(normalised);
     setError('');
     setMessage('Saving...');
-    const result = await recordDecision({ interviewId, decision });
-    setBusy(null);
-
-    if ('error' in result) {
+    try {
+      const result = await recordDecision({ interviewId, decision });
+      if ('error' in result) {
+        setMessage(statusCopy(selected));
+        setError(result.error);
+        return;
+      }
+      setSelected(normalised);
+      setMessage(`${statusCopy(normalised)} saved`);
+      router.refresh();
+    } catch {
       setMessage(statusCopy(selected));
-      setError(result.error);
-      return;
+      setError(t('employerActionInterrupted'));
+      router.refresh();
+    } finally {
+      setBusy(null);
     }
-
-    setSelected(normalised);
-    setMessage(`${statusCopy(normalised)} saved`);
-    router.refresh();
   }
 
   return (

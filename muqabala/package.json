@@ -52,6 +52,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
     "@sanity/vision": "^6.11.0",
     "@types/node": "^22.10.0",
     "@types/pdfkit": "^0.17.6",
@@ -62,6 +63,13 @@
     "typescript": "^5.7.0"
   },
   "overrides": {
-    "fast-uri": "^3.1.6"
+    "fast-uri": "^3.1.6",
+    "@vercel/frameworks": {
+      "js-yaml": "3.15.2",
+      "smol-toml": "1.8.0"
+    },
+    "typeid-js@1.2.0": {
+      "uuid": "11.1.1"
+    }
   }
 }

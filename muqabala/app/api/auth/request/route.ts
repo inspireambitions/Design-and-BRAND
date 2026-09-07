@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import { shouldClaimPracticeAttempt } from '@/lib/auth-destination';
 import { AuthRequestSchema } from '@/lib/interviews';
 import { limitAuth } from '@/lib/rate-limit';
 import {
@@ -37,8 +38,10 @@ export async function POST(request: Request) {
   const attemptToken = cookieStore.get(ATTEMPT_COOKIE)?.value;
   const admin = createAdminClient();
   let claimState: string | null = null;
+  // A new request replaces any earlier code flow, including a stale report claim.
+  cookieStore.delete(AUTH_STATE_COOKIE);
 
-  if (admin && attemptToken) {
+  if (admin && attemptToken && shouldClaimPracticeAttempt(next)) {
     const { data: interview } = await admin.from('interviews')
       .select('id')
       .eq('anonymous_token_hash', tokenHash(attemptToken))

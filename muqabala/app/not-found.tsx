@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { MuqabalaMark } from '@/components/MarketingSite';
+import { MuqabalaMark } from '@/components/Brand';
 
 export default function NotFound() {
   return (

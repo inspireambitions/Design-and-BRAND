@@ -37,7 +37,7 @@ export const ReportCompetencySchema = z.object({
 export const EmployerNoteSchema = z.object({
   author_id: z.string().uuid(),
   author_name: z.string().trim().min(1).max(100),
-  created_at: z.string().datetime(),
+  created_at: z.string().datetime({ offset: true }),
   text: z.string().trim().min(1).max(1000),
 }).strict();
 
@@ -47,7 +47,7 @@ export const EvaluationDecisionSchema = z.object({
   outcome: z.enum(['SHORTLIST', 'NOT_PROCEEDING', 'HOLD', 'PASS']),
   decided_by_id: z.string().uuid(),
   decided_by_name: z.string().trim().min(1).max(100),
-  decided_at: z.string().datetime(),
+  decided_at: z.string().datetime({ offset: true }),
 }).strict();
 
 export const CandidateEvaluationReportSchema = z.object({
@@ -63,7 +63,7 @@ export const CandidateEvaluationReportSchema = z.object({
   workplace: z.string().trim().min(1).max(200),
   employer_id: z.string().uuid(),
   interviewer_of_record: z.string().trim().max(100),
-  interview_datetime: z.string().datetime(),
+  interview_datetime: z.string().datetime({ offset: true }),
   duration_seconds: z.number().int().min(0).max(10_000),
   question_count: z.number().int().min(1).max(50),
   seniority_band: z.string().trim().min(1).max(80),

@@ -1,6 +1,6 @@
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { compareCandidates, coverageFor, type Coverage } from '@/lib/employer-volume/coverage';
+import { orderCandidates, coverageFor, type Coverage } from '@/lib/employer-volume/coverage';
 import { usableReportSummary, type ReportAnswer } from '@/lib/report-summary';
 import { REPORT_ANSWER_COLUMNS } from '@/lib/server/report-summary';
 
@@ -67,7 +67,7 @@ export async function rankedCandidates(client: SupabaseClient, roleId: string): 
     for (const invite of invites ?? []) refs.set(invite.id as string, invite.candidate_ref as string);
   }
 
-  return interviews
+  return orderCandidates(interviews
     .map((row) => {
       const summary = usableReportSummary(row.report_summary);
       const answers = summary ? summary.answers : (liveAnswers.get(row.id) ?? []);
@@ -85,6 +85,5 @@ export async function rankedCandidates(client: SupabaseClient, roleId: string): 
         roleTitle: row.role_title,
         language: row.language,
       } satisfies RankedCandidate;
-    })
-    .sort(compareCandidates);
+    }));
 }

@@ -73,7 +73,7 @@ test('dashboard normalises review and legacy decision vocabularies', () => {
   assert.equal(normaliseEmployerDecision('shortlisted'), 'shortlisted');
   assert.equal(normaliseEmployerDecision('pass'), 'not_proceeding');
   assert.equal(normaliseEmployerDecision('not_proceeding'), 'not_proceeding');
-  assert.equal(normaliseEmployerDecision('later'), null);
+  assert.equal(normaliseEmployerDecision('later'), 'hold');
 
   const submissions = [
     { screening_pack_id: 'active', submitted_at: '2026-08-29T10:00:00.000Z', employer_reviewed_at: '2026-08-29T11:00:00.000Z', employer_decision: 'shortlist' },

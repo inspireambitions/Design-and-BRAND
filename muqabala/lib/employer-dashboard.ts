@@ -13,12 +13,22 @@ export type DashboardSubmission = {
 };
 
 export type EmployerDecisionValue = 'shortlist' | 'shortlisted' | 'pass' | 'not_proceeding' | 'later';
-export type DashboardDecision = 'shortlisted' | 'not_proceeding' | null;
+export type DashboardDecision = 'shortlisted' | 'not_proceeding' | 'hold' | null;
 
 /** Normalises both decision vocabularies while older rows are still readable. */
 export function normaliseEmployerDecision(value: string | null | undefined): DashboardDecision {
   if (value === 'shortlist' || value === 'shortlisted') return 'shortlisted';
   if (value === 'pass' || value === 'not_proceeding') return 'not_proceeding';
+  if (value === 'later') return 'hold';
+  return null;
+}
+
+/** Public decision wording shared by the dashboard and downloaded exports. */
+export function employerDecisionLabel(value: string | null | undefined): string | null {
+  const decision = normaliseEmployerDecision(value);
+  if (decision === 'shortlisted') return 'Shortlisted';
+  if (decision === 'not_proceeding') return 'Not proceeding';
+  if (decision === 'hold') return 'Hold';
   return null;
 }
 

@@ -20,6 +20,17 @@ const {
 } = await import('../lib/server/evaluation-report-language.ts');
 const { evaluationPdfLines, buildEvaluationPdf, evaluationPdfFilename } = await import('../lib/evaluation-report-pdf.ts');
 const { sampleEvaluationReport } = await import('../lib/fixtures/evaluation-report.ts');
+
+test('database timestamps with explicit offsets remain valid in reports, notes and decisions', () => {
+  const at = '2026-09-05T07:17:17.43717+00:00';
+  const report = structuredClone(sampleEvaluationReport);
+  report.interview_datetime = at;
+  report.employer_notes = [{ author_id: report.employer_id, author_name: 'Test reviewer', created_at: at, text: 'Synthetic note' }];
+  report.decision = { outcome: 'HOLD', decided_by_id: report.employer_id, decided_by_name: 'Test reviewer', decided_at: at };
+  assert.equal(CandidateEvaluationReportSchema.safeParse(report).success, true);
+  report.interview_datetime = '2026-09-05T07:17:17';
+  assert.equal(CandidateEvaluationReportSchema.safeParse(report).success, false, 'timezone-free values stay invalid');
+});
 const [generatorSource, pdfRouteSource, shareRouteSource, actionSource, pageSource, playbackSource, migrationSource, marketingSource, reportViewSource, interviewerMigrationSource, candidateReviewSource, dashboardActionsSource, mediaCheckSource, reportCssSource, cronAuthSource, instrumentationSource] = await Promise.all([
   readFile(new URL('../lib/server/evaluation-report.ts', import.meta.url), 'utf8'),
   readFile(new URL('../app/api/employer/candidates/[id]/evaluation/pdf/route.ts', import.meta.url), 'utf8'),

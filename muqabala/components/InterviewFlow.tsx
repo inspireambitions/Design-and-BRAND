@@ -2387,13 +2387,6 @@ export function InterviewFlow({
       {/* ---------- feedback ---------- */}
       {stage === 'feedback' && feedback && (
         <div className="stack">
-          {practiceSitting && (
-            <ReadinessSlot
-              roleId={role.id}
-              roleTitle={reportRoleTitle}
-              answers={[...answers, { questionId: question.id, questionText, transcript, feedback }]}
-            />
-          )}
           <FeedbackCard feedback={feedback} attempt={attemptCount} />
           {answers.length === 0 && practiceSitting && hasScoredImprovement(previousTry?.feedback, feedback) && (
             <KeepFeedbackSlot
