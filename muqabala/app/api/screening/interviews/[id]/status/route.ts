@@ -1,5 +1,7 @@
 import { interviewAccess } from '@/lib/server/interview-access';
 import { privateNoStoreHeaders, screeningReceiptReference } from '@/lib/server/security';
+import { publicEmployerBrainState } from '@/lib/universal-interview/employer';
+import { loadStoredInterview } from '@/lib/universal-interview/repository';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,6 +22,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     .order('question_index');
   if (error) return Response.json({ error: 'Interview status could not be checked.' }, { status: 503 });
 
+  const brainState = await loadStoredInterview(id).catch(() => null);
   return Response.json({
     interviewId: id,
     currentQuestion: interview.current_question,
@@ -32,5 +35,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     submitted: Boolean(interview.submitted_at && interview.locked_at),
     submittedAt: interview.submitted_at,
     reference: interview.submitted_at ? screeningReceiptReference(id) : null,
+    brain: brainState?.screening ? publicEmployerBrainState(brainState) : null,
   }, { headers: privateNoStoreHeaders() });
 }

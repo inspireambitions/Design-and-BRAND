@@ -1,48 +1,67 @@
 'use client';
 
-import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { takeHeroDraft } from '@/lib/hero-draft';
 import type {
-  CoverageStatus,
-  DiscoveredCompetency,
   ExperienceLevel,
   FinalFeedback,
-  GeneratedQuestion,
 } from '@/lib/universal-interview/types';
 import { useLang } from './LanguageProvider';
 import { TopBar } from './TopBar';
 import { UniversalVideoAnswer } from './UniversalVideoAnswer';
+import { FocusedInterviewFooterGuard } from './FooterVisibility';
+import { hideUniversalInterviewFooter } from '@/lib/footer-visibility';
 
-type Stage = 'SETUP' | 'CONFIRM' | 'INTERVIEW' | 'FEEDBACK' | 'DELETED';
+type Stage = 'RESTORING' | 'SETUP' | 'CONFIRM' | 'INTERVIEW' | 'FEEDBACK_LOADING' | 'FEEDBACK' | 'DELETED';
+
+type PublicCompetency = {
+  id: string;
+  name: string;
+  detail: string;
+};
 
 type DiscoverResponse = {
   interview_id: string;
   role_summary: string;
-  competencies: DiscoveredCompetency[];
+  competencies: PublicCompetency[];
   suggested_competency_ids: string[];
   notice: string;
 };
 
 type InterviewResponse = {
   interview_id: string;
-  phase: 'AWAITING_CONFIRMATION' | 'ACTIVE' | 'COMPLETE';
-  question_number: number;
-  current_question: GeneratedQuestion | null;
-  coverage: Record<string, { status: CoverageStatus; evidence_ids: string[] }>;
+  stage: 'confirmation' | 'interview' | 'complete';
+  current_question: null | {
+    question_id: string;
+    candidate_text: string;
+    question_number: number;
+    total_questions: number;
+  };
   retry_used: boolean;
-  role_pack: { found: boolean; assessment_type: 'COMPETENCY' | 'PRACTICAL' | 'PORTFOLIO'; technical_accuracy_verified: boolean };
-  action?: string;
+  role_caveat: 'practical' | 'portfolio' | null;
 };
 
-type FeedbackResponse = FinalFeedback & { retry_question_text?: string };
+type EvidenceBand = FinalFeedback['competencies'][number]['band'];
+type PublicCompetencyFeedback = Pick<
+  FinalFeedback['competencies'][number],
+  'id' | 'what_worked' | 'what_is_missing' | 'improve_this' | 'band'
+>;
+type FeedbackResponse = Pick<
+  FinalFeedback,
+  'single_highest_value_improvement' | 'retry_recommended_question' | 'caveats'
+> & {
+  competencies: PublicCompetencyFeedback[];
+  retry_question_text?: string;
+};
 
 type RetryResponse = {
   question_number: number;
-  before: Record<string, CoverageStatus>;
-  after: Record<string, CoverageStatus>;
-  feedback: FinalFeedback['competencies'];
+  before: Record<string, EvidenceBand>;
+  after: Record<string, EvidenceBand>;
+  feedback: PublicCompetencyFeedback[];
 };
+
+const SAVED_INTERVIEW_KEY = 'muqabala.universalInterview.v2';
 
 async function postJson<T>(url: string, body: unknown): Promise<T> {
   const response = await fetch(url, {
@@ -57,7 +76,7 @@ async function postJson<T>(url: string, body: unknown): Promise<T> {
 
 export function UniversalInterview() {
   const { t } = useLang();
-  const [stage, setStage] = useState<Stage>('SETUP');
+  const [stage, setStage] = useState<Stage>('RESTORING');
   const [targetRole, setTargetRole] = useState('');
   const [level, setLevel] = useState<ExperienceLevel>('PROFESSIONAL');
   const [years, setYears] = useState(3);
@@ -75,18 +94,122 @@ export function UniversalInterview() {
   const [retryResult, setRetryResult] = useState<RetryResponse | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const errorRef = useRef<HTMLParagraphElement>(null);
+  const historyGuard = useRef(false);
+  const leaving = useRef(false);
+  const active = stage === 'CONFIRM' || stage === 'INTERVIEW' || stage === 'FEEDBACK_LOADING'
+    || (stage === 'SETUP' && Boolean(targetRole || previousRole || industry || jobDescription))
+    || (stage === 'FEEDBACK' && !interview?.retry_used && Boolean(retryAnswer.trim()));
 
   useEffect(() => {
-    const draft = takeHeroDraft();
-    if (!draft) return;
-    setTargetRole(draft.jobTitle);
-    setJobDescription(draft.jobText);
+    if (active && !historyGuard.current) {
+      window.history.pushState({ ...(window.history.state ?? {}), muqabalaUniversalGuard: true }, '', window.location.href);
+      historyGuard.current = true;
+    }
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      if (!active || leaving.current) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    const popState = () => {
+      if (!historyGuard.current) return;
+      if (!active || window.confirm(t('brainLeaveUnsaved'))) {
+        historyGuard.current = false;
+        leaving.current = true;
+        window.history.back();
+      } else {
+        window.history.pushState({ ...(window.history.state ?? {}), muqabalaUniversalGuard: true }, '', window.location.href);
+      }
+    };
+    const linkClick = (event: MouseEvent) => {
+      if (!active || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const anchor = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>('a[href]') : null;
+      if (!anchor || anchor.target === '_blank' || anchor.hasAttribute('download')) return;
+      const destination = new URL(anchor.href, window.location.href);
+      const current = new URL(window.location.href);
+      if (destination.pathname === current.pathname && destination.search === current.search && destination.origin === current.origin) return;
+      if (!window.confirm(t('brainLeaveUnsaved'))) {
+        event.preventDefault();
+        event.stopPropagation();
+      } else leaving.current = true;
+    };
+    window.addEventListener('beforeunload', beforeUnload);
+    window.addEventListener('popstate', popState);
+    document.addEventListener('click', linkClick, true);
+    return () => {
+      window.removeEventListener('beforeunload', beforeUnload);
+      window.removeEventListener('popstate', popState);
+      document.removeEventListener('click', linkClick, true);
+    };
+  }, [active, t]);
+
+  useEffect(() => {
+    if (error) errorRef.current?.focus();
+  }, [error]);
+
+  const restore = async () => {
+      setBusy(true);
+      setError('');
+      try {
+      const savedId = window.localStorage.getItem(SAVED_INTERVIEW_KEY);
+      if (savedId) {
+        try {
+          const response = await fetch(`/api/universal-interview/${encodeURIComponent(savedId)}`, { cache: 'no-store' });
+          if (response.ok) {
+            const restored = await response.json() as {
+              interview: InterviewResponse;
+              discovery: DiscoverResponse;
+              feedback: FeedbackResponse | null;
+              retry_result: RetryResponse | null;
+            };
+            setDiscovery(restored.discovery);
+            setSelected(restored.discovery.suggested_competency_ids);
+            setInterview(restored.interview);
+            setRetryResult(restored.retry_result);
+            if (restored.interview.stage === 'confirmation') setStage('CONFIRM');
+            if (restored.interview.stage === 'interview') setStage('INTERVIEW');
+            if (restored.interview.stage === 'complete' && restored.feedback) {
+              setFeedback(restored.feedback);
+              setStage('FEEDBACK');
+            } else if (restored.interview.stage === 'complete') {
+              setStage('FEEDBACK_LOADING');
+              await loadFeedback(restored.interview.interview_id);
+            }
+            return;
+          }
+        } catch { /* Keep the saved pointer for a later retry. */ }
+        // Even a not-found response can reflect unavailable storage or expired auth.
+        setError(t('brainRestoreError'));
+        return;
+      }
+      setStage('SETUP');
+      const draft = takeHeroDraft();
+      if (!draft) return;
+      setTargetRole(draft.jobTitle);
+      setJobDescription(draft.jobText);
+      } catch {
+        setStage('SETUP');
+      } finally {
+        setBusy(false);
+      }
+    };
+
+  useEffect(() => {
+    void restore();
   }, []);
 
   const loadFeedback = async (interviewId: string) => {
-    const result = await postJson<FeedbackResponse>('/api/universal-interview/feedback', { interview_id: interviewId });
-    setFeedback(result);
-    setStage('FEEDBACK');
+    setBusy(true);
+    setError('');
+    try {
+      const result = await postJson<FeedbackResponse>('/api/universal-interview/feedback', { interview_id: interviewId });
+      setFeedback(result);
+      setStage('FEEDBACK');
+    } catch (caught) {
+      setError(caught instanceof Error && caught.message ? caught.message : t('brainError'));
+    } finally {
+      setBusy(false);
+    }
   };
 
   const buildBlueprint = async () => {
@@ -108,6 +231,7 @@ export function UniversalInterview() {
         job_description: jobDescription,
       });
       setDiscovery(result);
+      window.localStorage.setItem(SAVED_INTERVIEW_KEY, result.interview_id);
       setSelected(result.suggested_competency_ids);
       setStage('CONFIRM');
     } catch (caught) {
@@ -146,7 +270,10 @@ export function UniversalInterview() {
       });
       setInterview(result);
       setAnswer('');
-      if (result.phase === 'COMPLETE') await loadFeedback(result.interview_id);
+      if (result.stage === 'complete') {
+        setStage('FEEDBACK_LOADING');
+        await loadFeedback(result.interview_id);
+      }
     } catch (caught) {
       setError(caught instanceof Error && caught.message ? caught.message : t('brainError'));
     } finally {
@@ -183,6 +310,7 @@ export function UniversalInterview() {
       const response = await fetch(`/api/universal-interview/${encodeURIComponent(interviewId)}`, { method: 'DELETE' });
       if (!response.ok) throw new Error(t('brainError'));
       setStage('DELETED');
+      window.localStorage.removeItem(SAVED_INTERVIEW_KEY);
     } catch (caught) {
       setError(caught instanceof Error && caught.message ? caught.message : t('brainError'));
     } finally {
@@ -193,8 +321,16 @@ export function UniversalInterview() {
   const competencyName = (id: string) => discovery?.competencies.find((item) => item.id === id)?.name ?? id;
   const displayBand = (band: FinalFeedback['competencies'][number]['band']) => band;
 
+  const startNew = () => {
+    if (active && !window.confirm(t('brainLeaveUnsaved'))) return;
+    leaving.current = true;
+    window.localStorage.removeItem(SAVED_INTERVIEW_KEY);
+    window.location.reload();
+  };
+
   return (
-    <div className="shell shell-narrow universal-brain">
+    <main className="shell shell-narrow universal-brain">
+      <FocusedInterviewFooterGuard active={hideUniversalInterviewFooter(stage)} />
       <TopBar showProgressLink={false} />
 
       {stage !== 'DELETED' && <header className="stack-sm">
@@ -204,7 +340,12 @@ export function UniversalInterview() {
         <p className="notice tiny">{t('brainEnglishOnly')}</p>
       </header>}
 
-      {error && <p className="notice notice-warn" role="alert">{error}</p>}
+      {error && <p ref={errorRef} className="notice notice-warn" role="alert" tabIndex={-1}>{error}</p>}
+
+      {stage === 'RESTORING' && <section className="card stack" aria-live="polite">
+        <button type="button" className="btn btn-primary" disabled={busy} onClick={() => void restore()}>{t('brainRestoreRetry')}</button>
+        {error && <button type="button" className="btn btn-ghost" disabled={busy} onClick={startNew}>{t('brainStartNew')}</button>}
+      </section>}
 
       {stage === 'SETUP' && <form className="card stack" onSubmit={(event) => { event.preventDefault(); void buildBlueprint(); }}>
         <label className="stack-sm" htmlFor="brain-target-role">
@@ -251,6 +392,7 @@ export function UniversalInterview() {
             onChange={(event) => setJobDescription(event.target.value)} />
           <span className="tiny">{t('brainJobDescriptionHint')}</span>
         </label>
+        <p className="notice tiny">{t('brainDataNotice')}</p>
         <button type="submit" className="btn btn-primary" disabled={busy || targetRole.trim().length < 2}>
           {busy ? t('brainBuildingBlueprint') : t('brainBuildBlueprint')}
         </button>
@@ -270,7 +412,7 @@ export function UniversalInterview() {
                 onChange={(event) => setSelected((current) => event.target.checked
                   ? [...current, competency.id]
                   : current.filter((id) => id !== competency.id))} />
-              <span><strong>{competency.name}</strong><small>{competency.source === 'EXPLICIT' ? competency.source_text : competency.family}</small></span>
+              <span><strong>{competency.name}</strong><small>{competency.detail}</small></span>
             </label>;
           })}
         </div>
@@ -281,17 +423,17 @@ export function UniversalInterview() {
       </section>}
 
       {stage === 'INTERVIEW' && interview?.current_question && <section className="stack-lg">
-        {interview.role_pack.assessment_type !== 'COMPETENCY' && <p className="notice tiny">
-          {interview.role_pack.assessment_type === 'PRACTICAL' ? t('brainPracticalCaveat') : t('brainPortfolioCaveat')}
+        {interview.role_caveat && <p className="notice tiny">
+          {interview.role_caveat === 'practical' ? t('brainPracticalCaveat') : t('brainPortfolioCaveat')}
         </p>}
-        <div className="flow-progress" aria-label={`${t('brainQuestion')} ${interview.question_number} of 8`}>
-          {Array.from({ length: 8 }, (_, index) => <span key={index} className={index < interview.question_number ? 'done' : ''} />)}
+        <div className="flow-progress" aria-label={`${t('brainQuestion')} ${interview.current_question.question_number} of ${interview.current_question.total_questions}`}>
+          {Array.from({ length: interview.current_question.total_questions }, (_, index) => <span key={index} className={index < interview.current_question!.question_number ? 'done' : ''} />)}
         </div>
         <div className="card stack">
-          <p className="eyebrow">{t('brainQuestion')} {interview.question_number} / 8</p>
-          <h2 className="brain-question">{interview.current_question.text}</h2>
+          <p className="eyebrow">{t('brainQuestion')} {interview.current_question.question_number} / {interview.current_question.total_questions}</p>
+          <h2 className="brain-question">{interview.current_question.candidate_text}</h2>
           <UniversalVideoAnswer
-            key={`${interview.question_number}:${interview.current_question.text}`}
+            key={interview.current_question.question_id}
             disabled={busy}
             onTranscript={setAnswer}
           />
@@ -304,6 +446,13 @@ export function UniversalInterview() {
             {busy ? t('brainReadingAnswer') : t('brainSendAnswer')}
           </button>
         </div>
+      </section>}
+
+      {stage === 'FEEDBACK_LOADING' && <section className="card stack" aria-live="polite">
+        <h2>{t('brainPreparingFeedback')}</h2>
+        <p className="muted">{t('brainReadingAnswer')}</p>
+        {error && interview && <button type="button" className="btn btn-primary" disabled={busy}
+          onClick={() => void loadFeedback(interview.interview_id)}>{t('brainFeedbackRetry')}</button>}
       </section>}
 
       {stage === 'FEEDBACK' && feedback && interview && <section className="stack-lg" aria-labelledby="brain-feedback-heading">
@@ -324,8 +473,11 @@ export function UniversalInterview() {
           <div><p className="eyebrow">{t('brainRetryTitle')}</p><h3>{t('brainQuestion')} {feedback.retry_recommended_question}</h3></div>
           <p className="muted">{feedback.retry_question_text || t('brainRetryBody')}</p>
           <UniversalVideoAnswer key={`retry:${feedback.retry_recommended_question}`} disabled={busy} onTranscript={setRetryAnswer} />
-          <textarea className="answer-box" value={retryAnswer} placeholder={t('brainAnswerPlaceholder')}
-            onChange={(event) => setRetryAnswer(event.target.value)} />
+          <label className="stack-sm" htmlFor="brain-retry-answer">
+            <span className="rate-label">{t('brainAnswerLabel')}</span>
+            <textarea id="brain-retry-answer" className="answer-box" value={retryAnswer} placeholder={t('brainAnswerPlaceholder')}
+              onChange={(event) => setRetryAnswer(event.target.value)} />
+          </label>
           <button type="button" className="btn btn-primary" disabled={busy || !retryAnswer.trim()} onClick={() => void retry()}>
             {busy ? t('brainRetrying') : t('brainRetrySend')}
           </button>
@@ -341,15 +493,15 @@ export function UniversalInterview() {
         </div>}
 
         <div className="row">
-          <Link href="/practice/universal" className="btn btn-primary" onClick={() => window.location.reload()}>{t('brainStartNew')}</Link>
+          <button type="button" className="btn btn-primary" onClick={startNew}>{t('brainStartNew')}</button>
           <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => void deleteData()}>{t('brainDeleteData')}</button>
         </div>
       </section>}
 
       {stage === 'DELETED' && <section className="card stack">
         <h1>{t('brainDeleted')}</h1>
-        <Link href="/practice/universal" className="btn btn-primary" onClick={() => window.location.reload()}>{t('brainStartNew')}</Link>
+        <button type="button" className="btn btn-primary" onClick={startNew}>{t('brainStartNew')}</button>
       </section>}
-    </div>
+    </main>
   );
 }

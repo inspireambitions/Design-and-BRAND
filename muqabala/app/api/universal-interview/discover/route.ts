@@ -8,7 +8,7 @@ import { createStoredInterview, recordStageMetric } from '@/lib/universal-interv
 import { getRolePack, rolePackFound } from '@/lib/universal-interview/role-packs';
 import { assessJobDescription } from '@/lib/universal-interview/sanitise';
 import { DiscoverRequestSchema, DiscoverySchema } from '@/lib/universal-interview/schemas';
-import { candidateCopySafe, jsonError, universalInterviewEnabled } from '@/lib/universal-interview/api';
+import { candidateCopySafe, jsonError, publicDiscoveryState, universalInterviewEnabled } from '@/lib/universal-interview/api';
 import { hasTrustedOrigin, privateNoStoreHeaders } from '@/lib/server/security';
 import { limitInterviewGeneration, limitInterviewGenerationDaily } from '@/lib/rate-limit';
 
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     const selected = jdQuality.detected_titles.some((title) => title.toLowerCase() === target);
     if (!selected) {
       return Response.json({
-        error: { code: 'role_choice_required', message: 'Choose which role you want to practise.' },
+        error: { code: 'role_choice_required', message: 'Choose which role you want to practice.' },
         detected_titles: jdQuality.detected_titles,
       }, { status: 409, headers: privateNoStoreHeaders() });
     }
@@ -84,21 +84,15 @@ export async function POST(request: Request) {
   });
 
   const notice = jdQuality.outcome === 'PASS'
-    ? 'Your blueprint uses the job description and the role pack.'
+    ? 'Your interview uses the job description and Muqabala\'s role guide.'
     : jdQuality.outcome === 'WEAK'
-      ? 'Part of this blueprint is assumed because the job description was limited.'
+      ? 'Part of this interview uses Muqabala\'s role guide because the job description was limited.'
       : rolePackFound(profile.target_role)
-        ? 'The job description could not be used, so this blueprint uses the role pack.'
-        : 'No reviewed role pack was found, so this blueprint uses the general baseline.';
+        ? 'The job description could not be used, so this interview uses Muqabala\'s role guide.'
+        : 'This interview uses Muqabala\'s general skills guide.';
 
-  return Response.json({
-    interview_id: state.interview_id,
-    role_summary: discovery.role_summary,
-    jd_quality: jdQuality,
-    competencies: discovery.competencies,
-    suggested_competency_ids: discovery.competencies.slice(0, 5).map((competency) => competency.id),
-    notice,
-    model_calls: budget.used,
-    prompt_version: state.prompt_version,
-  }, { headers: privateNoStoreHeaders() });
+  return Response.json(
+    publicDiscoveryState(state, discovery.role_summary, notice),
+    { headers: privateNoStoreHeaders() },
+  );
 }

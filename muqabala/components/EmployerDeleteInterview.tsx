@@ -11,7 +11,7 @@ export function EmployerDeleteInterview({ interviewId }: { interviewId: string }
   const [error, setError] = useState('');
 
   async function deleteInterview() {
-    const confirmed = window.confirm('Delete this interview and all three recordings? This cannot be undone.');
+    const confirmed = window.confirm('Delete this interview and all its recordings? This cannot be undone.');
     if (!confirmed) return;
 
     setDeleting(true);

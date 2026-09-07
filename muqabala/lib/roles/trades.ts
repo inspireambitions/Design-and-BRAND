@@ -20,7 +20,7 @@ export const tradesRoles: Role[] = [
       opener,
       q(
         'fault_finding',
-        'Walk me through how you find and fix an electrical fault you have not seen before.',
+        'Walk me through how you find and fix an electrical fault you have not seen before?',
         'اشرح لي كيف تكتشف وتصلح عطلاً كهربائياً لم تره من قبل.',
         ['problem_solving', 'evidence', 'communication'],
         'Give your real diagnostic order, step by step, and the instruments you use.',
@@ -110,7 +110,7 @@ export const tradesRoles: Role[] = [
       ),
       q(
         'weld_rejected',
-        'Tell me about a weld of yours that was rejected on inspection. What happened?',
+        'What did you do after your weld was rejected during inspection?',
         'حدثني عن لحام لك رُفض أثناء الفحص. ماذا حدث؟',
         ['ownership', 'problem_solving', 'compliance'],
       ),
@@ -178,13 +178,13 @@ export const tradesRoles: Role[] = [
       opener,
       q(
         'stop_work',
-        'Tell me about a time you stopped work on site. What happened afterwards?',
+        'Tell me about a time you stopped work on site?',
         'حدثني عن مرة أوقفت فيها العمل في الموقع. ماذا حدث بعد ذلك؟',
         ['compliance', 'ownership', 'communication', 'evidence'],
       ),
       q(
         'incident_investigation',
-        'Walk me through how you investigate an incident and what you produce at the end.',
+        'Walk me through how you investigate an incident?',
         'اشرح لي كيف تحقق في حادثة وماذا تُنتج في النهاية.',
         ['problem_solving', 'evidence', 'communication'],
         'Give your real process and the documents involved.',
@@ -217,7 +217,7 @@ export const tradesRoles: Role[] = [
       opener,
       q(
         'drawing_conflict',
-        'You find a conflict between the drawings and what is built on site. What do you do?',
+        'What do you do when drawings conflict with work already built on site?',
         'تجد تعارضاً بين المخططات وما هو منفّذ في الموقع. ماذا تفعل؟',
         ['problem_solving', 'communication', 'ownership', 'evidence'],
       ),
@@ -229,7 +229,7 @@ export const tradesRoles: Role[] = [
       ),
       q(
         'project_detail',
-        'Tell me about the largest project you have worked on and what you were responsible for.',
+        'Tell me about the largest project you have worked on?',
         'حدثني عن أكبر مشروع عملت فيه وما كانت مسؤوليتك.',
         ['evidence', 'communication'],
         'Give real scale, such as value, duration and team size, and your specific scope.',
@@ -254,7 +254,7 @@ export const tradesRoles: Role[] = [
       opener,
       q(
         'safety_incident',
-        'Tell me about a safety issue you identified on site. What did you do?',
+        'Tell me about a safety issue you identified on site?',
         'حدثني عن مشكلة سلامة اكتشفتها في الموقع. ماذا فعلت؟',
         ['compliance', 'ownership', 'problem_solving', 'evidence'],
       ),
@@ -299,7 +299,7 @@ export const tradesRoles: Role[] = [
       ),
       q(
         'rework',
-        'Tell me about work of yours that had to be redone. What happened?',
+        'What did you do when your work had to be redone?',
         'حدثني عن عمل لك اضطررت لإعادته. ماذا حدث؟',
         ['ownership', 'problem_solving', 'evidence'],
       ),
@@ -330,7 +330,7 @@ export const tradesRoles: Role[] = [
       opener,
       q(
         'formwork',
-        'Walk me through preparing formwork for a concrete pour.',
+        'How do you prepare formwork for a concrete pour?',
         'اشرح لي كيف تجهّز الشدّة الخشبية لصب الخرسانة.',
         ['evidence', 'compliance', 'problem_solving'],
         'Give your real steps and what you check before the pour starts.',
@@ -369,7 +369,7 @@ export const tradesRoles: Role[] = [
       opener,
       q(
         'surface_prep',
-        'Walk me through how you prepare a wall before painting it.',
+        'Walk me through how you prepare a wall before painting it?',
         'اشرح لي كيف تجهّز الجدار قبل دهانه.',
         ['evidence', 'compliance', 'communication'],
         'Preparation is what separates a good painter from a fast one. Be specific.',
@@ -408,7 +408,7 @@ export const tradesRoles: Role[] = [
       opener,
       q(
         'not_cooling',
-        'A unit is running but not cooling. Walk me through how you find the cause.',
+        'How do you find the cause when a unit is running but not cooling?',
         'وحدة تعمل لكنها لا تبرّد. اشرح لي كيف تجد السبب.',
         ['problem_solving', 'evidence', 'communication'],
         'This is the most common call in the Gulf. Give your real diagnostic order.',
@@ -463,7 +463,7 @@ export const tradesRoles: Role[] = [
       ),
       q(
         'signals',
-        'How do you work with a banksman or signaller, and what if you lose sight of them?',
+        'How do you work with a banksman or signaller?',
         'كيف تعمل مع الملقّن أو مُعطي الإشارات، وماذا لو غاب عن نظرك؟',
         ['communication', 'compliance', 'ownership'],
         undefined,

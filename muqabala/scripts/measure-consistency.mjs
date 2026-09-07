@@ -9,6 +9,7 @@
  *
  * Usage:
  *   node scripts/measure-consistency.mjs                    # against localhost:3000
+ *   node scripts/measure-consistency.mjs https://preview.example.com
  *   BASE_URL=https://your-app.vercel.app node scripts/measure-consistency.mjs
  *   RUNS=10 node scripts/measure-consistency.mjs            # more repeats per answer
  *
@@ -21,7 +22,13 @@
  * spread exceeds MAX_SPREAD, so it can run in CI.
  */
 
-const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3000';
+import { register } from 'node:module';
+import { gateFetch } from './live-gate-fetch.mjs';
+register('./test-hooks/ts-paths.mjs', import.meta.url);
+const { getRole } = await import('../lib/roles');
+const { CreateInterviewSchema } = await import('../lib/interviews.ts');
+
+const BASE_URL = (process.argv[2] ?? process.env.BASE_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 const RUNS = Number(process.env.RUNS ?? 5);
 /** Maximum acceptable max-min spread on the 0-100 scale, per answer. */
 const MAX_SPREAD = Number(process.env.MAX_SPREAD ?? 10);
@@ -94,13 +101,41 @@ const CORPUS = [
   },
 ];
 
+function cookieHeader(response) {
+  const values = typeof response.headers.getSetCookie === 'function'
+    ? response.headers.getSetCookie()
+    : [response.headers.get('set-cookie')].filter(Boolean);
+  return values.map((value) => value.split(';', 1)[0]).join('; ');
+}
+
 async function scoreOnce(item) {
-  const response = await fetch(`${BASE_URL}/api/score`, {
+  const role = getRole(item.roleId);
+  const question = [...(role?.questions ?? []), ...(role?.bank ?? [])].find(q => q.id === item.questionId);
+  if (!question) throw new Error(`Unknown frozen question: ${item.questionId}`);
+  const payload = CreateInterviewSchema.parse({
+    roleId: item.roleId, roleTitle: role.title, language: item.lang,
+    mode: 'guided', focusQuestionId: item.questionId, questions: [question],
+  });
+  const create = await gateFetch(`${BASE_URL}/api/interviews`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', Origin: BASE_URL },
+    body: JSON.stringify(payload),
+  });
+  if (create.status !== 201) throw new Error(`Interview start HTTP ${create.status} for ${item.id}`);
+  const interview = await create.json();
+  const response = await gateFetch(`${BASE_URL}/api/score`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Origin: BASE_URL,
+      Cookie: cookieHeader(create),
+      'X-Scoring-Session': `consistency-${item.id}-${crypto.randomUUID()}`,
+    },
     body: JSON.stringify({
       roleId: item.roleId,
       questionId: item.questionId,
+      questionIndex: 0,
+      interviewId: interview.id,
       transcript: item.transcript,
       lang: item.lang,
     }),
@@ -129,9 +164,12 @@ for (const item of CORPUS) {
   for (let i = 0; i < RUNS; i += 1) {
     try {
       const feedback = await scoreOnce(item);
+      console.log(JSON.stringify({ case: item.id, run: i + 1, status: feedback.status,
+        score: feedback.status === 'scored' ? feedback.score : null, source: feedback.source,
+        reason: feedback.unscoredReason ?? null }));
       statuses.add(feedback.status);
       sources.add(feedback.source);
-      if (feedback.status === 'scored') scores.push(feedback.score);
+      if (feedback.status === 'scored' && Number.isFinite(feedback.score)) scores.push(feedback.score);
     } catch (error) {
       console.error(`  ${item.id} run ${i + 1}: ${error.message}`);
       failed = true;
@@ -148,6 +186,7 @@ for (const item of CORPUS) {
   }
 
   if (EXPECT_AI) {
+    if (scores.length !== RUNS) failed = true;
     // Item-level live-gate checks: no fallback results, and no declined Arabic.
     if (!row.sources.every((src) => src === 'ai') || row.sources.length === 0) {
       console.error(`  FAIL: ${item.id} was served by [${row.sources.join(',') || 'nothing'}], expected the AI path only.`);

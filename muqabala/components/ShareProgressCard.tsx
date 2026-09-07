@@ -113,7 +113,7 @@ export function ShareProgressCard({ roleId, extraAttempts }: { roleId: string; e
     [url],
   );
 
-  if (!snapshot) return null;
+  if (!snapshot || snapshot.questionsPractised === 0) return null;
 
   const save = () => {
     if (!url) return;

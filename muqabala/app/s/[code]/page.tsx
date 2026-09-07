@@ -9,6 +9,7 @@ import { currentUser } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { tokenHash } from '@/lib/server/security';
 import { processScreeningNotifications } from '@/lib/server/screening-notifications';
+import { universalInterviewEnabled } from '@/lib/universal-interview/api';
 
 type PageProps = { params: Promise<{ code: string }>; searchParams?: Promise<{ verification?: string; i?: string }> };
 
@@ -100,6 +101,7 @@ export default async function ProofSittingPage({
         availability={pack.status}
         candidateEmail={candidate.email}
         inviteToken={invite === 'ok' ? query?.i : undefined}
+        brainEnabled={universalInterviewEnabled()}
       />
     </div>
   );

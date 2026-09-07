@@ -27,8 +27,10 @@ export type FeedbackStreamEvent =
 
 export const FEEDBACK_STREAM_CONTENT_TYPE = 'application/x-ndjson';
 
-/** Server side budget for a streamed score, including model thinking time. */
-export const FEEDBACK_STREAM_TIMEOUT_MS = 12_000;
+/** Allow model latency while staying below the route's 60-second limit.
+ * Partial feedback still streams; incomplete scores never bypass validation.
+ */
+export const FEEDBACK_STREAM_TIMEOUT_MS = 25_000;
 
 const STREAMED_KEYS = new Set(['headline', 'strengths', 'improvements', 'coach_tip']);
 

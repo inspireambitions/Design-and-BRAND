@@ -1,10 +1,12 @@
 import { confirmBlueprint, fallbackPlan } from './blueprint.ts';
 import {
+  candidateSafeQuestion,
   fallbackGeneratedQuestion,
   FRAMEWORK_CRITERIA,
   fromPlannedQuestion,
   highestValueUncovered,
   isSufficient,
+  makeValidatedQuestion,
 } from './questions.ts';
 import type {
   CandidateProfile,
@@ -32,6 +34,14 @@ const coverageRank: Record<CoverageStatus, number> = {
   SUFFICIENT: 3,
   STRONG: 4,
 };
+
+const ENTRY_PLAN_INDEXES = [0, 1, 2, 3, 6, 7] as const;
+
+function fitPlanToSeniority(plan: PlannedQuestion[], seniority: InterviewState['seniority']): PlannedQuestion[] {
+  if (plan.length !== 8) throw new Error('The interview planning pool must contain eight questions.');
+  const selected = seniority === 'ENTRY' ? ENTRY_PLAN_INDEXES.map((index) => plan[index]) : plan;
+  return selected.map((question, index) => ({ ...question, slot: index + 1 }));
+}
 
 function present(status: CriterionStatus | undefined): boolean {
   return criterionRank[status ?? 'MISSING'] >= criterionRank.PRESENT;
@@ -128,6 +138,7 @@ export function createInterviewState(input: {
     decision_log: [],
     role_pack: input.rolePack,
     retry_used: false,
+    retry_result: null,
     final_feedback: null,
     phase: 'AWAITING_CONFIRMATION',
     status: 'ACTIVE',
@@ -143,8 +154,10 @@ export function activateInterview(
   const next = structuredClone(state);
   next.blueprint = confirmBlueprint(next.discovery, competencyIds);
   next.confirmed_by_candidate = true;
-  next.plan = generatedPlan ?? fallbackPlan(next.blueprint, next.profile, next.role_pack);
-  if (next.plan.length !== 8) throw new Error('The interview plan must contain eight questions.');
+  next.plan = fitPlanToSeniority(
+    generatedPlan ?? fallbackPlan(next.blueprint, next.profile, next.role_pack),
+    next.seniority,
+  );
   next.current_question = fromPlannedQuestion(next.plan[0]);
   next.phase = 'ACTIVE';
   return next;
@@ -187,6 +200,7 @@ export function applyExtraction(
     id: evidenceId,
     question_number: next.question_number,
     summary: normalisedExtraction.evidence.summary || 'No usable evidence extracted.',
+    segment_ids: normalisedExtraction.evidence.segment_ids,
     example_key: normalisedExtraction.evidence.example_key,
     competencies: entryCompetencies,
     criteria: normalisedExtraction.evidence.criteria,
@@ -230,7 +244,7 @@ export function decideTurn(
   }
   if (!extraction) return { action: 'MOVE_ON', probe_target: '', counts_as_probe: false, override_reason: 'missing_extraction' };
   if (!extraction.answered_the_question && state.probe_count_current === 0) {
-    return { action: 'REDIRECT', probe_target: extraction.probe_target, counts_as_probe: false, override_reason: null };
+    return { action: 'REDIRECT', probe_target: extraction.probe_target, counts_as_probe: true, override_reason: null };
   }
   if (extraction.possible_inconsistency) {
     const key = `${extraction.possible_inconsistency.earlier_evidence_id}|${extraction.possible_inconsistency.what_differs}`;
@@ -269,7 +283,16 @@ export function applyImmediateDecision(
   if (!next.current_question) throw new Error('No active question.');
   if (decision.action === 'REPHRASE') {
     const planned = next.plan[next.question_number - 1];
-    next.current_question = { ...next.current_question, text: planned.rephrase, kind: 'REPHRASE' };
+    next.current_question = makeValidatedQuestion({
+      ...next.current_question,
+      question_id: `${next.current_question.question_id}_rephrase`,
+      candidate_text: planned.rephrase_text,
+      interviewer_intent: 'REPHRASE',
+      probe_targets: [],
+      source: 'BANK',
+      prompt_version: null,
+      kind: 'REPHRASE',
+    });
     return next;
   }
   if (decision.action === 'OFFER_HYPOTHETICAL') {
@@ -293,7 +316,30 @@ export function applyImmediateDecision(
 
 export function setGeneratedFollowup(state: InterviewState, question: GeneratedQuestion): InterviewState {
   const next = structuredClone(state);
-  next.current_question = question;
+  const safeQuestion = candidateSafeQuestion(question);
+  next.current_question = safeQuestion;
+  if (safeQuestion.kind === 'MAIN') {
+    const planned = next.plan[next.question_number - 1];
+    if (planned) {
+      next.plan[next.question_number - 1] = {
+        ...planned,
+        question_type: safeQuestion.question_type,
+        target_competencies: safeQuestion.target_competencies,
+        interviewer_intent: safeQuestion.interviewer_intent,
+        candidate_text: safeQuestion.candidate_text,
+        framework: safeQuestion.framework,
+        rephrase_text: safeQuestion.rephrase_text,
+        question_id: safeQuestion.question_id,
+        probe_targets: safeQuestion.probe_targets,
+        seniority: safeQuestion.seniority,
+        language: safeQuestion.language,
+        source: safeQuestion.source,
+        prompt_version: safeQuestion.prompt_version,
+        validated: safeQuestion.validated,
+        kind: safeQuestion.kind,
+      };
+    }
+  }
   return next;
 }
 
@@ -303,7 +349,7 @@ export function advanceInterview(state: InterviewState): {
   replacementCompetencyId: string | null;
 } {
   const next = structuredClone(state);
-  if (next.question_number >= 8) {
+  if (next.question_number >= next.plan.length) {
     next.phase = 'COMPLETE';
     next.status = 'COMPLETE';
     next.current_question = null;
@@ -322,6 +368,9 @@ export function advanceInterview(state: InterviewState): {
   const blueprintTarget = highestValueUncovered(next);
   const replacementTarget = blueprintTarget ?? highestValueUncovered(next, true);
   next.current_question = fromPlannedQuestion(planned);
+  if (!replacementTarget) {
+    return { state: next, needsReplacement: false, replacementCompetencyId: null };
+  }
   return { state: next, needsReplacement: true, replacementCompetencyId: replacementTarget };
 }
 
@@ -362,6 +411,7 @@ export function deterministicExtractionFallback(): ExtractionResult {
     answered_the_question: true,
     evidence: {
       summary: 'extraction failed',
+      segment_ids: [],
       example_key: '',
       competencies: [],
       criteria: {},

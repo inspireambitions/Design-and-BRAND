@@ -43,7 +43,7 @@ export function screeningPreviewCopy({
   const headline = 'Show how you would handle the job.';
   const invitationTitle = `${safeCompany} invites you to show how you would handle the job.`;
   const roleLine = `${safeJobTitle} work sample from ${safeCompany}.`;
-  const timingLine = `${questionWord(safeQuestionCount)} questions. About 12 minutes.`;
+  const timingLine = `${questionWord(safeQuestionCount)} questions. About ${safeQuestionCount <= 3 ? 12 : 25} minutes.`;
   const reviewLine = 'Your answers will be reviewed by the hiring team.';
   const trustLine = 'No face scoring. No automatic rejection.';
 

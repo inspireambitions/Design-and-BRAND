@@ -31,6 +31,15 @@ const FrameworkSchema = z.enum([
   'ROLE_KNOWLEDGE',
 ]);
 const CriterionStatusSchema = z.enum(['MISSING', 'WEAK', 'PRESENT', 'STRONG']);
+const CriterionNameSchema = z.enum([
+  'situation', 'task', 'action', 'result',
+  'specificity', 'role_understanding', 'credibility', 'career_logic',
+  'judgement', 'prioritisation', 'risk_recognition', 'reasoning',
+  'conceptual_understanding', 'application', 'trade_offs', 'clarity',
+  'scope', 'ownership', 'decision', 'stakeholder_handling', 'outcome',
+  'numbers', 'causality', 'coherence', 'relevance',
+  'accuracy_of_role_understanding', 'realism', 'priorities',
+]);
 
 export const CandidateProfileSchema = z.object({
   experience_level: ExperienceLevelSchema,
@@ -61,9 +70,9 @@ export const PlanSchema = z.object({
   plan: z.array(z.object({
     slot: z.number().int().min(1).max(8),
     question_type: QuestionTypeSchema,
-    primary_intent: z.string().trim().min(2).max(80),
+    interviewer_intent: z.string().trim().min(2).max(80),
     target_competencies: z.array(z.string().regex(/^c_[a-z0-9_]{2,60}$/)).min(1).max(2),
-    text: z.string().trim().min(8).max(300),
+    candidate_text: z.string().trim().min(8).max(300),
     framework: FrameworkSchema,
   }).strict()).length(8),
 }).strict();
@@ -72,13 +81,17 @@ export const ExtractionSchema = z.object({
   answered_the_question: z.boolean(),
   evidence: z.object({
     summary: z.string().trim().max(600),
+    segment_ids: z.array(z.string().regex(/^S\d{3}$/)).max(12),
     example_key: z.string().trim().max(120),
     competencies: z.array(z.object({
       id: z.string().regex(/^c_[a-z0-9_]{2,60}$/),
       strength: z.enum(['WEAK', 'MEDIUM', 'STRONG']),
       evidence_type: z.enum(['EMPLOYMENT', 'INTERNSHIP', 'ACADEMIC', 'VOLUNTEER', 'PERSONAL_PROJECT', 'HYPOTHETICAL']),
     }).strict()).max(5),
-    criteria: z.record(z.string(), CriterionStatusSchema),
+    criteria: z.array(z.object({
+      criterion: CriterionNameSchema,
+      status: CriterionStatusSchema,
+    }).strict()).min(3).max(5),
     personal_ownership: z.enum(['CLEAR', 'UNCLEAR', 'ABSENT']),
     numbers_stated: z.array(z.string().max(80)).max(10),
     unsupported_claims: z.array(z.string().max(200)).max(10),
@@ -104,10 +117,10 @@ export const ExtractionSchema = z.object({
 }).strict();
 
 export const GeneratedQuestionSchema = z.object({
-  text: z.string().trim().min(5).max(300),
+  candidate_text: z.string().trim().min(5).max(300),
   question_type: QuestionTypeSchema,
   target_competencies: z.array(z.string().regex(/^c_[a-z0-9_]{2,60}$/)).min(1).max(2),
-  intent: z.string().trim().min(2).max(100),
+  interviewer_intent: z.string().trim().min(2).max(100),
 }).strict();
 
 export const FeedbackSchema = z.object({

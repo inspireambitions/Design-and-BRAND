@@ -1,0 +1,7 @@
+.page { min-height: 100dvh; padding: 1rem max(1rem, calc((100vw - 78rem) / 2)) 5rem; background: #f2f4f1; }
+.readOnly { width: min(100%, 74rem); margin: 0 auto .7rem; color: #65736d; font-size: .7rem; text-align: right; }
+.closed { display: grid; min-height: 75dvh; place-items: center; padding: 2rem; background: #f2f4f1; text-align: center; }
+.closed > div { max-width: 32rem; padding: 2.5rem; border: 1px solid #d8ddd9; border-radius: 1rem; background: #fff; }
+.closed p { color: #08705e; font-size: .7rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.closed h1 { margin: .4rem 0 .7rem; font: 800 2.6rem/1 var(--font-display); letter-spacing: -.05em; }
+.closed span { color: #65736d; }

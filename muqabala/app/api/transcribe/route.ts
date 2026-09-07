@@ -6,6 +6,7 @@ import {
   audioFileExtension,
   validateTranscriptionUpload,
 } from '@/lib/transcription-upload';
+import type { TranscriptSegment } from '@/lib/interviews';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -22,6 +23,8 @@ export const maxDuration = 30;
 const TRANSCRIPTION_TIMEOUT_MS = 20_000;
 const DEFAULT_MODEL = 'gpt-4o-mini-transcribe';
 const FALLBACK_MODEL = 'whisper-1';
+const TIMED_MODEL = 'whisper-1';
+const TIMING_VERSION = 'openai-whisper-segment-v1' as const;
 
 function errorResponse(
   status: number,
@@ -67,6 +70,36 @@ async function transcribeWith(
   return result.text ?? '';
 }
 
+async function transcribeWithSegments(
+  client: OpenAI,
+  bytes: Uint8Array,
+  filename: string,
+  contentType: string,
+  language: 'en' | 'ar',
+  signal: AbortSignal,
+): Promise<{ transcript: string; segments: TranscriptSegment[] }> {
+  const file = await toFile(bytes, filename, { type: contentType });
+  const result = await client.audio.transcriptions.create(
+    {
+      file,
+      model: TIMED_MODEL,
+      language,
+      response_format: 'verbose_json',
+      timestamp_granularities: ['segment'],
+    },
+    { signal },
+  );
+  const segments = (result.segments ?? []).slice(0, 240).flatMap((segment, index) => {
+    const startMs = Math.max(0, Math.round(Number(segment.start) * 1000));
+    const endMs = Math.max(0, Math.round(Number(segment.end) * 1000));
+    const text = String(segment.text ?? '').trim().slice(0, 1000);
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs)
+      || startMs > 125_000 || endMs > 128_000 || endMs <= startMs || !text) return [];
+    return [{ id: `S${String(index + 1).padStart(3, '0')}`, startMs, endMs, text }];
+  });
+  return { transcript: result.text ?? '', segments };
+}
+
 export async function POST(request: Request) {
   if (!process.env.OPENAI_API_KEY) {
     return errorResponse(503, 'transcription_unavailable', 'Written transcription is not available right now.', false);
@@ -104,6 +137,7 @@ export async function POST(request: Request) {
 
   const audio = form.get('audio');
   const langField = form.get('lang');
+  const timed = form.get('timestamps') === 'segment';
   const language = langField === 'ar' ? 'ar' : langField === 'en' ? 'en' : null;
   if (!language) {
     return errorResponse(400, 'lang_required', 'lang must be en or ar.', false);
@@ -124,17 +158,26 @@ export async function POST(request: Request) {
   const signal = AbortSignal.timeout(TRANSCRIPTION_TIMEOUT_MS);
 
   try {
-    let transcript: string;
-    try {
-      transcript = await transcribeWith(client, configuredModel, bytes, filename, check.mimeType, language, signal);
-    } catch (error) {
-      if (configuredModel !== FALLBACK_MODEL && isModelRejection(error)) {
-        transcript = await transcribeWith(client, FALLBACK_MODEL, bytes, filename, check.mimeType, language, signal);
-      } else {
-        throw error;
+    let transcript = '';
+    let segments: TranscriptSegment[] = [];
+    let timingVersion: typeof TIMING_VERSION | null = null;
+    if (timed) {
+      const timedResult = await transcribeWithSegments(client, bytes, filename, check.mimeType, language, signal);
+      transcript = timedResult.transcript;
+      segments = timedResult.segments;
+      timingVersion = segments.length > 0 ? TIMING_VERSION : null;
+    } else {
+      try {
+        transcript = await transcribeWith(client, configuredModel, bytes, filename, check.mimeType, language, signal);
+      } catch (error) {
+        if (configuredModel !== FALLBACK_MODEL && isModelRejection(error)) {
+          transcript = await transcribeWith(client, FALLBACK_MODEL, bytes, filename, check.mimeType, language, signal);
+        } else {
+          throw error;
+        }
       }
     }
-    return Response.json({ transcript: transcript.trim() }, { headers: privateNoStoreHeaders() });
+    return Response.json({ transcript: transcript.trim(), segments, timingVersion }, { headers: privateNoStoreHeaders() });
   } catch (error) {
     if (isAbortError(error) || error instanceof OpenAI.APIConnectionTimeoutError) {
       return errorResponse(504, 'transcription_timeout', 'Writing up your words took too long.', true);

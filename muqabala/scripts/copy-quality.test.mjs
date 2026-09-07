@@ -2,7 +2,7 @@
  * Copy quality gates (brief sections 2.5 and 7).
  *
  *  1. No em dashes anywhere in candidate-facing source, in any file.
- *  2. "Practice" is never used as a verb in English copy.
+ *  2. Use Kim's preferred spelling, "Practice", for site copy.
  *  3. English strings in lib/i18n.ts for the candidate-facing prefixes read at
  *     an average Flesch-Kincaid grade of 6 or below; any single string above
  *     grade 8 is listed.
@@ -33,17 +33,34 @@ test('em dashes: none anywhere in candidate-facing source', () => {
   assert.deepEqual(problems, [], 'em dashes found');
 });
 
-const PRACTICE_VERB_CAPITAL = /\bPractice (for|with|until|this|your|now|again|the)\b/g;
-const PRACTICE_VERB_LOWER = /(^|[.!?]\s+|['"`>]\s*)practice (for|until|again)\b/gm;
-
-test('"practice" is never a verb in English copy (use "practise")', () => {
+test('site copy uses the preferred Practice spelling', () => {
   const problems = [];
   for (const file of copyFiles) {
-    const source = read(file);
-    for (const match of source.matchAll(PRACTICE_VERB_CAPITAL)) problems.push(`${file}: "${match[0]}"`);
-    for (const match of source.matchAll(PRACTICE_VERB_LOWER)) problems.push(`${file}: "${match[0].trim()}"`);
+    const source = read(file).replace(/\/\*[\s\S]*?\*\//g, '');
+    for (const match of source.matchAll(/(?<![\w-])practise(?![\w-])/gi)) problems.push(`${file}: "${match[0]}"`);
   }
   assert.deepEqual(problems, []);
+});
+
+function collectStrings(value) {
+  if (typeof value === 'string') return [value];
+  if (Array.isArray(value)) return value.flatMap(collectStrings);
+  if (value && typeof value === 'object') return Object.values(value).flatMap(collectStrings);
+  return [];
+}
+
+test('public copy never exposes internal release labels', async () => {
+  const [{ STRINGS }, { infoPages }] = await Promise.all([
+    import('../lib/i18n.ts'),
+    import('../lib/marketing-content.ts'),
+  ]);
+  const publicCopy = [...collectStrings(STRINGS), ...collectStrings(infoPages)];
+  const releaseLabel = /\b(?:MVP|V2|beta|prototype|proof of concept)\b/i;
+  assert.deepEqual(publicCopy.filter((value) => releaseLabel.test(value)), []);
+
+  const arabicAdaptivePrivacy = infoPages.privacy.ar.sections
+    .find((section) => section.title === 'المقابلات النصية المتكيفة')?.body ?? '';
+  assert.match(arabicAdaptivePrivacy, /90 يوماً/);
 });
 
 const READABILITY_PREFIXES = ['whatWorked', 'whatToImprove', 'biggestWin', 'keep', 'landing', 'readiness', 'shareCard', 'tag', 'plan'];

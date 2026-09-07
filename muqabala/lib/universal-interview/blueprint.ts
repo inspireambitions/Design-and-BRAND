@@ -7,7 +7,7 @@ import type {
   QuestionType,
   RolePack,
 } from './types.ts';
-import { frameworkForQuestionType } from './questions.ts';
+import { makeBankQuestion } from './questions.ts';
 
 const CATALOGUE: Record<string, Omit<DiscoveredCompetency, 'source' | 'source_text' | 'importance'>> = {
   c_role_relevance: { id: 'c_role_relevance', name: 'Role relevance', family: 'motivation' },
@@ -113,22 +113,30 @@ function questionTypeFor(competency: DiscoveredCompetency): QuestionType {
   return 'BEHAVIOURAL';
 }
 
-function question(slot: number, text: string, type: QuestionType, competency: DiscoveredCompetency, intent: string): PlannedQuestion {
+function question(
+  slot: number,
+  text: string,
+  type: QuestionType,
+  competency: DiscoveredCompetency,
+  intent: string,
+  seniority: CandidateProfile['experience_level'],
+): PlannedQuestion {
   return {
+    ...makeBankQuestion({
+      question_id: `plan_${slot}`,
+      candidate_text: text,
+      interviewer_intent: intent,
+      question_type: type,
+      target_competencies: [competency.id],
+      seniority,
+    }),
     slot,
-    text,
-    rephrase: `Please answer this in another way: ${text}`,
-    question_type: type,
-    primary_intent: intent,
-    target_competencies: [competency.id],
-    framework: frameworkForQuestionType(type),
   };
 }
 
 export function fallbackPlan(blueprint: DiscoveredCompetency[], profile: CandidateProfile, pack: RolePack): PlannedQuestion[] {
   if (blueprint.length !== 5) throw new Error('A confirmed five-competency blueprint is required.');
   const [first, second, third, fourth, fifth] = blueprint;
-  const role = profile.target_role;
   const motivation = blueprint.find((competency) => competency.family === 'motivation') ?? first;
   const behavioural = blueprint.find((competency) => competency.family === 'behavioural') ?? third;
   const situational = blueprint.find((competency) => competency.family === 'cognitive') ?? fourth;
@@ -138,27 +146,41 @@ export function fallbackPlan(blueprint: DiscoveredCompetency[], profile: Candida
     question(
       1,
       profile.career_change
-        ? `Talk me through your career change and why ${role} is the right next step.`
-        : `Tell me about your background and why it fits this ${role} role.`,
+        ? 'Why is this role the right next step in your career change?'
+        : 'What experience from your background is most relevant to this role?',
       'INTRODUCTION',
       motivation,
       profile.career_change ? 'CAREER_COHERENCE' : 'ROLE_RELEVANCE',
+      profile.experience_level,
     ),
-    question(2, `Tell me about a time you showed ${first.name.toLowerCase()}.`, questionTypeFor(first), first, first.id),
-    question(3, `Give me a specific example of how you used ${second.name.toLowerCase()}.`, questionTypeFor(second), second, second.id),
-    question(4, `Describe a difficult situation that tested your ${third.name.toLowerCase()}.`, questionTypeFor(third), third, third.id),
-    question(5, bank[0]?.text ?? 'Tell me about a challenging disagreement and how you handled it.', 'BEHAVIOURAL', behavioural, 'CHALLENGE_OR_CONFLICT'),
-    question(6, bank[1]?.text ?? `Imagine priorities change suddenly in this ${role} role. What would you do first?`, 'SITUATIONAL', situational, 'SITUATIONAL_JUDGEMENT'),
-    question(7, `Tell me about a result that shows your ${fourth.name.toLowerCase()}.`, questionTypeFor(fourth), fourth, fourth.id),
-    question(8, `What example best shows your ${fifth.name.toLowerCase()} for this role?`, questionTypeFor(fifth), fifth, 'HIGHEST_VALUE_UNCOVERED'),
+    question(2, 'What work example best shows how you handled a difficult task?', questionTypeFor(first), first, first.id, profile.experience_level),
+    question(3, 'Which work example best shows how you solved a problem?', questionTypeFor(second), second, second.id, profile.experience_level),
+    question(4, 'Describe one difficult situation you handled at work?', questionTypeFor(third), third, third.id, profile.experience_level),
+    question(5, bank[0]?.candidate_text ?? 'What challenging disagreement have you handled at work?', 'BEHAVIOURAL', behavioural, 'CHALLENGE_OR_CONFLICT', profile.experience_level),
+    question(6, bank[1]?.candidate_text ?? 'What would you do first if your priorities changed suddenly?', 'SITUATIONAL', situational, 'SITUATIONAL_JUDGEMENT', profile.experience_level),
+    question(7, 'What result best shows the value of your work?', questionTypeFor(fourth), fourth, fourth.id, profile.experience_level),
+    question(8, 'What example best shows your fit for this role?', questionTypeFor(fifth), fifth, 'HIGHEST_VALUE_UNCOVERED', profile.experience_level),
   ];
 }
 
-export function addPlanRephrases(plan: Omit<PlannedQuestion, 'rephrase'>[]): PlannedQuestion[] {
+export function addPlanRephrases(plan: PlannedQuestion[]): PlannedQuestion[] {
   const slots = new Set<number>();
   return plan.map((item) => {
     if (slots.has(item.slot)) throw new Error('Interview plan contains a duplicate slot.');
     slots.add(item.slot);
-    return { ...item, rephrase: `Please answer this in another way: ${item.text}` };
+    return {
+      ...makeBankQuestion({
+      question_id: item.question_id,
+      candidate_text: item.candidate_text,
+      interviewer_intent: item.interviewer_intent,
+      probe_targets: item.probe_targets,
+      question_type: item.question_type,
+      target_competencies: item.target_competencies,
+      seniority: item.seniority,
+      kind: 'MAIN',
+      rephrase_text: item.rephrase_text,
+      }),
+      slot: item.slot,
+    };
   }).sort((left, right) => left.slot - right.slot);
 }

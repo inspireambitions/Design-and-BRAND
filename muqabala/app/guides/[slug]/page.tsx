@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { GuidePage } from '@/components/GuidePage';
 import { sanityClient } from '@/lib/sanity/client';
+import { guideSpelling } from '@/lib/sanity/spelling';
 import { guideBySlugQuery, guidesQuery, type GuideDocument, type GuideListItem } from '@/lib/sanity/queries';
 
 // Every published guide is prerendered at build time and stays static until
@@ -31,7 +32,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const guide = await sanityClient.fetch<GuideDocument | null>(guideBySlugQuery, { slug }).catch(() => null);
+  const guide = guideSpelling(await sanityClient.fetch<GuideDocument | null>(guideBySlugQuery, { slug }).catch(() => null));
   if (!guide) return { title: 'Guide' };
   return {
     title: guide.title,
@@ -48,7 +49,7 @@ export default async function GuideSlugPage({
 }) {
   const { slug } = await params;
   if (!/^[a-z0-9-]{1,80}$/.test(slug)) notFound();
-  const guide = await sanityClient.fetch<GuideDocument | null>(guideBySlugQuery, { slug }).catch(() => null);
+  const guide = guideSpelling(await sanityClient.fetch<GuideDocument | null>(guideBySlugQuery, { slug }).catch(() => null));
   if (!guide) notFound();
   const articleJsonLd = safeJsonLd(guide.jsonLdRaw);
   const faqJsonLd = safeJsonLd(guide.faqJsonLdRaw);

@@ -14,9 +14,9 @@ const CARDS = {
 } as const;
 
 /**
- * Three equal cards: Type, Speak, Video. One tap confirms. The highlighted
- * card is the remembered or default choice; on a desktop it takes focus so
- * Enter confirms it straight away. Arrow keys move between the cards.
+ * Three equal cards: Type, Speak, Video. The highlighted card is the selected
+ * choice. On setup, a separate Start practice button confirms it. Arrow keys
+ * move between the cards.
  */
 export function AnswerModeSelector({
   highlighted,
@@ -71,6 +71,7 @@ export function AnswerModeSelector({
       {ANSWER_MODES.map((mode) => {
         const { Icon, title, body } = CARDS[mode];
         const usable = available(mode);
+        const idPrefix = `answer-mode-${compact ? 'change' : 'setup'}-${mode}`;
         return (
           <button
             key={mode}
@@ -78,14 +79,17 @@ export function AnswerModeSelector({
             className={`mode-card answer-mode-card${highlighted === mode ? ' on' : ''}`}
             aria-pressed={highlighted === mode}
             aria-disabled={!usable || undefined}
+            aria-labelledby={`${idPrefix}-title ${idPrefix}-body`}
             disabled={disabled}
             onClick={() => {
               if (usable) onChoose(mode);
             }}
           >
             <Icon className="mode-card-icon" size={compact ? 22 : 28} weight="duotone" aria-hidden="true" />
-            <span className="mode-title">{t(title)}</span>
-            <span className="tiny">{usable ? t(body) : t('modeUnavailable')}</span>
+            <span id={`${idPrefix}-title`} className="mode-title">{t(title)}</span>
+            <span id={`${idPrefix}-body`} className="tiny">
+              {usable ? t(body) : mode === 'video' ? t('modeVideoUnavailable') : t('modeUnavailable')}
+            </span>
           </button>
         );
       })}

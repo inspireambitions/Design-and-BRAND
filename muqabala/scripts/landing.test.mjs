@@ -131,13 +131,20 @@ test('role cards carry only the landing fields and keep the popular order', () =
   ];
   const cards = toRoleCards(roles, ['a', 'missing', 'b']);
   assert.deepEqual(Object.keys(cards[0]).sort(), [
-    'blurb', 'blurbAr', 'id', 'industry', 'industryAr', 'popularRank', 'questionCount', 'title', 'titleAr',
+    'blurb', 'blurbAr', 'id', 'industry', 'industryAr', 'popularRank', 'questionCount', 'quickQuestionId', 'title', 'titleAr',
   ]);
   assert.equal(cards[0].questionCount, 3);
   assert.deepEqual(popularRoleCards(cards).map((card) => card.id), ['a', 'b']);
   // The slim card must not smuggle the question bank across.
   assert.equal('questions' in cards[0], false);
   assert.equal('bank' in cards[0], false);
+});
+
+test('quick practice links select a real role question after the warm-up', () => {
+  const [card] = toRoleCards([{ id: 'sample', questions: [{ id: 'warm-up' }, { id: 'customer-care' }] }], ['sample']);
+  assert.equal(card.quickQuestionId, 'customer-care');
+  const [single] = toRoleCards([{ id: 'single', questions: [{ id: 'only-question' }] }], []);
+  assert.equal(single.quickQuestionId, 'only-question');
 });
 
 test('the hero draft is a one-shot handoff between /practice and /practice/custom', () => {
@@ -160,12 +167,12 @@ test('landing strings exist in both languages and follow the house rules', async
     assert.equal(typeof STRINGS.ar[key], 'string', `${key} is missing in Arabic`);
     assert.ok(STRINGS.ar[key].length > 0, `${key} is empty in Arabic`);
     assert.equal(STRINGS.en[key].includes('\u2014'), false, `${key} uses an em dash`);
-    assert.equal(/\bpractice\b/i.test(STRINGS.en[key]) && /\b(to|we|you|they) practice\b/i.test(STRINGS.en[key]), false, `${key} uses practice as a verb`);
+    assert.equal(/\bpractise\b/i.test(STRINGS.en[key]), false, `${key} should use the preferred Practice spelling`);
   }
   assert.equal(STRINGS.en.landingPasteHeading, 'Paste the job advert you are preparing for');
-  assert.equal(STRINGS.en.landingPasteSubline, 'Or pick a role below.');
+  assert.equal(STRINGS.en.landingPasteSubline, 'Or choose a role above.');
   assert.equal(STRINGS.ar.landingPasteHeading, 'الصق إعلان الوظيفة الذي تستعد له');
-  assert.equal(STRINGS.ar.landingPasteSubline, 'أو اختر وظيفة أدناه.');
+  assert.equal(STRINGS.ar.landingPasteSubline, 'أو اختر وظيفة أعلاه.');
   assert.equal(STRINGS.en.landingPackHeading, 'Where should we send your interview pack for this job?');
   assert.equal(STRINGS.en.landingPackSend, 'Send my pack');
   assert.equal(STRINGS.en.landingPackShowHere, 'Show it here instead');

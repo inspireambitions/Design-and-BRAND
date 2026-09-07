@@ -15,6 +15,8 @@ export type RoleCard = {
   blurb: string;
   blurbAr: string;
   questionCount: number;
+  /** First role question after the warm-up, using the existing focused-practice flow. */
+  quickQuestionId?: string;
   /** Position in the popular shortlist, or -1 when the role is directory only. */
   popularRank: number;
 };
@@ -29,6 +31,7 @@ export function toRoleCards(roles: readonly Role[], popularIds: readonly string[
     blurb: role.blurb,
     blurbAr: role.blurbAr,
     questionCount: role.questions.length,
+    quickQuestionId: role.questions[1]?.id ?? role.questions[0]?.id,
     popularRank: popularIds.indexOf(role.id),
   }));
 }

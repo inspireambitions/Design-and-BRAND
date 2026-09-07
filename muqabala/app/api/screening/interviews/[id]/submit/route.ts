@@ -6,9 +6,12 @@ import { hasTrustedOrigin, privateNoStoreHeaders, screeningReceiptReference } fr
 import { processScreeningNotifications } from '@/lib/server/screening-notifications';
 import { trackServer } from '@/lib/server/analytics';
 import { employerVolumeEnabled } from '@/lib/employer-volume';
+import { generateCandidateEvaluationReport } from '@/lib/server/evaluation-report';
+import { reportOperationalFailure } from '@/lib/sentry-server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   if (!hasTrustedOrigin(request)) return Response.json({ error: 'Invalid request origin.' }, { status: 403 });
@@ -38,7 +41,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (interview.screening_pack_id) {
     trackServer('candidate_answered', { role_id: interview.screening_pack_id, flag_state: employerVolumeEnabled() ? 'on' : 'off' });
   }
-  after(async () => { await processScreeningNotifications({ interviewId: id, limit: 2 }); });
+  after(async () => {
+    await Promise.all([
+      processScreeningNotifications({ interviewId: id, limit: 2 }).catch((error) => {
+        reportOperationalFailure('screening_submit_notification_failed', { area: 'screening', code: error instanceof Error ? error.name : 'unknown', route: '/api/screening/interviews/[id]/submit' });
+      }),
+      generateCandidateEvaluationReport(id).catch((error) => {
+        reportOperationalFailure('screening_submit_evaluation_failed', { area: 'evaluation', code: error instanceof Error ? error.name : 'unknown', route: '/api/screening/interviews/[id]/submit' });
+      }),
+    ]);
+  });
   return Response.json({
     submitted: true,
     submittedAt,

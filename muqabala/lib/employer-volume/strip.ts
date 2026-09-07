@@ -1,3 +1,6 @@
+import { employerDecisionLabel } from '../employer-dashboard.ts';
+import type { Coverage } from './coverage';
+
 /**
  * Role card number strip and export shaping. Pure so the reconciliation test
  * can assert the five numbers from fixtures.
@@ -82,7 +85,7 @@ export type ExportRow = {
   first_reminder_at: string | null;
   second_reminder_at: string | null;
   submitted_at: string | null;
-  rubric: boolean[];
+  rubric: (boolean | 'Unknown')[];
   decision: string | null;
   reviewer: string | null;
   decided_at: string | null;
@@ -110,8 +113,13 @@ export function exportCsv(rows: ExportRow[]): string {
     const rubric = [0, 1, 2, 3].map((index) => (row.rubric[index] === undefined ? '' : row.rubric[index]));
     lines.push([
       row.candidate_ref, row.name, row.email, row.phone, row.channel, row.invited_at, row.first_reminder_at, row.second_reminder_at, row.submitted_at,
-      ...rubric, row.decision, row.reviewer, row.decided_at, row.note, row.share_response, row.share_responded_at,
+      ...rubric, employerDecisionLabel(row.decision), row.reviewer, row.decided_at, row.note, row.share_response, row.share_responded_at,
     ].map(csvCell).join(','));
   }
   return `\uFEFF${lines.join('\r\n')}\r\n`;
+}
+
+export function exportCandidateSummaryLine(candidate: { displayName: string; coverage: Coverage; decision: string | null }): string {
+  const marks = candidate.coverage.items.map((item) => item.status === 'unavailable' ? 'Unknown' : item.covered ? 'Y' : 'N').join(' ');
+  return `${candidate.displayName}   rubric ${marks}   ${employerDecisionLabel(candidate.decision) ?? 'No decision yet'}`;
 }

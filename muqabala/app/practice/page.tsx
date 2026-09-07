@@ -4,8 +4,8 @@ import { toRoleCards } from '@/lib/landing/role-cards';
 import { HomeView } from '@/components/HomeView';
 
 export const metadata: Metadata = {
-  title: 'Start practising',
-  description: 'Choose a Gulf job interview or paste a job advert and start practising free in English or Arabic.',
+  title: 'Start practicing',
+  description: 'Choose a Gulf job interview or paste a job advert and start practicing free in English or Arabic.',
   alternates: { canonical: '/practice' },
 };
 

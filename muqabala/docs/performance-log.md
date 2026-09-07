@@ -163,7 +163,7 @@ Section 6, employer side.
 
 | Metric | Before | After | Source |
 | --- | --- | --- | --- |
-| Video upload path | Browser to Supabase Storage, resumable | Unchanged, confirmed | `lib/screening-video-upload.ts` line 20 (`new tus.Upload(file, { endpoint: grant.endpoint`); `app/api/screening/interviews/[id]/upload-url/route.ts` lines 71 to 82 (`createSignedUploadUrl`, endpoint `storage.supabase.co/storage/v1/upload/resumable`); `answers/route.ts` receives JSON metadata only and verifies the object with `storage.list` |
+| Video upload path | Browser to Supabase Storage through the incompatible TUS endpoint | Browser to a one-file Supabase signed upload URL, with three transient-failure attempts and an IndexedDB draft retained until server confirmation | `lib/screening-video-upload.ts`; `app/api/screening/interviews/[id]/upload-url/route.ts`; `answers/route.ts` receives JSON metadata only and verifies the stored object with `storage.list` |
 | Report page queries | 3 (packs, interview, answers) plus 3 `createSignedUrl` calls | 2 (packs, interview) and 0 signing calls; 3 queries for pre-summary submissions | `app/employer/interviews/[id]/page.tsx` |
 | Media requests during report load | 3 `<video preload="metadata">` with 15 minute signed URLs in the HTML | 0; a placeholder per answer, `<video>` mounts only after Play, signing via `signEmployerVideo` server action | `components/EmployerReportVideo.tsx`, `app/employer/actions.ts` |
 | Dashboard answers query | `interview_answers` for every submission (3 rows per candidate, unbounded) | Only the 20 rows on screen plus the 3 queued for review | `app/employer/page.tsx` |

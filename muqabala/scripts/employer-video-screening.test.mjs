@@ -48,8 +48,13 @@ test('candidate consent and receipt match the approved wording', () => {
 test('candidate APIs do not expose employer analysis or reports', () => {
   const scoreRoute = read('app/api/score/route.ts');
   const reportRoute = read('app/api/interviews/[id]/report/route.ts');
+  const brainRoute = read('app/api/screening/interviews/[id]/brain/route.ts');
+  const employerBrain = read('lib/universal-interview/employer.ts');
   assert.match(scoreRoute, /mode === 'screening'[\s\S]*saved: true/);
   assert.match(reportRoute, /mode === 'screening'[\s\S]*status: 404/);
+  assert.match(brainRoute, /publicEmployerBrainState\(state\)/);
+  assert.doesNotMatch(brainRoute, /publicInterviewState\(state\)/);
+  assert.doesNotMatch(employerBrain.match(/export function publicEmployerBrainState[\s\S]*?\n\}/)?.[0] ?? '', /coverage|evidence_ledger|final_feedback/);
 });
 
 test('employer ownership, final consent and private video storage are enforced in the migration', () => {
@@ -72,17 +77,18 @@ test('employer dashboard separates recorded evidence from AI analysis', () => {
   assert.match(report, /not a verified fact or an automatic decision/);
   assert.match(actions, /createSignedUrl/);
   assert.match(report, /Kept for up to 90 days/);
-  assert.match(deleteControl, /Delete this interview and all three recordings/);
+  assert.match(deleteControl, /Delete this interview and all its recordings/);
   assert.match(deleteRoute, /currentUser/);
   assert.match(deleteRoute, /not\('submitted_at', 'is', null\)/);
   assert.match(deleteRoute, /storage\.from\('screening-videos'\)\.remove/);
+  assert.match(deleteRoute, /from\('universal_interviews'\)[\s\S]*\.delete\(\)/);
   assert.match(deleteRoute, /\.eq\('screening_pack_id', interview\.screening_pack_id\)/);
 });
 
 test('private playback cache is shorter than the signed employer link', () => {
   const upload = read('lib/screening-video-upload.ts');
   const actions = read('app/employer/actions.ts');
-  assert.match(upload, /cacheControl: '60'/);
+  assert.match(upload, /body\.append\('cacheControl', '60'\)/);
   assert.match(actions, /createSignedUrl\(answer\.video_path, 15 \* 60\)/);
 });
 
@@ -111,10 +117,17 @@ test('employer report renders evidence text first and signs video only on play',
   assert.match(actions, /export async function signEmployerVideo/);
   assert.match(actions, /const owned = await ownedSubmittedInterview\(interviewId\);\s*if \(!owned\) return \{ error/);
 
-  // Video bytes go from the browser to Supabase Storage; no Next route reads them.
-  assert.match(upload, /new tus\.Upload\(file, \{\s*endpoint: grant\.endpoint/);
-  assert.match(uploadRoute, /storage\.supabase\.co\/storage\/v1\/upload\/resumable/);
-  assert.match(uploadRoute, /createSignedUploadUrl\(path\)/);
+  // Video bytes go from the browser to a one-file Supabase signed URL; no Next route reads them.
+  assert.match(upload, /new XMLHttpRequest\(\)/);
+  assert.match(upload, /request\.open\('PUT', grant\.signedUrl\)/);
+  assert.match(upload, /request\.setRequestHeader\('x-upsert', 'true'\)/);
+  assert.match(upload, /body\.append\('cacheControl', '60'\)/);
+  assert.match(upload, /body\.append\('', file\)/);
+  assert.match(upload, /const retryDelays = \[0, 1_000, 3_000\]/);
+  assert.match(upload, /request\.status === 429/);
+  assert.doesNotMatch(upload, /tus-js-client|upload\/resumable/);
+  assert.match(uploadRoute, /createSignedUploadUrl\(path, \{ upsert: true \}\)/);
+  assert.match(uploadRoute, /signedUrl: signed\.signedUrl/);
 });
 
 test('submitting writes the one-row report summary the employer page reads', () => {
@@ -126,17 +139,51 @@ test('submitting writes the one-row report summary the employer page reads', () 
   assert.doesNotMatch(migration, /create policy/);
 });
 
-test('screening questions are generated once per link and never on the candidate page', () => {
+test('screening questions are signed once per link and the adaptive engine owns follow-ups', () => {
   const packRoute = read('app/api/screening/packs/route.ts');
   const packLookup = read('lib/screening-pack.ts');
   const candidatePage = read('app/s/[code]/page.tsx');
-  assert.match(packRoute, /const questions = proofQuestions\(role\);/);
+  const brainRoute = read('app/api/screening/interviews/[id]/brain/route.ts');
+  assert.match(packRoute, /const questions = role\.questions\.slice\(0, 8\);/);
   assert.match(packRoute, /signProofPack\(\{[\s\S]*questions,/);
   assert.match(packRoute, /insert\(\{[\s\S]*signed_token: signedToken/);
-  assert.match(packLookup, /select\('(id, )?signed_token/);
+  assert.match(packLookup, /const columns = 'id, signed_token/);
   assert.match(packLookup, /verifyInterview\(data\.signed_token\)/);
   assert.doesNotMatch(packLookup, /proofQuestions|signProofPack/);
   assert.doesNotMatch(candidatePage, /proofQuestions|signProofPack/);
+  assert.match(brainRoute, /processUniversalTurn\(state, answer\.transcript/);
+  assert.match(brainRoute, /employerBrainQuestionSnapshot\(state\.current_question/);
+  assert.match(brainRoute, /processed_answer_count/);
+});
+
+test('adaptive screening resumes safely after an answer was uploaded but the next question was interrupted', () => {
+  const flow = read('components/EmployerVideoInterview.tsx');
+  const brainRoute = read('app/api/screening/interviews/[id]/brain/route.ts');
+  assert.match(flow, /status\.questionCount <= status\.currentQuestion/);
+  assert.match(flow, /questionIndex: status\.currentQuestion - 1/);
+  assert.match(flow, /draft\.questionIndex < nextIndex/);
+  assert.match(brainRoute, /if \(questionIndex === processed\)/);
+  assert.match(brainRoute, /if \(questionIndex > processed\)/);
+  assert.match(brainRoute, /snapshot\.length === current\.current_question/);
+});
+
+test('adaptive screening never presents a saved response as a failed upload', () => {
+  const flow = read('components/EmployerVideoInterview.tsx');
+  const brainRoute = read('app/api/screening/interviews/[id]/brain/route.ts');
+  const turnProcessor = read('lib/universal-interview/process-turn.ts');
+  const employerBridge = read('lib/universal-interview/employer.ts');
+  assert.match(turnProcessor, /new ModelCallBudget\(2\)/);
+  assert.doesNotMatch(turnProcessor, /new ModelCallBudget\(3\)/);
+  assert.match(brainRoute, /allowDeterministicExtractionFallback: true/);
+  assert.match(brainRoute, /code: 'analysis_unavailable'/);
+  assert.doesNotMatch(brainRoute, /Retry without recording again/);
+  assert.match(flow, /type SaveFailureKind = 'upload' \| 'analysis' \| 'transcription' \| null/);
+  assert.match(flow, /responseConfirmed \? 'analysis' : 'upload'/);
+  assert.match(flow, /analysisFailed: 'Your response is saved\. Its analysis needs another try\.'/);
+  assert.match(flow, /retryAnalysis: 'Retry analysis'/);
+  assert.match(employerBridge, /automatedAnalysisUnavailable/);
+  assert.match(employerBridge, /if \(!evidence \|\| automatedAnalysisUnavailable\)/);
+  assert.match(employerBridge, /status: 'unscored'/);
 });
 
 test('employer creation form generates the description before unlocking the link action', () => {
@@ -161,6 +208,8 @@ test('employer creation form generates the description before unlocking the link
   assert.match(form, /proofEmailSubject/);
   assert.match(form, /mailto:\?subject=/);
   assert.match(copy, /Learn how each candidate would approach the role before you shortlist\./);
+  assert.match(copy, /Your job description is saved\. Please try again\./);
+  assert.doesNotMatch(copy, /Check the job description and try again\./);
   assert.match(copy, /I used Muqabala for \{title\} at \{company\}\./);
   assert.doesNotMatch(read('components/EmailSignIn.tsx'), /Promotions or Spam|emailDeliveryHelp/);
   assert.match(form, /\{hasReportShot \? \(/);
@@ -212,16 +261,79 @@ test('completed recordings survive interruption and only advance after server re
   assert.match(draftStore, /indexedDB\.open/);
   assert.match(draftStore, /probeScreeningRecordingStore/);
   assert.match(draftStore, /blob: Blob/);
+  assert.match(draftStore, /transcriptSegments: TranscriptSegment\[\]/);
+  assert.match(draftStore, /transcriptTimingVersion/);
   assert.match(flow, /await saveScreeningRecordingDraft/);
   assert.match(flow, /await readStatus\(interviewId\)/);
   assert.match(flow, /await deleteScreeningRecordingDraft/);
   assert.match(flow, /error !== c\.recoveredRecording/);
-  assert.match(uploader, /muqabala-screening:\$\{grant\.path\}/);
+  assert.match(uploader, /file\.size > grant\.maxBytes/);
+  assert.match(uploader, /request\.upload\.onprogress/);
+  assert.match(uploader, /secure video upload was interrupted/i);
+  assert.match(uploader, /caught instanceof ScreeningUploadError && caught\.retryable/);
   assert.match(flow, /Recorded on this device/);
   assert.match(flow, /Received by Muqabala/);
   assert.match(statusRoute, /question_index,video_upload_status,response_saved_at/);
   assert.doesNotMatch(statusRoute, /transcript|video_path|feedback/);
   assert.match(uploadRoute, /state: 'received'/);
+});
+
+test('current OpenAI models receive no unsupported temperature option', () => {
+  const advertRoute = read('app/api/interview/route.ts');
+  const adaptiveModel = read('lib/universal-interview/model.ts');
+  const reportLanguage = read('lib/server/evaluation-report-language.ts');
+  for (const source of [advertRoute, adaptiveModel, reportLanguage]) {
+    assert.doesNotMatch(source, /temperature\s*:/);
+  }
+  assert.match(advertRoute, /reportOperationalEvent\('interview_generation_degraded'/);
+  assert.match(read('app/api/screening/packs/route.ts'), /reportOperationalFailure\('screening_pack_creation_failed'/);
+});
+
+test('a model timeout still leaves an immediate signed catalogue interview for the employer link', () => {
+  const advertRoute = read('app/api/interview/route.ts');
+  const catalogue = read('lib/interview-catalogue.ts');
+  const packRoute = read('app/api/screening/packs/route.ts');
+  const packLookup = read('lib/screening-pack.ts');
+  const migration = read('supabase/migrations/20260904164022_lock_screening_pack_question_version.sql');
+  const form = read('components/EmployerProofCreate.tsx');
+  assert.match(catalogue, /function catalogueInterviewRole[\s\S]*ROLES[\s\S]*drawMockQuestions\(role, 0\)[\s\S]*requested\.includes\(normaliseTitle\(role\.title\)\)/);
+  assert.match(advertRoute, /function signedFallbackResponse[\s\S]*signInterview\(\{[\s\S]*questions: role\.questions/);
+  assert.match(advertRoute, /return signedFallbackResponse\(jobTitle, timedOut \? 'timeout' : 'error'\)/);
+  assert.match(advertRoute, /tailored: false, fallback: true, token, reason/);
+  assert.match(advertRoute, /export async function POST/);
+  assert.match(advertRoute, /AbortSignal\.any\(\[request\.signal, AbortSignal\.timeout\(22_000\)\]\)/);
+  assert.doesNotMatch(form, /fetch\('\/api\/interview'/);
+  assert.match(form, /fetch\('\/api\/screening\/packs'/);
+  assert.match(packRoute, /catalogueInterviewRole\(parsed\.data\.jobTitle/);
+  assert.match(packRoute, /after\(\(\) => enhanceScreeningPack/);
+  assert.match(packRoute, /ENHANCEMENT_DEADLINE_MS = 10_000/);
+  assert.match(packRoute, /import \{ POST as generateInterviewResponse \} from '@\/app\/api\/interview\/route'/);
+  assert.match(packRoute, /generateInterviewResponse\(new Request\('https:\/\/muqabala\.internal\/api\/interview'/);
+  assert.doesNotMatch(packRoute, /fetch\(`\$\{configuredOrigin\(\)\}\/api\/interview/);
+  assert.match(packRoute, /\.eq\('starts_used', 0\)[\s\S]*\.is\('first_opened_at', null\)/);
+  assert.match(packLookup, /update\(\{ first_opened_at: openedAt \}\)[\s\S]*\.is\('first_opened_at', null\)/);
+  assert.match(migration, /question_source in \('legacy', 'catalogue', 'ai'\)/);
+  assert.match(migration, /signed question pack is immutable/);
+});
+
+test('timed evidence storage is private and rolls out through a compatible save function', () => {
+  const migration = read('supabase/migrations/20260903175653_timed_interview_evidence.sql');
+  const answerRoute = read('app/api/screening/interviews/[id]/answers/route.ts');
+  const brainRoute = read('app/api/screening/interviews/[id]/brain/route.ts');
+  assert.match(migration, /add column if not exists transcript_segments jsonb/);
+  assert.match(migration, /create table public\.interview_evidence_records/);
+  assert.match(migration, /alter table public\.interview_evidence_records enable row level security/);
+  assert.match(migration, /revoke all on public\.interview_evidence_records from public, anon, authenticated/);
+  assert.match(migration, /create or replace function public\.save_screening_video_answer_v2/);
+  assert.match(answerRoute, /rpc\('save_screening_video_answer_v2'/);
+  assert.match(answerRoute, /p_transcript_segments/);
+  assert.match(answerRoute, /p_transcript_timing_version/);
+  assert.match(brainRoute, /TranscriptSegmentsSchema\.safeParse/);
+  assert.match(brainRoute, /entry\.segment_ids/);
+  assert.match(brainRoute, /selected\.map\(\(segment\) => segment\.text\)\.join\(' '\)/);
+  assert.match(brainRoute, /start_ms: selected\[0\]\.startMs/);
+  assert.match(brainRoute, /end_ms: selected\.at\(-1\)!\.endMs/);
+  assert.doesNotMatch(brainRoute, /start_ms:\s*entry|end_ms:\s*entry/);
 });
 
 test('screening retries keep one capacity place and return a durable receipt', () => {

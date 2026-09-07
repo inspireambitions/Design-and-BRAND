@@ -1,5 +1,6 @@
 import type { EmailOtpType } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { shouldClaimPracticeAttempt } from '@/lib/auth-destination';
 import { claimCurrentAttempt } from '@/lib/server/claim-attempt';
 import { configuredOrigin, isOpaqueToken, safeNext } from '@/lib/server/security';
 import { createClient } from '@/lib/supabase/server';
@@ -11,8 +12,8 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const tokenHash = url.searchParams.get('token_hash');
   const type = url.searchParams.get('type') as EmailOtpType | null;
-  const claim = url.searchParams.get('claim');
   const next = safeNext(url.searchParams.get('next'), '/account');
+  const claim = shouldClaimPracticeAttempt(next) ? url.searchParams.get('claim') : null;
   const client = await createClient();
   if (client && tokenHash && type) {
     const { data, error } = await client.auth.verifyOtp({ type, token_hash: tokenHash });

@@ -29,6 +29,10 @@
 
   --radius: 12px;
   --radius-lg: 18px;
+  --control-radius: 0.75rem;
+  --control-height: 3rem;
+  --control-weight: 750;
+  --header-height: 4.5rem;
   --shadow: 0 1px 2px rgba(22, 36, 31, 0.06), 0 8px 24px -12px rgba(22, 36, 31, 0.18);
   --shadow-lift: 0 2px 4px rgba(22, 36, 31, 0.08), 0 16px 36px -16px rgba(22, 36, 31, 0.28);
 
@@ -300,10 +304,11 @@ body[dir='rtl'] .eyebrow {
   justify-content: center;
   gap: 0.5rem;
   padding: 0.72rem 1.25rem;
-  border-radius: 999px;
+  border-radius: var(--control-radius);
+  min-height: var(--control-height);
   border: 1px solid transparent;
   font-family: var(--font-display);
-  font-weight: 650;
+  font-weight: var(--control-weight);
   font-size: 0.95rem;
   line-height: 1;
   text-decoration: none;
@@ -353,7 +358,8 @@ body[dir='rtl'] .eyebrow {
   background: transparent;
   color: var(--ink-soft);
   padding: 0.5rem 0.75rem;
-  border-radius: 999px;
+  border-radius: var(--control-radius);
+  min-height: 44px;
   border: 1px solid var(--line);
   font-size: 0.85rem;
 }
@@ -3079,17 +3085,17 @@ body[dir='rtl'] .report-unscored-status {
 }
 
 .marketing-button {
-  min-height: 3.25rem;
+  min-height: var(--control-height);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0.78rem 1.2rem;
   border: 1px solid var(--jade);
-  border-radius: 0.72rem;
+  border-radius: var(--control-radius);
   background: var(--jade);
   box-shadow: 0 10px 28px -18px color-mix(in srgb, var(--jade) 65%, transparent);
   color: white;
-  font-weight: 800;
+  font-weight: var(--control-weight);
   line-height: 1.1;
   text-decoration: none;
   transition: transform 160ms ease-out, background 160ms ease-out;
@@ -3509,36 +3515,194 @@ body[dir='rtl'] .evidence-demo span {
   grid-row: 1 / span 2;
 }
 
-.marketing-footer {
-  padding-block: 4rem 6rem;
-  border-top: 1px solid var(--line);
-  background: var(--surface);
+.site-footer {
+  color-scheme: dark;
+  padding: clamp(3rem, 6vw, 5rem) clamp(1rem, 4vw, 2rem);
+  border-top: 1px solid rgba(212, 168, 79, 0.35);
+  background: #082f2b;
+  color: #f3f7f5;
 }
 
-.marketing-footer-grid {
+body:has([data-footer-visibility='focused']) .site-footer {
+  display: none;
+}
+
+.site-footer-inner {
+  width: min(100%, 74rem);
+  margin-inline: auto;
+}
+
+.site-footer-intro {
   display: grid;
-  grid-template-columns: 1.4fr 0.8fr 0.8fr;
-  gap: 3rem;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 0.7fr);
+  align-items: end;
+  gap: 2rem;
+  padding-bottom: 2.5rem;
+  border-bottom: 1px solid rgba(243, 247, 245, 0.2);
 }
 
-.marketing-brand-footer {
-  margin-bottom: 1rem;
+.site-footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 0.75rem;
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 750;
+  letter-spacing: -0.025em;
 }
 
-.marketing-footer p {
-  max-width: 26rem;
-  color: var(--ink-soft);
+.site-footer-brand svg {
+  flex: 0 0 auto;
 }
 
-.marketing-footer-owner {
-  margin-top: 0.65rem;
+.site-footer-brand-block p {
+  max-width: 31rem;
+  margin: 0;
+  color: #d7e1de;
+}
+
+.site-footer-brand-block .site-footer-owner {
+  margin-top: 0.45rem;
+  color: #b7cac4;
   font-size: 0.82rem;
 }
 
-.marketing-footer-links {
+.site-footer-support {
   display: grid;
-  align-content: start;
-  gap: 0.8rem;
+  justify-items: end;
+  gap: 0.85rem;
+}
+
+.site-footer-support a,
+.site-footer-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.site-footer-support-button {
+  justify-content: center;
+  min-height: 2.9rem;
+  padding: 0.7rem 1rem;
+  border: 1px solid #d4a84f;
+  border-radius: 999px;
+  background: #d4a84f;
+  color: #102d29 !important;
+  font-weight: 750;
+}
+
+.site-footer-more {
+  color: #d7e1de !important;
+  font-size: 0.9rem;
+}
+
+.site-footer-support a:hover,
+.site-footer-links a:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}
+
+.site-footer-support-button:hover {
+  background: #e0bc70;
+  text-decoration: none !important;
+}
+
+.site-footer a:focus-visible,
+.site-footer summary:focus-visible {
+  outline: 3px solid #efc66f;
+  outline-offset: 4px;
+}
+
+.site-footer-desktop-groups {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(1.5rem, 4vw, 3rem);
+  padding-top: 2.5rem;
+}
+
+.site-footer-group h2 {
+  margin: 0 0 1rem;
+  color: #d4a84f;
+  font-size: 0.86rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.site-footer-links {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-footer-links a {
+  width: fit-content;
+  max-width: 100%;
+  color: #edf3f1;
+  line-height: 1.45;
+}
+
+.site-footer-links svg,
+.site-footer-support svg {
+  flex: 0 0 auto;
+}
+
+.site-footer-mobile-groups {
+  display: none;
+}
+
+.site-footer-accordion {
+  border-bottom: 1px solid rgba(243, 247, 245, 0.2);
+}
+
+.site-footer-accordion summary {
+  padding: 1rem 0;
+  color: #f3f7f5;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.site-footer-accordion .site-footer-links {
+  padding: 0 0 1.25rem;
+}
+
+@media (max-width: 800px) {
+  .site-footer {
+    padding: 3rem 1.25rem 4rem;
+  }
+
+  body:has(.marketing-mobile-cta) .site-footer {
+    padding-bottom: 7rem;
+  }
+
+  .site-footer-intro {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .site-footer-support {
+    justify-items: start;
+  }
+
+  .site-footer-desktop-groups {
+    display: none;
+  }
+
+  .site-footer-mobile-groups {
+    display: block;
+    padding-top: 1.4rem;
+  }
+
+  .site-footer-support-button,
+  .site-footer-more,
+  .site-footer-links a {
+    overflow-wrap: anywhere;
+  }
 }
 
 .marketing-mobile-cta {
@@ -3929,7 +4093,6 @@ body[dir='rtl'] .evidence-demo span {
   .marketing-steps,
   .marketing-role-grid,
   .marketing-role-directory,
-  .marketing-footer-grid,
   .marketing-final .marketing-wrap {
     grid-template-columns: 1fr;
   }
@@ -4028,6 +4191,10 @@ body[dir='rtl'] .evidence-demo span {
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
+}
+
+.setup-start-actions .btn-primary {
+  flex: 1 1 100%;
 }
 
 .method-card {
@@ -4605,10 +4772,12 @@ textarea.landing-advert-box {
 
 .landing-role-list > li {
   display: flex;
+  min-width: 0;
 }
 
 .landing-role-card {
   flex: 1 1 auto;
+  min-width: 0;
   gap: 0.4rem;
   align-items: flex-start;
 }
@@ -4694,6 +4863,23 @@ body[dir='rtl'] .readiness-label {
   color: var(--ink-soft);
   font-size: 0.9rem;
   font-variant-numeric: tabular-nums;
+}
+
+.readiness-unscored {
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunk);
+}
+
+.readiness-not-scored {
+  margin: 0.3rem 0 0;
+  color: var(--jade);
+  font-size: 1rem;
+}
+
+.readiness-unscored .readiness-how {
+  margin-top: 0.35rem;
 }
 
 .readiness-compact .readiness-label {
@@ -4818,6 +5004,61 @@ body[dir='rtl'] .readiness-coverage-title {
 
 .feedback-heading-gold {
   color: var(--gold);
+}
+
+/* Shared identity and navigation, across marketing and the practice entry. */
+.brand > svg { flex: none; color: var(--jade-deep); }
+.brand-owner {
+  color: var(--ink-soft);
+  font-family: var(--font-body);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+.topbar { min-height: var(--header-height); }
+.skip-link {
+  position: fixed;
+  z-index: 1000;
+  inset-inline-start: 1rem;
+  top: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--control-radius);
+  background: var(--jade-deep);
+  color: white;
+  font-weight: 750;
+  transform: translateY(-160%);
+}
+.skip-link:focus { transform: translateY(0); }
+#main-content { scroll-margin-top: calc(var(--header-height) + 1rem); }
+.marketing-mobile-cta[hidden] { display: none; }
+.marketing-site:has(.marketing-mobile-menu[open]) .marketing-mobile-cta,
+.marketing-site:has(main :focus-visible) .marketing-mobile-cta { display: none; }
+.retry-example-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+.retry-example-grid > article { margin: 0; padding: 1.5rem; }
+.retry-example-grid .evidence-improve,
+.retry-example-grid .evidence-result { margin-top: 1.25rem; }
+.retry-example-note { margin-top: 1rem; max-width: 65ch; }
+.privacy-promises { display: grid; gap: 0.5rem; padding-inline-start: 1.2rem; margin-block: 1.5rem 0; }
+.practice-entry .hero { text-align: start; padding-top: 1.5rem; }
+.practice-advert-link { display: inline-block; margin-top: 1rem; }
+.practice-specific-vacancy { margin-top: 3rem; scroll-margin-top: 1.5rem; }
+.practice-entry .foot { display: grid; gap: 0.5rem; }
+.practice-entry .role-card { min-width: 0; }
+.practice-entry .landing-role-line { white-space: normal; overflow: visible; }
+.site-footer .brand { color: #fff; }
+.site-footer .brand > svg { color: #fff; }
+.site-footer-employer .site-footer-intro { margin-bottom: 0; }
+.employer-footer-links { display: flex; flex-wrap: wrap; gap: 1.25rem; align-items: center; }
+.employer-footer-links a { color: #fff; min-height: 44px; display: inline-flex; align-items: center; }
+@media (max-width: 700px) {
+  .brand-owner { display: none; }
+  .retry-example-grid { grid-template-columns: 1fr; }
+  .marketing-hero { gap: 1.75rem; }
+  .marketing-hero .marketing-lede { margin-top: 1rem; }
+  .marketing-hero .marketing-cta-row { margin-top: 1.25rem; }
+  .marketing-hero .marketing-trust-line { margin-top: 1rem; }
+  .marketing-site { padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); }
 }
 
 .coach-tip strong.feedback-heading-tip {

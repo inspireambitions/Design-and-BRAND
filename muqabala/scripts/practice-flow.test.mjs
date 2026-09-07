@@ -16,7 +16,9 @@ import {
 import { limitBlock, limitSentences, splitSentences } from '../lib/flow/feedback-copy.ts';
 import { diffAddedWords, hasAddedWords, tokenise } from '../lib/flow/answer-diff.ts';
 import { compareRetries } from '../lib/retry-comparison.ts';
+import { hasScoredImprovement } from '../lib/retry-comparison.ts';
 import { modelAnswerFor } from '../lib/flow/model-answers.ts';
+import { structureCheck } from '../lib/scoring.ts';
 
 /** Question ids of the two hospitality roles, kept in step with lib/roles/hospitality.ts. */
 const HOSPITALITY_QUESTIONS = {
@@ -138,6 +140,11 @@ test('diffAddedWords is case and punctuation blind and handles Arabic diacritics
   assert.equal(hasAddedWords(diffAddedWords('', '')), false);
 });
 
+test('diffAddedWords keeps hyphenated additions in one readable highlight', () => {
+  const segments = diffAddedWords('I worked at a hotel.', 'I worked at a four-star hotel.');
+  assert.deepEqual(segments.filter((segment) => segment.added).map((segment) => segment.text), ['four-star']);
+});
+
 const competency = (id, evidence = null) => ({ id, label: id, score: evidence ? 8 : 2, evidence });
 const feedback = (overrides = {}) => ({
   questionId: 'q1', score: 70, status: 'scored', headline: 'Result',
@@ -158,6 +165,110 @@ test('retry comparison names the real reason it cannot compare', () => {
     { compatible: false, reason: 'different_rubric' },
   );
   assert.equal(compareRetries(feedback(), feedback()).compatible, true);
+});
+
+test('retry comparison exposes score deltas and email capture waits for a scored improvement', () => {
+  const before = feedback({
+    score: 60,
+    competencies: [competency('communication', 'Some proof'), competency('customer_focus', 'Some proof')],
+  });
+  before.competencies[0].score = 7;
+  before.competencies[1].score = 5;
+  const after = feedback({
+    score: 95,
+    competencies: [competency('communication', 'Stronger proof'), competency('customer_focus', 'Stronger proof')],
+  });
+  after.competencies[0].score = 9;
+  after.competencies[1].score = 10;
+  const result = compareRetries(before, after);
+  assert.equal(result.compatible, true);
+  assert.deepEqual(result.scoreDelta, { before: 60, after: 95 });
+  assert.deepEqual(result.criterionDeltas, [
+    { id: 'communication', label: 'communication', before: 7, after: 9 },
+    { id: 'customer_focus', label: 'customer_focus', before: 5, after: 10 },
+  ]);
+  assert.equal(hasScoredImprovement(before, after), true);
+  assert.equal(hasScoredImprovement(feedback({ status: 'unscored' }), after), false);
+  assert.equal(hasScoredImprovement(after, before), false);
+});
+
+test('the setup and answer fields protect accessibility and fast typed input', () => {
+  const flow = readFileSync(new URL('../components/InterviewFlow.tsx', import.meta.url), 'utf8');
+  const selector = readFileSync(new URL('../components/flow/AnswerModeSelector.tsx', import.meta.url), 'utf8');
+  assert.match(flow, /aria-labelledby="interview-mode-mock-title interview-mode-mock-body"/);
+  assert.match(flow, /aria-labelledby="interview-mode-guided-title interview-mode-guided-body"/);
+  assert.match(flow, /aria-labelledby="extra-time-title extra-time-body"/);
+  assert.match(selector, /aria-labelledby=\{`\$\{idPrefix\}-title \$\{idPrefix\}-body`\}/);
+  assert.match(flow, /onChoose=\{setAnswerMethod\}/);
+  assert.match(flow, /t\('startPracticeButton'\)/);
+  assert.doesNotMatch(flow, /<textarea[\s\S]{0,400}value=\{transcript\}/);
+  assert.match(flow, /<textarea[\s\S]{0,400}defaultValue=\{transcript\}[\s\S]{0,300}onInput=/);
+  assert.match(flow, /addEventListener\('popstate', onPopState\)/);
+  assert.match(flow, /addEventListener\('beforeunload', onBeforeUnload\)/);
+  assert.match(flow, /window\.confirm\(t\('leavePracticeConfirm'\)\)/);
+});
+
+test('an unscored answer shows no zero readiness dial or share card', () => {
+  const readiness = readFileSync(new URL('../components/ReadinessScore.tsx', import.meta.url), 'utf8');
+  const panel = readFileSync(new URL('../components/ReadinessPanel.tsx', import.meta.url), 'utf8');
+  const share = readFileSync(new URL('../components/ShareProgressCard.tsx', import.meta.url), 'utf8');
+  assert.match(readiness, /snapshot\.questionsPractised === 0/);
+  assert.match(readiness, /readinessNotScored/);
+  assert.match(panel, /snapshot\.questionsPractised > 0/);
+  assert.match(share, /snapshot\.questionsPractised === 0/);
+});
+
+test('answer length is not scored and concise evidence beats fluent padding', () => {
+  const question = { id: 'angry_guest' };
+  const substantive = structureCheck(question,
+    'Last month at a hotel in Deira, an angry guest complained because his room was not ready. I apologised, checked Opera, called housekeeping, and updated him every ten minutes. The room was ready in twenty minutes, and in the end he thanked me at checkout.');
+  const padded = structureCheck(question,
+    'Customer service is very important in every hotel. I am hardworking and passionate about hospitality. Guests are always important and teamwork is important. We always try our best and follow every policy. I believe communication, service, quality, professionalism and a positive attitude are important. I always want every guest to be happy, comfortable and satisfied. In hospitality we must smile, listen, understand, communicate, support the team, solve problems and provide excellent five star service at all times for every guest.');
+  assert.equal(substantive.status, 'scored');
+  assert.ok(substantive.score > padded.score, `${substantive.score} should beat ${padded.score}`);
+  assert.doesNotMatch(JSON.stringify(substantive.competencies), /Answer length/);
+
+  const route = readFileSync(new URL('../app/api/score/route.ts', import.meta.url), 'utf8');
+  assert.match(route, /Answer length is not a scoring criterion/);
+  assert.match(route, /A longer answer must receive the same score as a shorter answer/);
+  assert.match(route, /coach-content-rubric-2026-09-05/);
+});
+
+test('the rubric stays visible while answering and reviewing, and retry copy uses the real attempt', () => {
+  const flow = readFileSync(new URL('../components/InterviewFlow.tsx', import.meta.url), 'utf8');
+  const comparison = readFileSync(new URL('../components/flow/AnswerComparison.tsx', import.meta.url), 'utf8');
+  assert.equal((flow.match(/\{rubricPreview\}/g) ?? []).length, 3);
+  assert.match(flow, /typedAnswerReviewTitle/);
+  assert.match(comparison, /replace\('\{attempt\}', String\(attempt\)\)/);
+  assert.doesNotMatch(comparison, /diffAddedLabel/);
+  assert.match(comparison, /criterionDeltas/);
+});
+
+test('practice supports desktop video when browser recording APIs exist', async () => {
+  const { buildDeviceCapabilities, videoCaptureSupported, videoModeSupported } = await import('../lib/device-capabilities.ts');
+  const desktopChrome = buildDeviceCapabilities({
+    isMobile: false,
+    speechSupported: true,
+    recordingSupported: true,
+    mediaDevicesSupported: true,
+  });
+  assert.equal(videoModeSupported(desktopChrome), true);
+  assert.equal(videoCaptureSupported(desktopChrome), true);
+});
+
+test('the email ask appears only after a scored improvement and model answers use rubric labels', () => {
+  const flow = readFileSync(new URL('../components/InterviewFlow.tsx', import.meta.url), 'utf8');
+  const model = readFileSync(new URL('../components/flow/ModelAnswer.tsx', import.meta.url), 'utf8');
+  assert.match(flow, /hasScoredImprovement\(previousTry\?\.feedback, feedback\)/);
+  assert.doesNotMatch(flow, /attemptCount === 1 && practiceSitting/);
+  assert.match(model, /criteria: Array<Pick<Competency/);
+  assert.doesNotMatch(model, /modelRelevance|modelEvidence|modelStructure|modelClarity/);
+});
+
+test('front office questions use clean candidate-facing grammar', () => {
+  const hospitality = readFileSync(new URL('../lib/roles/hospitality.ts', import.meta.url), 'utf8');
+  assert.match(hospitality, /How did you handle an angry guest who complained directly to you\?/);
+  assert.doesNotMatch(hospitality, /Tell me about a time an angry guest complained directly to you\?/);
 });
 
 test('model answers exist for every front office and waiter question in both languages', () => {

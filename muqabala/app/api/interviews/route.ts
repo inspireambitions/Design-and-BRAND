@@ -2,6 +2,10 @@ import { randomUUID } from 'node:crypto';
 import { cookies } from 'next/headers';
 import { CreateInterviewSchema } from '@/lib/interviews';
 import { trustedInterviewPlan } from '@/lib/interview-plan';
+import { universalInterviewEnabled } from '@/lib/universal-interview/api';
+import { createEmployerBrainState, employerBrainQuestionSnapshot, publicEmployerBrainState } from '@/lib/universal-interview/employer';
+import { createStoredInterview, discardStoredInterview, loadStoredInterview } from '@/lib/universal-interview/repository';
+import type { InterviewState } from '@/lib/universal-interview/types';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { currentUser } from '@/lib/supabase/server';
 import {
@@ -51,8 +55,25 @@ export async function POST(request: Request) {
   const rawToken = newOpaqueToken();
   let interviewId: string;
   let resumed = false;
+  let brainState: InterviewState | null = null;
   if (parsed.data.mode === 'screening') {
     interviewId = randomUUID();
+    const adaptive = parsed.data.adaptive && parsed.data.language === 'en' && universalInterviewEnabled();
+    if (adaptive) {
+      brainState = createEmployerBrainState({
+        interviewId,
+        packId: screeningPack!.data!.id,
+        role: plan.role,
+      });
+      try {
+        await createStoredInterview(brainState);
+      } catch {
+        return Response.json({ error: 'The adaptive interview could not be started safely.' }, { status: 503 });
+      }
+    }
+    const questionSnapshot = brainState?.current_question
+      ? [employerBrainQuestionSnapshot(brainState.current_question, 0)]
+      : plan.questions;
     const { data: startResult, error: startError } = await admin.rpc('start_screening_interview', {
       p_interview_id: interviewId,
       p_pack_id: screeningPack!.data!.id,
@@ -62,20 +83,29 @@ export async function POST(request: Request) {
       p_role_id: plan.role.id,
       p_role_title: parsed.data.language === 'ar' ? plan.role.titleAr : plan.role.title,
       p_language: parsed.data.language,
-      p_question_snapshot: plan.questions,
+      p_question_snapshot: questionSnapshot,
       p_role_snapshot: plan.role,
       p_candidate_name: parsed.data.candidateName!.replace(/\s+/g, ' ').trim(),
     });
-    if (startError) return Response.json({ error: 'Interview could not be started.' }, { status: 500 });
+    if (startError) {
+      if (brainState) await discardStoredInterview(brainState.interview_id);
+      return Response.json({ error: 'Interview could not be started.' }, { status: 500 });
+    }
     const result = startResult as { status?: string; interview_id?: string } | null;
     if (result?.status === 'full') {
+      if (brainState) await discardStoredInterview(brainState.interview_id);
       return Response.json({ error: 'This employer interview link has reached its candidate limit.' }, { status: 409 });
     }
     if ((result?.status !== 'started' && result?.status !== 'resumed') || !result.interview_id) {
+      if (brainState) await discardStoredInterview(brainState.interview_id);
       return Response.json({ error: 'This employer interview link is no longer available.' }, { status: 410 });
     }
     interviewId = result.interview_id;
     resumed = result.status === 'resumed';
+    if (resumed && brainState && brainState.interview_id !== interviewId) {
+      await discardStoredInterview(brainState.interview_id);
+      brainState = await loadStoredInterview(interviewId);
+    }
     if (parsed.data.inviteToken) {
       // Binds this interview to its invite and marks the invite started. A bad or
       // expired token is ignored so the plain link keeps working as before.
@@ -119,7 +149,12 @@ export async function POST(request: Request) {
     }
   }
   return Response.json(
-    { id: interviewId, unlocked: parsed.data.mode === 'screening' ? false : Boolean(user), resumed },
+    {
+      id: interviewId,
+      unlocked: parsed.data.mode === 'screening' ? false : Boolean(user),
+      resumed,
+      brain: brainState?.screening ? publicEmployerBrainState(brainState) : null,
+    },
     { status: resumed ? 200 : 201, headers: privateNoStoreHeaders() },
   );
 }

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useLang } from './LanguageProvider';
-import { MarketingFooter, MarketingHeader } from './MarketingSite';
+import { MarketingHeader } from './MarketingSite';
 import { marketingNav } from '@/lib/marketing-content';
 import type { GuideListItem } from '@/lib/sanity/queries';
 
@@ -20,7 +20,7 @@ export function GuidesIndex({ guides }: { guides: GuideListItem[] }) {
           <p className="marketing-lede">
             {lang === 'ar'
               ? 'كل دليل يحل مشكلة واحدة. ثم تدرب. لا يرى صاحب العمل تدريبك.'
-              : 'Each guide solves one problem. Then practise. No employer can see your practice.'}
+              : 'Each guide solves one problem. Then practice. No employer can see your practice.'}
           </p>
         </section>
         <section className="marketing-wrap guides-index">
@@ -28,7 +28,7 @@ export function GuidesIndex({ guides }: { guides: GuideListItem[] }) {
             <p>
               {lang === 'ar'
                 ? 'سننشر الأدلة هنا. يمكنك التدريب الآن.'
-                : 'Guides will appear here. You can start practising now.'}
+                : 'Guides will appear here. You can start practicing now.'}
             </p>
           ) : (
             <ul className="guides-list">
@@ -49,7 +49,6 @@ export function GuidesIndex({ guides }: { guides: GuideListItem[] }) {
           </p>
         </section>
       </main>
-      <MarketingFooter />
       <Link href="/practice" className="marketing-mobile-cta">{nav.practice}</Link>
     </div>
   );

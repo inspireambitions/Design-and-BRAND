@@ -51,12 +51,15 @@ import {
   type AnswerMode,
 } from '@/lib/flow/answer-mode';
 import { useLang } from './LanguageProvider';
+import { FocusedInterviewFooterGuard } from './FooterVisibility';
+import { hidePracticeFooter } from '@/lib/footer-visibility';
 import { TopBar } from './TopBar';
 import { FeedbackCard, StreamingFeedbackCard } from './FeedbackCard';
 import { AnswerModeSelector } from './flow/AnswerModeSelector';
 import { StarGuideLines, StarGuideToggle } from './flow/StarGuide';
 import { KeepFeedbackSlot, QuestionTagsSlot, ReadinessSlot } from './flow/Slots';
 import { recordSessionEnd, updateConsentState } from '@/lib/practice-plan/ask-policy';
+import { hasScoredImprovement } from '@/lib/retry-comparison';
 
 /*
  * Screens that most visits never reach, or reach only after the candidate has
@@ -300,6 +303,7 @@ export function InterviewFlow({
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [timerPaused, setTimerPaused] = useState(false);
   const [extraTimeEnabled, setExtraTimeEnabled] = useState(false);
+  const [skipWarmUp, setSkipWarmUp] = useState(false);
   const [timerAnnouncement, setTimerAnnouncement] = useState('');
   const [transcript, setTranscript] = useState('');
   const [transcriptConfirmed, setTranscriptConfirmed] = useState(false);
@@ -344,6 +348,8 @@ export function InterviewFlow({
   const advancingRef = useRef(false);
   const scoringSessionRef = useRef<string | null>(null);
   const automaticRetriesRef = useRef(0);
+  const practiceHistoryGuardRef = useRef(false);
+  const leavingPracticeRef = useRef(false);
   const [savedAttempt, setSavedAttempt] = useState<Attempt | null>(null);
 
   useEffect(() => {
@@ -364,6 +370,56 @@ export function InterviewFlow({
     }));
     setStarGuideOn(readStarGuide(window.localStorage));
   }, []);
+
+  useEffect(() => {
+    const active = stage !== 'check' && stage !== 'done';
+    if (active && !practiceHistoryGuardRef.current) {
+      window.history.pushState(
+        { ...(window.history.state ?? {}), muqabalaPracticeGuard: true },
+        '',
+        window.location.href,
+      );
+      practiceHistoryGuardRef.current = true;
+    }
+
+    const onPopState = () => {
+      if (!practiceHistoryGuardRef.current) return;
+      if (!active) {
+        // The sitting is complete. Consume the same-page guard entry, then
+        // honour the candidate's single Back action without another prompt.
+        practiceHistoryGuardRef.current = false;
+        leavingPracticeRef.current = true;
+        window.history.back();
+        return;
+      }
+      if (window.confirm(t('leavePracticeConfirm'))) {
+        practiceHistoryGuardRef.current = false;
+        leavingPracticeRef.current = true;
+        window.history.back();
+        return;
+      }
+      // Back already moved from the guard entry to the original page entry.
+      // Put the guard back only when the candidate chooses to stay.
+      window.history.pushState(
+        { ...(window.history.state ?? {}), muqabalaPracticeGuard: true },
+        '',
+        window.location.href,
+      );
+    };
+
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!active || leavingPracticeRef.current) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    window.addEventListener('popstate', onPopState);
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => {
+      window.removeEventListener('popstate', onPopState);
+      window.removeEventListener('beforeunload', onBeforeUnload);
+    };
+  }, [stage, t]);
 
   const voiceAvailable = speechOk || audioFallbackAvailable;
   const selectedAnswerMethod: AnswerMode = voiceAvailable ? answerMethod : 'type';
@@ -1435,9 +1491,9 @@ export function InterviewFlow({
   }, [completeCurrentAnswer, question.id, t, transcript]);
 
   /**
-   * The first question's "Choose how to answer" step. One tap confirms the
-   * mode, remembers it, and only then asks for the camera or microphone. A
-   * refusal drops quietly to typing.
+   * The setup screen's explicit Start practice action. It remembers the
+   * selected mode and only then asks for the camera or microphone. A refusal
+   * drops quietly to typing.
    */
   const startWithMode = useCallback(async (chosen: AnswerMode) => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -1446,9 +1502,13 @@ export function InterviewFlow({
     setDeviceFallback(false);
     setAnswerMethod(chosen);
     storeAnswerMode(window.localStorage, chosen);
-    const startingQuestions = mode === 'mock' && extraTimeEnabled
-      ? activeQuestions.map((item) => ({ ...item, answerSeconds: item.answerSeconds + 60 }))
-      : activeQuestions;
+    let startingQuestions = activeQuestions;
+    if (skipWarmUp && practiceSitting && startingQuestions[0]?.id === 'intro' && startingQuestions.length > 1) {
+      startingQuestions = startingQuestions.slice(1);
+    }
+    if (mode === 'mock' && extraTimeEnabled) {
+      startingQuestions = startingQuestions.map((item) => ({ ...item, answerSeconds: item.answerSeconds + 60 }));
+    }
     if (startingQuestions !== activeQuestions) setResumedQuestions(startingQuestions);
     const startingLanguage = initialLanguage ?? lang;
     setSessionLanguage(startingLanguage);
@@ -1471,9 +1531,11 @@ export function InterviewFlow({
       }
     }
     setModeChosen(true);
-    startPrep();
+    setSecondsLeft(startingQuestions[0].prepSeconds);
+    setTimerPaused(false);
+    setStage('prep');
   }, [activeQuestions, createServerAttempt, enableCamera, enableMicrophone, extraTimeEnabled, initialLanguage, lang,
-    mode, proof, role.id, startPrep, switchToTyping, videoSelectable]);
+    mode, practiceSitting, proof, role.id, skipWarmUp, switchToTyping, videoSelectable]);
 
   /** "Change mode" on a later question. Same rules as the first choice. */
   const changeMode = useCallback(async (chosen: AnswerMode) => {
@@ -1567,6 +1629,12 @@ export function InterviewFlow({
   }, [answers, interviewLanguage, reportRoleTitle, role.id, serverAttemptId, stage]);
 
   const wordCount = `${transcript} ${interim}`.trim().split(/\s+/).filter(Boolean).length;
+  const wordCountUnit = wordCount === 1 ? t('word') : t('words');
+  const expectedQuestionCount = skipWarmUp
+    && activeQuestions[0]?.id === 'intro'
+    && activeQuestions.length > 1
+    ? activeQuestions.length - 1
+    : activeQuestions.length;
   // Speech recognition is unreliable inside iOS in-app browsers: it reports as
   // supported, starts without error, and simply never returns words. If a
   // candidate has been speaking for a while with nothing transcribed, stop
@@ -1592,10 +1660,10 @@ export function InterviewFlow({
             className="answer-box"
             aria-label={t('yourAnswer')}
             placeholder={t('typeAnswer')}
-            value={transcript}
+            defaultValue={transcript}
             autoFocus={editingTranscript}
-            onChange={(e) => {
-              setTranscript(e.target.value);
+            onInput={(e) => {
+              setTranscript(e.currentTarget.value);
               setEditingTranscript(true);
               setTranscriptConfirmed(false);
               setScoringError(null);
@@ -1612,7 +1680,7 @@ export function InterviewFlow({
       )}
       <div className="row-between">
         <p className="tiny" style={{ margin: 0 }}>
-          {wordCount} {t('words')}
+          {wordCount} {wordCountUnit}
         </p>
         {!transcriptEditing && (
           <button type="button" className="btn btn-ghost btn-small" onClick={() => setEditingTranscript(true)}>
@@ -1636,8 +1704,36 @@ export function InterviewFlow({
     <p className="notice tiny quiet-notice" role="status">{t('permissionDeniedTypeInstead')}</p>
   ) : null;
 
+  const rubricPreview = questionRubric.length > 0 && !starProbe ? (
+    <div className="rubric-preview" aria-label={t('rubricPreviewTitle')}>
+      <div>
+        <p className="eyebrow">{t('rubricPreviewTitle')}</p>
+        <p className="tiny">{t('rubricPreviewBody')}</p>
+      </div>
+      <ul className="rubric-preview-list">
+        {questionRubric.map((competency) => (
+          <li key={competency.id}>
+            <strong>{interviewLanguage === 'ar' ? competency.labelAr : competency.label}</strong>
+            <span dir="auto">
+              {interviewLanguage === 'ar' && competency.anchorAr
+                ? competency.anchorAr
+                : competency.anchor}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  ) : null;
+
+  const questionEyebrow = starProbe
+    ? t('starProbeEyebrow')
+    : question.id === 'intro' && practiceSitting
+      ? `${t('warmUpQuestion')} · ${t('question')} ${index + 1}`
+      : `${t('question')} ${index + 1}`;
+
   return (
     <div className="shell shell-narrow">
+      <FocusedInterviewFooterGuard active={hidePracticeFooter(stage, Boolean(feedback), requestingCamera)} />
       <TopBar showProgressLink={false} locked={stage !== 'check' && stage !== 'done'} />
 
       <div className="rail" aria-hidden="true">
@@ -1771,23 +1867,25 @@ export function InterviewFlow({
                 type="button"
                 className={`mode-card ${mode === 'mock' ? 'on' : ''}`}
                 aria-pressed={mode === 'mock'}
+                aria-labelledby="interview-mode-mock-title interview-mode-mock-body"
                 onClick={() => setMode('mock')}
               >
                 <span className="method-title-row">
-                  <span className="mode-title">{t('modeMockTitle')}</span>
+                  <span id="interview-mode-mock-title" className="mode-title">{t('modeMockTitle')}</span>
                   <span className="choice-note">{t('modeRecommended')}</span>
                 </span>
-                <span className="tiny">{t('modeMockBody')}</span>
+                <span id="interview-mode-mock-body" className="tiny">{t('modeMockBody')}</span>
               </button>
             )}
             <button
               type="button"
               className={`mode-card ${mode === 'guided' ? 'on' : ''}`}
               aria-pressed={mode === 'guided'}
+              aria-labelledby="interview-mode-guided-title interview-mode-guided-body"
               onClick={() => setMode('guided')}
             >
-              <span className="mode-title">{t('modeGuidedTitle')}</span>
-                <span className="tiny">{t('modeGuidedBody')}</span>
+              <span id="interview-mode-guided-title" className="mode-title">{t('modeGuidedTitle')}</span>
+                <span id="interview-mode-guided-body" className="tiny">{t('modeGuidedBody')}</span>
             </button>
           </div>
           )}
@@ -1797,12 +1895,30 @@ export function InterviewFlow({
               <input
                 type="checkbox"
                 checked={extraTimeEnabled}
+                aria-labelledby="extra-time-title extra-time-body"
                 onChange={(event) => setExtraTimeEnabled(event.target.checked)}
               />
               <span>
-                <strong>{t('extraTimeTitle')}</strong>
-                <span className="tiny" style={{ display: 'block', marginTop: '0.2rem' }}>
+                <strong id="extra-time-title">{t('extraTimeTitle')}</strong>
+                <span id="extra-time-body" className="tiny" style={{ display: 'block', marginTop: '0.2rem' }}>
                   {t('extraTimeBody')}
+                </span>
+              </span>
+            </label>
+          )}
+
+          {mode === 'mock' && activeQuestions[0]?.id === 'intro' && activeQuestions.length > 1 && !proof && (
+            <label className="check-row">
+              <input
+                type="checkbox"
+                checked={skipWarmUp}
+                aria-labelledby="skip-warm-up-title skip-warm-up-body"
+                onChange={(event) => setSkipWarmUp(event.target.checked)}
+              />
+              <span>
+                <strong id="skip-warm-up-title">{t('skipWarmUp')}</strong>
+                <span id="skip-warm-up-body" className="tiny" style={{ display: 'block', marginTop: '0.2rem' }}>
+                  {t('skipWarmUpBody')}
                 </span>
               </span>
             </label>
@@ -1819,10 +1935,20 @@ export function InterviewFlow({
             <AnswerModeSelector
               highlighted={selectedAnswerMethod}
               availability={modeAvailability}
-              onChoose={(chosen) => void startWithMode(chosen)}
+              onChoose={setAnswerMethod}
               focusHighlighted={deviceCaps.isDesktop}
               disabled={requestingCamera}
             />
+            <div className="row setup-start-actions">
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={requestingCamera}
+                onClick={() => void startWithMode(selectedAnswerMethod)}
+              >
+                {requestingCamera ? t('cameraStarting') : t('startPracticeButton')}
+              </button>
+            </div>
             {requestingCamera && (
               <p className="tiny" role="status">{t('cameraStarting')}</p>
             )}
@@ -1847,9 +1973,9 @@ export function InterviewFlow({
               <strong>
                 {proof
                   ? t('expectProofQuestions')
-                  : activeQuestions.length === 1
+                  : expectedQuestionCount === 1
                     ? t('expectOneQuestion')
-                    : `${activeQuestions.length} ${t('expect1')}`}
+                    : `${expectedQuestionCount} ${t('expect1')}`}
               </strong>
               <span aria-hidden="true">·</span>
               <strong>
@@ -1911,9 +2037,7 @@ export function InterviewFlow({
             </div>
           )}
           <div className="card stack">
-            <p className="eyebrow">
-              {starProbe ? t('starProbeEyebrow') : `${t('question')} ${index + 1}`}
-            </p>
+            <p className="eyebrow">{questionEyebrow}</p>
             <h2 style={{ fontSize: '1.35rem' }} dir="auto">{promptText}</h2>
             {!starProbe && <QuestionTagsSlot question={question} lang={interviewLanguage} />}
             {mode === 'guided' && !starProbe && (
@@ -1922,26 +2046,7 @@ export function InterviewFlow({
                 {hintText}
               </div>
             )}
-            {questionRubric.length > 0 && !starProbe && (
-              <div className="rubric-preview" aria-label={t('rubricPreviewTitle')}>
-                <div>
-                  <p className="eyebrow">{t('rubricPreviewTitle')}</p>
-                  <p className="tiny">{t('rubricPreviewBody')}</p>
-                </div>
-                <ul className="rubric-preview-list">
-                  {questionRubric.map((competency) => (
-                    <li key={competency.id}>
-                      <strong>{interviewLanguage === 'ar' ? competency.labelAr : competency.label}</strong>
-                      <span dir="auto">
-                        {interviewLanguage === 'ar' && competency.anchorAr
-                          ? competency.anchorAr
-                          : competency.anchor}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            {rubricPreview}
           </div>
 
           <div className="card stack" style={{ alignItems: 'center', textAlign: 'center' }}>
@@ -1966,11 +2071,11 @@ export function InterviewFlow({
         <div className="stack">
           {quietFallbackNotice}
           <div className="card stack">
-            <p className="eyebrow">
-              {starProbe ? t('starProbeEyebrow') : `${t('question')} ${index + 1}`}
-            </p>
+            <p className="eyebrow">{questionEyebrow}</p>
             <h2 style={{ fontSize: '1.25rem' }} dir="auto">{promptText}</h2>
           </div>
+
+          {rubricPreview}
 
           {previousAnswerRecap}
 
@@ -2130,8 +2235,8 @@ export function InterviewFlow({
                           aria-label={t('yourAnswer')}
                           placeholder={showStar ? '' : t('typeAnswer')}
                           aria-describedby={showStar ? 'star-lines' : undefined}
-                          value={transcript}
-                          onChange={(e) => setTranscript(e.target.value)}
+                          defaultValue={transcript}
+                          onInput={(e) => setTranscript(e.currentTarget.value)}
                         />
                       )}
                       {showStar && <StarGuideLines id="star-lines" />}
@@ -2139,7 +2244,7 @@ export function InterviewFlow({
                   );
                 })()}
                 <p className="tiny" style={{ marginTop: '0.4rem' }}>
-                  {wordCount} {t('words')}
+                  {wordCount} {wordCountUnit}
                 </p>
               </div>
             )}
@@ -2166,11 +2271,23 @@ export function InterviewFlow({
         <div className="stack">
           {previousAnswerRecap}
           <div className="card stack">
-            <p className="eyebrow">{starProbe ? t('starProbeEyebrow') : t('transcriptCheckTitle')}</p>
+            <p className="eyebrow">
+              {starProbe
+                ? t('starProbeEyebrow')
+                : selectedAnswerMethod === 'type'
+                  ? t('typedAnswerReviewTitle')
+                  : t('transcriptCheckTitle')}
+            </p>
             <h2 style={{ fontSize: '1.2rem' }} dir="auto">{promptText}</h2>
             <p className="tiny muted" style={{ margin: 0 }}>
-              {starProbe ? t('starProbeReviewNote') : t('transcriptCheckBody')}
+              {starProbe
+                ? t('starProbeReviewNote')
+                : selectedAnswerMethod === 'type'
+                  ? t('typedAnswerReviewBody')
+                  : t('transcriptCheckBody')}
             </p>
+
+            {rubricPreview}
 
             {playbackUrl && (
               <div className="stack-sm">
@@ -2270,15 +2387,8 @@ export function InterviewFlow({
       {/* ---------- feedback ---------- */}
       {stage === 'feedback' && feedback && (
         <div className="stack">
-          {practiceSitting && (
-            <ReadinessSlot
-              roleId={role.id}
-              roleTitle={reportRoleTitle}
-              answers={[...answers, { questionId: question.id, questionText, transcript, feedback }]}
-            />
-          )}
           <FeedbackCard feedback={feedback} attempt={attemptCount} />
-          {answers.length === 0 && attemptCount === 1 && practiceSitting && (
+          {answers.length === 0 && practiceSitting && hasScoredImprovement(previousTry?.feedback, feedback) && (
             <KeepFeedbackSlot
               roleId={role.id}
               questionId={question.id}
@@ -2293,6 +2403,7 @@ export function InterviewFlow({
               firstFeedback={previousTry.feedback}
               newTranscript={transcript}
               newFeedback={feedback}
+              attempt={attemptCount}
               lang={interviewLanguage}
               labelFor={(id, fallback) => {
                 const competency = role.competencies.find((item) => item.id === id);
@@ -2303,7 +2414,7 @@ export function InterviewFlow({
           )}
           {/* A worked example only after two attempts, never before. */}
           {attemptCount >= 2 && practiceSitting && !starProbe && (
-            <ModelAnswer roleId={role.id} question={question} lang={interviewLanguage} />
+            <ModelAnswer roleId={role.id} question={question} criteria={questionRubric} lang={interviewLanguage} />
           )}
           {starFollowUp && (
             <div className="card stack-sm star-probe-card">

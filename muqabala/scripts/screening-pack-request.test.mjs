@@ -2,11 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { ScreeningPackRequestSchema } from '../lib/screening-pack-request.ts';
 
-test('screening links require a company name and a signed interview token', () => {
+test('screening links accept a catalogue-first request and legacy signed tokens', () => {
   assert.equal(
     ScreeningPackRequestSchema.safeParse({
       jobTitle: 'Receptionist',
-      interviewToken: 'signed-practice-token',
+      jobText: 'A complete job description.',
     }).success,
     false,
   );
@@ -14,14 +14,14 @@ test('screening links require a company name and a signed interview token', () =
     ScreeningPackRequestSchema.safeParse({
       companyName: 'Nour Clinic',
       jobTitle: 'Receptionist',
-      interviewToken: 'signed-practice-token',
+      jobText: 'A complete job description.',
     }).success,
     true,
   );
   const customised = ScreeningPackRequestSchema.safeParse({
     companyName: 'Nour Clinic',
     jobTitle: 'Receptionist',
-    interviewToken: 'signed-practice-token',
+    jobText: 'A complete job description.',
     maxCandidates: 100,
     expiryDays: 21,
   });
@@ -33,7 +33,7 @@ test('screening links require a company name and a signed interview token', () =
   assert.equal(
     ScreeningPackRequestSchema.safeParse({
       companyName: 'Nour Clinic',
-      interviewToken: 'signed-practice-token',
+      jobTitle: 'Receptionist',
       maxCandidates: 1001,
       expiryDays: 14,
     }).success,
@@ -42,7 +42,7 @@ test('screening links require a company name and a signed interview token', () =
   assert.equal(
     ScreeningPackRequestSchema.safeParse({
       companyName: 'Nour Clinic',
-      interviewToken: 'signed-practice-token',
+      jobTitle: 'Receptionist',
       maxCandidates: 100,
       expiryDays: 31,
     }).success,
@@ -52,15 +52,22 @@ test('screening links require a company name and a signed interview token', () =
     ScreeningPackRequestSchema.safeParse({
       workplace: 'Nour Clinic',
       jobTitle: 'Receptionist',
+      jobText: 'A complete job description.',
+    }).success,
+    true,
+  );
+  assert.equal(
+    ScreeningPackRequestSchema.safeParse({
+      companyName: 'Nour Clinic',
       interviewToken: 'signed-practice-token',
     }).success,
     true,
   );
-  assert.equal(ScreeningPackRequestSchema.safeParse({ jobTitle: 'Receptionist' }).success, false);
+  assert.equal(ScreeningPackRequestSchema.safeParse({ companyName: 'Nour Clinic' }).success, false);
   assert.equal(
     ScreeningPackRequestSchema.safeParse({
+      companyName: 'Nour Clinic',
       jobTitle: 'Receptionist',
-      interviewToken: 'signed-practice-token',
       unexpected: true,
     }).success,
     false,

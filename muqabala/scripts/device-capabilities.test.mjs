@@ -35,10 +35,19 @@ test('defaultAnswerMethod prefers speak on desktop with speech support', () => {
   assert.equal(defaultAnswerMethod(capabilities), 'speak');
 });
 
-test('videoModeSupported is true only when mobile recording is available', () => {
+test('videoModeSupported works on mobile and desktop when all recording APIs are available', () => {
   assert.equal(
     videoModeSupported(buildDeviceCapabilities({
       isMobile: true,
+      speechSupported: true,
+      recordingSupported: true,
+      mediaDevicesSupported: true,
+    })),
+    true,
+  );
+  assert.equal(
+    videoModeSupported(buildDeviceCapabilities({
+      isMobile: false,
       speechSupported: true,
       recordingSupported: true,
       mediaDevicesSupported: true,

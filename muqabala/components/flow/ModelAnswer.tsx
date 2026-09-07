@@ -1,6 +1,6 @@
 'use client';
 
-import type { Question } from '@/lib/roles';
+import type { Competency, Question } from '@/lib/roles';
 import { modelAnswerFor } from '@/lib/flow/model-answers';
 import { useLang } from '../LanguageProvider';
 
@@ -12,22 +12,24 @@ import { useLang } from '../LanguageProvider';
 export function ModelAnswer({
   roleId,
   question,
+  criteria,
   lang,
 }: {
   roleId: string;
   question: Question;
+  criteria: Array<Pick<Competency, 'id' | 'label' | 'labelAr'>>;
   lang: 'en' | 'ar';
 }) {
   const { t } = useLang();
   const answer = modelAnswerFor(roleId, question, lang);
-  if (!answer) return null;
+  if (!answer || criteria.length === 0) return null;
 
-  const parts = [
-    { key: 'modelRelevance', text: answer.relevance },
-    { key: 'modelEvidence', text: answer.evidence },
-    { key: 'modelStructure', text: answer.structure },
-    { key: 'modelClarity', text: answer.clarity },
-  ] as const;
+  const parts = [answer.relevance, answer.evidence, answer.structure, answer.clarity];
+  const sections = criteria.map((criterion, criterionIndex) => ({
+    id: criterion.id,
+    label: lang === 'ar' ? criterion.labelAr : criterion.label,
+    text: parts.filter((_, partIndex) => partIndex % criteria.length === criterionIndex).join(' '),
+  })).filter((section) => section.text);
 
   return (
     <details className="disclosure model-answer card-flat">
@@ -35,11 +37,11 @@ export function ModelAnswer({
       <div className="stack-sm" style={{ marginTop: '0.6rem' }}>
         <p className="tiny muted">{t('modelAnswerNote')}</p>
         <div className="model-answer-body" dir={lang === 'ar' ? 'rtl' : 'ltr'} lang={lang}>
-          {parts.map((part) => (
-            <p key={part.key} className="model-answer-part">
-              <span className="model-answer-label">{t(part.key)}</span>
+          {sections.map((section) => (
+            <p key={section.id} className="model-answer-part">
+              <span className="model-answer-label">{section.label}</span>
               {' '}
-              {part.text}
+              {section.text}
             </p>
           ))}
         </div>

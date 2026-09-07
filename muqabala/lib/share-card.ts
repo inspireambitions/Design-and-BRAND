@@ -31,13 +31,13 @@ export type ShareCardLabels = {
 const DEFAULT_LABELS: Record<Lang, ShareCardLabels> = {
   en: {
     wordmark: 'Muqabala',
-    readiness: 'Interview readiness',
-    questions: 'Questions practised: {practised} of {total}',
+    readiness: 'Practice coverage',
+    questions: 'Questions practiced: {practised} of {total}',
     site: 'trymuqabala.com',
   },
   ar: {
     wordmark: 'مقابلة',
-    readiness: 'الاستعداد للمقابلة',
+    readiness: 'تغطية التدريب',
     questions: 'الأسئلة التي تدرّبت عليها: {practised} من {total}',
     site: 'trymuqabala.com',
   },

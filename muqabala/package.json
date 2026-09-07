@@ -15,10 +15,14 @@
     "test:resilience": "node --experimental-strip-types --test --test-isolation=none scripts/*.test.mjs",
     "test:feedback-stream": "node --experimental-strip-types --test scripts/feedback-stream.test.mjs scripts/feedback-stream-response.test.mjs",
     "gate:feedback-quality": "EXPECT_AI=1 node scripts/measure-consistency.mjs",
+    "gate:substance": "node scripts/measure-substance-over-padding.mjs",
     "gate:arabic-parity": "node scripts/feedback-parity.mjs",
     "test:copy-quality": "node --experimental-strip-types --test scripts/copy-quality.test.mjs scripts/arabic-parity.test.mjs",
     "test:practice-plan": "node --experimental-strip-types --test scripts/practice-plan.test.mjs scripts/email-ask-policy.test.mjs scripts/question-tags.test.mjs",
     "test:universal": "node --experimental-strip-types --test --test-isolation=none scripts/universal-interview.test.mjs",
+    "test:question-pipeline": "node --experimental-strip-types --import ./scripts/test-hooks/register.mjs --test --test-isolation=none scripts/question-pipeline.test.mjs",
+    "check:question-copy": "node scripts/check-candidate-question-copy.mjs",
+    "validate:question-bank": "node --experimental-strip-types scripts/validate-question-bank",
     "test:universal-media-browser": "node scripts/verify-browser-media.mjs",
     "gate:universal-gold": "node --experimental-strip-types scripts/universal-gold-gate.mjs",
     "eval:universal": "node --experimental-strip-types scripts/universal-eval.mjs",
@@ -36,23 +40,36 @@
     "@supabase/supabase-js": "2.112.3",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.2",
+    "dejavu-fonts-ttf": "^2.37.3",
     "next": "^16.3.1",
     "next-sanity": "^13.3.3",
     "openai": "^7.5.0",
+    "pdfkit": "^0.20.2",
     "posthog-js": "^1.418.6",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "server-only": "0.0.1",
-    "tus-js-client": "^4.3.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
     "@sanity/vision": "^6.11.0",
     "@types/node": "^22.10.0",
+    "@types/pdfkit": "^0.17.6",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "sanity": "^6.11.0",
-    "supabase": "2.39.2",
+    "supabase": "^2.116.0",
     "typescript": "^5.7.0"
+  },
+  "overrides": {
+    "fast-uri": "^3.1.6",
+    "@vercel/frameworks": {
+      "js-yaml": "3.15.2",
+      "smol-toml": "1.8.0"
+    },
+    "typeid-js@1.2.0": {
+      "uuid": "11.1.1"
+    }
   }
 }

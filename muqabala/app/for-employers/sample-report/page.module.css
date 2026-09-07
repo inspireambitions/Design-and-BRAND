@@ -1,0 +1,5 @@
+.page { min-height: 100dvh; padding: 1rem max(1rem, calc((100vw - 78rem) / 2)) 5rem; background: #f2f4f1; color: #14221d; }
+.page nav { display: flex; align-items: center; justify-content: space-between; width: min(100%, 74rem); margin: 0 auto .8rem; color: #66736e; font-size: .72rem; }
+.page nav a { display: inline-flex; align-items: center; gap: .4rem; color: #08705e; font-weight: 750; text-decoration: none; }
+.page nav svg { width: 1rem; height: 1rem; }
+@media print { .page { padding: 0; background: #fff; } .page nav { display: none; } }

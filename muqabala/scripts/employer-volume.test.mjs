@@ -39,9 +39,9 @@ test('section 1: employer page hero and sample block change only behind the flag
   assert.match(component, /volume && !production \?/);
   assert.match(component, /hidden in production/);
 
-  assert.match(copy, /volumeTitle: '223 applications\. Seven worth your time\. 48 hours\.'/);
+  assert.match(copy, /volumeTitle: 'Build your shortlist from answer evidence\.'/);
   assert.match(copy, /volumePrimary: 'Start a shortlist, free'/);
-  assert.match(copy, /volumeSecondary: 'See a real report'/);
+  assert.match(copy, /volumeSecondary: 'See a sample report'/);
   assert.match(copy, /volumeTrust: 'No automatic rejection\. No accent, face or personality scoring\. You decide\.'/);
   assert.match(copy, /volumeSampleTitle: 'What you get after a candidate answers'/);
 
@@ -101,11 +101,11 @@ test('section 2: 250 pasted emails parse well inside the budget', async () => {
 test('section 2: invite copy fits the channel and stays bilingual', async () => {
   const { inviteSubject, inviteText, inviteWhatsApp } = await import('../lib/employer-volume/invite-message.ts');
   const input = { employerName: 'Nour Clinic', roleTitle: 'Receptionist', link: 'https://trymuqabala.com/s/abc123?i=' + 'x'.repeat(43) };
-  assert.equal(inviteSubject(input), 'Nour Clinic: three questions for the Receptionist role');
+  assert.equal(inviteSubject(input), 'Nour Clinic: adaptive interview for the Receptionist role');
   const text = inviteText(input);
-  assert.match(text, /About 12 minutes\. No account needed\. Your video stays on your device/);
+  assert.match(text, /Allow about 25 minutes\. Verify your email/);
   assert.match(text, /----------/);
-  assert.match(text, /نحو ١٢ دقيقة/);
+  assert.match(text, /نحو ٢٥ دقيقة/);
   assert.ok(inviteWhatsApp(input).length <= 300);
   const long = { ...input, roleTitle: 'Senior Front Office and Guest Relations Supervisor (Night Shift, Palm Jumeirah Resort and Residences)' };
   assert.ok(inviteWhatsApp(long).length <= 300);
@@ -148,11 +148,11 @@ test('section 2: invites table is owner-scoped, tokens are hashed and the candid
 
 test('section 2: add candidates screen renders the channel row only behind the WhatsApp flag', () => {
   const screen = read('components/AddCandidates.tsx');
-  assert.match(screen, /Paste emails or phone numbers, or upload a CSV from your applicant system\./);
+  assert.match(screen, /Paste email addresses, or upload a CSV from your applicant system\./);
   assert.match(screen, /\{whatsApp && \(\s*<fieldset/);
   assert.match(screen, /hasPhone \? 'both' : 'email'/);
   assert.match(screen, /disabled=\{!canSend\}/);
-  assert.match(screen, /Sent to \{sent\.sent\}/);
+  assert.match(screen, /Invites queued for \{sent\.queued\}/);
   const page = read('app/employer/roles/[roleId]/candidates/add/page.tsx');
   assert.match(page, /if \(!flags\.volume\) notFound\(\)/);
 });
@@ -202,7 +202,10 @@ test('section 3: hourly cron is registered, gated by the flag and the toggle is 
   assert.ok(cron, 'employer volume cron registered');
   assert.match(cron.schedule, /^\d+ \* \* \* \*$/, 'runs hourly');
   const route = read('app/api/cron/employer-volume/route.ts');
-  assert.match(route, /Bearer \$\{secret\}/);
+  const cronAuth = read('lib/server/cron-auth.ts');
+  assert.match(route, /rejectUnauthorisedCron\(request, 'employer_volume'\)/);
+  assert.match(cronAuth, /Bearer \$\{secret\}/);
+  assert.match(cronAuth, /cron_secret_missing/);
   assert.match(route, /if \(!employerVolumeEnabled\(\)\) return Response\.json\(\{ enabled: false \}/);
   const migration = read('supabase/migrations/20260902130000_employer_volume_reminders.sql');
   assert.match(migration, /reminders_enabled boolean not null default true/);
@@ -250,7 +253,7 @@ test('section 4: rubric coverage is ticks from stored evidence, never a number, 
 
 test('section 4: shortlist email subject, snippet, ordering and magic link', async () => {
   const { shortlistSubject, shortlistText, shortlistHtml, firstAnswerSnippet, pickShortlistRows } = await import('../lib/employer-volume/shortlist-message.ts');
-  const cov = (n) => ({ items: Array.from({ length: 4 }, (_, i) => ({ id: String(i), label: 'x', labelAr: 'x', covered: i < n })), covered: n, total: 4, full: n === 4 });
+  const cov = (n) => ({ items: Array.from({ length: 4 }, (_, i) => ({ id: String(i), label: 'x', labelAr: 'x', covered: i < n, status: i < n ? 'evidence' : 'missing' })), covered: n, total: 4, full: n === 4, analysisComplete: true });
   const input = {
     roleTitle: 'Receptionist', employerName: 'Nour Clinic', invited: 223, answered: 41, fullCoverage: 7,
     rows: [{ displayName: 'Aisha R.', coverage: cov(4), firstAnswer: 'Hello there', openUrl: 'https://trymuqabala.com/auth/confirm?token_hash=abc&type=magiclink&next=%2Femployer%2Finterviews%2F1' }],
@@ -278,9 +281,10 @@ test('section 4: shortlist email subject, snippet, ordering and magic link', asy
 
 test('section 4: decisions are logged with reviewer, undo deletes the row, and the review screen is one candidate', () => {
   const actions = read('app/employer/actions.ts');
-  assert.match(actions, /from\('employer_decisions'\)\s*\.insert\(\{ interview_id: owned\.interviewId, role_id: owned\.roleId, reviewer_id: owned\.userId, decision: input\.decision, note \}\)/);
+  assert.match(actions, /\.rpc\('record_employer_decision'/);
   assert.match(actions, /export async function undoDecision/);
-  assert.match(actions, /from\('employer_decisions'\)\s*\.delete\(\)/);
+  assert.match(actions, /\.rpc\('undo_employer_decision'/);
+  assert.doesNotMatch(actions, /export async function setEmployerDecision/);
   assert.match(actions, /export async function createCandidateShare/);
   assert.match(actions, /7 \* 24 \* 60 \* 60 \* 1000/);
   assert.match(actions, /\/c\/\$\{token\}/);
@@ -288,9 +292,15 @@ test('section 4: decisions are logged with reviewer, undo deletes the row, and t
   const review = read('components/CandidateReview.tsx');
   assert.match(review, /const UNDO_MS = 10_000/);
   assert.match(review, /decide\('shortlist'\)[\s\S]*decide\('pass'\)[\s\S]*decide\('later'\)/);
-  assert.match(review, /start - end > 80\) goNext\(\)/, 'swipe left advances');
+  assert.doesNotMatch(review, /onTouchStart|onTouchEnd/, 'review content does not capture media and text gestures');
+  assert.match(review, /onClick=\{goNext\}/, 'explicit Next remains available');
   assert.match(review, /maxLength=\{280\}/);
   assert.doesNotMatch(review, /\/100/);
+  const dashboardActions = read('components/DashboardDecisionActions.tsx');
+  assert.match(dashboardActions, /recordDecision\(\{ interviewId, decision \}\)/);
+  assert.match(dashboardActions, /selected === normalised/);
+  assert.match(dashboardActions, /router\.refresh\(\)/);
+  assert.match(dashboardActions, /role=\{error \? 'alert' : 'status'\}/);
   const css = read('components/CandidateReview.module.css');
   assert.match(css, /\.decisionBar \{[\s\S]*position: fixed;[\s\S]*bottom: 0;/);
   assert.match(css, /width: min\(100% - 2rem, 40rem\)/, 'centred at 640px on desktop');
@@ -301,6 +311,13 @@ test('section 4: decisions are logged with reviewer, undo deletes the row, and t
   assert.match(migration, /create table if not exists public\.candidate_shares/);
   assert.match(migration, /response in \('recommend', 'not_this_one'\)/);
   assert.match(migration, /revoke all on public\.candidate_shares from public, anon, authenticated/);
+
+  const consistencyMigration = read('supabase/migrations/20260903170412_employer_decision_consistency.sql');
+  assert.match(consistencyMigration, /create or replace function public\.record_employer_decision/);
+  assert.match(consistencyMigration, /when 'shortlist' then 'shortlisted'/);
+  assert.match(consistencyMigration, /when 'pass' then 'not_proceeding'/);
+  assert.match(consistencyMigration, /create or replace function public\.undo_employer_decision/);
+  assert.match(consistencyMigration, /grant execute on function public\.record_employer_decision[\s\S]*to service_role/);
 });
 
 test('section 4: shared page is public, shows no contact details and closes when revoked', () => {
@@ -355,7 +372,7 @@ test('section 5: export of 500 candidates builds in well under the budget and is
   const lines = csv.trim().split('\r\n');
   assert.equal(lines.length, 501);
   assert.equal(lines[0], EXPORT_COLUMNS.join(','));
-  assert.match(lines[1], /,true,false,true,true,shortlist,kim@example\.com,/);
+  assert.match(lines[1], /,true,false,true,true,Shortlisted,kim@example\.com,/);
   assert.match(lines[4], /'=HYPERLINK/, 'formula prefix neutralised');
   assert.match(lines[1], /"Strong, ""quoted"" note"/);
 
@@ -397,7 +414,7 @@ test('section 7: every brief event exists and no event carries a name, email or 
 
   const fired = [
     ['components/EmployerProofCreate.tsx', ['employer_landing_viewed', 'sample_report_opened', 'role_created']],
-    ['components/AddCandidates.tsx', ['invites_sent']],
+    ['components/AddCandidates.tsx', ['invites_queued']],
     ['lib/server/employer-messages.ts', ['reminder_sent']],
     ['app/api/screening/interviews/[id]/submit/route.ts', ['candidate_answered']],
     ['app/auth/confirm/route.ts', ['shortlist_email_opened']],
@@ -409,7 +426,7 @@ test('section 7: every brief event exists and no event carries a name, email or 
     for (const event of events) assert.match(source, new RegExp(`'${event}'`), `${event} fired from ${file}`);
   }
   const invites = read('components/AddCandidates.tsx');
-  assert.match(invites, /track\('invites_sent', employerVolumeProps\(true, \{ role_id: roleId, channel: 'email', count: body\.byEmail \}\)\)/);
+  assert.match(invites, /track\('invites_queued', employerVolumeProps\(true, \{ role_id: roleId, channel: 'email', count: body\.byEmail \}\)\)/);
   assert.doesNotMatch(invites, /track\([^)]*(email:|phone:|name:)/, 'no contact details in invite events');
 });
 

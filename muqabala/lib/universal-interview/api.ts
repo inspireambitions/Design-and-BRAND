@@ -1,42 +1,131 @@
-import type { ExtractionResult, GeneratedQuestion, InterviewState, PlannedQuestion } from './types.ts';
-import { FRAMEWORK_CRITERIA, frameworkForQuestionType, questionQualityGate } from './questions.ts';
+import { coverageBand } from './feedback.ts';
+import type {
+  ExtractionResult,
+  FinalFeedback,
+  GeneratedQuestion,
+  InterviewState,
+  PlannedQuestion,
+  RetryComparison,
+} from './types.ts';
+import type { TranscriptSegment } from '../interviews.ts';
+import {
+  fixedRephrase,
+  rejectedQuestionLog,
+  serialiseCandidateQuestion,
+  validateQuestionObject,
+} from './candidate-question.ts';
+import {
+  candidateCopySafeValue,
+  candidateSafeQuestion,
+  FRAMEWORK_CRITERIA,
+  frameworkForQuestionType,
+  questionQualityGate,
+} from './questions.ts';
+const INTERNAL_PUBLIC_LABEL = /\b(?:MVP|V2|beta|prototype|proof of concept|prompt[_ ]version|model[_ ]calls?|role pack|candidate-set)\b/i;
 
-const FORBIDDEN_CANDIDATE_COPY = /\b(?:contradiction|lie|dishonest|inconsistent)\b|—/i;
+const FAMILY_LABELS = {
+  behavioural: 'Behavioural skill',
+  cognitive: 'Thinking and judgement',
+  leadership: 'Leadership',
+  commercial: 'Commercial judgement',
+  technical: 'Role knowledge',
+  motivation: 'Motivation',
+} as const;
 
 export function universalInterviewEnabled(): boolean {
   return process.env.NEXT_PUBLIC_UNIVERSAL_BRAIN_V2 === 'on';
 }
 
 export function candidateCopySafe(value: unknown): boolean {
-  return !FORBIDDEN_CANDIDATE_COPY.test(JSON.stringify(value));
+  return candidateCopySafeValue(value);
+}
+
+function publicText(value: string, fallback: string): string {
+  return INTERNAL_PUBLIC_LABEL.test(value) ? fallback : value;
 }
 
 export function publicInterviewState(state: InterviewState) {
   return {
     interview_id: state.interview_id,
-    role: state.role,
-    seniority: state.seniority,
-    phase: state.phase,
-    status: state.status,
-    prompt_version: state.prompt_version,
-    blueprint: state.blueprint,
-    confirmed_by_candidate: state.confirmed_by_candidate,
-    question_number: state.question_number,
-    current_question: state.current_question,
-    coverage: state.coverage,
+    stage: state.phase === 'AWAITING_CONFIRMATION'
+      ? 'confirmation' as const
+      : state.phase === 'COMPLETE'
+        ? 'complete' as const
+        : 'interview' as const,
+    current_question: state.current_question
+      ? serialiseCandidateQuestion(candidateSafeQuestion(state.current_question), state.question_number, state.plan.length)
+      : null,
     retry_used: state.retry_used,
-    role_pack: {
-      found: !state.role_pack.is_fallback,
-      assessment_type: state.role_pack.assessment_type,
-      technical_accuracy_verified: Boolean(state.role_pack.technical_reference),
-    },
+    role_caveat: state.role_pack.assessment_type === 'PRACTICAL'
+      ? 'practical' as const
+      : state.role_pack.assessment_type === 'PORTFOLIO'
+        ? 'portfolio' as const
+        : null,
   };
 }
 
-export function validateExtractionSemantics(state: InterviewState, extraction: ExtractionResult): string | null {
-  const allowedCompetencies = new Set(state.discovery.map((competency) => competency.id));
+export function publicDiscoveryState(
+  state: InterviewState,
+  roleSummary: string,
+  notice: string,
+) {
+  return {
+    interview_id: state.interview_id,
+    role_summary: publicText(roleSummary, `Interview for ${state.profile.target_role}.`),
+    competencies: state.discovery.map(({ id, name, family, source, source_text }) => ({
+      id,
+      name,
+      detail: source === 'EXPLICIT'
+        ? publicText(source_text, FAMILY_LABELS[family])
+        : FAMILY_LABELS[family],
+    })),
+    suggested_competency_ids: state.blueprint.length
+      ? state.blueprint.map((competency) => competency.id)
+      : state.discovery.slice(0, 5).map((competency) => competency.id),
+    notice: publicText(notice, 'Your interview is ready to review.'),
+  };
+}
+
+function publicCompetencyFeedback(item: FinalFeedback['competencies'][number]) {
+  return {
+    id: item.id,
+    what_worked: item.what_worked,
+    what_is_missing: item.what_is_missing,
+    improve_this: item.improve_this,
+    band: item.band,
+  };
+}
+
+export function publicFinalFeedback(feedback: FinalFeedback, retryQuestionText?: string) {
+  return {
+    competencies: feedback.competencies.map(publicCompetencyFeedback),
+    single_highest_value_improvement: feedback.single_highest_value_improvement,
+    retry_recommended_question: feedback.retry_recommended_question,
+    caveats: feedback.caveats,
+    ...(retryQuestionText ? { retry_question_text: retryQuestionText } : {}),
+  };
+}
+
+export function publicRetryComparison(comparison: RetryComparison) {
+  const bands = (values: RetryComparison['before']) => Object.fromEntries(
+    Object.entries(values).map(([id, status]) => [id, coverageBand(status)]),
+  );
+  return {
+    question_number: comparison.question_number,
+    before: bands(comparison.before),
+    after: bands(comparison.after),
+    feedback: comparison.feedback.map(publicCompetencyFeedback),
+  };
+}
+
+export function validateExtractionSemantics(
+  state: InterviewState,
+  extraction: ExtractionResult,
+  timedSegments: TranscriptSegment[] = [],
+): string | null {
+  const allowedCompetencies = new Set(state.current_question?.target_competencies ?? []);
   if (extraction.evidence.competencies.some((competency) => !allowedCompetencies.has(competency.id))) {
-    return 'unknown competency id';
+    return 'competency was not targeted by the current question';
   }
   const expectedCriteria = FRAMEWORK_CRITERIA[state.current_question?.framework ?? 'STAR'];
   if (expectedCriteria.some((criterion) => !(criterion in extraction.evidence.criteria))) {
@@ -49,15 +138,36 @@ export function validateExtractionSemantics(state: InterviewState, extraction: E
   if (extraction.possible_inconsistency && !evidenceIds.has(extraction.possible_inconsistency.earlier_evidence_id)) {
     return 'possible_inconsistency references unknown evidence';
   }
+  const segmentOrder = new Map(timedSegments.map((segment, index) => [segment.id, index]));
+  const selected = extraction.evidence.segment_ids.map((id) => segmentOrder.get(id));
+  if (selected.some((index) => index === undefined)) return 'segment_ids reference unknown timed evidence';
+  if (timedSegments.length === 0 && extraction.evidence.segment_ids.length > 0) {
+    return 'segment_ids were supplied without timed evidence';
+  }
+  if (timedSegments.length > 0
+    && extraction.evidence.competencies.length > 0
+    && extraction.evidence.segment_ids.length === 0) {
+    return 'evidence competencies require a timed transcript span';
+  }
+  const indices = selected.filter((index): index is number => index !== undefined).sort((left, right) => left - right);
+  if (indices.length > 1 && indices.at(-1)! - indices[0] + 1 !== indices.length) {
+    return 'segment_ids must form one continuous transcript span';
+  }
   return null;
 }
 
-export function normaliseGeneratedPlan(state: InterviewState, plan: Array<Omit<PlannedQuestion, 'rephrase'>>): PlannedQuestion[] | null {
+export function normaliseGeneratedPlan(state: InterviewState, plan: Array<{
+  slot: number;
+  candidate_text: string;
+  question_type: PlannedQuestion['question_type'];
+  target_competencies: string[];
+  interviewer_intent: string;
+}>): PlannedQuestion[] | null {
   const allowed = new Set(state.blueprint.map((competency) => competency.id));
   const slots = [...plan].sort((left, right) => left.slot - right.slot);
   if (slots.length !== 8 || slots.some((item, index) => item.slot !== index + 1)) return null;
   if (slots.some((item) => item.target_competencies.some((id) => !allowed.has(id)))) return null;
-  if (!candidateCopySafe(slots)) return null;
+  if (slots.some((item) => !candidateCopySafe(item.candidate_text))) return null;
 
   const motivation = state.blueprint.find((competency) => competency.family === 'motivation') ?? state.blueprint[0];
   const behavioural = state.blueprint.find((competency) => competency.family === 'behavioural') ?? state.blueprint[2];
@@ -84,28 +194,38 @@ export function normaliseGeneratedPlan(state: InterviewState, plan: Array<Omit<P
     { type: typeFor(3), targets: [state.blueprint[3].id], intent: state.blueprint[3].id },
     { type: typeFor(4), targets: [state.blueprint[4].id], intent: 'HIGHEST_VALUE_UNCOVERED' },
   ];
-  const normalised = slots.map((item, index) => ({
-    ...item,
-    question_type: fixed[index].type,
-    target_competencies: fixed[index].targets,
-    primary_intent: fixed[index].intent,
-    framework: frameworkForQuestionType(fixed[index].type),
-    rephrase: `Please answer this in another way: ${item.text}`,
-  }));
+  const normalised: PlannedQuestion[] = [];
+  for (const [index, item] of slots.entries()) {
+    const questionType = fixed[index].type;
+    const candidate = {
+      question_id: `model_plan_${item.slot}`,
+      candidate_text: item.candidate_text,
+      interviewer_intent: fixed[index].intent,
+      probe_targets: [],
+      question_type: questionType,
+      target_competencies: fixed[index].targets,
+      seniority: state.seniority,
+      language: 'en' as const,
+      source: 'MODEL' as const,
+      prompt_version: state.prompt_version,
+      rephrase_text: fixedRephrase(questionType),
+      framework: frameworkForQuestionType(questionType),
+      kind: 'MAIN' as const,
+    };
+    const validated = validateQuestionObject(candidate);
+    if (!validated.ok) {
+      console.warn('question_rejected', rejectedQuestionLog(candidate, validated.reasons));
+      return null;
+    }
+    normalised.push({ ...validated.question, slot: item.slot });
+  }
   const temporary = { ...state, coverage: state.coverage, dedupe_keys: [] };
-  if (normalised.some((item) => !questionQualityGate({
-    text: item.text,
-    question_type: item.question_type,
-    target_competencies: item.target_competencies,
-    intent: item.primary_intent,
-    framework: item.framework,
-    kind: 'MAIN',
-  }, temporary).ok)) return null;
+  if (normalised.some((item) => !questionQualityGate(item, temporary).ok)) return null;
   return normalised;
 }
 
 export function validateGeneratedQuestion(state: InterviewState, question: GeneratedQuestion): string | null {
-  if (!candidateCopySafe(question)) return 'forbidden candidate-facing wording';
+  if (!candidateCopySafe(question.candidate_text)) return 'forbidden candidate-facing wording';
   const allowed = new Set(state.discovery.map((competency) => competency.id));
   if (question.target_competencies.some((id) => !allowed.has(id))) return 'unknown competency id';
   const quality = questionQualityGate(question, state);

@@ -72,7 +72,7 @@ export function buildFeedbackEmail(input: {
             <div style="margin-top:22px;font:700 34px/1 Georgia,serif;color:#10261e;">${rating.stars}/5</div>
             <div style="margin-top:8px;font:700 22px/1 Arial,sans-serif;letter-spacing:2px;color:#d69a28;">${stars}</div>
             <div style="margin-top:22px;font:700 25px/1.25 Georgia,serif;color:#10261e;">${escapeHtml(socialStatement)}</div>
-            <div style="margin-top:22px;padding-top:16px;border-top:1px solid #cbd8d1;font:700 12px/1.4 Arial,sans-serif;letter-spacing:1px;text-transform:uppercase;color:#287f70;">Muqabala · Practise until you feel ready</div>
+            <div style="margin-top:22px;padding-top:16px;border-top:1px solid #cbd8d1;font:700 12px/1.4 Arial,sans-serif;letter-spacing:1px;text-transform:uppercase;color:#287f70;">Muqabala · Practice until you feel ready</div>
             ${downloadButtons}
           </td></tr>
         </table>

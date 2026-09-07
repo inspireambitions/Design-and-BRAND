@@ -95,7 +95,11 @@ export function defaultAnswerMethod(capabilities: DeviceCapabilities): 'speak' |
 }
 
 export function videoModeSupported(capabilities: DeviceCapabilities): boolean {
-  return capabilities.videoRecommended;
+  // Desktop Chrome and Edge support the same getUserMedia + MediaRecorder
+  // path as mobile. Mobile remains the default recommendation, not a gate.
+  return capabilities.mediaDevicesSupported
+    && capabilities.recordingSupported
+    && capabilities.speechSupported;
 }
 
 /**
@@ -104,5 +108,5 @@ export function videoModeSupported(capabilities: DeviceCapabilities): boolean {
  * are written up after the answer rather than as it is spoken.
  */
 export function videoCaptureSupported(capabilities: DeviceCapabilities): boolean {
-  return capabilities.isMobile && capabilities.mediaDevicesSupported && capabilities.recordingSupported;
+  return capabilities.mediaDevicesSupported && capabilities.recordingSupported;
 }

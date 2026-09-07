@@ -10,6 +10,7 @@ import {
   criteriaMeetSeniority,
   decideTurn,
   deterministicExtractionFallback,
+  setGeneratedFollowup,
 } from '../lib/universal-interview/engine.ts';
 import {
   confirmBlueprint,
@@ -18,10 +19,27 @@ import {
   mergeAndRankCompetencies,
 } from '../lib/universal-interview/blueprint.ts';
 import { assessJobDescription, precheckAnswer, stripInjection } from '../lib/universal-interview/sanitise.ts';
-import { fallbackGeneratedQuestion, questionQualityGate } from '../lib/universal-interview/questions.ts';
+import {
+  candidateQuestionSafetyReason,
+  candidateSafeQuestion,
+  fallbackGeneratedQuestion,
+  makeBankQuestion,
+  questionQualityGate,
+} from '../lib/universal-interview/questions.ts';
 import { evaluateObservedTurns, validateGoldSet } from '../lib/universal-interview/evaluation.ts';
-import { candidateCopySafe, normaliseGeneratedPlan } from '../lib/universal-interview/api.ts';
+import {
+  candidateCopySafe,
+  normaliseGeneratedPlan,
+  publicDiscoveryState,
+  publicFinalFeedback,
+  publicInterviewState,
+  publicRetryComparison,
+  validateExtractionSemantics,
+} from '../lib/universal-interview/api.ts';
 import { ModelCallBudget } from '../lib/universal-interview/model-budget.ts';
+import { zodTextFormat } from 'openai/helpers/zod';
+import { ExtractionSchema } from '../lib/universal-interview/schemas.ts';
+import { buildFinalFeedback, deterministicFeedbackFallback } from '../lib/universal-interview/feedback.ts';
 
 const profile = {
   experience_level: 'PROFESSIONAL',
@@ -37,6 +55,9 @@ const profile = {
 const pack = {
   role: 'Front Desk Agent',
   version: '1.0',
+  author: 'Inspire Ambitions HR Career Specialist',
+  reviewed_by: null,
+  reviewed_at: null,
   implicit_competencies: ['c_complaint_handling', 'c_prioritisation'],
   core_competencies: ['c_guest_service'],
   question_bank: [],
@@ -71,6 +92,7 @@ function extraction(overrides = {}) {
     answered_the_question: true,
     evidence: {
       summary: 'The candidate owned a guest complaint and the guest returned.',
+      segment_ids: [],
       example_key: 'late-room-guest',
       competencies: [{ id: 'c_guest_service', strength: 'STRONG', evidence_type: 'EMPLOYMENT' }],
       criteria: { situation: 'PRESENT', task: 'PRESENT', action: 'STRONG', result: 'PRESENT' },
@@ -114,7 +136,40 @@ test('answer prechecks run before model extraction', () => {
   assert.equal(precheckAnswer("I don't know").kind, 'NO_EXAMPLE');
   assert.equal(precheckAnswer('Could you rephrase that?').kind, 'REPHRASE_REQUEST');
   assert.equal(precheckAnswer('Next question').kind, 'SKIP_REQUEST');
+  assert.equal(precheckAnswer('Hello').word_count, 1);
+  assert.equal(precheckAnswer('I led the project myself').word_count, 5);
   assert.equal(precheckAnswer('I handled the issue myself and the guest returned.').short_answer, true);
+});
+
+test('turn and retry routes reject evidence answers shorter than five words', () => {
+  const turnRoute = readFileSync(new URL('../app/api/universal-interview/turn/route.ts', import.meta.url), 'utf8');
+  const turnProcessor = readFileSync(new URL('../lib/universal-interview/process-turn.ts', import.meta.url), 'utf8');
+  const retryRoute = readFileSync(new URL('../app/api/universal-interview/retry/route.ts', import.meta.url), 'utf8');
+  assert.match(turnRoute, /processUniversalTurn\(state, parsed\.data\.answer\)/);
+  assert.match(turnProcessor, /precheck\.kind === 'NONE' && precheck\.word_count < 5/);
+  assert.match(turnProcessor, /answer_too_short/);
+  assert.match(retryRoute, /precheck\.kind !== 'NONE' \|\| precheck\.word_count < 5/);
+});
+
+test('the evidence schema compiles for strict OpenAI structured output', () => {
+  assert.doesNotThrow(() => zodTextFormat(ExtractionSchema, 'turn_evidence'));
+});
+
+test('model extraction failure is visible and never advances with empty evidence', () => {
+  const turnRoute = readFileSync(new URL('../app/api/universal-interview/turn/route.ts', import.meta.url), 'utf8');
+  const retryRoute = readFileSync(new URL('../app/api/universal-interview/retry/route.ts', import.meta.url), 'utf8');
+  assert.match(turnRoute, /answer_processing_unavailable/);
+  assert.doesNotMatch(turnRoute, /deterministicExtractionFallback/);
+  assert.match(retryRoute, /answer_processing_unavailable/);
+  assert.doesNotMatch(retryRoute, /deterministicExtractionFallback/);
+});
+
+test('the candidate journey restores after refresh and has a feedback loading state', () => {
+  const component = readFileSync(new URL('../components/UniversalInterview.tsx', import.meta.url), 'utf8');
+  const route = readFileSync(new URL('../app/api/universal-interview/[id]/route.ts', import.meta.url), 'utf8');
+  assert.match(component, /SAVED_INTERVIEW_KEY/);
+  assert.match(component, /FEEDBACK_LOADING/);
+  assert.match(route, /export async function GET/);
 });
 
 test('role-pack implicit competencies merge and core capability ranks first', () => {
@@ -125,6 +180,16 @@ test('role-pack implicit competencies merge and core capability ranks first', ()
   assert.equal(ranked.some((item) => item.id === 'c_complaint_handling'), true);
   assert.equal(ranked.some((item) => item.id === 'c_dynamic'), false);
   assert.equal(ranked[0].id, 'c_guest_service');
+});
+
+test('every starter role pack records authorship and leaves review evidence explicit', () => {
+  const rolePacks = ['front-desk-agent', 'software-engineer', 'sales-manager', 'graduate-trainee']
+    .map((name) => JSON.parse(readFileSync(new URL(`../lib/universal-interview/role-packs/${name}.json`, import.meta.url), 'utf8')));
+  for (const rolePack of rolePacks) {
+    assert.equal(rolePack.author, 'Inspire Ambitions HR Career Specialist');
+    assert.equal(rolePack.reviewed_by, null);
+    assert.equal(rolePack.reviewed_at, null);
+  }
 });
 
 test('candidate confirmation requires five known, different competencies', () => {
@@ -170,6 +235,39 @@ test('a sufficient target is never probed again', () => {
   assert.equal(decision.override_reason, 'target_sufficient');
 });
 
+test('evidence can credit only competencies targeted by the current question', () => {
+  const state = stateFor();
+  state.current_question = { ...state.current_question, target_competencies: ['c_guest_service'], framework: 'STAR' };
+  const unrelated = extraction({
+    evidence: {
+      ...extraction().evidence,
+      competencies: [{ id: 'c_communication', strength: 'STRONG', evidence_type: 'EMPLOYMENT' }],
+    },
+  });
+  assert.match(validateExtractionSemantics(state, unrelated), /not targeted/);
+  assert.equal(validateExtractionSemantics(state, extraction()), null);
+});
+
+test('timed evidence accepts only supplied, continuous transcript segment ids', () => {
+  const state = stateFor();
+  state.current_question = { ...state.current_question, target_competencies: ['c_guest_service'], framework: 'STAR' };
+  const segments = [
+    { id: 'S001', startMs: 0, endMs: 900, text: 'A guest arrived early.' },
+    { id: 'S002', startMs: 950, endMs: 2100, text: 'I checked the available rooms.' },
+    { id: 'S003', startMs: 2150, endMs: 3400, text: 'The guest thanked me.' },
+  ];
+  assert.equal(validateExtractionSemantics(state, extraction({
+    evidence: { ...extraction().evidence, segment_ids: ['S001', 'S002'] },
+  }), segments), null);
+  assert.match(validateExtractionSemantics(state, extraction({
+    evidence: { ...extraction().evidence, segment_ids: ['S001', 'S099'] },
+  }), segments), /unknown timed evidence/);
+  assert.match(validateExtractionSemantics(state, extraction({
+    evidence: { ...extraction().evidence, segment_ids: ['S001', 'S003'] },
+  }), segments), /continuous/);
+  assert.match(validateExtractionSemantics(state, extraction(), segments), /require a timed transcript span/);
+});
+
 test('the decision table enforces two probes and the executive ownership limit', () => {
   let state = stateFor();
   const result = extraction({ recommended_action: 'PROBE_ACTION', probe_target: 'personal action' });
@@ -184,6 +282,22 @@ test('the decision table enforces two probes and the executive ownership limit',
   assert.equal(decision.override_reason, 'executive_ownership_probe_limit');
 });
 
+test('an off-topic answer gets one redirect and then moves on', () => {
+  let state = stateFor();
+  const offTopic = extraction({
+    answered_the_question: false,
+    recommended_action: 'REDIRECT',
+    probe_target: 'the question asked',
+  });
+  const first = decideTurn(state, precheckAnswer('This answer discusses something unrelated to the interview question.'), offTopic);
+  assert.equal(first.action, 'REDIRECT');
+  assert.equal(first.counts_as_probe, true);
+  state = applyImmediateDecision(state, first, offTopic);
+  assert.equal(state.probe_count_current, 1);
+  const second = decideTurn(state, precheckAnswer('This answer is still unrelated to the interview question.'), offTopic);
+  assert.equal(second.action, 'MOVE_ON');
+});
+
 test('no-example offers one hypothetical and then moves on', () => {
   let state = stateFor();
   const precheck = precheckAnswer('No example');
@@ -196,20 +310,151 @@ test('no-example offers one hypothetical and then moves on', () => {
 test('question quality rejects praise, long text, two questions and covered targets', () => {
   const state = stateFor();
   const base = { ...state.current_question, kind: 'PROBE' };
-  assert.equal(questionQualityGate({ ...base, text: 'Great, what happened?' }, state).ok, false);
-  assert.equal(questionQualityGate({ ...base, text: 'What happened? What changed?' }, state).ok, false);
+  assert.equal(questionQualityGate({ ...base, candidate_text: 'Great, what happened?' }, state).ok, false);
+  assert.equal(questionQualityGate({ ...base, candidate_text: 'What happened? What changed?' }, state).ok, false);
   state.coverage[base.target_competencies[0]].status = 'SUFFICIENT';
-  assert.equal(questionQualityGate({ ...base, text: 'What happened next?' }, state).ok, false);
+  assert.equal(questionQualityGate({ ...base, candidate_text: 'What did you do next?' }, state).ok, false);
 });
 
-test('fallbacks are deterministic and the eighth main question completes the interview', () => {
+test('adaptive follow-ups never expose interviewer instructions or foreign-script fragments', () => {
   const state = stateFor();
+  const reportedQuestions = [
+    'What specific example shows Why the candidate specifically wants the Housekeeping Attendant role and what relevant experience or understanding they have of room-cleaning standards and guest care?',
+    'What specific example shows Ask for one specific room-cleaning example from the hotel attachment, including the standards followed, how guest belongings and needs were handled, and why that experience motivated pursuit of this役割?',
+  ];
+
+  assert.notEqual(candidateQuestionSafetyReason(reportedQuestions[0], 'PROBE'), null);
+  assert.notEqual(candidateQuestionSafetyReason(reportedQuestions[1], 'PROBE'), null);
+  for (const text of reportedQuestions) {
+    assert.throws(
+      () => candidateSafeQuestion({ ...state.current_question, candidate_text: text, kind: 'PROBE' }),
+      /Refusing to serve unvalidated question/,
+    );
+  }
+
+  const fallback = fallbackGeneratedQuestion('PROBE_SPECIFICITY', state.current_question, reportedQuestions[1]);
+  assert.equal(fallback.candidate_text, 'What is one specific example from your experience?');
+  assert.doesNotMatch(fallback.candidate_text, /candidate|ask for|attachment|役割/i);
+});
+
+test('short interviewer guides and non-English script fail the candidate question gate', () => {
+  assert.equal(candidateQuestionSafetyReason('Ask for one clear example?', 'PROBE'), 'INTERVIEWER_VERB');
+  assert.equal(candidateQuestionSafetyReason('Why the candidate wants this role?', 'PROBE'), 'THIRD_PERSON');
+  assert.equal(candidateQuestionSafetyReason('What experience prepared you for this役割?', 'MAIN'), 'NON_LATIN');
+  assert.equal(candidateQuestionSafetyReason('What experience prepared you for this role?', 'MAIN'), null);
+});
+
+test('employer screening repairs unsafe stored questions at both output boundaries', () => {
+  const employerBridge = readFileSync(new URL('../lib/universal-interview/employer.ts', import.meta.url), 'utf8');
+  const snapshotBoundary = employerBridge.match(/export function employerBrainQuestionSnapshot[\s\S]*?\n\}/)?.[0] ?? '';
+  const responseBoundary = employerBridge.match(/export function publicEmployerBrainState[\s\S]*?\n\}/)?.[0] ?? '';
+  assert.match(snapshotBoundary, /candidateSafeQuestion\(question\)/);
+  assert.match(responseBoundary, /candidateSafeQuestion\(state\.current_question\)/);
+});
+
+test('entry interviews use six balanced questions and higher levels use eight', () => {
+  const entry = stateFor('ENTRY');
+  assert.equal(entry.plan.length, 6);
+  assert.deepEqual(entry.plan.map((question) => question.slot), [1, 2, 3, 4, 5, 6]);
+  assert.deepEqual(
+    new Set(entry.plan.flatMap((question) => question.target_competencies)),
+    new Set(entry.blueprint.map((competency) => competency.id)),
+  );
+  entry.question_number = 6;
+  assert.equal(advanceInterview(entry).state.phase, 'COMPLETE');
+
+  const state = stateFor();
+  assert.equal(state.plan.length, 8);
   assert.equal(deterministicExtractionFallback().evidence.summary, 'extraction failed');
-  assert.equal(fallbackGeneratedQuestion('PROBE_RESULT', state.current_question, '').text, 'What changed because of your actions?');
+  assert.equal(fallbackGeneratedQuestion('PROBE_RESULT', state.current_question, '').candidate_text, 'What changed because of your actions?');
   state.question_number = 8;
   const advanced = advanceInterview(state);
   assert.equal(advanced.state.phase, 'COMPLETE');
   assert.equal(advanced.state.current_question, null);
+});
+
+test('coverage never shortens the declared interview length', () => {
+  const state = stateFor('PROFESSIONAL');
+  for (const competency of state.discovery) state.coverage[competency.id].status = 'STRONG';
+  const advanced = advanceInterview(state);
+  assert.equal(advanced.state.phase, 'ACTIVE');
+  assert.equal(advanced.state.question_number, 2);
+  assert.equal(advanced.needsReplacement, false);
+});
+
+test('adaptive main questions update the plan used by retry', () => {
+  const state = stateFor();
+  state.question_number = 2;
+  const replacement = makeBankQuestion({
+    question_id: 'replacement_complaint',
+    candidate_text: 'Tell me about a complaint you resolved for a guest?',
+    interviewer_intent: 'COMPLAINT_RECOVERY',
+    question_type: 'BEHAVIOURAL',
+    target_competencies: ['c_complaint_handling'],
+    seniority: state.seniority,
+  });
+  const updated = setGeneratedFollowup(state, replacement);
+  assert.equal(updated.plan[1].candidate_text, replacement.candidate_text);
+  assert.deepEqual(updated.plan[1].target_competencies, ['c_complaint_handling']);
+});
+
+test('fallback feedback is grounded in recorded evidence', () => {
+  let state = stateFor();
+  state.current_question = { ...state.current_question, target_competencies: ['c_guest_service'], framework: 'STAR' };
+  state = applyExtraction(state, extraction(), 'I resolved the complaint and the guest returned.');
+  const feedback = buildFinalFeedback(state, deterministicFeedbackFallback(state));
+  const guestService = feedback.competencies.find((item) => item.id === 'c_guest_service');
+  assert.match(guestService.what_worked, /guest complaint and the guest returned/i);
+  assert.deepEqual(guestService.evidence_ids, ['E01']);
+});
+
+test('retry comparison is persisted and restored with the report', () => {
+  const retryRoute = readFileSync(new URL('../app/api/universal-interview/retry/route.ts', import.meta.url), 'utf8');
+  const getRoute = readFileSync(new URL('../app/api/universal-interview/[id]/route.ts', import.meta.url), 'utf8');
+  assert.match(retryRoute, /state\.retry_result =/);
+  assert.match(getRoute, /publicRetryComparison\(state\.retry_result\)/);
+});
+
+test('public Brain responses contain only fields the candidate journey uses', () => {
+  const state = stateFor();
+  const interview = publicInterviewState(state);
+  assert.deepEqual(Object.keys(interview), [
+    'interview_id', 'stage', 'current_question', 'retry_used', 'role_caveat',
+  ]);
+  assert.deepEqual(Object.keys(interview.current_question), [
+    'question_id', 'candidate_text', 'question_number', 'total_questions',
+  ]);
+
+  state.discovery[0] = {
+    ...state.discovery[0],
+    source: 'EXPLICIT',
+    source_text: 'Role pack core competency',
+  };
+  const discovery = publicDiscoveryState(
+    state,
+    'Universal Interview Brain V2 role pack',
+    'This notice came from the role pack.',
+  );
+  assert.deepEqual(Object.keys(discovery.competencies[0]), ['id', 'name', 'detail']);
+  assert.equal(discovery.role_summary, 'Interview for Front Desk Agent.');
+  assert.equal(discovery.competencies[0].detail, 'Behavioural skill');
+  assert.equal(discovery.notice, 'Your interview is ready to review.');
+  assert.doesNotMatch(JSON.stringify(discovery), /INFERRED|ASSUMED|PROFESSIONAL|role pack|MVP|V2/i);
+
+  const feedback = buildFinalFeedback(state, deterministicFeedbackFallback(state));
+  const publicFeedback = publicFinalFeedback(feedback, 'Try this question again.');
+  assert.equal('patterns' in publicFeedback, false);
+  assert.equal('evidence_ids' in publicFeedback.competencies[0], false);
+
+  const retry = publicRetryComparison({
+    question_number: 1,
+    before: { c_guest_service: 'NO_EVIDENCE' },
+    after: { c_guest_service: 'STRONG' },
+    feedback: [feedback.competencies[0]],
+  });
+  assert.equal(retry.before.c_guest_service, 'Missing evidence');
+  assert.equal(retry.after.c_guest_service, 'Strong evidence');
+  assert.equal('evidence_ids' in retry.feedback[0], false);
 });
 
 test('code, not the planning model, owns slot type, target and framework', () => {
@@ -218,7 +463,7 @@ test('code, not the planning model, owns slot type, target and framework', () =>
     ...item,
     question_type: 'COMMERCIAL',
     target_competencies: [state.blueprint[4].id],
-    primary_intent: 'MODEL_CHOICE',
+    interviewer_intent: 'MODEL_CHOICE',
   }));
   const normalised = normaliseGeneratedPlan(state, generated);
   assert.ok(normalised);
@@ -233,6 +478,7 @@ test('candidate-facing model output rejects forbidden words and em dashes', () =
   assert.equal(candidateCopySafe({ text: 'The scope was described differently.' }), true);
   assert.equal(candidateCopySafe({ text: 'That was inconsistent.' }), false);
   assert.equal(candidateCopySafe({ text: 'Clear answer — weak result.' }), false);
+  assert.equal(candidateCopySafe({ text: 'This is the MVP V2 flow.' }), false);
 });
 
 test('a confidentiality refusal can still count a directional result with scale', () => {
@@ -288,10 +534,10 @@ test('the model-call budget makes a third call impossible', () => {
 });
 
 test('persistence is encrypted, identity-separated, retention-bound and concurrency-claimed', () => {
-  const migration = readFileSync(new URL('../supabase/migrations/20260902120000_universal_interview_brain_v2.sql', import.meta.url), 'utf8');
+  const migration = readFileSync(new URL('../supabase/migrations/20260903032306_universal_interview_brain_v2.sql', import.meta.url), 'utf8');
   assert.match(migration, /state_ciphertext text not null/);
   assert.match(migration, /universal_interview_accounts/);
-  assert.match(migration, /interval '12 months'/);
+  assert.match(migration, /interval '90 days'/);
   assert.match(migration, /processing_token_hash/);
   assert.match(migration, /model_calls smallint not null check \(model_calls between 0 and 2\)/);
   assert.match(migration, /revoke all on public\.universal_interviews from anon, authenticated/);

@@ -14,7 +14,7 @@ export function trustedInterviewPlan(input: {
   // Practice and proof never mix: a Coach token cannot start a work sample,
   // and a work-sample pack cannot be scored as practice.
   if (input.mode === 'screening') {
-    if (!verified || verified.kind !== 'proof' || verified.questions.length !== 3) return null;
+    if (!verified || verified.kind !== 'proof' || (verified.questions.length !== 3 && verified.questions.length !== 8)) return null;
   } else if (verified?.kind === 'proof') {
     return null;
   }
@@ -32,7 +32,10 @@ export function trustedInterviewPlan(input: {
   if (!opener || !closer) return null;
   const ids = input.questions.map((question) => question.id);
   const allowed = new Map([...role.questions, ...(role.bank ?? [])].map((question) => [question.id, question]));
-  if (input.focusQuestionId) {
+  if (input.mode === 'screening' && verified?.questions.length === 8) {
+    const expected = verified.questions.map((question) => question.id);
+    if (ids.length !== expected.length || ids.some((id, index) => id !== expected[index])) return null;
+  } else if (input.focusQuestionId) {
     if (!matchesFocusedQuestionSequence(input.mode, ids, input.focusQuestionId, new Set(allowed.keys()))) return null;
   } else if (!matchesTrustedQuestionSequence(input.mode, ids, opener.id, closer.id)) {
     return null;

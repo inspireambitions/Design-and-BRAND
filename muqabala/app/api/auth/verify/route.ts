@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import { shouldClaimPracticeAttempt } from '@/lib/auth-destination';
 import { OtpVerifySchema } from '@/lib/interviews';
 import { limitAuth } from '@/lib/rate-limit';
 import { claimCurrentAttempt } from '@/lib/server/claim-attempt';
@@ -24,7 +25,10 @@ export async function POST(request: Request) {
   });
   if (error || !data.user) return Response.json({ error: message('That code is invalid or has expired.', 'هذا الرمز غير صحيح أو انتهت صلاحيته.') }, { status: 400 });
   const cookieStore = await cookies();
-  const claimState = cookieStore.get(AUTH_STATE_COOKIE)?.value;
+  const requestedNext = safeNext(parsed.data.next, '/account');
+  const claimState = shouldClaimPracticeAttempt(requestedNext)
+    ? cookieStore.get(AUTH_STATE_COOKIE)?.value : null;
+  if (!shouldClaimPracticeAttempt(requestedNext)) cookieStore.delete(AUTH_STATE_COOKIE);
   if (claimState && !isOpaqueToken(claimState)) {
     await client.auth.signOut();
     return Response.json({ error: message('This report link is invalid. Request a new code.', 'رابط التقرير غير صالح. اطلب رمزاً جديداً.') }, { status: 400 });
@@ -38,6 +42,6 @@ export async function POST(request: Request) {
     ? claimed.status === 'completed'
       ? `/account/reports/${claimed.id}`
       : `/practice/${encodeURIComponent(claimed.roleId)}?resume=${encodeURIComponent(claimed.id)}`
-    : safeNext(parsed.data.next, '/account');
+    : requestedNext;
   return Response.json({ verified: true, next }, { headers: privateNoStoreHeaders() });
 }

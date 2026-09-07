@@ -20,7 +20,7 @@ export function ReportActions({ interviewId, roleId, roleTitle, language, initia
     : `/practice/${encodeURIComponent(roleId)}?lang=${language}`;
   const coachingText = language === 'ar'
     ? 'مرحباً، أتدرب على المقابلات في تطبيق مقابلة وأود أن أسأل عن التدريب الشخصي.'
-    : 'Hi, I have been practising interviews on Muqabala and I would like to ask about personal coaching.';
+    : 'Hi, I have been practicing interviews on Muqabala and I would like to ask about personal coaching.';
   const coachingHref = COACHING_NUMBER
     ? `https://wa.me/${COACHING_NUMBER}?text=${encodeURIComponent(coachingText)}`
     : '/contact';

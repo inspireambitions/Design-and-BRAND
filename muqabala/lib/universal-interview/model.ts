@@ -15,7 +15,7 @@ function modelFor(stage: Stage): string {
 }
 
 function effortFor(stage: Stage): 'low' | 'medium' | 'high' {
-  const raw = process.env[`UNIVERSAL_${stage}_REASONING`] || (stage === 'T2' ? 'low' : 'medium');
+  const raw = process.env[`UNIVERSAL_${stage}_REASONING`] || 'low';
   return raw === 'low' || raw === 'high' ? raw : 'medium';
 }
 
@@ -30,12 +30,12 @@ export async function callStructured<Schema extends z.ZodType>(input: {
 }): Promise<z.output<Schema> | null> {
   if (!process.env.OPENAI_API_KEY || input.budget.remaining <= 0) return null;
   const timeout = input.stage === 'F1'
-    ? 4_500
+    ? 12_000
     : input.stage === 'T2'
-      ? 3_000
+      ? 8_000
       : input.stage === 'T1'
-        ? 3_500
-        : 3_800;
+        ? 10_000
+        : 12_000;
   const client = new OpenAI({ timeout, maxRetries: 0 });
   let validationError = '';
   const attempts = input.allowValidationRetry === false ? 1 : 2;
@@ -58,6 +58,15 @@ export async function callStructured<Schema extends z.ZodType>(input: {
       validationError = parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; ').slice(0, 1000);
     } catch (error) {
       validationError = error instanceof Error ? error.message.slice(0, 1000) : 'invalid output';
+      const safeError = error as { status?: number; code?: string; name?: string };
+      console.warn('universal_model_call_failed', {
+        stage: input.stage,
+        attempt: attempt + 1,
+        model: modelFor(input.stage),
+        status: safeError?.status ?? null,
+        code: safeError?.code ?? null,
+        name: safeError?.name ?? 'UnknownError',
+      });
     }
   }
   return null;

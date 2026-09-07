@@ -4,6 +4,7 @@ import './globals.css';
 import { GoogleAnalytics } from '@/components/GoogleAnalytics';
 import { WebVitals } from '@/components/WebVitals';
 import { LanguageProvider } from '@/components/LanguageProvider';
+import { SiteFooter } from '@/components/SiteFooter';
 
 const displayFont = Bricolage_Grotesque({
   subsets: ['latin'],
@@ -33,20 +34,20 @@ export const metadata: Metadata = {
     template: '%s | Muqabala',
   },
   description:
-    'Practise real Gulf interview questions out loud, in English or Arabic, and get honest feedback. Free, no account. We score your answer. Not your accent. Not your face.',
+    'Practice real Gulf interview questions out loud, in English or Arabic, and get honest feedback. Free, no account. We score your answer. Not your accent. Not your face.',
   applicationName: 'Muqabala',
   category: 'career',
   openGraph: {
     type: 'website',
     siteName: 'Muqabala',
     title: 'Muqabala | Interview practice for Gulf jobs',
-    description: 'Practise real Gulf interview questions out loud, in English or Arabic, and get honest feedback. Free, no account. We score your answer. Not your accent. Not your face.',
+    description: 'Practice real Gulf interview questions out loud, in English or Arabic, and get honest feedback. Free, no account. We score your answer. Not your accent. Not your face.',
     url: '/',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Muqabala | Interview practice for Gulf jobs',
-    description: 'Practise real Gulf interview questions out loud, in English or Arabic, and get honest feedback. Free, no account. We score your answer. Not your accent. Not your face.',
+    description: 'Practice real Gulf interview questions out loud, in English or Arabic, and get honest feedback. Free, no account. We score your answer. Not your accent. Not your face.',
   },
   verification: {
     google: 'CzEnPDgPrKfnxXMie9ojnjNUOIQbT2P-L-_2SopKSf4',
@@ -87,7 +88,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(appSchema) }}
         />
-        <LanguageProvider>{children}</LanguageProvider>
+        <LanguageProvider>
+          {children}
+          <SiteFooter />
+        </LanguageProvider>
         <GoogleAnalytics />
         <WebVitals />
       </body>

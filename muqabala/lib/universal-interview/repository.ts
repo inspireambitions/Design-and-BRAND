@@ -6,6 +6,7 @@ import { currentUser } from '@/lib/supabase/server';
 import { newOpaqueToken, tokenHash } from '@/lib/server/security';
 import { openInterviewState, sealInterviewState } from './crypto';
 import type { InterviewState } from './types';
+import { upgradeStoredQuestionState } from './questions';
 
 export const UNIVERSAL_INTERVIEW_COOKIE = 'muqabala_brain_v2';
 
@@ -60,6 +61,13 @@ export async function createStoredInterview(state: InterviewState): Promise<void
   });
 }
 
+/** Removes a just-created state when the matching employer interview could not start. */
+export async function discardStoredInterview(interviewId: string): Promise<void> {
+  const admin = createAdminClient();
+  if (!admin) return;
+  await admin.from('universal_interviews').delete().eq('id', interviewId);
+}
+
 export async function loadStoredInterview(interviewId: string): Promise<InterviewState | null> {
   const admin = createAdminClient();
   if (!admin) return null;
@@ -87,7 +95,35 @@ export async function loadStoredInterview(interviewId: string): Promise<Intervie
       authorised = Boolean(link);
     }
   }
-  return authorised ? openInterviewState(data.state_ciphertext) : null;
+  return authorised ? upgradeStoredQuestionState(openInterviewState(data.state_ciphertext)) : null;
+}
+
+/**
+ * Service-only reader for a stored employer interview. Callers must establish
+ * interview ownership before returning any derived data to a browser.
+ */
+export async function loadStoredInterviewForReporting(interviewId: string): Promise<InterviewState | null> {
+  const admin = createAdminClient();
+  if (!admin) return null;
+  const { data } = await admin
+    .from('universal_interviews')
+    .select('state_ciphertext')
+    .eq('id', interviewId)
+    .maybeSingle<{ state_ciphertext: string }>();
+  return data?.state_ciphertext
+    ? upgradeStoredQuestionState(openInterviewState(data.state_ciphertext))
+    : null;
+}
+
+export async function releaseInterviewClaim(interviewId: string, claim: string): Promise<void> {
+  const admin = createAdminClient();
+  if (!admin) return;
+  await admin.from('universal_interviews').update({
+    processing_token_hash: null,
+    processing_until: null,
+  })
+    .eq('id', interviewId)
+    .eq('processing_token_hash', tokenHash(claim));
 }
 
 export async function claimStoredInterview(state: InterviewState): Promise<string | null> {

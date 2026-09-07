@@ -4,7 +4,7 @@ import { UniversalInterview } from '@/components/UniversalInterview';
 
 export const metadata: Metadata = {
   title: 'Adaptive interview practice',
-  description: 'Build an eight-question competency interview that follows your evidence and avoids repeated questions.',
+  description: 'Build an adaptive competency interview that follows your evidence and avoids repeated questions.',
   robots: { index: false, follow: true },
 };
 

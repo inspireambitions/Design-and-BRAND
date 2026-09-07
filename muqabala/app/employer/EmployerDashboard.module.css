@@ -444,8 +444,10 @@
 }
 
 .decisionActions {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, 2.25rem);
   gap: 0.42rem;
+  justify-items: center;
 }
 
 .decisionActions button {
@@ -460,8 +462,41 @@
   cursor: pointer;
 }
 
-.decisionActions form:last-child button {
+.decisionActions button:nth-child(2) {
   color: #a0a49f;
+}
+
+.decisionActions button[aria-pressed='true'] {
+  border-color: #087662;
+  background: #087662;
+  color: #fff;
+  cursor: default;
+}
+
+.decisionActions button:nth-child(2)[aria-pressed='true'] {
+  border-color: #6e7772;
+  background: #6e7772;
+  color: #fff;
+}
+
+.decisionActions button:disabled:not([aria-pressed='true']) {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.decisionStatus,
+.decisionError {
+  grid-column: 1 / -1;
+  max-width: 7rem;
+  color: #087662;
+  font-size: 0.62rem;
+  font-weight: 750;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.decisionError {
+  color: #a33f2c;
 }
 
 .decisionActions svg {

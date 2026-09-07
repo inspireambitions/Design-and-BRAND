@@ -1,4 +1,4 @@
-export const PROMPT_VERSION = 'universal-brain-v2.0.0';
+export const PROMPT_VERSION = 'universal-brain-v2.0.1';
 
 export type CompetencyFamily =
   | 'behavioural'
@@ -104,24 +104,28 @@ export type JDQualityResult = {
   reason: string | null;
 };
 
-export type PlannedQuestion = {
-  slot: number;
-  question_type: QuestionType;
-  primary_intent: string;
-  target_competencies: string[];
-  text: string;
-  rephrase: string;
-  framework: Framework;
-};
-
-export type GeneratedQuestion = {
-  text: string;
+export type CandidateQuestion = {
+  question_id: string;
+  candidate_text: string;
+  interviewer_intent: string;
+  probe_targets: string[];
   question_type: QuestionType;
   target_competencies: string[];
-  intent: string;
+  seniority: ExperienceLevel;
+  language: 'en';
+  source: 'BANK' | 'MODEL';
+  prompt_version: string | null;
+  validated: boolean;
+  rephrase_text: string;
   framework: Framework;
   kind: 'MAIN' | 'PROBE' | 'CLARIFY' | 'REDIRECT' | 'HYPOTHETICAL' | 'REPHRASE';
 };
+
+export type PlannedQuestion = CandidateQuestion & {
+  slot: number;
+};
+
+export type GeneratedQuestion = CandidateQuestion;
 
 export type ExtractedCompetency = {
   id: string;
@@ -138,6 +142,7 @@ export type ExtractionResult = {
   answered_the_question: boolean;
   evidence: {
     summary: string;
+    segment_ids: string[];
     example_key: string;
     competencies: ExtractedCompetency[];
     criteria: Record<string, CriterionStatus>;
@@ -155,6 +160,7 @@ export type EvidenceLedgerEntry = {
   id: string;
   question_number: number;
   summary: string;
+  segment_ids: string[];
   example_key: string;
   competencies: Record<string, EvidenceStrength>;
   criteria: Record<string, CriterionStatus>;
@@ -186,16 +192,14 @@ export type DecisionLogEntry = {
   stripped_patterns: string[];
 };
 
-export type RolePackQuestion = {
-  text: string;
-  question_type: QuestionType;
-  target_competencies: string[];
-  intent: string;
-};
+export type RolePackQuestion = CandidateQuestion;
 
 export type RolePack = {
   role: string;
   version: string;
+  author: string;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
   implicit_competencies: string[];
   core_competencies: string[];
   question_bank: RolePackQuestion[];
@@ -239,14 +243,30 @@ export type InterviewState = {
   decision_log: DecisionLogEntry[];
   role_pack: RolePack;
   retry_used: boolean;
+  retry_result: RetryComparison | null;
   final_feedback: FinalFeedback | null;
+  /** Present only when the adaptive engine is powering an employer interview. */
+  screening?: {
+    pack_id: string;
+    processed_answer_count: number;
+    evidence_after_answers: number[];
+    competency_id_map: Record<string, string>;
+  };
   phase: InterviewPhase;
   status: 'ACTIVE' | 'COMPLETE';
+};
+
+export type RetryComparison = {
+  question_number: number;
+  before: Record<string, CoverageStatus>;
+  after: Record<string, CoverageStatus>;
+  feedback: FinalFeedback['competencies'];
 };
 
 export type PrecheckResult = {
   kind: 'NONE' | 'NO_EXAMPLE' | 'REPHRASE_REQUEST' | 'SKIP_REQUEST';
   cleaned_answer: string;
+  word_count: number;
   short_answer: boolean;
   truncated: boolean;
   stripped_patterns: string[];

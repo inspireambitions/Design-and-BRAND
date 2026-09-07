@@ -19,7 +19,7 @@ export function CoachingCard() {
   const text =
     lang === 'ar'
       ? 'مرحباً، أتدرب على المقابلات في تطبيق مقابلة وأود أن أسأل عن التدريب الشخصي.'
-      : 'Hi, I have been practising interviews on Muqabala and I would like to ask about personal coaching.';
+      : 'Hi, I have been practicing interviews on Muqabala and I would like to ask about personal coaching.';
 
   return (
     <div className="card stack no-print">

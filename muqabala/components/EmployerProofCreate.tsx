@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { employerVolumeProps, track } from '@/lib/analytics';
-import { MuqabalaMark } from './MarketingSite';
+import { Brand } from './Brand';
+import { SkipLink } from './SkipLink';
 import { useLang } from './LanguageProvider';
 import { EmailSignIn } from './EmailSignIn';
 import { t as translate, type Lang, type StringKey } from '@/lib/i18n';
@@ -77,13 +78,10 @@ export function EmployerProofCreate({
 
   return (
     <div className={[styles.page, 'employer-light-theme'].join(' ')}>
+      <SkipLink />
       <header className={styles.header}>
         <div className={styles.headerInner}>
-          <Link href="/" className={styles.brand} aria-label="Muqabala home">
-            <span className={styles.brandMark} aria-hidden="true"><MuqabalaMark /></span>
-            <span>Muqabala</span>
-            <small className={styles.brandOwner}>{nav.owner}</small>
-          </Link>
+          <Brand className={styles.brand} owner={nav.owner} />
           <nav className={styles.headerNav} aria-label={ar ? 'التنقل' : 'Navigation'}>
             <Link href="/">{nav.candidates}</Link>
             <button
@@ -94,27 +92,36 @@ export function EmployerProofCreate({
             >
               {ar ? 'English' : 'العربية'}
             </button>
-            <a href="#create" className={styles.headerSignIn}>{signedIn ? translate(lang, 'proofOpenDashboard') : (ar ? 'تسجيل الدخول' : 'Sign in')}</a>
+            <a href={signedIn ? '/employer' : '#create'} className={styles.headerSignIn}>{signedIn ? translate(lang, 'proofOpenDashboard') : (ar ? 'تسجيل الدخول' : 'Sign in')}</a>
           </nav>
         </div>
       </header>
 
-      <main className={styles.main}>
+      <main className={styles.main} id="main-content" tabIndex={-1}>
         <section className={styles.hero} aria-labelledby="employer-title">
+          <div className={styles.heroCopy}>
           <p className={styles.eyebrow}>{c.eyebrow}</p>
           <h1 id="employer-title" className={styles.title}>{volume ? c.volumeTitle : c.title}</h1>
           <p className={styles.lede}>{volume ? c.volumeSub : c.sub}</p>
           <div className={styles.heroActions}>
             <a href={volume ? startHref : '#create'} className={styles.primaryButton}>{volume ? c.volumePrimary : c.primaryCta}</a>
-            <a href="#sample-report" className={styles.secondaryButton} onClick={() => track('sample_report_opened', employerVolumeProps(volume))}>{volume ? c.volumeSecondary : c.secondaryCta}</a>
+            <Link href="/for-employers/sample-report" className={styles.secondaryButton} onClick={() => track('sample_report_opened', employerVolumeProps(volume))}>{volume ? c.volumeSecondary : c.secondaryCta}</Link>
           </div>
           <p className={styles.trustLine}>{volume ? c.volumeTrust : c.trustLine}</p>
           <p className={styles.founderLine}>{founderLine[lang]}</p>
           <dl className={styles.facts}>
             <div><dt>{ar ? 'وظائف مغطاة' : 'Roles covered'}</dt><dd>{formatCount(stats.roles, lang)}</dd></div>
             <div><dt>{ar ? 'أسئلة في البنك' : 'Questions in the bank'}</dt><dd>{formatCount(stats.questions, lang)}</dd></div>
-            <div><dt>{ar ? 'لكل مرشح' : 'Per candidate'}</dt><dd>{ar ? '١٢ دقيقة' : '12 minutes'}</dd></div>
+            <div><dt>{ar ? 'لكل مرشح' : 'Per candidate'}</dt><dd>{ar ? 'نحو ٢٥ دقيقة' : 'About 25 minutes'}</dd></div>
           </dl>
+          </div>
+          <figure className={styles.heroReport}>
+            <figcaption>{ar ? 'معاينة تقرير · بيانات خيالية' : 'Report preview · fictional data'}</figcaption>
+            <Link href="/for-employers/sample-report" aria-label={ar ? 'افتح نموذج التقرير الكامل' : 'Open the full sample report'}>
+              <img src="/samples/employer-report-preview.png" width="1000" height="820" alt={ar ? 'مقتطف من تقرير باللغة الإنجليزية يوضح أدلة الإجابة ومستويات المراجعة' : 'A sample evidence report showing answer evidence and review bands'} />
+            </Link>
+            <p>{ar ? 'راجع الدليل المسجل. أضف ملاحظاتك. اتخذ القرار بنفسك.' : 'Review the recorded evidence. Add your notes. Make your own decision.'}</p>
+          </figure>
         </section>
 
         <section className={styles.section} aria-labelledby="how-title">
@@ -142,8 +149,8 @@ export function EmployerProofCreate({
           {hasReportShot ? (
             <figure className={styles.shot}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/samples/employer-report.png" alt={ar ? 'تقرير عينة عمل مكتمل مع إخفاء بيانات المرشح' : 'A completed work sample report with candidate details blurred'} loading="lazy" />
-              <figcaption>{c.reportCaption}</figcaption>
+              <img src="/samples/employer-report-preview.png" width="1000" height="820" alt={ar ? 'تقرير توضيحي باللغة الإنجليزية يستخدم بيانات خيالية' : 'An illustrative evidence report using fictional candidate data'} loading="lazy" />
+              <figcaption>{ar ? 'مثال توضيحي ببيانات خيالية. افتح التقرير الكامل لمراجعة الأدلة وأسئلة المتابعة.' : 'Illustrative report with fictional data. Open the full report to review the evidence and follow-up questions.'}</figcaption>
             </figure>
           ) : volume && !production ? (
             <div className={styles.shotPlaceholder} role="note">
@@ -225,21 +232,7 @@ export function EmployerProofCreate({
         </section>
       </main>
 
-      <footer className={styles.footer}>
-        <div className={styles.footerInner}>
-          <div>
-            <p className={styles.footerBrand}>Muqabala</p>
-            <p>{c.footerLine}</p>
-            <p className={styles.footerOwner}>Muqabala by Inspire Ambitions</p>
-          </div>
-          <nav className={styles.footerLinks} aria-label={ar ? 'روابط' : 'Footer'}>
-            <Link href="/">{c.footerCandidates}</Link>
-            <Link href="/privacy">{c.footerPrivacy}</Link>
-            <Link href="/terms">{c.footerTerms}</Link>
-            <Link href="/contact">{c.footerContact}</Link>
-          </nav>
-        </div>
-      </footer>
+
     </div>
   );
 }
@@ -335,28 +328,14 @@ function EmployerCreateForm({ volume }: { volume: boolean }) {
     setTooShort(false);
     setCopied(null);
     try {
-      const generated = await fetch('/api/interview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobTitle, jobText }),
-      });
-      const generatedBody = await generated.json().catch(() => ({})) as {
-        tailored?: boolean;
-        token?: string;
-        role?: { title?: string };
-      };
-      if (!generated.ok || !generatedBody.tailored || !generatedBody.token) {
-        setError('create');
-        return;
-      }
       const pack = await fetch('/api/screening/packs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           companyName: companyName.trim(),
           recruiterName: recruiterName.trim() || undefined,
-          jobTitle: jobTitle || generatedBody.role?.title,
-          interviewToken: generatedBody.token,
+          jobTitle: jobTitle.trim(),
+          jobText: jobText.trim(),
           maxCandidates,
           expiryDays,
         }),
@@ -368,7 +347,7 @@ function EmployerCreateForm({ volume }: { volume: boolean }) {
       }
       setLinkDetails(packBody as LinkDetails);
       track('role_created', employerVolumeProps(volume, packBody.id ? { role_id: packBody.id } : {}));
-      // Volume flow: the role's three questions are confirmed, so go straight to Add candidates.
+      // Volume flow: the role plan is confirmed, so go straight to Add candidates.
       if (volume && packBody.id) router.push(`/employer/roles/${packBody.id}/candidates/add`);
     } catch {
       setError('create');

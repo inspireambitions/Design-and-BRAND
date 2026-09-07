@@ -49,7 +49,7 @@ export function ReadinessPanel({
   return (
     <div className="stack">
       <ReadinessScore roleId={roleId} size="compact" previous={previous} extraAttempts={sitting} />
-      {share && <ShareProgressCard roleId={roleId} extraAttempts={sitting} />}
+      {share && snapshot.questionsPractised > 0 && <ShareProgressCard roleId={roleId} extraAttempts={sitting} />}
     </div>
   );
 }

@@ -17,21 +17,21 @@ function escapePdfText(value: string): string {
     .replace(/\)/g, '\\)');
 }
 
-export type PdfLine = { text: string; size?: number; bold?: boolean; gapBefore?: number };
+export type PdfLine = { text: string; size?: number; bold?: boolean; gapBefore?: number; lineHeight?: number; indent?: number };
 
 export function buildPdf(lines: PdfLine[]): Blob {
   const pages: string[][] = [[]];
   let y = PAGE_HEIGHT - MARGIN;
   for (const line of lines) {
     const size = line.size ?? 11;
-    const advance = Math.max(LINE_HEIGHT, size * 1.4) + (line.gapBefore ?? 0);
+    const advance = (line.lineHeight ?? Math.max(LINE_HEIGHT, size * 1.4)) + (line.gapBefore ?? 0);
     if (y - advance < MARGIN) {
       pages.push([]);
       y = PAGE_HEIGHT - MARGIN;
     }
     y -= advance;
     const font = line.bold ? '/F2' : '/F1';
-    pages[pages.length - 1].push(`BT ${font} ${size} Tf ${MARGIN} ${y.toFixed(2)} Td (${escapePdfText(line.text)}) Tj ET`);
+    pages[pages.length - 1].push(`BT ${font} ${size} Tf ${MARGIN + (line.indent ?? 0)} ${y.toFixed(2)} Td (${escapePdfText(line.text)}) Tj ET`);
   }
 
   const objects: string[] = [];

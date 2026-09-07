@@ -115,7 +115,7 @@ export function assessJobDescription(raw: string): JDQualityResult {
     reason = 'The job description has fewer than 80 words.';
   } else if (!isProbablyEnglish(cleaned)) {
     score = 0;
-    reason = 'Only English job descriptions are supported in this MVP.';
+    reason = 'Only English job descriptions are supported right now.';
   } else {
     if (responsibilities < 3) score -= 30;
     if (boilerplateRatio > 0.4) score -= 30;
@@ -140,7 +140,9 @@ export function assessJobDescription(raw: string): JDQualityResult {
   };
 }
 
-const NO_EXAMPLE = /\b(?:i don['’]?t know|no example|never happened to me)\b/i;
+// Only explicit standalone refusals bypass extraction. Quoted uncertainty or
+// an opening admission followed by a real example must still be assessed.
+const NO_EXAMPLE = /^(?:(?:sorry|well)[, ]+)?(?:i don['’]?t know|i do not know|no example|(?:it has )?never happened to me)[.!?\s]*$/i;
 const REPHRASE = /^(?:(?:please|could you)\s+)?(?:repeat|rephrase)(?:\s+(?:that|the question|it))?[?.!]*$|^what do you mean[?.!]*$/i;
 const SKIP = /^(?:please\s+)?(?:skip|next question)[?.!]*$/i;
 
@@ -161,6 +163,7 @@ export function precheckAnswer(raw: string): PrecheckResult {
   return {
     kind,
     cleaned_answer: cleanedAnswer,
+    word_count: answerWords.length,
     short_answer: answerWords.length < 15,
     truncated,
     stripped_patterns: stripped.hits,

@@ -2,7 +2,7 @@ import { after } from 'next/server';
 import { z } from 'zod';
 import { employerVolumeEnabled, whatsAppEnabled } from '@/lib/employer-volume';
 import { MAX_CONTACTS, normaliseEmail, normalisePhone } from '@/lib/employer-volume/contacts';
-import { processEmployerMessages } from '@/lib/server/employer-messages';
+import { processEmployerMessages, employerEmailConfigured } from '@/lib/server/employer-messages';
 import { newCandidateRef, newInviteToken } from '@/lib/server/invite-token';
 import { hasTrustedOrigin, privateNoStoreHeaders } from '@/lib/server/security';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -10,6 +10,21 @@ import { createClient, currentUser } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
+
+export async function GET(_request: Request, context: { params: Promise<{ roleId: string }> }) {
+  if (!employerVolumeEnabled()) return Response.json({ error: 'Not available.' }, { status: 404 });
+  const user = await currentUser();
+  if (!user?.email_confirmed_at) return Response.json({ error: 'Sign in to view delivery.' }, { status: 401 });
+  const admin = createAdminClient();
+  if (!admin) return Response.json({ error: 'Delivery status is unavailable.' }, { status: 503 });
+  const { roleId } = await context.params;
+  const { data, error } = await admin.rpc('employer_invite_delivery_status', {
+    p_role_id: roleId, p_employer_id: user.id,
+  });
+  if (error) return Response.json({ error: 'Delivery status is unavailable.' }, { status: error.code === '42501' ? 404 : 503 });
+  return Response.json({ ...data, configured: employerEmailConfigured() }, { headers: privateNoStoreHeaders() });
+}
 
 const ContactSchema = z.object({
   email: z.string().trim().max(254).nullable(),
@@ -45,8 +60,12 @@ export async function POST(request: Request, context: { params: Promise<{ roleId
 
   const parsed = InvitesSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: 'Invalid candidate list.' }, { status: 400 });
+  if (!employerEmailConfigured()) {
+    return Response.json({ error: 'Email invitations are temporarily unavailable. No invitations were queued.' }, { status: 503 });
+  }
 
   const channel = whatsAppEnabled() ? parsed.data.channel : 'email';
+  if (channel !== 'email') return Response.json({ error: 'WhatsApp invitations are not available yet. Choose email.' }, { status: 400 });
   const rows: {
     role_id: string;
     candidate_ref: string;
@@ -64,7 +83,7 @@ export async function POST(request: Request, context: { params: Promise<{ roleId
   for (const contact of parsed.data.contacts) {
     const email = contact.email ? normaliseEmail(contact.email) : null;
     const phone = contact.phone ? normalisePhone(contact.phone) : null;
-    if (!email && !phone) { invalid += 1; continue; }
+    if (!email) { invalid += 1; continue; }
     const keys = [email ? `e:${email}` : null, phone ? `p:${phone}` : null].filter((key): key is string => Boolean(key));
     if (keys.some((key) => seen.has(key))) { duplicates += 1; continue; }
     for (const key of keys) seen.add(key);
@@ -82,42 +101,19 @@ export async function POST(request: Request, context: { params: Promise<{ roleId
   }
   if (rows.length === 0) return Response.json({ error: 'No valid contacts.' }, { status: 400 });
 
-  // Existing invites for the same role are skipped rather than failing the batch.
-  const { data: inserted, error } = await admin
-    .from('role_invites')
-    .upsert(rows, { onConflict: 'candidate_ref', ignoreDuplicates: true })
-    .select('id,email,phone,channel');
-  if (error) return Response.json({ error: 'Candidates could not be saved.' }, { status: 503 });
-
-  const created = (inserted ?? []) as { id: string; email: string | null; phone: string | null; channel: string }[];
-  const alreadyInvited = rows.length - created.length;
-
-  const outbox: { role_id: string; invite_id: string; kind: 'invite'; channel: 'email' | 'whatsapp' }[] = [];
-  let byEmail = 0;
-  let byWhatsApp = 0;
-  for (const invite of created) {
-    if (invite.email && (channel === 'email' || channel === 'both')) {
-      outbox.push({ role_id: pack.id, invite_id: invite.id, kind: 'invite', channel: 'email' });
-      byEmail += 1;
-    }
-    if (invite.phone && whatsAppEnabled() && (channel === 'whatsapp' || channel === 'both')) {
-      outbox.push({ role_id: pack.id, invite_id: invite.id, kind: 'invite', channel: 'whatsapp' });
-      byWhatsApp += 1;
-    }
-  }
-  if (outbox.length) {
-    const { error: queueError } = await admin.from('employer_message_outbox').insert(outbox);
-    if (queueError) return Response.json({ error: 'Invites were saved but could not be queued.' }, { status: 503 });
-  }
-
-  after(async () => { await processEmployerMessages({ roleId: pack.id, limit: 50 }); });
+  const { data, error } = await admin.rpc('queue_employer_invites', {
+    p_role_id: pack.id, p_employer_id: user.id, p_rows: rows,
+  });
+  if (error || !data) return Response.json({ error: 'Invites could not be queued. Your list is safe to retry.' }, { status: 503 });
+  const result = data as { queued: number; byEmail: number; byWhatsApp: number; duplicates: number };
+  after(async () => { await processEmployerMessages({ roleId: pack.id, limit: 5 }); });
 
   return Response.json(
     {
-      sent: created.length,
-      byEmail,
-      byWhatsApp,
-      duplicates: duplicates + alreadyInvited,
+      queued: result.queued,
+      byEmail: result.byEmail,
+      byWhatsApp: result.byWhatsApp,
+      duplicates: duplicates + result.duplicates,
       invalid,
     },
     { status: 201, headers: privateNoStoreHeaders() },

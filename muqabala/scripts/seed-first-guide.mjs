@@ -83,7 +83,7 @@ const englishBody = [
     '“I am a passionate people person” with no example.',
     'Salary, visa, or overtime in the opener.',
   ]),
-  heading('en-h-practise', 'Practise it out loud'),
+  heading('en-h-practise', 'Practice it out loud'),
   block(
     'en-p-practise',
     'Say it in English, then in Arabic if the job needs both. Time yourself. If you go past one minute, cut. No employer can see that practice.',
@@ -128,7 +128,7 @@ const document = {
   titleAr: 'كيف تجيب على «عرّفني عن نفسك» لوظيفة استقبال في دبي',
   slug: { _type: 'slug', current: 'tell-me-about-yourself-dubai-front-office' },
   excerpt:
-    'A 45-second answer for Dubai hotel reception. Then practise. No employer can see that practice.',
+    'A 45-second answer for Dubai hotel reception. Then practice. No employer can see that practice.',
   excerptAr:
     'إجابة في 45 ثانية لوظيفة استقبال في فندق بدبي. ثم تدرب. لا يرى صاحب العمل ذلك التدريب.',
   body: englishBody,

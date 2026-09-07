@@ -1,22 +1,17 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 import { founderLine, homeCopy, marketingNav, type MarketingPageContent, type MarketingRole } from '@/lib/marketing-content';
 import type { CatalogueStats as MarketingStats } from '@/lib/catalogue-stats';
 import { useLang } from './LanguageProvider';
+import { Brand } from './Brand';
+import { SkipLink } from './SkipLink';
+import { MobilePracticeCta } from './MobilePracticeCta';
+import { RetryExample } from './RetryExample';
 
 export type { MarketingStats };
 
-export function MuqabalaMark() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="32" height="32" aria-hidden="true" focusable="false">
-      <path d="M 26 36 A 27 27 0 1 0 70 36" fill="none" stroke="#0E3B36" strokeWidth="11" strokeLinecap="round" />
-      <circle cx="35" cy="17" r="7.5" fill="#0E3B36" />
-      <circle cx="61" cy="17" r="7.5" fill="#B9892E" />
-    </svg>
-  );
-}
+export { MuqabalaMark } from './Brand';
 
 export function MarketingHeader() {
   const { lang, setLang } = useLang();
@@ -24,12 +19,9 @@ export function MarketingHeader() {
 
   return (
     <header className="marketing-header">
+      <SkipLink />
       <div className="marketing-wrap marketing-nav">
-        <Link href="/" className="marketing-brand" aria-label="Muqabala home">
-          <MuqabalaMark />
-          <span>Muqabala</span>
-          <small className="marketing-brand-owner">{nav.owner}</small>
-        </Link>
+        <Brand className="marketing-brand" owner={nav.owner} />
         <nav className="marketing-links" aria-label={lang === 'ar' ? 'التنقل الرئيسي' : 'Main navigation'}>
           <Link href="/how-it-works">{nav.how}</Link>
           <Link href="/interview-roles">{nav.roles}</Link>
@@ -66,40 +58,6 @@ export function MarketingHeader() {
     </header>
   );
 }
-export function MarketingFooter() {
-  const { lang } = useLang();
-  const nav = marketingNav[lang];
-  return (
-    <footer className="marketing-footer">
-      <div className="marketing-wrap marketing-footer-grid">
-        <div>
-          <div className="marketing-brand marketing-brand-footer">
-            <MuqabalaMark />
-            <span>Muqabala</span>
-          </div>
-          <p>{lang === 'ar' ? 'تدريب خاص لمقابلات العمل في الخليج.' : 'Private practice for Gulf job interviews.'}</p>
-          <p className="marketing-footer-owner">Muqabala by Inspire Ambitions</p>
-        </div>
-        <div className="marketing-footer-links">
-          <Link href="/practice">{nav.practice}</Link>
-          <Link href="/how-it-works">{nav.how}</Link>
-          <Link href="/interview-roles">{nav.roles}</Link>
-          <Link href="/how-feedback-works">{nav.feedback}</Link>
-          <Link href="/faq">{nav.faq}</Link>
-        </div>
-        <div className="marketing-footer-links">
-          <Link href="/about">{nav.about}</Link>
-          <Link href="/guides">{nav.blog}</Link>
-          <Link href="/for-employers">{nav.hiring}</Link>
-          <Link href="/contact">{lang === 'ar' ? 'تواصل' : 'Contact'}</Link>
-          <Link href="/privacy">{lang === 'ar' ? 'الخصوصية' : 'Privacy'}</Link>
-          <Link href="/terms">{lang === 'ar' ? 'الشروط' : 'Terms'}</Link>
-          <Link href="/accessibility">{lang === 'ar' ? 'إمكانية الوصول' : 'Accessibility'}</Link>
-        </div>
-      </div>
-    </footer>
-  );
-}
 type ExampleRole = 'front-office' | 'nurse';
 
 function EvidenceDemo({ role = 'front-office' }: { role?: ExampleRole }) {
@@ -134,37 +92,6 @@ function EvidenceDemo({ role = 'front-office' }: { role?: ExampleRole }) {
   );
 }
 
-function MethodExample() {
-  const { lang } = useLang();
-  const c = homeCopy[lang];
-  const [role, setRole] = useState<ExampleRole>('nurse');
-  const options: { id: ExampleRole; label: string }[] = [
-    { id: 'nurse', label: c.exampleNurse },
-    { id: 'front-office', label: c.exampleFrontOffice },
-  ];
-  return (
-    <div className="marketing-method-example">
-      <div className="marketing-example-switch" role="tablist" aria-label={c.exampleSwitchLabel}>
-        {options.map((option) => (
-          <button
-            key={option.id}
-            type="button"
-            role="tab"
-            aria-selected={role === option.id}
-            className={role === option.id ? 'is-active' : undefined}
-            onMouseEnter={() => setRole(option.id)}
-            onFocus={() => setRole(option.id)}
-            onClick={() => setRole(option.id)}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-      <EvidenceDemo role={role} />
-    </div>
-  );
-}
-
 function formatCount(value: number, lang: 'en' | 'ar') {
   return new Intl.NumberFormat(lang === 'ar' ? 'ar-EG' : 'en-GB').format(value);
 }
@@ -183,29 +110,19 @@ export function MarketingHome({ roles, stats }: { roles: MarketingRole[]; stats:
   return (
     <div className="marketing-site">
       <MarketingHeader />
-      <main>
+      <main id="main-content" tabIndex={-1}>
         <section className="marketing-hero marketing-wrap">
           <div className="marketing-hero-copy">
             <p className="marketing-eyebrow">{c.eyebrow}</p>
             <h1>{c.title}</h1>
             <p className="marketing-lede">{c.intro}</p>
             <div className="marketing-cta-row">
-              <Link href="/practice" className="marketing-button">{c.primary}</Link>
+              <Link id="hero-practice-action" href="/practice" className="marketing-button">{c.primary}</Link>
               <Link href="/how-feedback-works" className="marketing-text-link">{c.secondary}</Link>
             </div>
             <p className="marketing-trust-line">{c.trust}</p>
-            <p className="marketing-founder-line">{founderLine[lang]}</p>
           </div>
           <EvidenceDemo />
-        </section>
-
-        <section className="marketing-wrap marketing-stats" aria-label={lang === 'ar' ? 'أرقام حقيقية' : 'Real figures'}>
-          {facts.map(([label, value]) => (
-            <div key={label}>
-              <strong>{formatCount(value, lang)}</strong>
-              <span>{label}</span>
-            </div>
-          ))}
         </section>
 
         <section className="marketing-section marketing-wrap">
@@ -256,46 +173,7 @@ export function MarketingHome({ roles, stats }: { roles: MarketingRole[]; stats:
           </div>
         </section>
 
-        <section className="marketing-section marketing-proof">
-          <div className="marketing-wrap marketing-proof-grid">
-            <div className="marketing-proof-copy">
-              <p className="marketing-eyebrow">{c.methodEyebrow}</p>
-              <h2>{c.proofTitle}</h2>
-              <p>{c.proofBody}</p>
-              <div className="marketing-cta-row">
-                <Link href="/practice/front-office-agent" className="marketing-button">{c.methodCta}</Link>
-                <Link href="/how-feedback-works" className="marketing-text-link">{c.secondary}</Link>
-              </div>
-            </div>
-            <MethodExample />
-          </div>
-        </section>
-
-        <section className="marketing-section marketing-wrap marketing-never">
-          <div>
-            <p className="marketing-eyebrow">{c.trustEyebrow}</p>
-            <h2>{c.neverTitle}</h2>
-            <Link href="/practice" className="marketing-button marketing-never-cta">{c.trustCta}</Link>
-          </div>
-          <ul>
-            {never.map((item) => <li key={item}>{item}</li>)}
-          </ul>
-        </section>
-
-        <section className="marketing-section marketing-control">
-          <div className="marketing-wrap marketing-control-grid">
-            <div>
-              <h2>{c.privacyTitle}</h2>
-              <p className="marketing-lede-small">{c.privacyBody}</p>
-            </div>
-            <div className="marketing-control-detail">
-              <p><strong>{c.privacyStaysLabel}</strong> {c.privacyStaysBody}</p>
-              <p><strong>{c.privacySentLabel}</strong> {c.privacySentBody}</p>
-              <p>{c.privacyDetail}</p>
-              <Link href="/privacy" className="marketing-text-link">{lang === 'ar' ? 'اقرأ سياسة الخصوصية' : 'Read the privacy explanation'}</Link>
-            </div>
-          </div>
-        </section>
+        <RetryExample />
 
         <section className="marketing-section marketing-wrap">
           <div className="marketing-section-heading marketing-section-heading-row">
@@ -316,6 +194,34 @@ export function MarketingHome({ roles, stats }: { roles: MarketingRole[]; stats:
           </div>
         </section>
 
+        <section className="marketing-wrap marketing-stats" aria-label={lang === 'ar' ? 'أرقام حقيقية' : 'Real figures'}>
+          {facts.map(([label, value]) => (
+            <div key={label}>
+              <strong>{formatCount(value, lang)}</strong>
+              <span>{label}</span>
+            </div>
+          ))}
+        </section>
+
+        <section className="marketing-section marketing-control">
+          <div className="marketing-wrap marketing-control-grid">
+            <div>
+              <p className="marketing-eyebrow">{c.trustEyebrow}</p>
+              <h2>{c.privacyTitle}</h2>
+              <p className="marketing-lede-small">{c.privacyBody}</p>
+              <ul className="privacy-promises">{never.map((item) => <li key={item}>{item}</li>)}</ul>
+            </div>
+            <div className="marketing-control-detail">
+              <p><strong>{c.privacyStaysLabel}</strong> {c.privacyStaysBody}</p>
+              <p><strong>{c.privacySentLabel}</strong> {c.privacySentBody}</p>
+              <p>{c.privacyDetail}</p>
+              <Link href="/privacy" className="marketing-text-link">{lang === 'ar' ? 'اقرأ سياسة الخصوصية' : 'Read the privacy explanation'}</Link>
+            </div>
+          </div>
+        </section>
+
+        <p className="marketing-wrap marketing-founder-line">{founderLine[lang]}</p>
+
         <section className="marketing-wrap marketing-hiring-strip">
           <div>
             <h2>{c.hiringTitle}</h2>
@@ -332,8 +238,7 @@ export function MarketingHome({ roles, stats }: { roles: MarketingRole[]; stats:
           </div>
         </section>
       </main>
-      <MarketingFooter />
-      <Link href="/practice" className="marketing-mobile-cta">{marketingNav[lang].practice}</Link>
+      <MobilePracticeCta label={marketingNav[lang].practice} anchorId="hero-practice-action" />
     </div>
   );
 }
@@ -344,7 +249,7 @@ export function MarketingInfoPage({ content }: { content: Record<'en' | 'ar', Ma
   return (
     <div className="marketing-site">
       <MarketingHeader />
-      <main>
+      <main id="main-content" tabIndex={-1}>
         <section className="info-hero marketing-wrap">
           <p className="marketing-eyebrow">{c.eyebrow}</p>
           <h1>{c.title}</h1>
@@ -365,12 +270,11 @@ export function MarketingInfoPage({ content }: { content: Record<'en' | 'ar', Ma
           ))}
         </section>
         <section className="info-cta marketing-wrap">
-          <h2>{lang === 'ar' ? 'تدرّب عندما تكون جاهزاً.' : 'Practise when you are ready.'}</h2>
-          <Link href="/practice" className="marketing-button">{marketingNav[lang].practice}</Link>
+          <h2>{lang === 'ar' ? 'تدرّب عندما تكون جاهزاً.' : 'Practice when you are ready.'}</h2>
+          <Link id="info-practice-action" href="/practice" className="marketing-button">{marketingNav[lang].practice}</Link>
         </section>
       </main>
-      <MarketingFooter />
-      <Link href="/practice" className="marketing-mobile-cta">{marketingNav[lang].practice}</Link>
+      <MobilePracticeCta label={marketingNav[lang].practice} anchorId="info-practice-action" />
     </div>
   );
 }
@@ -380,12 +284,12 @@ export function InterviewRolesPage({ roles }: { roles: MarketingRole[] }) {
   return (
     <div className="marketing-site">
       <MarketingHeader />
-      <main>
+      <main id="main-content" tabIndex={-1}>
         <section className="info-hero marketing-wrap">
           <p className="marketing-eyebrow">{lang === 'ar' ? 'دليل المقابلات' : 'Interview directory'}</p>
-          <h1>{lang === 'ar' ? 'تدرّب للوظيفة التي تريدها.' : 'Practise for the job you want.'}</h1>
+          <h1>{lang === 'ar' ? 'تدرّب للوظيفة التي تريدها.' : 'Practice for the job you want.'}</h1>
           <p className="marketing-lede">{lang === 'ar' ? 'اختر وظيفة خليجية أو استخدم إعلانك لإنشاء مقابلة مخصصة.' : 'Choose a Gulf role or use your job advert to create a tailored interview.'}</p>
-          <Link href="/practice#job-ad" className="marketing-button">{lang === 'ar' ? 'استخدم إعلان الوظيفة' : 'Use my job advert'}</Link>
+          <Link id="directory-practice-action" href="/practice#job-ad" className="marketing-button">{lang === 'ar' ? 'استخدم إعلان الوظيفة' : 'Use my job advert'}</Link>
         </section>
         <section className="marketing-wrap marketing-role-directory">
           {roles.map((role) => (
@@ -397,8 +301,7 @@ export function InterviewRolesPage({ roles }: { roles: MarketingRole[] }) {
           ))}
         </section>
       </main>
-      <MarketingFooter />
-      <Link href="/practice" className="marketing-mobile-cta">{marketingNav[lang].practice}</Link>
+      <MobilePracticeCta label={marketingNav[lang].practice} anchorId="directory-practice-action" />
     </div>
   );
 }
