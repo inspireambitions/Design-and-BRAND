@@ -54,7 +54,6 @@ import { useLang } from './LanguageProvider';
 import { FocusedInterviewFooterGuard } from './FooterVisibility';
 import { hidePracticeFooter } from '@/lib/footer-visibility';
 import { TopBar } from './TopBar';
-import { FeedbackCard, StreamingFeedbackCard } from './FeedbackCard';
 import { AnswerModeSelector } from './flow/AnswerModeSelector';
 import { StarGuideLines, StarGuideToggle } from './flow/StarGuide';
 import { KeepFeedbackSlot, QuestionTagsSlot, ReadinessSlot } from './flow/Slots';
@@ -66,6 +65,8 @@ import { hasScoredImprovement } from '@/lib/retry-comparison';
  * answered, are loaded when first rendered rather than shipped with the page.
  */
 const ScoreRing = dynamic(() => import('./ScoreRing').then((m) => m.ScoreRing));
+const FeedbackCard = dynamic(() => import('./FeedbackCard').then((m) => m.FeedbackCard));
+const StreamingFeedbackCard = dynamic(() => import('./FeedbackCard').then((m) => m.StreamingFeedbackCard));
 const RatingCard = dynamic(() => import('./RatingCard').then((m) => m.RatingCard));
 const CoachingCard = dynamic(() => import('./CoachingCard').then((m) => m.CoachingCard));
 const EmailSignIn = dynamic(() => import('./EmailSignIn').then((m) => m.EmailSignIn));
@@ -112,7 +113,7 @@ type PreviousTry = {
 type ScoringError = {
   creditsExhausted: boolean;
   answerTooLong: boolean;
-  /** The 12 second budget ran out. The candidate retries by hand. */
+  /** The feedback budget ran out. The candidate retries by hand. */
   timedOut: boolean;
 };
 
@@ -324,6 +325,7 @@ export function InterviewFlow({
   const [showContinueSignIn, setShowContinueSignIn] = useState(false);
   const [pendingDraft, setPendingDraft] = useState<InterviewSessionDraft | null>(null);
   const [confirmDiscardDraft, setConfirmDiscardDraft] = useState(false);
+  const [draftAccessState, setDraftAccessState] = useState<'ready' | 'missing' | 'retry' | 'checking'>('ready');
   const [sessionLanguage, setSessionLanguage] = useState<'en' | 'ar' | null>(initialLanguage ?? null);
   const [starProbe, setStarProbe] = useState<{
     element: StarElement;
@@ -856,6 +858,12 @@ export function InterviewFlow({
   }, []);
 
   const resumeLocalDraft = useCallback(async (draft: InterviewSessionDraft) => {
+    if (draft.serverAttemptId) {
+      setDraftAccessState('checking');
+      const state = await import('@/lib/draft-access').then(({ draftAccess }) => draftAccess(draft.serverAttemptId!)).catch(() => 'retry' as const);
+      setDraftAccessState(state);
+      if (state !== 'ready') return;
+    }
     let safeDraft = draft;
     if (draft.stage === 'prep' && draft.answerMethod !== 'type') {
       const captureReady = draft.answerMethod === 'video'
@@ -1793,7 +1801,7 @@ export function InterviewFlow({
           </div>
           {!confirmDiscardDraft ? (
             <div className="row">
-              <button type="button" className="btn btn-primary" onClick={() => void resumeLocalDraft(pendingDraft)}>
+              <button type="button" className="btn btn-primary" disabled={draftAccessState === 'checking'} onClick={() => void resumeLocalDraft(pendingDraft)}>
                 {t('resumeInterview')}
               </button>
               <button type="button" className="btn btn-ghost" onClick={() => setConfirmDiscardDraft(true)}>
@@ -1820,6 +1828,12 @@ export function InterviewFlow({
                   {t('deleteSavedPractice')}
                 </button>
               </div>
+            </div>
+          )}
+          {(draftAccessState === 'missing' || draftAccessState === 'retry') && (
+            <div className="notice notice-warn" role="status">
+              <p>{t(draftAccessState === 'missing' ? 'draftAccessMissing' : 'progressSaveFailed')}</p>
+              {draftAccessState === 'missing' && <p style={{ whiteSpace: 'pre-wrap' }}>{[...pendingDraft.answers.map(answer => answer.transcript), pendingDraft.transcript].filter(Boolean).join('\n\n')}</p>}
             </div>
           )}
         </section>
