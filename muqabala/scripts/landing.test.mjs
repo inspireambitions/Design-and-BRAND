@@ -167,7 +167,7 @@ test('landing strings exist in both languages and follow the house rules', async
     assert.equal(typeof STRINGS.ar[key], 'string', `${key} is missing in Arabic`);
     assert.ok(STRINGS.ar[key].length > 0, `${key} is empty in Arabic`);
     assert.equal(STRINGS.en[key].includes('\u2014'), false, `${key} uses an em dash`);
-    assert.equal(/\bpractice\b/i.test(STRINGS.en[key]) && /\b(to|we|you|they) practice\b/i.test(STRINGS.en[key]), false, `${key} uses practice as a verb`);
+    assert.equal(/\bpractise\b/i.test(STRINGS.en[key]), false, `${key} should use the preferred Practice spelling`);
   }
   assert.equal(STRINGS.en.landingPasteHeading, 'Paste the job advert you are preparing for');
   assert.equal(STRINGS.en.landingPasteSubline, 'Or choose a role above.');

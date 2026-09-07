@@ -37,7 +37,7 @@ export function HomeView({ roles }: { roles: RoleCard[] }) {
       <main id="main-content" tabIndex={-1}>
       <section className="hero hero-compact">
         <p className="eyebrow">{t('tagline')}</p>
-        <h1>{lang === 'ar' ? 'تدرّب على إجابة واحدة.' : 'Practise one answer.'}</h1>
+        <h1>{lang === 'ar' ? 'تدرّب على إجابة واحدة.' : 'Practice one answer.'}</h1>
         <p className="lede">{lang === 'ar' ? 'اختر وظيفة، ثم أجب وراجع الملاحظات وحاول مجدداً. التدريب خاص بك.' : 'Choose a role. Give your answer, read your feedback and try again. Your practice stays private.'}</p>
         <a className="marketing-text-link practice-advert-link" href="#job-ad">{lang === 'ar' ? 'هل تستعد لوظيفة محددة؟ استخدم إعلان الوظيفة.' : 'Preparing for a specific vacancy? Use your job advert.'}</a>
         <div className="hero-points">

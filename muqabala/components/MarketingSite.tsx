@@ -270,7 +270,7 @@ export function MarketingInfoPage({ content }: { content: Record<'en' | 'ar', Ma
           ))}
         </section>
         <section className="info-cta marketing-wrap">
-          <h2>{lang === 'ar' ? 'تدرّب عندما تكون جاهزاً.' : 'Practise when you are ready.'}</h2>
+          <h2>{lang === 'ar' ? 'تدرّب عندما تكون جاهزاً.' : 'Practice when you are ready.'}</h2>
           <Link id="info-practice-action" href="/practice" className="marketing-button">{marketingNav[lang].practice}</Link>
         </section>
       </main>
@@ -287,7 +287,7 @@ export function InterviewRolesPage({ roles }: { roles: MarketingRole[] }) {
       <main id="main-content" tabIndex={-1}>
         <section className="info-hero marketing-wrap">
           <p className="marketing-eyebrow">{lang === 'ar' ? 'دليل المقابلات' : 'Interview directory'}</p>
-          <h1>{lang === 'ar' ? 'تدرّب للوظيفة التي تريدها.' : 'Practise for the job you want.'}</h1>
+          <h1>{lang === 'ar' ? 'تدرّب للوظيفة التي تريدها.' : 'Practice for the job you want.'}</h1>
           <p className="marketing-lede">{lang === 'ar' ? 'اختر وظيفة خليجية أو استخدم إعلانك لإنشاء مقابلة مخصصة.' : 'Choose a Gulf role or use your job advert to create a tailored interview.'}</p>
           <Link id="directory-practice-action" href="/practice#job-ad" className="marketing-button">{lang === 'ar' ? 'استخدم إعلان الوظيفة' : 'Use my job advert'}</Link>
         </section>

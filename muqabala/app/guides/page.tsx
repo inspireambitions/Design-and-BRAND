@@ -9,7 +9,7 @@ export const revalidate = 86400;
 
 export const metadata: Metadata = {
   title: 'Gulf interview guides',
-  description: 'Practical guidance for Gulf job interviews in English and Arabic. Then practise. No employer can see your practice.',
+  description: 'Practical guidance for Gulf job interviews in English and Arabic. Then practice. No employer can see your practice.',
   alternates: { canonical: '/guides' },
 };
 

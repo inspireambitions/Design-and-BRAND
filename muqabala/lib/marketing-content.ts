@@ -38,7 +38,7 @@ export const marketingNav: Localised<Record<string, string>> = {
     blog: 'Guides',
     hiring: 'Hiring teams',
     candidates: 'For candidates',
-    practice: 'Practise one answer, free',
+    practice: 'Practice one answer, free',
     progress: 'My progress',
     owner: 'by Inspire Ambitions',
   },
@@ -65,10 +65,10 @@ export const founderLine: Localised<string> = {
 export const homeCopy: Localised<Record<string, string>> = {
   en: {
     eyebrow: 'Private practice for Gulf job interviews',
-    title: 'Practise your Gulf job interview.',
+    title: 'Practice your Gulf job interview.',
     intro:
       'Get clear feedback in English or Arabic. See what worked, add the missing detail and try again.',
-    primary: 'Practise one answer, free',
+    primary: 'Practice one answer, free',
     secondary: 'See an example',
     trust: 'First feedback without sign-up. Verify your email to keep full reports.',
     statsRoles: 'Roles covered',
@@ -120,7 +120,7 @@ export const homeCopy: Localised<Record<string, string>> = {
     nurseImproveBody: 'Give the actual readings you saw. Then say what you told the patient while you waited for the doctor.',
     neverTitle: 'We score your answer. We do not score you.',
     trustEyebrow: 'Candidate trust',
-    trustCta: 'Practise in private now',
+    trustCta: 'Practice in private now',
     never1: 'No facial analysis',
     never2: 'No emotion detection',
     never3: 'No accent scoring',
@@ -136,15 +136,15 @@ export const homeCopy: Localised<Record<string, string>> = {
     privacySentBody: 'the text of your answer only, after you check it.',
     privacyDetail:
       'Progress is saved for seven days before you verify your email. Reports you keep are private to your account.',
-    rolesTitle: 'Practise for the job you want',
+    rolesTitle: 'Practice for the job you want',
     rolesBody: 'Start with a popular Gulf role or browse the full directory.',
     allRoles: 'Browse all interview roles',
     hiringTitle: 'Hiring? Turn a job advert into an adaptive video interview.',
     hiringBody: 'Candidates follow the same role blueprint. Muqabala asks for clearer evidence when needed. You review every answer and make the decision.',
     hiringCta: 'See Muqabala for hiring teams',
     finalTitle: 'Your next answer can be stronger.',
-    finalBody: 'Practise in private. Read your feedback. Try again when you are ready.',
-    finalCta: 'Practise your next answer',
+    finalBody: 'Practice in private. Read your feedback. Try again when you are ready.',
+    finalCta: 'Practice your next answer',
   },
   ar: {
     eyebrow: 'تدريب خاص لمقابلات العمل في الخليج',
@@ -360,7 +360,7 @@ export const infoPages: Record<string, Localised<MarketingPageContent>> = {
   'how-it-works': {
     en: {
       eyebrow: 'How it works',
-      title: 'Practise in five easy steps.',
+      title: 'Practice in five easy steps.',
       intro: 'This is private practice. Take your time. No employer can see your answers.',
       sections: [
         { title: '1. Choose a job', body: 'Pick a job from the list. You can also type a job title or paste a job advert.' },
@@ -417,7 +417,7 @@ export const infoPages: Record<string, Localised<MarketingPageContent>> = {
       sections: [
         { title: 'Why we built it', body: 'Many good workers find interviews hard. Private practice helps you explain your real experience clearly.' },
         { title: 'Made for Gulf jobs', body: 'The practice covers jobs in the UAE, Saudi Arabia, Qatar, Oman, Bahrain and Kuwait.' },
-        { title: 'People still make hiring decisions', body: 'Muqabala only helps you practise. It does not choose who gets hired. It cannot promise you a job.' },
+        { title: 'People still make hiring decisions', body: 'Muqabala only helps you practice. It does not choose who gets hired. It cannot promise you a job.' },
         { title: 'Built with HR experience', body: 'An HR Career Specialist with more than 20 years of Gulf and African experience leads this project through Inspire Ambitions.' },
       ],
     },
@@ -491,14 +491,14 @@ export const infoPages: Record<string, Localised<MarketingPageContent>> = {
   },
   faq: {
     en: {
-      eyebrow: 'Questions before you practise',
+      eyebrow: 'Questions before you practice',
       title: 'Your questions, answered.',
       intro: 'Read these short answers before you start.',
       sections: [
         { title: 'Is Muqabala free?', body: 'Yes. Practice is free and unlimited now. We will clearly show any paid choice before you use it.' },
         { title: 'Will an employer see my recording?', body: 'No. Muqabala Coach is private candidate practice. Your video is not uploaded and there is no employer access to your practice history.' },
         { title: 'Does it score my face or accent?', body: 'No. The scoring policy excludes face, appearance, eye contact, emotion, accent, pronunciation, grammar fluency and personality.' },
-        { title: 'Can I practise in Arabic?', body: 'Yes. The website and questions work in Arabic and English. If we cannot score an Arabic answer fairly, we will not give a score.' },
+        { title: 'Can I practice in Arabic?', body: 'Yes. The website and questions work in Arabic and English. If we cannot score an Arabic answer fairly, we will not give a score.' },
         { title: 'Do I need a camera?', body: 'No. You can type and receive the same content feedback. A camera can make practice feel more realistic, but it is not scored.' },
         { title: 'What if the written words are wrong?', body: 'Fix them before you ask for feedback. If the words are too unclear, Muqabala will not give a score.' },
       ],
@@ -524,7 +524,7 @@ export const infoPages: Record<string, Localised<MarketingPageContent>> = {
       intro: 'Your message helps us make Muqabala easier and more useful.',
       sections: [
         { title: 'Report a problem', body: 'Tell us your phone or device, browser and language. Say where the problem happened. Do not send private answer details.' },
-        { title: 'Share your opinion', body: 'Tell us if the feedback was clear and useful. Tell us what would make you practise again.' },
+        { title: 'Share your opinion', body: 'Tell us if the feedback was clear and useful. Tell us what would make you practice again.' },
         { title: 'Personal interview coaching', body: 'Human coaching is separate from the app and may be offered through Inspire Ambitions. It is preparation only and does not guarantee a job.' },
         { title: 'Contact us', body: 'Send your message through the Inspire Ambitions contact page.', href: 'https://inspireambitions.com/contact/', linkLabel: 'Open the contact page' },
       ],

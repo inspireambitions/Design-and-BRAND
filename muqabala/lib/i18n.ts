@@ -2,7 +2,7 @@ export type Lang = 'en' | 'ar';
 
 export const STRINGS = {
   en: {
-    tagline: 'Practise until you feel ready.',
+    tagline: 'Practice until you feel ready.',
     footerNavigation: 'Footer navigation',
     footerPrepare: 'Prepare',
     footerStartPractice: 'Start Interview Practice',
@@ -26,7 +26,7 @@ export const STRINGS = {
     footerBookCall: 'Book a Coaching Call',
     footerMoreResources: 'More career resources at Inspire Ambitions',
     footerPromise: 'Private practice for Gulf job interviews.',
-    heroTitle: 'Practise for your Gulf job interview.',
+    heroTitle: 'Practice for your Gulf job interview.',
     heroBody:
       'Choose your job. Speak or type your answers. Get clear feedback and try again. No employer can see your practice.',
     startPractice: 'Start practising',
@@ -39,12 +39,12 @@ export const STRINGS = {
     allIndustries: 'All industries',
     questions: 'questions',
     minutes: 'min',
-    practiceThis: 'Practise this interview',
+    practiceThis: 'Practice this interview',
     chooseStartPath: 'Choose how to start',
     bestMatch: 'Most specific practice',
     quickStart: 'Quick start',
     useJobAdvert: 'Use a job advert',
-    useJobAdvertBody: 'Paste the advert and practise questions written for that job.',
+    useJobAdvertBody: 'Paste the advert and practice questions written for that job.',
     useJobAdvertAction: 'Paste my advert',
     findRole: 'Find a role',
     findRoleBody: 'Choose from six popular Gulf roles, or open the full directory.',
@@ -257,7 +257,7 @@ export const STRINGS = {
     customCta: 'Do you have a job advert?',
     customCtaBody: 'Paste the job advert and we will make questions for it. You can also type the job title.',
     customEyebrow: 'Any job, any industry',
-    customTitle: 'Practise for your own job',
+    customTitle: 'Practice for your own job',
     customBody:
       'Paste the job advert to get questions for that job. No advert? Type the job title instead.',
     customLabel: 'Your job title',
@@ -351,7 +351,7 @@ export const STRINGS = {
     isThisWhatYouSaid: 'Is this what you said?',
     confirmWrittenWords: 'Check names, numbers and work words. Tick this before we score your answer.',
     readyForFullMock: 'Ready for the full interview?',
-    readyForFullMockBody: 'Now practise eight questions without feedback between answers. Your full report comes at the end.',
+    readyForFullMockBody: 'Now practice eight questions without feedback between answers. Your full report comes at the end.',
     startFullMock: 'Start full interview',
     revealTitle: 'Read your questions before you start',
     mockHiddenNote:
@@ -367,7 +367,7 @@ export const STRINGS = {
     copyFallbackHint: 'Copying is blocked in this browser. Press and hold the text below, then copy it.',
     coachingTitle: 'Want a person in your corner?',
     coachingBody:
-      'You can also practise live with an HR Career Specialist before your interview. Ask questions and get clear advice.',
+      'You can also practice live with an HR Career Specialist before your interview. Ask questions and get clear advice.',
     coachingCta: 'Ask about coaching on WhatsApp',
     coachingNote:
       'Coaching is optional and separate. It helps you prepare, but it is not a job offer and cannot promise one. The app stays free.',
@@ -458,8 +458,8 @@ export const STRINGS = {
     strongest: 'Strongest answer',
     weakest: 'Focus here next',
     nextAction: 'Your next step',
-    practiceAgain: 'Practise this interview again',
-    practiceRoleAgain: 'Practise this role again',
+    practiceAgain: 'Practice this interview again',
+    practiceRoleAgain: 'Practice this role again',
     tryAnotherRole: 'Try another role',
     savedLocally: 'Saved for this session. Verify your email to keep it privately in your account.',
     progressSyncing: 'Saving your progress…',
@@ -564,7 +564,7 @@ export const STRINGS = {
     reportTryQuestionAgain: 'Try Question {number} again',
     reportNextActionsTitle: 'What would you like to do next?',
     returnHome: 'Return to home',
-    reportCoachingTitle: 'Practise with a person',
+    reportCoachingTitle: 'Practice with a person',
     reportCoachingBody: 'Get clear, private guidance from an HR Career Specialist.',
     reportCoachingCta: 'Ask about personal coaching',
     reportManagementTitle: 'Save and manage this report',

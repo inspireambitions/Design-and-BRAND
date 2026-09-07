@@ -53,7 +53,7 @@ export default function OpenGraphImage() {
             <div>Made stronger.</div>
           </div>
           <div style={{ fontSize: 25, lineHeight: 1.25, color: '#D7E2DC' }}>
-            Practise 8 Gulf job questions. Get feedback after every answer.
+            Practice 8 Gulf job questions. Get feedback after every answer.
           </div>
         </div>
         <div

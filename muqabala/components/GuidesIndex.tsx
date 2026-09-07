@@ -20,7 +20,7 @@ export function GuidesIndex({ guides }: { guides: GuideListItem[] }) {
           <p className="marketing-lede">
             {lang === 'ar'
               ? 'كل دليل يحل مشكلة واحدة. ثم تدرب. لا يرى صاحب العمل تدريبك.'
-              : 'Each guide solves one problem. Then practise. No employer can see your practice.'}
+              : 'Each guide solves one problem. Then practice. No employer can see your practice.'}
           </p>
         </section>
         <section className="marketing-wrap guides-index">

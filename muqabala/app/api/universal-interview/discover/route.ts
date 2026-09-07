@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     const selected = jdQuality.detected_titles.some((title) => title.toLowerCase() === target);
     if (!selected) {
       return Response.json({
-        error: { code: 'role_choice_required', message: 'Choose which role you want to practise.' },
+        error: { code: 'role_choice_required', message: 'Choose which role you want to practice.' },
         detected_titles: jdQuality.detected_titles,
       }, { status: 409, headers: privateNoStoreHeaders() });
     }
