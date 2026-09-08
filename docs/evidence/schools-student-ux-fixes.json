@@ -1,10 +1,10 @@
 {
-  "checkedAt": "2026-09-08T18:05:09.771Z",
+  "checkedAt": "2026-09-08T18:08:57.688Z",
   "syntheticOnly": true,
   "origin": "http://localhost:3110",
   "physicalDevice": false,
   "feedbackTransition": "simulated pending then ready, real draft and retry storage",
-  "assignment": "0cdfbd92-6de6-4c55-8dd2-7115f97adbc1",
+  "assignment": "dc52ffb5-9d16-4b24-b6ad-640c625c6d17",
   "checks": [
     "Enrolment 848px: no overflow, progress, slow response cue and retained code",
     "Enrolment 375px: no overflow, progress, slow response cue and retained code",

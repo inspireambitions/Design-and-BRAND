@@ -132,3 +132,5 @@ Verified at 1280px and 375px with no horizontal overflow. The form retained inpu
 ## Student journey review fixes
 
 See schools-student-feedback-fixes-20260908.md for the nine reported findings, changes and verification. Local browser checks now cover direct retry, feedback updates, student navigation, narrow enrolment and slow-request recovery. Historical answer and feedback records remain preserved.
+
+Final student UX release: product commit 864d14e, deployment muqabala-qjdk8pmy6-inspire14.vercel.app, existing staging alias updated. Real feedback appeared automatically in 17 seconds in the Q3 regression. Hosted retry and student cohort denial passed. See schools-student-feedback-fixes-20260908.md for the report and retained limitations.

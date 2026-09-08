@@ -15,7 +15,7 @@ try{
  await page.getByLabel('Private link code or recovery code').fill('synthetic-invalid-code');await page.getByLabel('I confirm I am aged 18 or over').check();
  await page.route('**/api/schools/access',async route=>{await new Promise(r=>setTimeout(r,11000));await route.fulfill({status:503,json:{error:'Please try again.'}});});
  await page.getByRole('button',{name:'Continue',exact:true}).click();await page.getByRole('progressbar').waitFor();
- await page.getByText(/Still working/).waitFor({timeout:15000});await page.getByRole('alert').waitFor();
+ await page.getByText(/Still working/).waitFor({timeout:15000});await page.locator('p[role="alert"]').filter({hasText:'Please try again.'}).waitFor();
  assert.equal(await page.getByLabel('Private link code or recovery code').inputValue(),'synthetic-invalid-code');
  await page.screenshot({path:'output/playwright/schools-enrol-fixes-'+width+'.png',fullPage:true});await page.close();checks.push('Enrolment '+width+'px: no overflow, progress, slow response cue and retained code');}
  qaStage('student retry and feedback updates');

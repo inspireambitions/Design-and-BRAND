@@ -1,0 +1,24 @@
+{
+  "checkedAt": "2026-09-08T18:07:23.763Z",
+  "previewOrigin": "https://muqabala-schools-pilot-20260908-inspire14.vercel.app",
+  "syntheticOnly": true,
+  "physicalDevice": false,
+  "checks": [
+    {
+      "check": "Real AI feedback appeared without reload",
+      "seconds": 17,
+      "status": "ready"
+    },
+    {
+      "check": "Exact fictional Q3 regression",
+      "improvement": "Say how the feedback changed the way you work in later presentations.",
+      "allElementsPresent": true
+    },
+    {
+      "check": "Hosted retry creates one editable draft and preserves submission"
+    },
+    {
+      "check": "Hosted student cohort page returns 404"
+    }
+  ]
+}
