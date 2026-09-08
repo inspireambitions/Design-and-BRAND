@@ -11,6 +11,7 @@ docs/
 **/scripts/schools-email-enrolment.mjs
 **/scripts/schools-configure-preview-mail.mjs
 **/scripts/schools-prepare-handoff.mjs
+**/scripts/schools-landing-review.mjs
 **/scripts/schools-worker-*.mjs
 **/scripts/schools-worker-*.ps1
 **/scripts/schools-vercel-env.mjs

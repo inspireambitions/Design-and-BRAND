@@ -1,0 +1,25 @@
+{
+  "checkedAt": "2026-09-08T17:28:43.221Z",
+  "origin": "http://localhost:3110",
+  "physicalDevice": false,
+  "checks": [
+    {
+      "width": 1280,
+      "horizontalOverflow": false,
+      "reviewAndCohortVisible": true
+    },
+    {
+      "width": 375,
+      "horizontalOverflow": false,
+      "reviewAndCohortVisible": true
+    },
+    {
+      "formFailurePreservesInput": true,
+      "realFormSubmission": 200,
+      "successState": true
+    }
+  ],
+  "enquiryReference": "5d4f5501-bce2-4109-989f-34bb49b140fa",
+  "storedEnquiryVerified": true,
+  "syntheticEnquiryCleaned": true
+}

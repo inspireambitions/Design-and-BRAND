@@ -120,3 +120,11 @@ The protected preview sign-in request returned HTTP 200 with sent=true. Gmail in
 Final runtime verification uses staging deployment dpl_B5JiJZ23geUtr2VYGPxoGCxj9fMp at muqabala-gwap8cs6c-inspire14.vercel.app. It uses the same product source as dpl_7gpWsx2ry1dfCCwGLHeDQJkrYLXS with corrected GitHub branch environment association. Mail and cron credentials remain preview-branch-only. Ten staging migrations are applied.
 
 See schools-agent-report-20260908.md for the current passed/pending split. Controlled access is prepared for hello@trymuqabala.com. Physical devices, external messaging previews, automatic scheduled execution, supplier receipts and larger-group AI budget/capacity remain open. No public production activation.
+
+## Educators landing-page review changes
+
+Implemented the external review feedback: fictional cohort illustration beside the hero; reviewed attempt-2 sample with On track, adviser comment, an absent-to-present correction and its reason; original answer excerpts and per-element engine confidence; brand link to the main home page; footer links to Inspire Ambitions, Privacy, Accessibility, candidates and hiring teams.
+
+The sample is explicitly English. Pilot language remains unconfirmed in schools-pilot-plan.md, so the page does not claim an agreed English pilot.
+
+Verified at 1280px and 375px with no horizontal overflow. The form retained input after a simulated failure, then saved a real staging enquiry and showed its success state. The stored row was independently verified and the labelled synthetic enquiry removed. Lighthouse Accessibility:100. TypeScript and ten relevant access/home tests passed. Rendered OG metadata and all three static PNG dimensions/size checks passed; WhatsApp/iMessage/LinkedIn crawler previews remain unverified on protected staging. Evidence: schools-landing-review.json and schools-landing-review-accessibility.json.
