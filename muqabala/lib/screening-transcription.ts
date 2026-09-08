@@ -16,8 +16,11 @@ export async function resolveScreeningTranscript(
   request: typeof fetch = fetch,
 ): Promise<{ ok: true; value: ScreeningTranscript } | { ok: false; reason: TranscriptionFailure }> {
   const sufficient = (text: string) => text.trim().split(/\s+/).filter(Boolean).length >= 5;
+  const usableFallback = sufficient(fallback.transcript)
+    && fallback.transcriptTimingVersion === 'openai-whisper-segment-v1'
+    && fallback.transcriptSegments.length > 0;
   if (!audio?.size) {
-    return !required || sufficient(fallback.transcript)
+    return !required || usableFallback
       ? { ok: true, value: fallback }
       : { ok: false, reason: 'missing_audio' };
   }
@@ -33,9 +36,13 @@ export async function resolveScreeningTranscript(
     if (!response.ok || typeof body.transcript !== 'string') throw new Error('transcription_service');
     const text = body.transcript.trim();
     if (required && !sufficient(text)) {
-      return sufficient(fallback.transcript)
+      return usableFallback
         ? { ok: true, value: fallback }
         : { ok: false, reason: 'short_transcript' };
+    }
+    if (required && (body.timingVersion !== 'openai-whisper-segment-v1'
+      || !Array.isArray(body.segments) || body.segments.length === 0)) {
+      return usableFallback ? { ok: true, value: fallback } : { ok: false, reason: 'service' };
     }
     return { ok: true, value: text ? {
       transcript: text,
@@ -43,7 +50,7 @@ export async function resolveScreeningTranscript(
       transcriptTimingVersion: body.timingVersion === 'openai-whisper-segment-v1' ? body.timingVersion : null,
     } : fallback };
   } catch {
-    return !required || sufficient(fallback.transcript)
+    return !required || usableFallback
       ? { ok: true, value: fallback }
       : { ok: false, reason: 'service' };
   }

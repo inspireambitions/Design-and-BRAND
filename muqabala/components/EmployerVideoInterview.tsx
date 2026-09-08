@@ -306,7 +306,7 @@ export function EmployerVideoInterview({
     : 0;
 
   const readStatus = useCallback(async (id: string): Promise<ScreeningStatus> => {
-    const response = await fetch(`/api/screening/interviews/${id}/status`, { cache: 'no-store' });
+    const response = await fetch(`/api/screening/interviews/${id}/status`, { cache: 'no-store', signal: AbortSignal.timeout(30_000) });
     const body = await response.json().catch(() => ({})) as ScreeningStatus & { error?: string };
     if (!response.ok) throw new Error(body.error || 'Interview status could not be checked.');
     return body;
@@ -341,6 +341,7 @@ export function EmployerVideoInterview({
         let resumedBrain = status.brain;
         if (resumedBrain?.stage === 'questions' && status.currentQuestion > 0 && status.questionCount <= status.currentQuestion) {
           const repair = await fetch(`/api/screening/interviews/${resumedId}/brain`, {
+            signal: AbortSignal.timeout(90_000),
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ questionIndex: status.currentQuestion - 1 }),
@@ -592,6 +593,7 @@ export function EmployerVideoInterview({
     let nextIndex = savedIndex + 1;
     if (brainMode) {
       const response = await fetch(`/api/screening/interviews/${interviewId}/brain`, {
+        signal: AbortSignal.timeout(90_000),
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ questionIndex: savedIndex }),
@@ -655,7 +657,7 @@ export function EmployerVideoInterview({
         await continueAfterSaved(savedIndex, beforeUpload, toSave.transcript);
         return;
       }
-      if (toSave.needsTranscription) {
+      if (toSave.needsTranscription || (brainMode && (!toSave.transcriptTimingVersion || !toSave.transcriptSegments.length))) {
         const result = await resolveScreeningTranscript(toSave.transcriptionAudio ?? null, toSave, lang, brainMode);
         if (!result.ok) {
           setPending(toSave);
@@ -670,6 +672,7 @@ export function EmployerVideoInterview({
           { transcriptionAudio: toSave.transcriptionAudio, needsTranscription: false });
       }
       const grantResponse = await fetch(`/api/screening/interviews/${interviewId}/upload-url`, {
+        signal: AbortSignal.timeout(30_000),
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ questionIndex: toSave.questionIndex, mimeType: toSave.recording.mimeType }),
@@ -692,6 +695,7 @@ export function EmployerVideoInterview({
       await uploadScreeningVideo(grantBody, toSave.recording.blob, toSave.recording.mimeType, setUploadProgress);
 
       const saveResponse = await fetch(`/api/screening/interviews/${interviewId}/answers`, {
+        signal: AbortSignal.timeout(30_000),
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -33,12 +33,25 @@ test('empty and short successful transcripts are distinct from missing audio and
   }
 });
 
-test('usable browser words remain a fallback without fabricated timing segments', async () => {
+test('untimed browser words cannot silently create an answer that blocks the report', async () => {
   const fallback = { ...empty, transcript: 'I asked my manager for help and resolved it' };
   for (const source of [audio, null]) {
     const result = await resolveScreeningTranscript(source, fallback, 'en', true, async () => json({}, 429));
-    assert.deepEqual(result, { ok: true, value: fallback });
+    assert.deepEqual(result, { ok: false, reason: source ? 'service' : 'missing_audio' });
   }
+});
+
+test('a successful untimed response retains audio for a timed retry', async () => {
+  const fallback = { ...empty, transcript: 'I asked my manager for help and resolved it' };
+  const bodies = [];
+  const request = async (_url, init) => {
+    bodies.push(await init.body.get('audio').text());
+    return json({ transcript: fallback.transcript, segments: bodies.length === 1 ? [] : [{ id: 'S001' }],
+      timingVersion: bodies.length === 1 ? null : 'openai-whisper-segment-v1' });
+  };
+  assert.deepEqual(await resolveScreeningTranscript(audio, fallback, 'en', true, request), { ok: false, reason: 'service' });
+  assert.equal((await resolveScreeningTranscript(audio, fallback, 'en', true, request)).ok, true);
+  assert.deepEqual(bodies, ['synthetic audio', 'synthetic audio']);
 });
 
 test('fixed-question interviews keep their existing optional transcription behaviour', async () => {

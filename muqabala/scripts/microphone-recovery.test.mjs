@@ -24,7 +24,7 @@ async function component(name, mocks, globals = {}) {
   };
   const exports = {};
   vm.runInNewContext(compiled, {
-    exports, Blob, URL, Error, console, setTimeout, clearTimeout, ...globals,
+    exports, Blob, URL, Error, AbortSignal, console, setTimeout, clearTimeout, ...globals,
     require(id) {
       if (id === 'react') return react;
       if (id === 'react/jsx-runtime') return { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) };

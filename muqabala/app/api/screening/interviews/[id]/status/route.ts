@@ -22,7 +22,18 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     .order('question_index');
   if (error) return Response.json({ error: 'Interview status could not be checked.' }, { status: 503 });
 
-  const brainState = await loadStoredInterview(id).catch(() => null);
+  let brainState;
+  try {
+    brainState = await loadStoredInterview(id);
+    if (!brainState) {
+      const { data: stored, error: lookupError } = await access.admin!.from('universal_interviews')
+        .select('id').eq('id', id).maybeSingle();
+      if (lookupError || stored) throw new Error('adaptive_status_unavailable');
+    }
+  } catch {
+    return Response.json({ error: 'Your progress is saved. Interview status needs another try.' },
+      { status: 503, headers: privateNoStoreHeaders() });
+  }
   return Response.json({
     interviewId: id,
     currentQuestion: interview.current_question,
