@@ -11,6 +11,14 @@
     {
       "path": "/api/cron/employer-volume",
       "schedule": "7 * * * *"
+    },
+    {
+      "path": "/api/schools/mail",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/schools/retention",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

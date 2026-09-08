@@ -1,0 +1,16 @@
+{
+  "productionProject": "hmaxzpgsefzpflrwzopa",
+  "migrationsApplied": 10,
+  "schoolsTables": 26,
+  "withoutRls": 0,
+  "existingPolicyFingerprint": "a8d1ca176dba185d2eca259243521391",
+  "transactionTestsPassed": true,
+  "testTransactionRolledBack": true,
+  "remainingSchoolsInstitutions": 0,
+  "remainingSchoolsCohorts": 0,
+  "remainingSchoolsSessions": 0,
+  "remainingSchoolsAttempts": 0,
+  "remainingSchoolsOutbox": 0,
+  "productionSettingsChanged": false,
+  "productionAppDeployed": false
+}

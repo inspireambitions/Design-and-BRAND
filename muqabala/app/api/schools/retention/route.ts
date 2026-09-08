@@ -19,6 +19,7 @@ export async function GET(request:Request) {
   const started=Date.now();
   for(const job of (pending.data??[]).slice(0,3)) {if(Date.now()-started>35000)break;try{await deleteSchoolsData(job.id);deleted++;}catch{failed++;}}
   if(failed)reportOperationalFailure('schools_retention_failed',{area:'cron',job:'schools_retention',code:'local_deletion_failed',count:failed,status:503});
+  console.info('schools_retention_completed',{queued:queued.data,localDeleted:deleted,failed,scheduled:request.headers.get('user-agent')==='vercel-cron/1.0'});
   return Response.json({queued:queued.data,localDeleted:deleted,failed,externalChecksPending:true},{status:failed?503:200,headers:{'Cache-Control':'no-store'}});
 }
 export function POST(){return schoolsUnavailable()??Response.json({error:'Not found'},{status:404});}
