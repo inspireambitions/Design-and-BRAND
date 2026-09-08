@@ -26,13 +26,14 @@ try{
  qaStage('student page');await page.goto(origin+'/schools/me/'+assignment);assert.equal(await page.locator('header a[href="/schools/cohorts"]').count(),0);
  qaStage('cohort denial');const cohortResponse=await context.request.get(origin+'/schools/cohorts');assert.equal(cohortResponse.status(),404);checks.push('Student cohort navigation hidden and direct route returns 404');
  const text='Our tutor asked for clearer notes. I added headings and checked each step with my classmate. We finished the next task without confusion.';
+ await page.route('**/api/schools',async route=>{if(route.request().postDataJSON()?.operation==='draft')await new Promise(resolve=>setTimeout(resolve,1000));await route.continue();});
  qaStage('answer fields');for(const field of await page.getByRole('textbox',{name:'Your answer',exact:true}).all())await field.fill(text);
  assert.match(await page.locator('textarea').first().evaluate(e=>getComputedStyle(e).fontFamily),/Arial/);
  await page.route('**/api/schools/feedback',route=>route.fulfill({status:202,json:{ready:false}}));
  let polls=0;const detail=Array.from({length:3},(_,q)=>({questionIndex:q,improvement:'Add what happened next.',elements:Array.from({length:4},(_,e)=>({id:'e'+e,present:true,supportingText:text,confidence:e===0?'medium':'high'}))}));
  await page.route('**/api/schools/feedback?*',route=>route.fulfill({json:++polls<2?{feedback_status:'processing'}:{feedback_status:'ready',evidence_detail:detail,evidence_covered:12}}));
  qaStage('submit and automatic feedback');await page.getByRole('button',{name:'Submit answers',exact:true}).click();await page.getByRole('heading',{name:'Your private feedback',exact:true}).waitFor({timeout:30000});
- qaStage('confidence');assert(polls>=2);assert.equal(await page.getByText(/Confidence: high/).count(),0);assert.equal(await page.getByText(/Confidence: medium/).count(),3);checks.push('Pending feedback appears without reload; student high confidence hidden; medium retained; normal form font');
+ qaStage('confidence');assert(polls>=2);assert.equal(await page.getByText(/Confidence: high/).count(),0);assert.equal(await page.getByText(/Confidence: medium/).count(),3);checks.push('Submit click queues behind delayed blur autosave');checks.push('Pending feedback appears without reload; student high confidence hidden; medium retained; normal form font');
  const before=await admin.from('schools_assignment_attempts').select('id').eq('assignment_id',assignment).eq('status','submitted').single();assert(!before.error);
  qaStage('retry button');await page.getByRole('button',{name:'Retry question 1',exact:true}).click();await page.getByRole('button',{name:'Submit answers',exact:true}).waitFor();assert.equal(await page.locator('textarea').first().isEnabled(),true);assert.equal(await page.locator('textarea').first().inputValue(),text);checks.push('Feedback retry button opens a separate prefilled draft');
  await page.getByRole('button',{name:'Submit answers',exact:true}).click();await page.getByRole('heading',{name:'Your answers are saved',exact:true}).waitFor();

@@ -25,3 +25,9 @@ Scope: Schools staging only. Existing employer and personal practice paths are u
 - Feedback status rejects an inaccessible attempt.
 
 Evidence: docs/evidence/schools-student-ux-fixes.json. Browser emulation does not replace physical iPhone and Android acceptance. Hosted deployment and real-model regression results will be appended below.
+
+## Additional submission fault found during hosted verification
+
+Clicking Submit immediately after typing could blur the field, start an autosave and disable the button before its click reached the handler. The synthetic Q3 run remained a draft, so no AI request started. The form now keeps Submit available during autosave and queues one submission behind an in-flight save. A failed save retains the answer and requires retry. A browser test with a deliberately delayed draft request passed with one click.
+
+The full desktop keyboard journey passed on the first deployed fixes: enrolment, draft refresh, lost submission response recovery without duplicate attempts, real feedback, attempt-bound adviser review and private comment, sign out everywhere, recovery and deletion.

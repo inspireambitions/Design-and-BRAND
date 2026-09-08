@@ -18,6 +18,7 @@ export function SchoolsPractice({assignmentId,cohortId,questions,initial,dueAt,r
   const version=useRef(initial);
   const pendingId=useRef<string|null>(initial?.id??null);
   const locked=useRef(false);
+  const queuedSubmission=useRef(false);
   const closed=Date.now()>=new Date(dueAt).getTime();
   const submitted=attempt?.status==='submitted';
   useEffect(()=>{if(!submitted&&retryQuestion)document.getElementById('answer-'+(retryQuestion-1))?.focus();},[submitted,retryQuestion]);
@@ -38,9 +39,11 @@ export function SchoolsPractice({assignmentId,cohortId,questions,initial,dueAt,r
     if(retryQuestion&&submitted&&!closed&&!retryStarted.current){retryStarted.current=true;void startRetry(retryQuestion);}
   },[retryQuestion,submitted,closed]);
   async function save(submit=false) {
-    if(locked.current||submitted||closed) return;
+    if(submitted||closed)return;
+    if(locked.current){if(submit){queuedSubmission.current=true;setBusy(true);}return;}
     if(!submit&&JSON.stringify(latest.current)===JSON.stringify(stored.current)) return;
-    locked.current=true;setBusy(true);setError('');
+    locked.current=true;if(submit)setBusy(true);setError('');
+    let saved=false;
     const snapshot=[...latest.current];
     pendingId.current??=crypto.randomUUID();
     try {
@@ -49,10 +52,13 @@ export function SchoolsPractice({assignmentId,cohortId,questions,initial,dueAt,r
         signal:AbortSignal.timeout(25000)});
       const body=await response.json();
       if(!response.ok) throw new Error(body.error||'Could not save. Retry without closing this page.');
-      version.current=body.result;stored.current=snapshot;setAttempt(body.result);
+      version.current=body.result;stored.current=snapshot;setAttempt(body.result);saved=true;
       setMessage(submit?'Your answers have been submitted.':'Draft saved.');
     } catch(e) {setError(e instanceof Error?e.message:'Could not save. Keep this page open and retry.');}
-    finally {locked.current=false;setBusy(false);}
+    finally {
+      locked.current=false;const shouldSubmit=queuedSubmission.current&&saved&&!submit;queuedSubmission.current=false;
+      if(shouldSubmit)void saveLatest.current(true);else setBusy(false);
+    }
   }
   const saveLatest=useRef(save);saveLatest.current=save;
   useEffect(()=>{const timer=setInterval(()=>void saveLatest.current(),10000);return()=>clearInterval(timer);},[]);
