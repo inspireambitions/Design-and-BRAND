@@ -1,0 +1,150 @@
+
+> muqabala@0.1.0 build
+> next build --webpack
+
+▲ Next.js 16.3.1 (webpack)
+✓ Running next.config.ts took 36ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 30.6s
+  Running TypeScript ...
+  Finished TypeScript in 11.9s ...
+  Collecting page data using 5 workers ...
+  Generating static pages using 5 workers (0/129) ...
+  Generating static pages using 5 workers (32/129) 
+  Generating static pages using 5 workers (64/129) 
+  Generating static pages using 5 workers (96/129) 
+✓ Generating static pages using 5 workers (129/129) in 6.4s
+  Finalizing page optimization ...
+  Collecting build traces ...
+
+Route (app)                                        Revalidate  Expire
+┌ ○ /
+├ ○ /_not-found
+├ ○ /about
+├ ○ /accessibility
+├ ƒ /account
+├ ƒ /account/reports/[id]
+├ ƒ /api/auth/request
+├ ƒ /api/auth/sign-out
+├ ƒ /api/auth/verify
+├ ƒ /api/c/[token]/respond
+├ ƒ /api/cron/employer-volume
+├ ƒ /api/cron/practice-plan-retention
+├ ƒ /api/cron/practice-plan-worker
+├ ƒ /api/cron/screening-cleanup
+├ ƒ /api/cron/screening-notifications
+├ ƒ /api/employer/candidates/[id]/evaluation/pdf
+├ ƒ /api/employer/interviews/[id]
+├ ƒ /api/employer/roles/[roleId]/export
+├ ƒ /api/employer/roles/[roleId]/invites
+├ ƒ /api/employer/roles/[roleId]/summary
+├ ƒ /api/evaluation-share/[token]
+├ ƒ /api/feedback
+├ ƒ /api/feedback/share-card
+├ ƒ /api/integrations/babylovegrowth
+├ ƒ /api/interview
+├ ƒ /api/interview-pack
+├ ƒ /api/interviews
+├ ƒ /api/interviews/[id]
+├ ƒ /api/interviews/[id]/report
+├ ƒ /api/interviews/[id]/save
+├ ƒ /api/interviews/[id]/share
+├ ƒ /api/practice-plans
+├ ƒ /api/revalidate
+├ ƒ /api/schools
+├ ƒ /api/schools/access
+├ ƒ /api/schools/delete
+├ ƒ /api/schools/feedback
+├ ƒ /api/schools/mail
+├ ƒ /api/schools/manage
+├ ƒ /api/schools/pilot-contact
+├ ƒ /api/schools/retention
+├ ƒ /api/schools/sign-out
+├ ƒ /api/schools/staff
+├ ƒ /api/score
+├ ƒ /api/screening/auth/request
+├ ƒ /api/screening/auth/verify
+├ ƒ /api/screening/interviews/[id]/answers
+├ ƒ /api/screening/interviews/[id]/brain
+├ ƒ /api/screening/interviews/[id]/status
+├ ƒ /api/screening/interviews/[id]/submit
+├ ƒ /api/screening/interviews/[id]/upload-url
+├ ƒ /api/screening/job-description
+├ ƒ /api/screening/packs
+├ ƒ /api/screening/resume
+├ ƒ /api/transcribe
+├ ƒ /api/universal-interview/[id]
+├ ƒ /api/universal-interview/confirm
+├ ƒ /api/universal-interview/discover
+├ ƒ /api/universal-interview/feedback
+├ ƒ /api/universal-interview/retry
+├ ƒ /api/universal-interview/turn
+├ ƒ /api/webhooks/resend
+├ ƒ /auth/confirm
+├ ƒ /auth/screening-confirm
+├ ○ /blog
+├ ƒ /c/[token]
+├ ○ /contact
+├ ƒ /dev/email/shortlist
+├ ƒ /employer
+├ ƒ /employer/candidates/[id]/evaluation
+├ ƒ /employer/interviews/[id]
+├ ƒ /employer/roles/[roleId]/candidates/add
+├ ƒ /evaluation-share/[token]
+├ ○ /faq
+├ ƒ /for-employers
+├ ○ /for-employers/sample-report
+├ ○ /guides                                                1d      1y
+├   /guides/[slug]
+│ ├ ● /guides/project-manager-interview-questions          1d      1y
+│ ├ ● /guides/strengths-and-weaknesses-answers             1d      1y
+│ ├ ● /guides/nurse-interview-questions                    1d      1y
+│ └ ● [+10 more paths]
+├ ○ /how-feedback-works
+├ ○ /how-it-works
+├ ○ /icon.svg
+├ ○ /interview-roles
+├ ○ /practice
+├ ƒ /practice-plan/[token]
+├   /practice/[roleId]
+│ ├ ● /practice/front-office-agent
+│ ├ ● /practice/waiter
+│ ├ ● /practice/housekeeping-attendant
+│ └ ● [+66 more paths]
+├ ○ /practice/custom
+├ ○ /practice/universal
+├ ○ /privacy
+├ ○ /progress
+├ ○ /robots.txt
+├ ƒ /s/[code]
+├ ƒ /s/[code]/opengraph-image
+├ ƒ /s/[code]/twitter-image
+├ ƒ /schools
+├ ƒ /schools/admin
+├ ƒ /schools/cohorts
+├ ƒ /schools/cohorts/[id]
+├ ƒ /schools/cohorts/[id]/assign
+├ ƒ /schools/cohorts/[id]/review
+├ ƒ /schools/cohorts/[id]/support/[studentId]
+├ ƒ /schools/enrol
+├ ƒ /schools/founder
+├ ƒ /schools/me
+├ ƒ /schools/me/[id]
+├ ƒ /schools/me/delete
+├ ƒ /schools/me/reports/[attemptId]
+├ ƒ /schools/me/settings
+├ ƒ /schools/sign-in
+├ ƒ /schools/staff
+├ ƒ /share/[token]
+├ ƒ /sign-in
+├ ○ /sitemap.xml
+└ ○ /terms
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+

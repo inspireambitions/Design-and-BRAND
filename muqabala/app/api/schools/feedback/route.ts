@@ -18,5 +18,16 @@ export async function POST(request:Request) {
   const ready=attempt.feedback_status==='ready'||await prepareSchoolsFeedback(attempt.id);
   return Response.json({ready},{status:ready?200:202,headers:{'Cache-Control':'no-store'}});
 }
-export function GET(){return schoolsUnavailable()??Response.json({error:'Not found'},{status:404});}
-export const HEAD=GET;export const OPTIONS=GET;export const PUT=GET;export const PATCH=GET;export const DELETE=GET;
+export async function GET(request:Request){
+  const unavailable=schoolsUnavailable();if(unavailable)return unavailable;
+  const client=await createClient();if(!client)return Response.json({error:'Service unavailable'},{status:503});
+  const identity=await touchSchoolsSession(client);if(!identity)return Response.json({error:'Sign in again'},{status:401});
+  const id=z.string().uuid().safeParse(new URL(request.url).searchParams.get('attemptId'));
+  if(!id.success)return Response.json({error:'Invalid request'},{status:400});
+  const {data,error}=await client.from('schools_assignment_attempts').select('feedback_status,evidence_detail,evidence_covered').eq('id',id.data).eq('student_user_id',identity.user.id).eq('status','submitted').maybeSingle();
+  if(error)return Response.json({error:'Could not check feedback'},{status:503});
+  if(!data)return Response.json({error:'Not found'},{status:404});
+  return Response.json(data,{headers:{'Cache-Control':'private, no-store'}});
+}
+export function HEAD(){return schoolsUnavailable()??new Response(null,{status:405});}
+export const OPTIONS=HEAD;export const PUT=HEAD;export const PATCH=HEAD;export const DELETE=HEAD;

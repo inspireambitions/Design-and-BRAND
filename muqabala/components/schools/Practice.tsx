@@ -21,6 +21,22 @@ export function SchoolsPractice({assignmentId,cohortId,questions,initial,dueAt,r
   const closed=Date.now()>=new Date(dueAt).getTime();
   const submitted=attempt?.status==='submitted';
   useEffect(()=>{if(!submitted&&retryQuestion)document.getElementById('answer-'+(retryQuestion-1))?.focus();},[submitted,retryQuestion]);
+  const retryStarted=useRef(false);
+  async function startRetry(question?:number) {
+    if(locked.current||!attempt||closed)return;
+    locked.current=true;setBusy(true);setError('');
+    try {
+      const response=await fetch('/api/schools',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({operation:'retry',payload:{attemptId:attempt.id}}),signal:AbortSignal.timeout(25000)});
+      const body=await response.json();if(!response.ok)throw new Error(body.error||'Could not start a retry. Please try again.');
+      version.current=body.result;pendingId.current=body.result.id;stored.current=body.result.answers;latest.current=body.result.answers;
+      setAnswers(body.result.answers);setAttempt(body.result);setMessage('Your new draft is open. Your previous answers and review are saved.');
+      requestAnimationFrame(()=>document.getElementById('answer-'+((question??1)-1))?.focus());
+    }catch(error){setError(error instanceof Error?error.message:'Could not start a retry. Please try again.');}
+    finally{locked.current=false;setBusy(false);}
+  }
+  useEffect(()=>{
+    if(retryQuestion&&submitted&&!closed&&!retryStarted.current){retryStarted.current=true;void startRetry(retryQuestion);}
+  },[retryQuestion,submitted,closed]);
   async function save(submit=false) {
     if(locked.current||submitted||closed) return;
     if(!submit&&JSON.stringify(latest.current)===JSON.stringify(stored.current)) return;
@@ -46,12 +62,8 @@ export function SchoolsPractice({assignmentId,cohortId,questions,initial,dueAt,r
   },[]);
   return <><p role="status" aria-live="polite">{message}</p>{error&&<p role="alert">{error}</p>}
     {submitted?<section className="schools-card"><h2>Your answers are saved</h2><p>Attempt {attempt.attempt_number}. {attempt.feedback_status==='ready'?'Your feedback is available.':'Your feedback is awaiting processing. Your submitted answers are safe.'}</p></section>:null}
-    {submitted&&<SchoolsFeedback attemptId={attempt.id} rubrics={questions.map(question=>question.rubric)} assignmentId={assignmentId} status={initial?.id===attempt.id?initial.feedback_status:attempt.feedback_status} detail={initial?.id===attempt.id?initial.evidence_detail:attempt.evidence_detail} covered={initial?.id===attempt.id?initial.evidence_covered:attempt.evidence_covered}/>}
-    {submitted&&!closed&&<button disabled={busy} onClick={async()=>{setBusy(true);try{
-      const response=await fetch('/api/schools',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({operation:'retry',payload:{attemptId:attempt.id}})});
-      const body=await response.json();if(!response.ok)throw new Error(body.error);
-      version.current=body.result;stored.current=body.result.answers;setAnswers(body.result.answers);setAttempt(body.result);router.refresh();
-    }catch(error){setError(error instanceof Error?error.message:'Could not start a retry.');}finally{setBusy(false);}}}>{retryQuestion?'Retry question '+retryQuestion:'Start a new attempt'}</button>}
+    {submitted&&<SchoolsFeedback attemptId={attempt.id} rubrics={questions.map(question=>question.rubric)} assignmentId={assignmentId} onRetry={startRetry} retryBusy={busy} status={initial?.id===attempt.id?initial.feedback_status:attempt.feedback_status} detail={initial?.id===attempt.id?initial.evidence_detail:attempt.evidence_detail} covered={initial?.id===attempt.id?initial.evidence_covered:attempt.evidence_covered}/>}
+    {submitted&&!closed&&<button disabled={busy} onClick={()=>void startRetry(retryQuestion)}>{busy?'Opening your new draft...':retryQuestion?'Retry question '+retryQuestion:'Start a new attempt'}</button>}
     {questions.map((question,index)=><fieldset key={index}><legend>Question {index+1}: {question.text}</legend>
       <label htmlFor={'answer-'+index}>Your answer</label><textarea id={'answer-'+index} rows={8} maxLength={12000} value={answers[index]} disabled={submitted||closed}
         onChange={e=>{const next=[...answers];next[index]=e.target.value;setAnswers(next);}} onBlur={()=>void save()}/>

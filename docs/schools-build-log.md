@@ -128,3 +128,7 @@ Implemented the external review feedback: fictional cohort illustration beside t
 The sample is explicitly English. Pilot language remains unconfirmed in schools-pilot-plan.md, so the page does not claim an agreed English pilot.
 
 Verified at 1280px and 375px with no horizontal overflow. The form retained input after a simulated failure, then saved a real staging enquiry and showed its success state. The stored row was independently verified and the labelled synthetic enquiry removed. Lighthouse Accessibility:100. TypeScript and ten relevant access/home tests passed. Rendered OG metadata and all three static PNG dimensions/size checks passed; WhatsApp/iMessage/LinkedIn crawler previews remain unverified on protected staging. Evidence: schools-landing-review.json and schools-landing-review-accessibility.json.
+
+## Student journey review fixes
+
+See schools-student-feedback-fixes-20260908.md for the nine reported findings, changes and verification. Local browser checks now cover direct retry, feedback updates, student navigation, narrow enrolment and slow-request recovery. Historical answer and feedback records remain preserved.

@@ -25,7 +25,6 @@ try{
   await studentPage.goto('http://localhost:3110/schools/me/reports/'+attempt.id);
   await studentPage.getByText('Synthetic original adviser comment.',{exact:true}).waitFor();checks.push('Private report displays adviser comment');
   await studentPage.goto('http://localhost:3110/schools/me/'+f.assignments[0]+'?retry=1');
-  await studentPage.getByRole('button',{name:'Retry question 1',exact:true}).click();
   const answer=studentPage.getByRole('textbox',{name:'Your answer',exact:true}).first();await answer.waitFor();
   await answer.fill('Our class project finished on Friday. I checked every remaining task with the group. Everyone completed their part.');
   await studentPage.getByRole('button',{name:'I cannot think of an example',exact:true}).first().click();

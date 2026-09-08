@@ -90,7 +90,7 @@ try{
   qaStage('keyboard submit retry');await tabTo(page,page.getByRole('button',{name:'Submit answers',exact:true}));qaStage('submitted heading');await page.getByRole('heading',{name:'Your answers are saved',exact:true}).waitFor();checks.push('Keyboard recovery from a lost submission response on Vercel');
   assert.equal(routeFailed,false);await page.unrouteAll({behavior:'wait'});qaStage('read feedback');
   const submittedRows=await educator.admin.from('schools_assignment_attempts').select('id').eq('assignment_id',f.assignments[0]).eq('student_user_id',studentId).eq('status','submitted').order('attempt_number',{ascending:false});assert(!submittedRows.error);assert.equal(submittedRows.data.length,previous.data.length+1);const attemptId=submittedRows.data[0].id;checks.push('Lost response retry creates exactly one submitted attempt');
-  await tabTo(page,page.getByRole('button',{name:'Read your feedback',exact:true}));await page.getByRole('heading',{name:'Your private feedback',exact:true}).waitFor({timeout:60000});
+  await page.getByRole('heading',{name:'Your private feedback',exact:true}).waitFor({timeout:130000});
   await page.getByRole('heading',{name:'Add this first',exact:true}).waitFor();checks.push('Keyboard-only live feedback reading');
   await page.screenshot({path:'output/playwright/schools-preview-keyboard-feedback-'+mode+'.png',fullPage:true});
   qaStage('adviser keyboard review');await teacherPage.goto(previewOrigin+'/schools/cohorts/'+f.cohorts[0]+'/review?attempt='+attemptId);

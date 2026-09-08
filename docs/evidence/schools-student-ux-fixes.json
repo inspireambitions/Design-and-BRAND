@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-09-08T17:56:00.193Z",
+  "syntheticOnly": true,
+  "origin": "http://localhost:3110",
+  "physicalDevice": false,
+  "feedbackTransition": "simulated pending then ready, real draft and retry storage",
+  "assignment": "c62e6853-3170-4743-955e-32b39ca37f09",
+  "checks": [
+    "Enrolment 848px: no overflow, progress, slow response cue and retained code",
+    "Enrolment 375px: no overflow, progress, slow response cue and retained code",
+    "Student cohort navigation hidden and direct route returns 404",
+    "Pending feedback appears without reload; student high confidence hidden; medium retained; normal form font",
+    "Feedback retry button opens a separate prefilled draft",
+    "Retry URL opens draft directly and preserves both submitted attempts",
+    "Feedback status endpoint rejects inaccessible attempt"
+  ]
+}

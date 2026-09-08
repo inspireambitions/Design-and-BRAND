@@ -35,3 +35,12 @@
 .schools-sample-next{padding:2px 0 14px}.schools-sample-review{background:#eef4ec;border-top:1px solid #9eb8ac;padding:24px}.schools-sample-review h3{margin:8px 0}.schools-sample-review>p:last-child{font-size:13px}
 @media(max-width:820px){.schools-landing-hero{grid-template-columns:1fr;gap:30px;padding-top:8px}.schools-cohort-example{width:100%;max-width:500px}.schools-hero-copy h1{max-width:640px}.schools-sample-review{padding:18px}}
 @media(max-width:400px){.schools-cohort-counts{padding-inline:16px;gap:8px}.schools-example-heading{padding-inline:16px}.schools-cohort-example th,.schools-cohort-example td{padding-inline:4px}.schools-sample-evidence dt{font-size:15px}.schools-sample>blockquote{padding:14px}}
+
+/* Keep enrolment and answer fields within narrow screens, including before fonts settle. */
+.schools-shell,.schools-shell *{box-sizing:border-box}
+.schools-shell main,.schools-shell fieldset,.schools-shell legend,.schools-card,.schools-header>div,.schools-header nav{min-width:0;max-width:100%}
+.schools-shell h1,.schools-shell legend,.schools-shell p,.schools-shell a{overflow-wrap:anywhere}
+.schools-shell input,.schools-shell select,.schools-shell textarea,.schools-shell button{font-family:inherit;font-size:16px;line-height:1.5}
+.schools-shell textarea{resize:vertical}
+.schools-shell progress{max-width:100%;accent-color:#075c50}
+@media(max-width:900px){.schools-header{flex-wrap:wrap}.schools-shell main{padding-inline:20px}}
