@@ -1,11 +1,16 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { schoolsContext } from '@/lib/schools/server';
+import { SchoolsEnrolmentPanel } from '@/components/schools/EnrolmentPanel';
+import {createAdminClient} from '@/lib/supabase/admin';
 export default async function CohortPage({params}:{params:Promise<{id:string}>}) {
   const {id}=await params;
   const {client,user}=await schoolsContext();
   const {data:assigned}=await client.from('schools_cohort_educators').select('cohort_id').eq('cohort_id',id).eq('educator_user_id',user.id).maybeSingle();
   if(!assigned)notFound();
+  // Only the verified assigned adviser receives the private enrolment controls.
+  const admin=createAdminClient();
+  const settings=admin?await admin.from('schools_cohorts').select('enrolment_open,enrolment_code').eq('id',id).maybeSingle():{data:null};
   const {data:cohort}=await client.from('schools_cohorts').select('id,name').eq('id',id).maybeSingle();
   const {data:members}=await client.from('schools_cohort_members').select('student_user_id,display_name,status').eq('cohort_id',id).eq('status','active');
   const {data:assignments}=await client.from('schools_assignments').select('id,role_id,due_at').eq('cohort_id',id).order('created_at',{ascending:false});
@@ -28,6 +33,7 @@ export default async function CohortPage({params}:{params:Promise<{id:string}>})
     <div style={{overflowX:'auto'}}><table><caption>Students in this cohort</caption><thead><tr><th scope="col">Student</th><th scope="col">Submitted attempts</th><th scope="col">Adviser view</th><th scope="col">Support request status</th></tr></thead>
       <tbody>{rows.map(row=><tr key={row.student_user_id}><th scope="row">{row.latest?<Link href={'/schools/cohorts/'+id+'/review?attempt='+row.latest.id}>{row.display_name}</Link>:row.display_name}</th><td>{row.submitted}</td><td>{labels[row.state]}</td><td>{row.support}</td></tr>)}</tbody></table></div>
     <h2>Assignments</h2>
+    {settings.data&&<SchoolsEnrolmentPanel cohortId={id} students={members??[]} initialOpen={settings.data.enrolment_open} initialCode={settings.data.enrolment_code}/>}
     {assignments?.map(a=><article className="schools-card" key={a.id}><h2>{a.role_id}</h2><p>Due {new Date(a.due_at).toLocaleDateString('en-GB',{timeZone:'UTC'})}</p>
       <Link className="schools-button" href={'/schools/cohorts/'+id+'/review?assignment='+a.id}>Review submitted answers</Link></article>)}</>;
 }

@@ -8,12 +8,13 @@ import { Brand } from './Brand';
 import { SkipLink } from './SkipLink';
 import { MobilePracticeCta } from './MobilePracticeCta';
 import { RetryExample } from './RetryExample';
+import './SchoolsProductStrip.css';
 
 export type { MarketingStats };
 
 export { MuqabalaMark } from './Brand';
 
-export function MarketingHeader() {
+export function MarketingHeader({schools=false}:{schools?:boolean}) {
   const { lang, setLang } = useLang();
   const nav = marketingNav[lang];
 
@@ -25,9 +26,10 @@ export function MarketingHeader() {
         <nav className="marketing-links" aria-label={lang === 'ar' ? 'التنقل الرئيسي' : 'Main navigation'}>
           <Link href="/how-it-works">{nav.how}</Link>
           <Link href="/interview-roles">{nav.roles}</Link>
-          <Link href="/how-feedback-works">{nav.feedback}</Link>
+          {!schools&&<Link href="/how-feedback-works">{nav.feedback}</Link>}
           <Link href="/about">{nav.about}</Link>
-          <Link href="/for-employers" className="marketing-links-hiring">{nav.hiring}</Link>
+          <Link href="/for-employers" className="marketing-links-hiring">{schools?'Hiring teams':nav.hiring}</Link>
+          {schools&&<Link href="/schools" className="marketing-links-hiring">Educators</Link>}
         </nav>
         <div className="marketing-actions">
           <button
@@ -46,11 +48,12 @@ export function MarketingHeader() {
             <div>
               <Link href="/how-it-works">{nav.how}</Link>
               <Link href="/interview-roles">{nav.roles}</Link>
-              <Link href="/how-feedback-works">{nav.feedback}</Link>
+              {!schools&&<Link href="/how-feedback-works">{nav.feedback}</Link>}
               <Link href="/about">{nav.about}</Link>
               <Link href="/guides">{nav.blog}</Link>
               <Link href="/faq">{nav.faq}</Link>
               <Link href="/for-employers">{nav.hiring}</Link>
+              {schools&&<Link href="/schools">Educators</Link>}
             </div>
           </details>
         </div>
@@ -96,7 +99,7 @@ function formatCount(value: number, lang: 'en' | 'ar') {
   return new Intl.NumberFormat(lang === 'ar' ? 'ar-EG' : 'en-GB').format(value);
 }
 
-export function MarketingHome({ roles, stats }: { roles: MarketingRole[]; stats: MarketingStats }) {
+export function MarketingHome({ roles, stats, schools=false }: { roles: MarketingRole[]; stats: MarketingStats; schools?:boolean }) {
   const { lang } = useLang();
   const c = homeCopy[lang];
   const popular = roles;
@@ -109,7 +112,7 @@ export function MarketingHome({ roles, stats }: { roles: MarketingRole[]; stats:
 
   return (
     <div className="marketing-site">
-      <MarketingHeader />
+      <MarketingHeader schools={schools}/>
       <main id="main-content" tabIndex={-1}>
         <section className="marketing-hero marketing-wrap">
           <div className="marketing-hero-copy">
@@ -238,6 +241,11 @@ export function MarketingHome({ roles, stats }: { roles: MarketingRole[]; stats:
           </div>
         </section>
       </main>
+      {schools&&<section className="marketing-wrap schools-product-strip" aria-labelledby="schools-products-heading"><h2 id="schools-products-heading">Also from Muqabala</h2>
+        <div><article><h3>Hiring teams</h3><p>Invite candidates and review answers in their own words.</p><Link href="/for-employers">Explore Muqabala for Hiring Teams</Link></article>
+          <article><h3>Educators</h3><p>Assign role-relevant interview practice. Review each student's submitted work.</p><Link href="/schools">Explore Muqabala for Schools and Colleges</Link></article></div>
+        <nav aria-label="Muqabala products"><Link href="/for-employers">Hiring teams</Link> · <Link href="/schools">Educators</Link> · <Link href="/how-feedback-works">Your feedback</Link></nav>
+      </section>}
       <MobilePracticeCta label={marketingNav[lang].practice} anchorId="hero-practice-action" />
     </div>
   );

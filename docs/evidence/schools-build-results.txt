@@ -1,16 +1,20 @@
+
+> muqabala@0.1.0 build
+> next build --webpack
+
 ▲ Next.js 16.3.1 (webpack)
-✓ Running next.config.ts took 38ms
+✓ Running next.config.ts took 39ms
 
   Creating an optimized production build ...
-✓ Compiled successfully in 23.0s
+✓ Compiled successfully in 24.8s
   Running TypeScript ...
-  Finished TypeScript in 8.0s ...
+  Finished TypeScript in 19.8s ...
   Collecting page data using 5 workers ...
-  Generating static pages using 5 workers (0/127) ...
-  Generating static pages using 5 workers (31/127)
-  Generating static pages using 5 workers (63/127)
-  Generating static pages using 5 workers (95/127)
-✓ Generating static pages using 5 workers (127/127) in 5.6s
+  Generating static pages using 5 workers (0/129) ...
+  Generating static pages using 5 workers (32/129)
+  Generating static pages using 5 workers (64/129)
+  Generating static pages using 5 workers (96/129)
+✓ Generating static pages using 5 workers (129/129) in 5.3s
   Finalizing page optimization ...
   Collecting build traces ...
 
@@ -49,9 +53,15 @@ Route (app)                                        Revalidate  Expire
 ├ ƒ /api/practice-plans
 ├ ƒ /api/revalidate
 ├ ƒ /api/schools
+├ ƒ /api/schools/access
+├ ƒ /api/schools/delete
 ├ ƒ /api/schools/feedback
+├ ƒ /api/schools/mail
 ├ ƒ /api/schools/manage
+├ ƒ /api/schools/pilot-contact
+├ ƒ /api/schools/retention
 ├ ƒ /api/schools/sign-out
+├ ƒ /api/schools/staff
 ├ ƒ /api/score
 ├ ƒ /api/screening/auth/request
 ├ ƒ /api/screening/auth/verify
@@ -84,9 +94,7 @@ Route (app)                                        Revalidate  Expire
 ├ ƒ /evaluation-share/[token]
 ├ ○ /faq
 ├ ƒ /for-employers
-├ ○ /for-employers/opengraph-image
 ├ ○ /for-employers/sample-report
-├ ○ /for-employers/twitter-image
 ├ ○ /guides                                                1d      1y
 ├   /guides/[slug]
 │ ├ ● /guides/project-manager-interview-questions          1d      1y
@@ -97,7 +105,6 @@ Route (app)                                        Revalidate  Expire
 ├ ○ /how-it-works
 ├ ○ /icon.svg
 ├ ○ /interview-roles
-├ ○ /opengraph-image
 ├ ○ /practice
 ├ ƒ /practice-plan/[token]
 ├   /practice/[roleId]
@@ -119,17 +126,19 @@ Route (app)                                        Revalidate  Expire
 ├ ƒ /schools/cohorts/[id]
 ├ ƒ /schools/cohorts/[id]/assign
 ├ ƒ /schools/cohorts/[id]/review
+├ ƒ /schools/enrol
 ├ ƒ /schools/founder
 ├ ƒ /schools/me
 ├ ƒ /schools/me/[id]
+├ ƒ /schools/me/delete
 ├ ƒ /schools/me/reports/[attemptId]
 ├ ƒ /schools/me/settings
 ├ ƒ /schools/sign-in
+├ ƒ /schools/staff
 ├ ƒ /share/[token]
 ├ ƒ /sign-in
 ├ ○ /sitemap.xml
-├ ○ /terms
-└ ○ /twitter-image
+└ ○ /terms
 
 
 ƒ Proxy (Middleware)

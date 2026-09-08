@@ -5,16 +5,18 @@ type Question={id:string;role_id:string;question_text:string;rubric:{id:string;l
 export function SchoolsAssign({cohortId,questions}:{cohortId:string;questions:Question[]}){
   const roles=[...new Set(questions.map(q=>q.role_id))];
   const [role,setRole]=useState(roles[0]??'');
+  const [search,setSearch]=useState('');
   const pool=questions.filter(q=>q.role_id===role);
   const [chosen,setChosen]=useState<string[]>(pool.slice(0,3).map(q=>q.id));
   const [due,setDue]=useState(new Date(Date.now()+7*86400000).toISOString().slice(0,10));
   const [message,setMessage]=useState('');const [busy,setBusy]=useState(false);const router=useRouter();
-  return <form className="schools-card" onSubmit={async event=>{event.preventDefault();setBusy(true);try{
+  return <form method="post" className="schools-card" onSubmit={async event=>{event.preventDefault();setBusy(true);try{
     const response=await fetch('/api/schools/manage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({operation:'assignment',payload:{cohortId,roleId:role,questionIds:chosen,dueAt:new Date(due+'T23:59:00Z').toISOString()}})});
     const body=await response.json();if(!response.ok)throw new Error(body.error);router.push('/schools/cohorts/'+cohortId);
   }catch(error){setMessage(error instanceof Error?error.message:'Could not assign.');}finally{setBusy(false);}}}>
+    <label>Search approved roles<input type="search" value={search} onChange={e=>setSearch(e.target.value)}/></label>
     <label>Role<select value={role} onChange={e=>{setRole(e.target.value);setChosen(questions.filter(q=>q.role_id===e.target.value).slice(0,3).map(q=>q.id));}}>
-      {roles.map(r=><option key={r}>{r}</option>)}</select></label>
+      {roles.filter(r=>r===role||r.toLowerCase().includes(search.toLowerCase())).map(r=><option key={r}>{r}</option>)}</select></label>
     {pool.length<3&&<p>Approve at least three questions for this role before assigning.</p>}
     {[0,1,2].map(index=>{const question=pool.find(q=>q.id===chosen[index]);return <fieldset key={index}><legend>Question {index+1}</legend>
       <select aria-label={'Choose question '+(index+1)} value={chosen[index]??''} onChange={e=>{const next=[...chosen];next[index]=e.target.value;setChosen(next);}}>
@@ -25,7 +27,7 @@ export function SchoolsAssign({cohortId,questions}:{cohortId:string;questions:Qu
 }
 export function SchoolsQuestionEditor({cohortId,roles}:{cohortId:string;roles:{id:string;title:string}[]}){
   const [message,setMessage]=useState('');const router=useRouter();
-  return <details className="schools-card"><summary>Approve a question for the bank</summary><form onSubmit={async event=>{event.preventDefault();const form=new FormData(event.currentTarget);
+  return <details className="schools-card"><summary>Approve a question for the bank</summary><form method="post" onSubmit={async event=>{event.preventDefault();const form=new FormData(event.currentTarget);
     const payload={cohortId,roleId:form.get('role'),text:form.get('question'),followUp:form.get('followUp'),
       rubric:[0,1,2,3].map(i=>({id:'e'+i,label:String(form.get('label'+i)),description:String(form.get('description'+i))}))};
     try{const response=await fetch('/api/schools/manage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({operation:'question',payload})});const body=await response.json();

@@ -664,7 +664,7 @@ begin
       where id=request.id returning * into request;
   end if;
   insert into public.schools_audit_log(actor_user_id,action,target_table,target_id,institution_id)
-    values(actor,'support_updated','schools_support_requests',request.id,institution);
+    values(actor,case when request.created_at=request.updated_at then 'support_requested' else 'support_updated' end,'schools_support_requests',request.id,institution);
   return to_jsonb(request);
 end;
 $$;

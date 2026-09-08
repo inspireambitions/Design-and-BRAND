@@ -3,9 +3,11 @@ import { POPULAR_ROLE_IDS, ROLES, type Role } from '@/lib/roles';
 import { catalogueStats } from '@/lib/catalogue-stats';
 import type { MarketingRole } from '@/lib/marketing-content';
 import { MarketingHome } from '@/components/MarketingSite';
+import { pagePreviewMetadata } from '@/lib/link-previews';
+import {schoolsEnabled} from '@/lib/schools/config';
 
 export const metadata: Metadata = {
-  alternates: { canonical: '/' },
+  ...pagePreviewMetadata('home'),
 };
 
 export default function HomePage() {
@@ -24,5 +26,5 @@ export default function HomePage() {
         ? 8
         : role.questions.length,
     }));
-  return <MarketingHome roles={popularRoles} stats={catalogueStats()} />;
+  return <MarketingHome roles={popularRoles} stats={catalogueStats()} schools={schoolsEnabled()} />;
 }

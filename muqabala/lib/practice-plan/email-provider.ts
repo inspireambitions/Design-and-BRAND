@@ -7,6 +7,7 @@ export type EmailMessage = {
   html: string;
   text: string;
   idempotencyKey: string;
+  messageType?: 'practice_plan_v2' | 'schools_staff' | 'schools_assignment' | 'schools_privacy';
 };
 
 export type EmailSendResult = { providerMessageId: string };
@@ -85,7 +86,7 @@ export class ResendEmailProvider implements EmailProvider {
           subject: message.subject,
           html: message.html,
           text: message.text,
-          tags: [{ name: 'message_type', value: 'practice_plan_v2' }],
+          tags: [{ name: 'message_type', value: message.messageType ?? 'practice_plan_v2' }],
         }),
         signal: AbortSignal.timeout(15_000),
       });

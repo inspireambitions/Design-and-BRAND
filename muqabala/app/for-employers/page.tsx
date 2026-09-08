@@ -6,27 +6,11 @@ import { catalogueStats } from '@/lib/catalogue-stats';
 import { employerVolumeEnabled } from '@/lib/employer-volume';
 import { SCREENING_STORAGE_REGION } from '@/lib/marketing-content';
 import { currentUser } from '@/lib/supabase/server';
-
-const DESCRIPTION =
-  'Turn any job advert into an adaptive video interview. Candidates answer in their own words. You review every answer and make every decision. No automatic rejection.';
+import {pagePreviewMetadata} from '@/lib/link-previews';
 
 export const metadata: Metadata = {
-  title: 'Work samples for hiring teams',
-  description: DESCRIPTION,
+  ...pagePreviewMetadata('employers'),
   robots: { index: true, follow: true },
-  alternates: { canonical: '/for-employers' },
-  openGraph: {
-    type: 'website',
-    siteName: 'Muqabala',
-    title: 'See who can do the job.',
-    description: DESCRIPTION,
-    url: '/for-employers',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'See who can do the job.',
-    description: DESCRIPTION,
-  },
 };
 
 export const dynamic = 'force-dynamic';

@@ -5,6 +5,7 @@ import { zodTextFormat } from 'openai/helpers/zod';
 import { createAdminClient } from '../supabase/admin';
 import { calculateEvidence, questionRubricSchema, schoolsFeedbackSchema } from './evidence';
 import { requireSchoolsEnabled } from './access';
+import {schoolsFeedbackCost} from './feedback-cost';
 
 export async function prepareSchoolsFeedback(attemptId:string):Promise<boolean> {
   requireSchoolsEnabled();
@@ -28,6 +29,8 @@ export async function prepareSchoolsFeedback(attemptId:string):Promise<boolean> 
       input:JSON.stringify({questions:questions.map((q,index)=>({questionIndex:index,question:q!.question_text,language:q!.language,rubric:rubrics[index],answer:attempt.answers[index]}))}),
       text:{format:zodTextFormat(schoolsFeedbackSchema,'schools_feedback_v1')},
     });
+    const usage=await admin.rpc('schools_record_usage',{attempt:attemptId,claim,model_name:model,input_count:response.usage?.input_tokens??null,output_count:response.usage?.output_tokens??null,estimated_cost:schoolsFeedbackCost(response.usage?.input_tokens,response.usage?.output_tokens)});
+    if(usage.error)throw new Error('Usage receipt unavailable');
     const validated=calculateEvidence(response.output_parsed,attempt.answers,rubrics);
     if(validated.detail.some(q=>/\u2014|\b(score|grade|rank|top)\b|ready to interview/i.test(q.improvement)))throw new Error('Feedback wording failed validation');
     const {data:stored,error:storeError}=await admin.rpc('schools_store_feedback',{

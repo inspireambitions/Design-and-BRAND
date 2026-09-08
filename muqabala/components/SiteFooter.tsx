@@ -98,7 +98,7 @@ function FooterGroup({ group, mobile = false }: { group: (typeof groups)[number]
   );
 }
 
-export function SiteFooter() {
+export function SiteFooter({schools=false}:{schools?:boolean}) {
   const { t, lang } = useLang();
   const path = usePathname();
   if (path === '/schools' || path?.startsWith('/schools/')) return null;
@@ -152,6 +152,7 @@ export function SiteFooter() {
           </div>
         </div>
 
+        {schools&&path==='/'&&<nav aria-label="Muqabala products"><Link href="/for-employers">Hiring teams</Link>{' · '}<Link href="/schools">Educators</Link></nav>}
         <nav className="site-footer-desktop-groups" aria-label={t('footerNavigation')}>
           {groups.map((group) => <FooterGroup key={group.heading} group={group} />)}
         </nav>

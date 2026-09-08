@@ -35,6 +35,6 @@ export default async function ReviewPage({params,searchParams}:{params:Promise<{
       questions={questions.map(question=>({text:question!.question_text,rubric:question!.rubric}))}
       detail={current.evidence_detail} corrections={corrections??[]} firstAnswers={current.attempt_number>1&&first?first.answers:null}/>
     {review&&review.educator_id!==user.id?<p>This review belongs to another adviser.</p>:<SchoolsReview key={current.id} attemptId={current.id} initial={review}/>}
-    <SchoolsSupport key={current.id+'-support'} cohortId={id} studentId={current.student_user_id} initial={support} owned={!support?.owner_educator_id||support.owner_educator_id===user.id}/>
+    <SchoolsSupport key={current.id+'-support'} cohortId={id} studentId={current.student_user_id} initial={support} unclaimed={!!support&&!support.owner_educator_id} owned={!support?.owner_educator_id||support.owner_educator_id===user.id}/>
     <Link href={'/schools/cohorts/'+id}>Back to cohort</Link></>;
 }

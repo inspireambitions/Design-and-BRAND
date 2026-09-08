@@ -1,0 +1,46 @@
+✔ disabled enrolment does not touch Auth or storage (119.8018ms)
+(node:3488) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Kim/OneDrive/Documents/ChatGPT/trymuqabala.com/schools-pilot-20260908/muqabala/lib/schools/access-secrets.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\Users\Kim\OneDrive\Documents\ChatGPT\trymuqabala.com\schools-pilot-20260908\muqabala\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ email enrolment requires its verified recipient before consuming a grant (27.089ms)
+✔ pseudonymous access returns a fresh recovery code and stores only its hash (21.6466ms)
+✔ failed schools session creation signs out the newly issued identity (15.1039ms)
+✔ browser cannot substitute a student identity in redemption (15.2044ms)
+✔ schools requires an explicit server flag (0.1569ms)
+✔ schools authentication never claims unrelated anonymous practice (0.2044ms)
+✔ evidence derives the count from exact stored answer excerpts (2.8782ms)
+▶ schools database denies cross-institution, draft and employer access
+  ✔ adviser reads only submitted work in assigned cohorts (18.3101ms)
+  ✔ student sees their own draft and submitted attempt (15.9812ms)
+  ✔ institution admin cannot read answer contents (2.9925ms)
+  ✔ an employer identity cannot read any schools table (58.4773ms)
+  ✔ client writes cannot set evidence or impersonate a student (4.7249ms)
+  ✔ service transaction rejects tampered assignment and closes enrolment gates (23.0609ms)
+  ✔ a lost first submission response returns the same reserved attempt (10.0589ms)
+  ✔ support ownership rejects another institution and preserves its assigned owner (46.6786ms)
+  ✔ read markers reject another student and an unseen review revision (9.8719ms)
+  ✔ published question versions cannot be removed or moved (3.8446ms)
+  ✔ review is attempt-bound with exact content undo and stale-write rejection (15.8164ms)
+  ✔ every client table write is denied, including direct deletion (55.0555ms)
+  ✔ idle and revoked sessions cannot read even their own membership (6.316ms)
+  ✔ a retry copies answer provenance without carrying an adviser review (5.6968ms)
+  ✔ private grants deny direct access and enforce invitation gates and email binding (24.1746ms)
+  ✔ staff invitations bind the verified email and queue one delivery with leased retries (25.0441ms)
+  ✔ instrumentation stores safe categories and checks cohort ownership (6.3171ms)
+  ✔ both pseudonymous recovery paths rotate secrets and revoke prior sessions (29.8191ms)
+  ✔ pilot metrics require founder access and never turn unknown costs into zero (11.0061ms)
+  ✔ removed membership loses access immediately (4.4549ms)
+  ✔ submitted answers cannot be overwritten even by the storage worker (1.487ms)
+  ✔ deletion removes school records and keeps the shared Auth account (21.1539ms)
+  ✔ retention uses active activity and archive dates without deleting another cohort (19.0569ms)
+  ✔ Auth deletion guard detects references in any other public product table (10.5446ms)
+✔ schools database denies cross-institution, draft and employer access (2632.4649ms)
+ℹ tests 33
+ℹ suites 0
+ℹ pass 33
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3246.7933

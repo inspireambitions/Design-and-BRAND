@@ -15,3 +15,6 @@
 .schools-skip{position:absolute;left:-10000px}.schools-skip:focus{left:12px;top:12px;background:white;padding:16px;z-index:20}
 .schools-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.schools-shell mark{background:#d9eadc;color:#123c31}
 @media(max-width:600px){.schools-header{align-items:flex-start;flex-direction:column}.schools-card{padding:18px}.schools-header nav{gap:12px}}
+.schools-shell input[type=checkbox]{display:inline-block;width:20px;height:20px;margin:8px 12px 8px 0;vertical-align:middle}
+.schools-shell table{width:100%;border-collapse:collapse;margin:28px 0}.schools-shell th,.schools-shell td{text-align:left;padding:14px 12px;border-bottom:1px solid #c9d8d0}.schools-shell caption{text-align:left;font-weight:bold;margin:12px 0}
+.schools-landing-hero{padding:30px 0 52px;max-width:850px}.schools-landing-hero>p{font-size:21px;max-width:690px}.schools-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:32px;padding:24px 0}.schools-steps strong{font-size:18px}.schools-sample{border-left:5px solid #075c50}.schools-section{padding-block:28px;border-top:1px solid #c9d8d0}.schools-shell summary{cursor:pointer;font-weight:bold;padding:10px 0}@media(max-width:650px){.schools-steps{grid-template-columns:1fr}}

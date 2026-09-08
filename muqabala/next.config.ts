@@ -45,6 +45,10 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      { source:'/opengraph-image',destination:'/og/home.png',permanent:true },
+      { source:'/twitter-image',destination:'/og/home.png',permanent:true },
+      { source:'/for-employers/opengraph-image',destination:'/og/employers.png',permanent:true },
+      { source:'/for-employers/twitter-image',destination:'/og/employers.png',permanent:true },
       { source: '/blog', destination: '/guides', permanent: true },
       { source: '/blog/:path*', destination: '/guides/:path*', permanent: true },
       { source: '/articles', destination: '/guides', permanent: true },

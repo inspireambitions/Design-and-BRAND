@@ -1,0 +1,30 @@
+{
+  "checkedAt": "2026-09-08T12:55:54.707Z",
+  "results": [
+    {
+      "page": "/",
+      "title": "Muqabala: private interview practice",
+      "width": 1200,
+      "height": 630,
+      "bytes": 22887,
+      "renderedMetadata": true
+    },
+    {
+      "page": "/schools",
+      "title": "Muqabala for Schools and Colleges",
+      "width": 1200,
+      "height": 630,
+      "bytes": 25052,
+      "renderedMetadata": true
+    },
+    {
+      "page": "/for-employers",
+      "title": "Muqabala for Hiring Teams",
+      "width": 1200,
+      "height": 630,
+      "bytes": 20795,
+      "renderedMetadata": true
+    }
+  ],
+  "platformPreviewsVerified": false
+}

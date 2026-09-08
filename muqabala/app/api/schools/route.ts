@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { hasTrustedOrigin } from '@/lib/server/security';
 import { touchSchoolsSession } from '@/lib/schools/session';
+import {schoolsDevice} from '@/lib/schools/device';
 
 const answers = z.array(z.string().max(12000)).length(3);
 const attempt = z.object({
@@ -11,11 +12,14 @@ const attempt = z.object({
   revision: z.number().int().nonnegative(), answers,
 }).strip();
 const schema = z.discriminatedUnion('operation', [
+  z.object({operation:z.literal('claim_support'),payload:z.object({cohortId:z.string().uuid(),studentId:z.string().uuid()}).strict()}),
+  z.object({operation:z.literal('review_open'),payload:z.object({attemptId:z.string().uuid()}).strict()}),
+  z.object({operation:z.literal('no_example'),payload:z.object({cohortId:z.string().uuid()}).strict()}),
   z.object({operation:z.literal('read'),payload:z.object({attemptId:z.string().uuid(),feedback:z.boolean(),reviewRevision:z.number().int().positive().nullable()}).strict()}),
   z.object({operation:z.literal('adviser_support'),payload:z.object({cohortId:z.string().uuid(),studentId:z.string().uuid(),status:z.enum(['open','scheduled','closed']),note:z.string().max(1000)}).strict()}),
   z.object({operation:z.literal('retry'),payload:z.object({attemptId:z.string().uuid()}).strict()}),
   z.object({operation:z.literal('correct'),payload:z.object({attemptId:z.string().uuid(),question:z.number().int().min(0).max(2),
-    element:z.string().min(1).max(80),present:z.boolean(),reason:z.string().trim().min(1).max(500)}).strict()}),
+    element:z.string().min(1).max(80),present:z.boolean(),reason:z.string().trim().min(1).max(500),revision:z.number().int().nonnegative()}).strict()}),
   z.object({ operation: z.literal('draft'), payload: attempt }),
   z.object({ operation: z.literal('submit'), payload: attempt }),
   z.object({ operation: z.literal('review'), payload: z.object({
@@ -44,18 +48,8 @@ export async function POST(request: Request) {
   if (!parsed.success) return Response.json({error:'Check your answers and try again.'},{status:400});
   const admin=createAdminClient();
   if (!admin) return Response.json({error:'Service unavailable'},{status:503});
-  const {data:result,error}=parsed.data.operation==='read'?await admin.rpc('schools_mark_read',{
-    actor:data.user.id,attempt:parsed.data.payload.attemptId,feedback:parsed.data.payload.feedback,review_revision:parsed.data.payload.reviewRevision,
-  }):parsed.data.operation==='adviser_support'?await admin.rpc('schools_adviser_support',{
-    actor:data.user.id,cohort:parsed.data.payload.cohortId,student:parsed.data.payload.studentId,
-    new_status:parsed.data.payload.status,note_text:parsed.data.payload.note,
-  }):parsed.data.operation==='retry'?await admin.rpc('schools_retry',{
-    actor:data.user.id,source_attempt:parsed.data.payload.attemptId
-  }):parsed.data.operation==='correct'?await admin.rpc('schools_correct_evidence',{
-    actor:data.user.id,attempt:parsed.data.payload.attemptId,question:parsed.data.payload.question,
-    element:parsed.data.payload.element,present:parsed.data.payload.present,reason_text:parsed.data.payload.reason,
-  }):await admin.rpc('schools_write',{
-    actor:data.user.id,operation:parsed.data.operation,payload:parsed.data.payload,
+  const {data:result,error}=await admin.rpc('schools_action',{
+    actor:data.user.id,operation:parsed.data.operation,payload:parsed.data.payload,device:schoolsDevice(request),
   });
   if(error) {
     const status=error.code==='42501'?403:error.code==='40001'?409:error.code==='23514'?400:503;

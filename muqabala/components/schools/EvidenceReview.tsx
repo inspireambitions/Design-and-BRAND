@@ -18,7 +18,7 @@ export function SchoolsEvidenceReview({attemptId,answers,questions,detail,correc
     setBusy(true);setError('');
     try {
       const response=await fetch('/api/schools',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({operation:'correct',payload:{attemptId,question,element:element.id,present:!element.present,reason}})});
+        body:JSON.stringify({operation:'correct',payload:{attemptId,question,element:element.id,present:!element.present,reason,revision:corrections.length}})});
       const body=await response.json();if(!response.ok)throw new Error(body.error);
       setEditing(null);setReason('');router.refresh();
     }catch(error){setError(error instanceof Error?error.message:'Could not save the correction.');}

@@ -5,6 +5,7 @@ import { GoogleAnalytics } from '@/components/GoogleAnalytics';
 import { WebVitals } from '@/components/WebVitals';
 import { LanguageProvider } from '@/components/LanguageProvider';
 import { SiteFooter } from '@/components/SiteFooter';
+import {schoolsEnabled} from '@/lib/schools/config';
 
 const displayFont = Bricolage_Grotesque({
   subsets: ['latin'],
@@ -43,9 +44,11 @@ export const metadata: Metadata = {
     title: 'Muqabala | Interview practice for Gulf jobs',
     description: 'Practice real Gulf interview questions out loud, in English or Arabic, and get honest feedback. Free, no account. We score your answer. Not your accent. Not your face.',
     url: '/',
+    images: [{url:'https://trymuqabala.com/og/home.png',width:1200,height:630}],
   },
   twitter: {
     card: 'summary_large_image',
+    images: ['https://trymuqabala.com/og/home.png'],
     title: 'Muqabala | Interview practice for Gulf jobs',
     description: 'Practice real Gulf interview questions out loud, in English or Arabic, and get honest feedback. Free, no account. We score your answer. Not your accent. Not your face.',
   },
@@ -90,7 +93,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
         <LanguageProvider>
           {children}
-          <SiteFooter />
+          <SiteFooter schools={schoolsEnabled()} />
         </LanguageProvider>
         <GoogleAnalytics />
         <WebVitals />

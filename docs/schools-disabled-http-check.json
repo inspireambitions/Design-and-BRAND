@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-09-08T11:38:19.161Z",
+  "checkedAt": "2026-09-08T12:55:00.406Z",
   "origin": "http://127.0.0.1:3109",
   "results": [
     {
@@ -14,6 +14,16 @@
     },
     {
       "method": "GET",
+      "route": "/schools/staff",
+      "status": 404
+    },
+    {
+      "method": "HEAD",
+      "route": "/schools/staff",
+      "status": 404
+    },
+    {
+      "method": "GET",
       "route": "/schools/sign-in",
       "status": 404
     },
@@ -64,12 +74,32 @@
     },
     {
       "method": "GET",
+      "route": "/schools/me/delete",
+      "status": 404
+    },
+    {
+      "method": "HEAD",
+      "route": "/schools/me/delete",
+      "status": 404
+    },
+    {
+      "method": "GET",
       "route": "/schools/founder",
       "status": 404
     },
     {
       "method": "HEAD",
       "route": "/schools/founder",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "route": "/schools/enrol",
+      "status": 404
+    },
+    {
+      "method": "HEAD",
+      "route": "/schools/enrol",
       "status": 404
     },
     {
@@ -159,6 +189,41 @@
     },
     {
       "method": "GET",
+      "route": "/api/schools/staff",
+      "status": 404
+    },
+    {
+      "method": "POST",
+      "route": "/api/schools/staff",
+      "status": 404
+    },
+    {
+      "method": "PUT",
+      "route": "/api/schools/staff",
+      "status": 404
+    },
+    {
+      "method": "PATCH",
+      "route": "/api/schools/staff",
+      "status": 404
+    },
+    {
+      "method": "DELETE",
+      "route": "/api/schools/staff",
+      "status": 404
+    },
+    {
+      "method": "HEAD",
+      "route": "/api/schools/staff",
+      "status": 404
+    },
+    {
+      "method": "OPTIONS",
+      "route": "/api/schools/staff",
+      "status": 404
+    },
+    {
+      "method": "GET",
       "route": "/api/schools/sign-out",
       "status": 404
     },
@@ -190,6 +255,76 @@
     {
       "method": "OPTIONS",
       "route": "/api/schools/sign-out",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "route": "/api/schools/retention",
+      "status": 404
+    },
+    {
+      "method": "POST",
+      "route": "/api/schools/retention",
+      "status": 404
+    },
+    {
+      "method": "PUT",
+      "route": "/api/schools/retention",
+      "status": 404
+    },
+    {
+      "method": "PATCH",
+      "route": "/api/schools/retention",
+      "status": 404
+    },
+    {
+      "method": "DELETE",
+      "route": "/api/schools/retention",
+      "status": 404
+    },
+    {
+      "method": "HEAD",
+      "route": "/api/schools/retention",
+      "status": 404
+    },
+    {
+      "method": "OPTIONS",
+      "route": "/api/schools/retention",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "route": "/api/schools/pilot-contact",
+      "status": 404
+    },
+    {
+      "method": "POST",
+      "route": "/api/schools/pilot-contact",
+      "status": 404
+    },
+    {
+      "method": "PUT",
+      "route": "/api/schools/pilot-contact",
+      "status": 404
+    },
+    {
+      "method": "PATCH",
+      "route": "/api/schools/pilot-contact",
+      "status": 404
+    },
+    {
+      "method": "DELETE",
+      "route": "/api/schools/pilot-contact",
+      "status": 404
+    },
+    {
+      "method": "HEAD",
+      "route": "/api/schools/pilot-contact",
+      "status": 404
+    },
+    {
+      "method": "OPTIONS",
+      "route": "/api/schools/pilot-contact",
       "status": 404
     },
     {
@@ -229,6 +364,41 @@
     },
     {
       "method": "GET",
+      "route": "/api/schools/mail",
+      "status": 404
+    },
+    {
+      "method": "POST",
+      "route": "/api/schools/mail",
+      "status": 404
+    },
+    {
+      "method": "PUT",
+      "route": "/api/schools/mail",
+      "status": 404
+    },
+    {
+      "method": "PATCH",
+      "route": "/api/schools/mail",
+      "status": 404
+    },
+    {
+      "method": "DELETE",
+      "route": "/api/schools/mail",
+      "status": 404
+    },
+    {
+      "method": "HEAD",
+      "route": "/api/schools/mail",
+      "status": 404
+    },
+    {
+      "method": "OPTIONS",
+      "route": "/api/schools/mail",
+      "status": 404
+    },
+    {
+      "method": "GET",
       "route": "/api/schools/feedback",
       "status": 404
     },
@@ -260,6 +430,76 @@
     {
       "method": "OPTIONS",
       "route": "/api/schools/feedback",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "route": "/api/schools/delete",
+      "status": 404
+    },
+    {
+      "method": "POST",
+      "route": "/api/schools/delete",
+      "status": 404
+    },
+    {
+      "method": "PUT",
+      "route": "/api/schools/delete",
+      "status": 404
+    },
+    {
+      "method": "PATCH",
+      "route": "/api/schools/delete",
+      "status": 404
+    },
+    {
+      "method": "DELETE",
+      "route": "/api/schools/delete",
+      "status": 404
+    },
+    {
+      "method": "HEAD",
+      "route": "/api/schools/delete",
+      "status": 404
+    },
+    {
+      "method": "OPTIONS",
+      "route": "/api/schools/delete",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "route": "/api/schools/access",
+      "status": 404
+    },
+    {
+      "method": "POST",
+      "route": "/api/schools/access",
+      "status": 404
+    },
+    {
+      "method": "PUT",
+      "route": "/api/schools/access",
+      "status": 404
+    },
+    {
+      "method": "PATCH",
+      "route": "/api/schools/access",
+      "status": 404
+    },
+    {
+      "method": "DELETE",
+      "route": "/api/schools/access",
+      "status": 404
+    },
+    {
+      "method": "HEAD",
+      "route": "/api/schools/access",
+      "status": 404
+    },
+    {
+      "method": "OPTIONS",
+      "route": "/api/schools/access",
       "status": 404
     },
     {

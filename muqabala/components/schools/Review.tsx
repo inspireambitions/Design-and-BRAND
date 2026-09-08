@@ -7,6 +7,7 @@ export function SchoolsReview({attemptId,initial}:{attemptId:string;initial:{sta
   const [undo,setUndo]=useState(false);
   const [message,setMessage]=useState('');
   const [busy,setBusy]=useState(false);
+  useEffect(()=>{void fetch('/api/schools',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({operation:'review_open',payload:{attemptId}})}).catch(()=>{});},[attemptId]);
   useEffect(()=>{if(!undo)return;const timer=setTimeout(()=>setUndo(false),10000);return()=>clearTimeout(timer);},[undo,revision]);
   async function send(operation:'review'|'undo_review') {
     setBusy(true);setMessage('');

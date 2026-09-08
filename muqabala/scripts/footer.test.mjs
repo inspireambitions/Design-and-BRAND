@@ -42,7 +42,7 @@ test('universal interview footer stays visible during setup and competency prepa
 test('global footer uses established internal links and safe external links', () => {
   const footer = read('components/SiteFooter.tsx');
   const layout = read('app/layout.tsx');
-  assert.match(layout, /<SiteFooter\s*\/>/);
+  assert.match(layout, /<SiteFooter(?:\s+schools=\{schoolsEnabled\(\)\})?\s*\/>/);
   assert.match(footer, /import Link from 'next\/link'/);
   assert.match(footer, /target="_blank" rel="noopener noreferrer"/);
   assert.match(footer, /footer_link_clicked/);
