@@ -1,0 +1,10 @@
+{
+  "checkedAt": "2026-09-08T13:22:05.854Z",
+  "checks": [
+    "Hosted browser review undo restores exact state and comment",
+    "Private report displays adviser comment",
+    "No-example prompts remain available on retry",
+    "New submission has no carried-over review"
+  ],
+  "syntheticOnly": true
+}

@@ -1,0 +1,11 @@
+{
+  "checkedAt": "2026-09-08T15:32:49.404Z",
+  "previewOrigin": "https://muqabala-schools-pilot-20260908-inspire14.vercel.app",
+  "controlledInbox": true,
+  "checks": [
+    "Delivered email code starts a Schools session",
+    "Verified intended email redeems its controlled cohort invitation",
+    "Enrolled email user can open an assigned practice card",
+    "Used email enrolment link cannot be replayed"
+  ]
+}

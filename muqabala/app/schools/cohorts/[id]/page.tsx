@@ -31,7 +31,7 @@ export default async function CohortPage({params}:{params:Promise<{id:string}>})
       <dt>Not reviewed</dt><dd>{notReviewed}</dd><dt>Support requests open</dt><dd>{support?.length??0}</dd></dl>
     <Link className="schools-button" href={notReviewed?'/schools/cohorts/'+id+'/review?assignment='+active!.id:'/schools/cohorts/'+id+'/assign'}>{notReviewed?'Review '+notReviewed+' not reviewed':'Assign'}</Link>
     <div style={{overflowX:'auto'}}><table><caption>Students in this cohort</caption><thead><tr><th scope="col">Student</th><th scope="col">Submitted attempts</th><th scope="col">Adviser view</th><th scope="col">Support request status</th></tr></thead>
-      <tbody>{rows.map(row=><tr key={row.student_user_id}><th scope="row">{row.latest?<Link href={'/schools/cohorts/'+id+'/review?attempt='+row.latest.id}>{row.display_name}</Link>:row.display_name}</th><td>{row.submitted}</td><td>{labels[row.state]}</td><td>{row.support}</td></tr>)}</tbody></table></div>
+      <tbody>{rows.map(row=><tr key={row.student_user_id}><th scope="row">{row.latest?<Link href={'/schools/cohorts/'+id+'/review?attempt='+row.latest.id}>{row.display_name}</Link>:row.display_name}</th><td>{row.submitted}</td><td>{labels[row.state]}</td><td><Link href={'/schools/cohorts/'+id+'/support/'+row.student_user_id}>{row.support==='None'?'Request support':row.support}</Link></td></tr>)}</tbody></table></div>
     <h2>Assignments</h2>
     {settings.data&&<SchoolsEnrolmentPanel cohortId={id} students={members??[]} initialOpen={settings.data.enrolment_open} initialCode={settings.data.enrolment_code}/>}
     {assignments?.map(a=><article className="schools-card" key={a.id}><h2>{a.role_id}</h2><p>Due {new Date(a.due_at).toLocaleDateString('en-GB',{timeZone:'UTC'})}</p>

@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-09-08T15:26:55.974Z",
+  "previewOrigin": "https://muqabala-schools-pilot-20260908-inspire14.vercel.app",
+  "mode": "desktop",
+  "browser": "Chrome headless",
+  "physicalDevice": false,
+  "syntheticOnly": true,
+  "checks": [
+    "Keyboard-only pseudonymous enrolment and recovery-code acknowledgement",
+    "All three keyboard answers and autosaves survive refresh on the preview",
+    "Keyboard recovery from a lost submission response on Vercel",
+    "Lost response retry creates exactly one submitted attempt",
+    "Keyboard-only live feedback reading",
+    "Adviser saves an attempt-bound review with keyboard controls and the student reads it privately",
+    "Keyboard sign out everywhere closes access",
+    "Disposable keyboard learner recovered and deleted after testing"
+  ]
+}

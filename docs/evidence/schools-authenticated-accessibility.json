@@ -1,0 +1,23 @@
+{
+  "checkedAt": "2026-09-08T13:31:52.550Z",
+  "results": [
+    {
+      "route": "/schools/me",
+      "accessibility": 100,
+      "finalUrl": "http://localhost:3110/schools/me",
+      "failures": []
+    },
+    {
+      "route": "/schools/cohorts/7c13d408-3ef7-43a8-8af1-0795d26ccc63",
+      "accessibility": 100,
+      "finalUrl": "http://localhost:3110/schools/cohorts/7c13d408-3ef7-43a8-8af1-0795d26ccc63",
+      "failures": []
+    },
+    {
+      "route": "/schools/cohorts/7c13d408-3ef7-43a8-8af1-0795d26ccc63/review",
+      "accessibility": 100,
+      "finalUrl": "http://localhost:3110/schools/cohorts/7c13d408-3ef7-43a8-8af1-0795d26ccc63/review",
+      "failures": []
+    }
+  ]
+}

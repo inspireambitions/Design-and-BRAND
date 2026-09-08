@@ -8,6 +8,10 @@ import { questionRubricSchema } from '@/lib/schools/evidence';
 import {schoolsDevice} from '@/lib/schools/device';
 const uuid=z.string().uuid();
 const schema=z.discriminatedUnion('operation',[
+  z.object({operation:z.literal('retry_feedback'),payload:z.object({attemptId:uuid}).strict()}),
+  z.object({operation:z.literal('retry_mail'),payload:z.object({messageId:uuid}).strict()}),
+  z.object({operation:z.literal('institution_details'),payload:z.object({institutionId:uuid,name:z.string().trim().min(1).max(160),country:z.string().trim().min(2).max(80)}).strict()}),
+  z.object({operation:z.literal('finish_privacy'),payload:z.object({jobId:uuid,supplierReference:z.string().trim().min(1).max(500),notificationReference:z.string().trim().min(1).max(500)}).strict()}),
   z.object({operation:z.literal('remove_member'),payload:z.object({cohortId:uuid,studentId:uuid}).strict()}),
   z.object({operation:z.literal('archive_cohort'),payload:z.object({cohortId:uuid}).strict()}),
   z.object({operation:z.literal('institution'),payload:z.object({name:z.string().trim().min(1).max(160),country:z.string().trim().min(2).max(80),language:z.enum(['en','ar'])}).strict()}),
@@ -28,7 +32,12 @@ export async function POST(request:Request){
   let body:unknown;try{body=JSON.parse(text);}catch{return Response.json({error:'Invalid request'},{status:400});}
   const parsed=schema.safeParse(body);if(!parsed.success)return Response.json({error:'Check all fields and try again.'},{status:400});
   const admin=createAdminClient();if(!admin)return Response.json({error:'Service unavailable'},{status:503});
-  const {data,error}=await admin.rpc('schools_manage_action',{actor:identity.user.id,operation:parsed.data.operation,payload:parsed.data.payload,device:schoolsDevice(request)});
+  const input=parsed.data;
+  const {data,error}=input.operation==='institution_details'?await admin.rpc('schools_update_institution',{actor:identity.user.id,institution:input.payload.institutionId,new_name:input.payload.name,new_country:input.payload.country}):
+    input.operation==='retry_mail'?await admin.rpc('schools_retry_mail',{actor:identity.user.id,message:input.payload.messageId}):
+    input.operation==='retry_feedback'?await admin.rpc('schools_retry_feedback',{actor:identity.user.id,attempt:input.payload.attemptId}):
+    input.operation==='finish_privacy'?await admin.rpc('schools_finish_privacy',{actor:identity.user.id,job:input.payload.jobId,supplier_reference:input.payload.supplierReference,notification_reference:input.payload.notificationReference}):
+    await admin.rpc('schools_manage_action',{actor:identity.user.id,operation:input.operation,payload:input.payload,device:schoolsDevice(request)});
   if(error)return Response.json({error:error.code==='42501'?'You cannot change this record.':'Could not save. Check the fields and your institution setup.'},{status:error.code==='42501'?403:400});
   return Response.json({result:data},{headers:{'Cache-Control':'no-store'}});
 }

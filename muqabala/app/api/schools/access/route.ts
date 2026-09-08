@@ -4,7 +4,7 @@ import { schoolsUnavailable } from '@/lib/schools/access';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { hasTrustedOrigin } from '@/lib/server/security';
-import { limitAuth } from '@/lib/rate-limit';
+import {limitSchoolsAccessIp,limitSchoolsRedemption,limitSchoolsIssuance,schoolsAccessLimitResponse} from '@/lib/schools/access-rate-limit';
 import { registerSchoolsSession, touchSchoolsSession } from '@/lib/schools/session';
 import { newSchoolsSecret, schoolsEmailHash, schoolsInternalEmail, schoolsSecretHash } from '@/lib/schools/access-secrets';
 import {parseContacts} from '@/lib/employer-volume/contacts';
@@ -17,12 +17,14 @@ const batch=z.object({operation:z.literal('issue_batch'),cohortId:z.string().uui
 export async function POST(request:Request) {
   const unavailable=schoolsUnavailable();if(unavailable)return unavailable;
   if(!hasTrustedOrigin(request))return Response.json({error:'Request not allowed.'},{status:403});
-  // A fixed bucket prevents callers from evading the limit with fresh codes.
-  if((await limitAuth(request,'schools-access')).limited)return Response.json({error:'Please wait before trying again.'},{status:429});
+  const ipLimit=schoolsAccessLimitResponse(await limitSchoolsAccessIp(request));if(ipLimit)return ipLimit;
   const body=await request.text();if(body.length>12000)return Response.json({error:'Request too large.'},{status:413});
   let raw:unknown;try{raw=JSON.parse(body);}catch{return Response.json({error:'Check your request.'},{status:400});}
   const parsed=z.union([issue,redeem,batch]).safeParse(raw);
   if(!parsed.success)return Response.json({error:'Check the code and all fields.'},{status:400});
+  if(parsed.data.operation==='redeem'){
+    const codeLimit=schoolsAccessLimitResponse(await limitSchoolsRedemption(parsed.data.secret));if(codeLimit)return codeLimit;
+  }
   const admin=createAdminClient();const client=await createClient();
   if(!admin||!client)return Response.json({error:'Service unavailable.'},{status:503});
   let pseudonymousSessionStarted=false;
@@ -30,6 +32,7 @@ export async function POST(request:Request) {
     const input=parsed.data;
     if(input.operation==='issue_batch'){
       const identity=await touchSchoolsSession(client);if(!identity)return Response.json({error:'Sign in again.'},{status:401});
+      const actorLimit=schoolsAccessLimitResponse(await limitSchoolsIssuance(identity.user.id));if(actorLimit)return actorLimit;
       const contacts=parseContacts(input.contacts,'text');
       if(contacts.invalid.length||!contacts.valid.length||contacts.valid.length>25||contacts.valid.some(c=>!c.email||c.email.endsWith('.invalid')))
         return Response.json({error:'Enter up to 25 valid institution email addresses.'},{status:400});
@@ -42,6 +45,7 @@ export async function POST(request:Request) {
     }
     if(input.operation==='issue') {
       const identity=await touchSchoolsSession(client);if(!identity)return Response.json({error:'Sign in again.'},{status:401});
+      const actorLimit=schoolsAccessLimitResponse(await limitSchoolsIssuance(identity.user.id));if(actorLimit)return actorLimit;
       const secret=newSchoolsSecret();
       const {data:grant,error}=await admin.rpc('schools_issue_access',{actor:identity.user.id,cohort:input.cohortId,purpose:input.purpose,mode:input.mode,
         secret_hash:schoolsSecretHash(secret),recipient_hash:input.mode==='email'?schoolsEmailHash(input.email!):null,

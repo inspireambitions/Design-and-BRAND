@@ -1,0 +1,131 @@
+{
+  "checkedAt": "2026-09-08T13:57:45.568Z",
+  "previewOrigin": "https://muqabala-schools-pilot-20260908-inspire14.vercel.app",
+  "syntheticOnly": true,
+  "provider": "openai",
+  "model": "gpt-4.1-mini",
+  "contract": "schools-text-evidence-v1",
+  "evidenceCovered": 11,
+  "detail": [
+    {
+      "elements": [
+        {
+          "id": "e0",
+          "end": 37,
+          "start": 0,
+          "present": true,
+          "confidence": "high",
+          "supportingText": "Our class project finished on Friday."
+        },
+        {
+          "id": "e1",
+          "end": 84,
+          "start": 38,
+          "present": true,
+          "confidence": "high",
+          "supportingText": "I checked every remaining task with the group."
+        },
+        {
+          "id": "e2",
+          "end": 115,
+          "start": 38,
+          "present": true,
+          "confidence": "high",
+          "supportingText": "I checked every remaining task with the group. Everyone completed their part."
+        },
+        {
+          "id": "e3",
+          "end": 37,
+          "start": 0,
+          "present": true,
+          "confidence": "medium",
+          "supportingText": "Our class project finished on Friday."
+        }
+      ],
+      "improvement": "Include a clearer explanation of how your actions specifically helped the group meet the deadline and what the final result was.",
+      "questionIndex": 0
+    },
+    {
+      "elements": [
+        {
+          "id": "e0",
+          "end": 32,
+          "start": 0,
+          "present": true,
+          "confidence": "high",
+          "supportingText": "Our project materials were late."
+        },
+        {
+          "id": "e1",
+          "end": 97,
+          "start": 33,
+          "present": true,
+          "confidence": "high",
+          "supportingText": "I found another supplier and asked the tutor to check the order."
+        },
+        {
+          "id": "e2",
+          "end": null,
+          "start": null,
+          "present": false,
+          "confidence": "medium",
+          "supportingText": ""
+        },
+        {
+          "id": "e3",
+          "end": 120,
+          "start": 98,
+          "present": true,
+          "confidence": "medium",
+          "supportingText": "The project continued."
+        }
+      ],
+      "improvement": "Explain more about how you worked with others while solving the problem, such as collaborating or communicating with team members.",
+      "questionIndex": 1
+    },
+    {
+      "elements": [
+        {
+          "id": "e0",
+          "end": 33,
+          "start": 0,
+          "present": true,
+          "confidence": "high",
+          "supportingText": "My tutor asked for clearer notes."
+        },
+        {
+          "id": "e1",
+          "end": 86,
+          "start": 34,
+          "present": true,
+          "confidence": "high",
+          "supportingText": "I used headings and asked a classmate to check them."
+        },
+        {
+          "id": "e2",
+          "end": 86,
+          "start": 34,
+          "present": true,
+          "confidence": "high",
+          "supportingText": "I used headings and asked a classmate to check them."
+        },
+        {
+          "id": "e3",
+          "end": 113,
+          "start": 87,
+          "present": true,
+          "confidence": "high",
+          "supportingText": "We could follow the notes."
+        }
+      ],
+      "improvement": "Provide more detail on how this feedback improved your work or learning beyond just following the notes.",
+      "questionIndex": 2
+    }
+  ],
+  "checks": [
+    "Protected preview opens with the scoped share link",
+    "Live provider returns and stores answer-text feedback",
+    "Stored evidence count matches the rubric elements",
+    "Private report renders on Vercel"
+  ]
+}

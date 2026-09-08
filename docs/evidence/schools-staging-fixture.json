@@ -1,0 +1,46 @@
+{
+  "stagingRef": "okrsezhospztwtptqhpo",
+  "syntheticOnly": true,
+  "users": {
+    "founder": {
+      "id": "3ce6943e-edf0-4ede-9caf-76cf20961153",
+      "email": "schools-qa-founder-f2204f38-cedf-4394-9b5c-9bdb56eace88@example.invalid"
+    },
+    "admin": {
+      "id": "75b0ba91-f002-4f8a-b088-8465267e61af",
+      "email": "schools-qa-admin-9a102084-899d-4239-9682-fc4634c7d5d6@example.invalid"
+    },
+    "educator": {
+      "id": "d5e10d27-40f2-4b49-aa40-83c6b2120c2d",
+      "email": "schools-qa-educator-5d9b5374-6063-45d1-9b9d-79b5a69031a2@example.invalid"
+    },
+    "student": {
+      "id": "62efd506-a543-484e-af6c-40ff645a9a94",
+      "email": "schools-qa-student-c7757e24-db7f-4c4b-916a-ad0aedc0e4c8@example.invalid"
+    },
+    "otherEducator": {
+      "id": "c35dc799-0eab-470a-94ee-868fd4c20cb0",
+      "email": "schools-qa-otherEducator-19ddfb4c-3198-49a5-b180-a0b63da7944c@example.invalid"
+    },
+    "otherStudent": {
+      "id": "2321413d-4042-4f11-9ec4-951056f58633",
+      "email": "schools-qa-otherStudent-457c8e50-457a-4449-a778-c5706447e9ff@example.invalid"
+    },
+    "employer": {
+      "id": "6bdb2f2f-9ba4-4f95-81ca-f18e55032493",
+      "email": "schools-qa-employer-2fe67413-8779-458d-84fb-80c86f738204@example.invalid"
+    }
+  },
+  "institutions": [
+    "50d4b899-8368-45ec-9e03-06edbee48a2f",
+    "cd27f1ac-c2aa-42e6-978d-37bed922fb17"
+  ],
+  "cohorts": [
+    "7c13d408-3ef7-43a8-8af1-0795d26ccc63",
+    "1aafa09b-d400-4933-9d35-db61ea9b7932"
+  ],
+  "assignments": [
+    "0639556b-8f5f-440c-8d76-934ba764397a",
+    "7cc5e0b8-18e9-43c1-86ea-765eabdb2f70"
+  ]
+}

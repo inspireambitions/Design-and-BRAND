@@ -1,0 +1,622 @@
+{
+  "checkedAt": "2026-09-08T14:10:42.900Z",
+  "syntheticOnly": true,
+  "model": "gpt-4.1-mini",
+  "results": [
+    {
+      "name": "original-1",
+      "httpStatus": 200,
+      "status": "ready",
+      "failure": null,
+      "covered": 11,
+      "detail": [
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": 37,
+              "start": 0,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "Our class project finished on Friday."
+            },
+            {
+              "id": "e1",
+              "end": 84,
+              "start": 38,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I checked every remaining task with the group."
+            },
+            {
+              "id": "e2",
+              "end": 115,
+              "start": 38,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I checked every remaining task with the group. Everyone completed their part."
+            },
+            {
+              "id": "e3",
+              "end": 115,
+              "start": 85,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "Everyone completed their part."
+            }
+          ],
+          "improvement": "Provide more detail about the specific project and the steps you took to help meet the deadline, including any challenges faced.",
+          "questionIndex": 0
+        },
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": 32,
+              "start": 0,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "Our project materials were late."
+            },
+            {
+              "id": "e1",
+              "end": 97,
+              "start": 33,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I found another supplier and asked the tutor to check the order."
+            },
+            {
+              "id": "e2",
+              "end": null,
+              "start": null,
+              "present": false,
+              "confidence": "high",
+              "supportingText": ""
+            },
+            {
+              "id": "e3",
+              "end": 120,
+              "start": 98,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "The project continued."
+            }
+          ],
+          "improvement": "Include an example of collaborating or communicating with others during the problem-solving process.",
+          "questionIndex": 1
+        },
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": 33,
+              "start": 0,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "My tutor asked for clearer notes."
+            },
+            {
+              "id": "e1",
+              "end": 86,
+              "start": 34,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I used headings and asked a classmate to check them."
+            },
+            {
+              "id": "e2",
+              "end": 86,
+              "start": 34,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I used headings and asked a classmate to check them."
+            },
+            {
+              "id": "e3",
+              "end": 113,
+              "start": 87,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "We could follow the notes."
+            }
+          ],
+          "improvement": "Explain more about the feedback process and how it helped improve your work.",
+          "questionIndex": 2
+        }
+      ]
+    },
+    {
+      "name": "original-2",
+      "httpStatus": 200,
+      "status": "ready",
+      "failure": null,
+      "covered": 11,
+      "detail": [
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": 37,
+              "start": 0,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "Our class project finished on Friday."
+            },
+            {
+              "id": "e1",
+              "end": 84,
+              "start": 38,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I checked every remaining task with the group."
+            },
+            {
+              "id": "e2",
+              "end": 115,
+              "start": 38,
+              "present": true,
+              "confidence": "medium",
+              "supportingText": "I checked every remaining task with the group. Everyone completed their part."
+            },
+            {
+              "id": "e3",
+              "end": 115,
+              "start": 85,
+              "present": true,
+              "confidence": "medium",
+              "supportingText": "Everyone completed their part."
+            }
+          ],
+          "improvement": "Provide more detail about the specific deadline and the nature of the project to clarify the situation and outcome.",
+          "questionIndex": 0
+        },
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": 32,
+              "start": 0,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "Our project materials were late."
+            },
+            {
+              "id": "e1",
+              "end": 97,
+              "start": 33,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I found another supplier and asked the tutor to check the order."
+            },
+            {
+              "id": "e2",
+              "end": null,
+              "start": null,
+              "present": false,
+              "confidence": "high",
+              "supportingText": ""
+            },
+            {
+              "id": "e3",
+              "end": 120,
+              "start": 98,
+              "present": true,
+              "confidence": "medium",
+              "supportingText": "The project continued."
+            }
+          ],
+          "improvement": "Explain how you communicated or coordinated with others to highlight teamwork during problem-solving.",
+          "questionIndex": 1
+        },
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": 33,
+              "start": 0,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "My tutor asked for clearer notes."
+            },
+            {
+              "id": "e1",
+              "end": 86,
+              "start": 34,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I used headings and asked a classmate to check them."
+            },
+            {
+              "id": "e2",
+              "end": 86,
+              "start": 34,
+              "present": true,
+              "confidence": "medium",
+              "supportingText": "I used headings and asked a classmate to check them."
+            },
+            {
+              "id": "e3",
+              "end": 113,
+              "start": 87,
+              "present": true,
+              "confidence": "medium",
+              "supportingText": "We could follow the notes."
+            }
+          ],
+          "improvement": "Describe more specifically what was learned from the feedback and how it improved your work or understanding.",
+          "questionIndex": 2
+        }
+      ]
+    },
+    {
+      "name": "original-3",
+      "httpStatus": 200,
+      "status": "ready",
+      "failure": null,
+      "covered": 11,
+      "detail": [
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": 37,
+              "start": 0,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "Our class project finished on Friday."
+            },
+            {
+              "id": "e1",
+              "end": 84,
+              "start": 38,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I checked every remaining task with the group."
+            },
+            {
+              "id": "e2",
+              "end": 115,
+              "start": 38,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I checked every remaining task with the group. Everyone completed their part."
+            },
+            {
+              "id": "e3",
+              "end": 115,
+              "start": 85,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "Everyone completed their part."
+            }
+          ],
+          "improvement": "Provide more detail about the specific tasks and how you ensured coordination among the group.",
+          "questionIndex": 0
+        },
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": 32,
+              "start": 0,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "Our project materials were late."
+            },
+            {
+              "id": "e1",
+              "end": 97,
+              "start": 33,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I found another supplier and asked the tutor to check the order."
+            },
+            {
+              "id": "e2",
+              "end": null,
+              "start": null,
+              "present": false,
+              "confidence": "high",
+              "supportingText": ""
+            },
+            {
+              "id": "e3",
+              "end": 120,
+              "start": 98,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "The project continued."
+            }
+          ],
+          "improvement": "Include more about how you communicated or collaborated with others to solve the problem.",
+          "questionIndex": 1
+        },
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": 33,
+              "start": 0,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "My tutor asked for clearer notes."
+            },
+            {
+              "id": "e1",
+              "end": 86,
+              "start": 34,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I used headings and asked a classmate to check them."
+            },
+            {
+              "id": "e2",
+              "end": 86,
+              "start": 34,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I used headings and asked a classmate to check them."
+            },
+            {
+              "id": "e3",
+              "end": 113,
+              "start": 87,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "We could follow the notes."
+            }
+          ],
+          "improvement": "Explain more about the feedback process and how it influenced your improvement.",
+          "questionIndex": 2
+        }
+      ]
+    },
+    {
+      "name": "original-4",
+      "httpStatus": 200,
+      "status": "ready",
+      "failure": null,
+      "covered": 11,
+      "detail": [
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": 37,
+              "start": 0,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "Our class project finished on Friday."
+            },
+            {
+              "id": "e1",
+              "end": 84,
+              "start": 38,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I checked every remaining task with the group."
+            },
+            {
+              "id": "e2",
+              "end": 115,
+              "start": 38,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I checked every remaining task with the group. Everyone completed their part."
+            },
+            {
+              "id": "e3",
+              "end": 115,
+              "start": 85,
+              "present": true,
+              "confidence": "medium",
+              "supportingText": "Everyone completed their part."
+            }
+          ],
+          "improvement": "Add a clearer statement about the final result, emphasising that the group met the deadline successfully.",
+          "questionIndex": 0
+        },
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": 32,
+              "start": 0,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "Our project materials were late."
+            },
+            {
+              "id": "e1",
+              "end": 97,
+              "start": 33,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I found another supplier and asked the tutor to check the order."
+            },
+            {
+              "id": "e2",
+              "end": null,
+              "start": null,
+              "present": false,
+              "confidence": "high",
+              "supportingText": ""
+            },
+            {
+              "id": "e3",
+              "end": 120,
+              "start": 98,
+              "present": true,
+              "confidence": "medium",
+              "supportingText": "The project continued."
+            }
+          ],
+          "improvement": "Include details about collaboration or communication with others when solving the problem to demonstrate teamwork.",
+          "questionIndex": 1
+        },
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": 33,
+              "start": 0,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "My tutor asked for clearer notes."
+            },
+            {
+              "id": "e1",
+              "end": 86,
+              "start": 34,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I used headings and asked a classmate to check them."
+            },
+            {
+              "id": "e2",
+              "end": 86,
+              "start": 34,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I used headings and asked a classmate to check them."
+            },
+            {
+              "id": "e3",
+              "end": 113,
+              "start": 87,
+              "present": true,
+              "confidence": "medium",
+              "supportingText": "We could follow the notes."
+            }
+          ],
+          "improvement": "Explain the positive effect the improved notes had on learning or performance to strengthen the outcome description.",
+          "questionIndex": 2
+        }
+      ]
+    },
+    {
+      "name": "original-5",
+      "httpStatus": 200,
+      "status": "ready",
+      "failure": null,
+      "covered": 10,
+      "detail": [
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": 37,
+              "start": 0,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "Our class project finished on Friday."
+            },
+            {
+              "id": "e1",
+              "end": 84,
+              "start": 38,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I checked every remaining task with the group."
+            },
+            {
+              "id": "e2",
+              "end": 115,
+              "start": 38,
+              "present": true,
+              "confidence": "medium",
+              "supportingText": "I checked every remaining task with the group. Everyone completed their part."
+            },
+            {
+              "id": "e3",
+              "end": null,
+              "start": null,
+              "present": false,
+              "confidence": "high",
+              "supportingText": ""
+            }
+          ],
+          "improvement": "Add a clear result or outcome describing how the group met the deadline successfully.",
+          "questionIndex": 0
+        },
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": 32,
+              "start": 0,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "Our project materials were late."
+            },
+            {
+              "id": "e1",
+              "end": 97,
+              "start": 33,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I found another supplier and asked the tutor to check the order."
+            },
+            {
+              "id": "e2",
+              "end": null,
+              "start": null,
+              "present": false,
+              "confidence": "high",
+              "supportingText": ""
+            },
+            {
+              "id": "e3",
+              "end": 120,
+              "start": 98,
+              "present": true,
+              "confidence": "medium",
+              "supportingText": "The project continued."
+            }
+          ],
+          "improvement": "Include information about how you collaborated or communicated with others while solving the problem.",
+          "questionIndex": 1
+        },
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": 33,
+              "start": 0,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "My tutor asked for clearer notes."
+            },
+            {
+              "id": "e1",
+              "end": 86,
+              "start": 34,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I used headings and asked a classmate to check them."
+            },
+            {
+              "id": "e2",
+              "end": 86,
+              "start": 34,
+              "present": true,
+              "confidence": "medium",
+              "supportingText": "I used headings and asked a classmate to check them."
+            },
+            {
+              "id": "e3",
+              "end": 113,
+              "start": 87,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "We could follow the notes."
+            }
+          ],
+          "improvement": "Expand on how the feedback resulted in a positive change or improvement in performance or understanding.",
+          "questionIndex": 2
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "checkedAt": "2026-09-08T16:44:14.206Z",
+  "previewOrigin": "https://muqabala-schools-pilot-20260908-inspire14.vercel.app",
+  "stagingOnly": true,
+  "authorisedInboxOnly": true,
+  "checks": [
+    {
+      "check": "Mail worker rejects missing cron authorisation",
+      "passed": true
+    },
+    {
+      "check": "Controlled staff notification accepted by provider and stored as sent",
+      "passed": true,
+      "messageId": "6099fda8-150f-4988-b692-c33f62cd52f9",
+      "providerMessageId": "5dcd6c83-e35c-4729-8e36-634d2b8528db"
+    },
+    {
+      "check": "Two simultaneous worker requests send one queued message once",
+      "passed": true
+    },
+    {
+      "check": "Lost receipt replay returns the same provider message id",
+      "passed": true,
+      "attempts": 2
+    },
+    {
+      "check": "Completed message is not claimed a third time",
+      "passed": true
+    },
+    {
+      "check": "Retention rejects missing cron authorisation",
+      "passed": true
+    }
+  ],
+  "inboxVerified": true,
+  "scheduledTriggerVerified": false,
+  "gmailMessageId": "1a081e80e3b1a815",
+  "receivedAt": "2026-09-08T16:44:23Z"
+}

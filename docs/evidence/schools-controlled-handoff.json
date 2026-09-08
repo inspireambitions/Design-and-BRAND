@@ -1,0 +1,11 @@
+{
+  "createdAt": "2026-09-08T16:50:37.319Z",
+  "stagingOnly": true,
+  "recipient": "hello@trymuqabala.com",
+  "cohortId": "957bcd2d-365a-4677-8edf-9b2d1c054c75",
+  "assignmentId": "38cfd71d-96d8-4c38-8d28-644f57dcf4a7",
+  "educatorUserId": "60781439-7549-42a4-9795-e55c5430e869",
+  "restriction": "Fictional answers only; no real institution activation",
+  "handoffProviderId": "53cc34af-dc77-44f3-8c37-83768eda0881",
+  "handoffSentAt": "2026-09-08T16:50:48.135Z"
+}

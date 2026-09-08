@@ -1,0 +1,17 @@
+import './schools-qa-errors.mjs';
+import {readFileSync} from 'node:fs';
+import {join} from 'node:path';
+import {hkdfSync} from 'node:crypto';
+import {stagingEnvironment} from './schools-staging-env.mjs';
+const key=process.env.SCHOOLS_QA_SENDER;delete process.env.SCHOOLS_QA_SENDER;
+if(!/^re_[A-Za-z0-9_-]+$/.test(key??''))throw new Error('Dedicated staging sender key required');
+const auth=JSON.parse(readFileSync(join(process.env.APPDATA,'com.vercel.cli-inspire14/auth.json'),'utf8'));
+const staging=stagingEnvironment();
+if(new URL(staging.SUPABASE_URL).hostname!=='okrsezhospztwtptqhpo.supabase.co')throw new Error('Staging scope required');
+const cron=Buffer.from(hkdfSync('sha256',staging.SUPABASE_JWT_SECRET,'okrsezhospztwtptqhpo','schools-synthetic-cron-v1',32)).toString('hex');
+const values={SCHOOLS_RESEND_API_KEY:key,SCHOOLS_EMAIL_FROM:'Muqabala Schools staging <hello@auth.trymuqabala.com>',CRON_SECRET:cron};
+const url='https://api.vercel.com/v10/projects/prj_mLU2A8yiW61V4a4da54GryoIcSXX/env?teamId=team_IlZz8UvetUXPtSvI4hPqy6fn&upsert=true';
+const result=await fetch(url,{method:'POST',headers:{Authorization:'Bearer '+auth.token,'Content-Type':'application/json'},body:JSON.stringify(Object.entries(values).map(([key,value])=>({key,value,type:key==='SCHOOLS_EMAIL_FROM'?'plain':'sensitive',target:['preview'],gitBranch:'codex/schools-pilot-20260908'})))});
+if(!result.ok)throw new Error('Preview configuration failed');
+const response=await result.json();if(response.error||response.failed?.length)throw new Error('Preview settings were not all accepted');
+console.log(JSON.stringify({configured:Object.keys(values),target:'preview',branch:'codex/schools-pilot-20260908',productionChanged:false}));

@@ -1,0 +1,45 @@
+✔ schools requires an explicit server flag (1.4114ms)
+(node:27536) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Kim/OneDrive/Documents/ChatGPT/trymuqabala.com/schools-pilot-20260908/muqabala/lib/schools/config.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\Users\Kim\OneDrive\Documents\ChatGPT\trymuqabala.com\schools-pilot-20260908\muqabala\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ schools authentication never claims unrelated anonymous practice (0.3392ms)
+✔ evidence derives the count from exact stored answer excerpts (5.5759ms)
+▶ schools database denies cross-institution, draft and employer access
+  ✔ adviser reads only submitted work in assigned cohorts (20.7151ms)
+  ✔ student sees their own draft and submitted attempt (22.5819ms)
+  ✔ institution admin cannot read answer contents (3.0743ms)
+  ✔ an employer identity cannot read any schools table (67.353ms)
+  ✔ client writes cannot set evidence or impersonate a student (4.9567ms)
+  ✔ service transaction rejects tampered assignment and closes enrolment gates (26.994ms)
+  ✔ a lost first submission response returns the same reserved attempt (12.8243ms)
+  ✔ support ownership rejects another institution and preserves its assigned owner (13.3351ms)
+  ✔ read markers reject another student and an unseen review revision (4.7954ms)
+  ✔ published question versions cannot be removed or moved (5.1985ms)
+  ✔ review is attempt-bound with exact content undo and stale-write rejection (14.826ms)
+  ✔ every client table write is denied, including direct deletion (47.7639ms)
+  ✔ idle and revoked sessions cannot read even their own membership (5.5046ms)
+  ✔ a retry copies answer provenance without carrying an adviser review (7.8308ms)
+  ✔ private grants deny direct access and enforce invitation gates and email binding (30.3453ms)
+  ✔ staff invitations bind the verified email and queue one delivery with leased retries (23.1262ms)
+  ✔ instrumentation stores safe categories and checks cohort ownership (6.6285ms)
+  ✔ both pseudonymous recovery paths rotate secrets and revoke prior sessions (33.4571ms)
+  ✔ evidence corrections reject a stale view and update the server count (14.6265ms)
+  ✔ pilot metrics require founder access and never turn unknown costs into zero (10.6856ms)
+  ✔ removed membership loses access immediately (4.0963ms)
+  ✔ submitted answers cannot be overwritten even by the storage worker (1.5663ms)
+  ✔ deletion removes school records and keeps the shared Auth account (20.9681ms)
+  ✔ retention uses active activity and archive dates without deleting another cohort (17.1146ms)
+  ✔ Auth deletion guard detects references in any other public product table (20.9761ms)
+  ✔ failed mail retries preserve identity and stop beyond the duplicate-protection window (11.6927ms)
+  ✔ only the founder can reopen exhausted feedback after investigating (4.4444ms)
+  ✔ expired unbound Auth provisioning is queued and safely removable (23.4944ms)
+✔ schools database denies cross-institution, draft and employer access (2780.9535ms)
+ℹ tests 32
+ℹ suites 0
+ℹ pass 32
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2960.916

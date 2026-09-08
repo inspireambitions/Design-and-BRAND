@@ -1,0 +1,31 @@
+import {qaStage,qaFailure} from './schools-qa-errors.mjs';
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+import {writeFile} from 'node:fs/promises';
+import {login} from './schools-staging-qa.mjs';
+import {previewAccess,previewOrigin} from './schools-preview-access.mjs';
+const require=createRequire(import.meta.url),{request}=require(process.env.SCHOOLS_QA_PLAYWRIGHT);
+const contexts=[];const checks=[];
+try {
+  qaStage('email verification');
+  const token=process.env.SCHOOLS_QA_OTP;delete process.env.SCHOOLS_QA_OTP;
+  assert.match(token??'',/^\d{6}$/);
+  const access=await previewAccess();
+  const share='/schools?_vercel_share='+encodeURIComponent(Object.keys(access.protectionBypass)[0]);
+  const student=await request.newContext({baseURL:previewOrigin,extraHTTPHeaders:{Origin:previewOrigin}});contexts.push(student);await student.get(share);
+  const verified=await student.post('/api/auth/verify',{data:{email:'inspireambition.com@gmail.com',token,next:'/schools/me',lang:'en'}});
+  assert.equal(verified.status(),200);assert.equal((await verified.json()).verified,true);checks.push('Delivered email code starts a Schools session');
+  qaStage('issue controlled email enrolment');
+  const educator=await login('educator');
+  const teacher=await request.newContext({baseURL:previewOrigin,extraHTTPHeaders:{Origin:previewOrigin},storageState:{cookies:educator.cookies.map(c=>({...c,expires:-1,domain:new URL(previewOrigin).hostname,secure:true})),origins:[]}});contexts.push(teacher);await teacher.get(share);
+  const issued=await teacher.post('/api/schools/access',{data:{operation:'issue',cohortId:educator.fixture.cohorts[0],purpose:'enrolment',mode:'email',email:'inspireambition.com@gmail.com',displayName:'Controlled email tester',identityChecked:false}});
+  console.log(JSON.stringify({step:'email grant issue',httpStatus:issued.status()}));assert.equal(issued.status(),200);const grant=await issued.json();
+  const secret=grant.path.split('#')[1];
+  qaStage('redeem email enrolment');
+  const redeemed=await student.post('/api/schools/access',{data:{operation:'redeem',secret,recovery:false,adultConfirmed:true}});assert.equal(redeemed.status(),200);
+  assert.equal((await redeemed.json()).next,'/schools/me');checks.push('Verified intended email redeems its controlled cohort invitation');
+  const home=await student.get('/schools/me');assert.equal(home.status(),200);assert((await home.text()).includes(educator.fixture.assignments[0]));checks.push('Enrolled email user can open an assigned practice card');
+  const replay=await student.post('/api/schools/access',{data:{operation:'redeem',secret,recovery:false,adultConfirmed:true}});assert.equal(replay.status(),400);checks.push('Used email enrolment link cannot be replayed');
+  await writeFile('../docs/evidence/schools-email-enrolment.json',JSON.stringify({checkedAt:new Date().toISOString(),previewOrigin,controlledInbox:true,checks},null,2)+'\n');
+  console.log(JSON.stringify({checks}));
+} catch {qaFailure();} finally {for(const context of contexts)await context.dispose();}

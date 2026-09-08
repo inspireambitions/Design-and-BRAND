@@ -30,7 +30,7 @@ test('schools database denies cross-institution, draft and employer access', asy
   const db=new PGlite();
   try {
     await db.exec(`create role anon; create role authenticated; create role service_role bypassrls;
-      create schema auth; create table auth.users(id uuid primary key);
+      create schema auth; create table auth.users(id uuid primary key,email text);
       create function auth.uid() returns uuid language sql as 'select nullif(current_setting(''request.jwt.claim.sub'',true),'''')::uuid';
       create function auth.jwt() returns jsonb language sql as 'select jsonb_build_object(''session_id'',nullif(current_setting(''request.jwt.claim.sub'',true),''''))';
       grant usage on schema auth to authenticated,service_role; grant execute on function auth.uid() to authenticated,service_role;`);
@@ -40,6 +40,9 @@ test('schools database denies cross-institution, draft and employer access', asy
     await db.exec(readFileSync(new URL('../supabase/migrations/20260908120955_schools_pilot_instrumentation.sql',import.meta.url),'utf8'));
     await db.exec(readFileSync(new URL('../supabase/migrations/20260908121657_schools_mail_and_staff.sql',import.meta.url),'utf8'));
     await db.exec(readFileSync(new URL('../supabase/migrations/20260908123002_schools_pilot_operations.sql',import.meta.url),'utf8'));
+    await db.exec(readFileSync(new URL('../supabase/migrations/20260908130227_schools_tester_readiness.sql',import.meta.url),'utf8'));
+    await db.exec(readFileSync(new URL('../supabase/migrations/20260908131853_schools_cleanup_worker.sql',import.meta.url),'utf8'));
+    await db.exec(readFileSync(new URL('../supabase/migrations/20260908135304_schools_feedback_recovery.sql',import.meta.url),'utf8'));
     await db.exec(`
       insert into auth.users values ('${id(1)}'),('${id(2)}'),('${id(3)}'),('${id(4)}'),('${id(5)}'),('${id(6)}');
       insert into public.schools_institutions(id,name,country,language) values ('${id(10)}','A','UAE','en'),('${id(11)}','B','UAE','en');
@@ -303,6 +306,46 @@ await t.test('every client table write is denied, including direct deletion',asy
       await db.query('insert into public.other_product_fixture values($1)',[id(7)]);await db.exec('set role service_role');
       assert.equal((await db.query('select public.schools_can_delete_auth($1) as allowed',[id(7)])).rows[0].allowed,false);
       assert.equal((await db.query('select public.schools_can_delete_auth($1) as allowed',[id(3)])).rows[0].allowed,true);
+      await db.exec('reset role');
+      await assert.rejects(()=>db.query('delete from auth.users where id=$1',[id(7)]),/another account context/);
+      await assert.rejects(()=>db.query('select public.schools_update_institution($1,$2,$3,$4)',[id(2),id(10),'Changed name','GB']),/administration required/);
+      await db.query('select public.schools_update_institution($1,$2,$3,$4)',[id(6),id(10),'Updated synthetic institution','GB']);
+      const job=(await db.query("select id from schools_private.privacy_jobs where reason='student_request' limit 1")).rows[0].id;
+      await assert.rejects(()=>db.query('select public.schools_finish_privacy($1,$2,$3,$4)',[id(6),job,'supplier-fixture','notification-fixture']),/Founder access/);
+      await db.query('insert into public.schools_staff(user_id) values($1)',[id(5)]);
+      await assert.rejects(()=>db.query('select public.schools_finish_privacy($1,$2,$3,$4)',[id(5),job,'','notification-fixture']),/incomplete/);
+      assert.equal((await db.query('select public.schools_finish_privacy($1,$2,$3,$4) as done',[id(5),job,'supplier-fixture','notification-fixture'])).rows[0].done,true);
+    });
+    await t.test('failed mail retries preserve identity and stop beyond the duplicate-protection window',async()=>{
+      await db.exec('reset role');
+      await db.query("insert into schools_private.mail_outbox(id,institution_id,kind,payload_id,status,attempts) values($1,$2,'assignment',$3,'failed',5)",[id(950),id(10),id(30)]);
+      await assert.rejects(()=>db.query('select public.schools_retry_mail($1,$2)',[id(6),id(950)]),/Founder access/);
+      assert.equal((await db.query('select public.schools_retry_mail($1,$2) as done',[id(5),id(950)])).rows[0].done,true);
+      const retried=(await db.query('select status,attempts from schools_private.mail_outbox where id=$1',[id(950)])).rows[0];
+      assert.equal(retried.status,'queued');assert.equal(retried.attempts,0);
+      await db.query("update schools_private.mail_outbox set status='failed',created_at=now()-interval '24 hours' where id=$1",[id(950)]);
+      await assert.rejects(()=>db.query('select public.schools_retry_mail($1,$2)',[id(5),id(950)]),/Inspect provider/);
+      const expired=(await db.query('select public.schools_failed_mail($1) as items',[id(5)])).rows[0].items.find(item=>item.id===id(950));assert.equal(expired.canRetry,false);
+    });
+    await t.test('only the founder can reopen exhausted feedback after investigating',async()=>{
+      await db.exec('reset role');
+      await db.query("update public.schools_assignment_attempts set feedback_status='failed',feedback_tries=3,feedback_started_at=now()-interval '2 minutes',feedback_failure_code='evidence:excerpt' where id=$1",[id(42)]);
+      await assert.rejects(()=>db.query('select public.schools_retry_feedback($1,$2)',[id(6),id(42)]),/Founder access/);
+      assert.equal((await db.query('select public.schools_retry_feedback($1,$2) as done',[id(5),id(42)])).rows[0].done,true);
+      const row=(await db.query('select feedback_status,feedback_tries,feedback_failure_code from public.schools_assignment_attempts where id=$1',[id(42)])).rows[0];
+      assert.equal(row.feedback_status,'pending');assert.equal(row.feedback_tries,0);assert.equal(row.feedback_failure_code,null);
+    });
+    await t.test('expired unbound Auth provisioning is queued and safely removable',async()=>{
+      await db.exec('reset role');
+      const grant=(await db.query("select public.schools_issue_access($1,$2,'enrolment','pseudonymous',$3,null,null,'Synthetic unused account',false) as result",[id(1),id(20),'3'.repeat(64)])).rows[0].result;
+      await db.query('insert into auth.users(id,email) values($1,$2)',[id(9),'schools-'+grant.id+'@accounts.trymuqabala.invalid']);
+      await db.query('update schools_private.access_grants set revoked_at=now() where id=$1',[grant.id]);
+      assert.equal((await db.query('select public.schools_cleanup_operations() as queued')).rows[0].queued,1);
+      const job=(await db.query('select id from schools_private.privacy_jobs where user_id=$1',[id(9)])).rows[0].id;
+      const purged=(await db.query('select public.schools_purge_local($1) as result',[job])).rows[0].result;
+      assert.equal(purged.deleteAuth,true);
+      await db.query('delete from auth.users where id=$1',[id(9)]);
+      assert.equal((await db.query('select count(*)::int as n from auth.users where id=$1',[id(9)])).rows[0].n,0);
     });
   } finally {await db.close();}
 });

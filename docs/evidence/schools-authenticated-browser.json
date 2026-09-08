@@ -1,0 +1,10 @@
+{
+  "checkedAt": "2026-09-08T13:17:18.217Z",
+  "stagingRef": "okrsezhospztwtptqhpo",
+  "checks": [
+    "Timed autosave and refresh resume",
+    "Hosted adviser draft privacy",
+    "Lost submit response preserves answers and retries once"
+  ],
+  "syntheticFeedback": true
+}

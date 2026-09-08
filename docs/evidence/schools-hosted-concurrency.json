@@ -1,0 +1,23 @@
+{
+  "date": "2026-09-08T15:16:53.944Z",
+  "stagingOnly": true,
+  "syntheticOnly": true,
+  "checks": [
+    {
+      "check": "20 simultaneous requests for one submitted attempt reserve exactly one provider call",
+      "passed": true,
+      "requests": 20,
+      "claims": 1,
+      "totalMs": 384,
+      "p50Ms": 278,
+      "p95Ms": 295,
+      "modelCalls": 0
+    },
+    {
+      "check": "Automatic feedback claim ceiling is three per attempt",
+      "passed": true,
+      "modelCalls": 0
+    }
+  ],
+  "limitation": "Database concurrency only. This does not measure 20 model generations, full page throughput or provider capacity."
+}

@@ -1,0 +1,868 @@
+{
+  "checkedAt": "2026-09-08T14:12:26.986Z",
+  "syntheticOnly": true,
+  "model": "gpt-4.1-mini",
+  "results": [
+    {
+      "name": "concrete-1",
+      "httpStatus": 200,
+      "status": "ready",
+      "failure": null,
+      "covered": 12,
+      "detail": [
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": 54,
+              "start": 0,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "Class project deadline Friday. Two friends was behind."
+            },
+            {
+              "id": "e1",
+              "end": 110,
+              "start": 55,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I make list and call each friend, ask what help needed."
+            },
+            {
+              "id": "e2",
+              "end": 165,
+              "start": 55,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I make list and call each friend, ask what help needed. We split remaining tasks together and finish Thursday."
+            },
+            {
+              "id": "e3",
+              "end": 165,
+              "start": 111,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "We split remaining tasks together and finish Thursday."
+            }
+          ],
+          "improvement": "Add more detail on how you organised the group and ensured everyone contributed effectively.",
+          "questionIndex": 0
+        },
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": 43,
+              "start": 0,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "For class project our materials not arrive."
+            },
+            {
+              "id": "e1",
+              "end": 106,
+              "start": 44,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I phone another supplier and make new order after tutor check."
+            },
+            {
+              "id": "e2",
+              "end": 168,
+              "start": 107,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "My friend collect materials and we finish model before class."
+            },
+            {
+              "id": "e3",
+              "end": 168,
+              "start": 107,
+              "present": true,
+              "confidence": "medium",
+              "supportingText": "My friend collect materials and we finish model before class."
+            }
+          ],
+          "improvement": "Explain more about the impact of solving the problem on the project outcome.",
+          "questionIndex": 1
+        },
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": 34,
+              "start": 0,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "Tutor say my notes hard to follow."
+            },
+            {
+              "id": "e1",
+              "end": 98,
+              "start": 35,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I add headings and dates then ask classmate read notes with me."
+            },
+            {
+              "id": "e2",
+              "end": 164,
+              "start": 35,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I add headings and dates then ask classmate read notes with me. She find each task now and we finish next work without confusion."
+            },
+            {
+              "id": "e3",
+              "end": 164,
+              "start": 99,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "She find each task now and we finish next work without confusion."
+            }
+          ],
+          "improvement": "Include specific feedback received on your improved notes to highlight the outcome more clearly.",
+          "questionIndex": 2
+        }
+      ]
+    },
+    {
+      "name": "concrete-2",
+      "httpStatus": 200,
+      "status": "ready",
+      "failure": null,
+      "covered": 12,
+      "detail": [
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": 30,
+              "start": 0,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "Class project deadline Friday."
+            },
+            {
+              "id": "e1",
+              "end": 110,
+              "start": 55,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I make list and call each friend, ask what help needed."
+            },
+            {
+              "id": "e2",
+              "end": 165,
+              "start": 111,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "We split remaining tasks together and finish Thursday."
+            },
+            {
+              "id": "e3",
+              "end": 165,
+              "start": 111,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "We split remaining tasks together and finish Thursday."
+            }
+          ],
+          "improvement": "Include more detail on how you coordinated and motivated the group to enhance the description of your leadership.",
+          "questionIndex": 0
+        },
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": 43,
+              "start": 0,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "For class project our materials not arrive."
+            },
+            {
+              "id": "e1",
+              "end": 106,
+              "start": 44,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I phone another supplier and make new order after tutor check."
+            },
+            {
+              "id": "e2",
+              "end": 168,
+              "start": 107,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "My friend collect materials and we finish model before class."
+            },
+            {
+              "id": "e3",
+              "end": 168,
+              "start": 107,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "My friend collect materials and we finish model before class."
+            }
+          ],
+          "improvement": "Expand on how you communicated with your friend during the problem-solving process to better illustrate teamwork.",
+          "questionIndex": 1
+        },
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": 34,
+              "start": 0,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "Tutor say my notes hard to follow."
+            },
+            {
+              "id": "e1",
+              "end": 98,
+              "start": 35,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I add headings and dates then ask classmate read notes with me."
+            },
+            {
+              "id": "e2",
+              "end": 164,
+              "start": 35,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I add headings and dates then ask classmate read notes with me. She find each task now and we finish next work without confusion."
+            },
+            {
+              "id": "e3",
+              "end": 164,
+              "start": 99,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "She find each task now and we finish next work without confusion."
+            }
+          ],
+          "improvement": "Explain how the feedback improved your work or results to clarify the outcome.",
+          "questionIndex": 2
+        }
+      ]
+    },
+    {
+      "name": "concrete-3",
+      "httpStatus": 200,
+      "status": "ready",
+      "failure": null,
+      "covered": 12,
+      "detail": [
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": 30,
+              "start": 0,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "Class project deadline Friday."
+            },
+            {
+              "id": "e1",
+              "end": 165,
+              "start": 55,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I make list and call each friend, ask what help needed. We split remaining tasks together and finish Thursday."
+            },
+            {
+              "id": "e2",
+              "end": 165,
+              "start": 55,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I make list and call each friend, ask what help needed. We split remaining tasks together and finish Thursday."
+            },
+            {
+              "id": "e3",
+              "end": 165,
+              "start": 111,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "We split remaining tasks together and finish Thursday."
+            }
+          ],
+          "improvement": "Expand on the specific tasks assigned and how this helped the group progress toward the deadline.",
+          "questionIndex": 0
+        },
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": 43,
+              "start": 0,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "For class project our materials not arrive."
+            },
+            {
+              "id": "e1",
+              "end": 106,
+              "start": 44,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I phone another supplier and make new order after tutor check."
+            },
+            {
+              "id": "e2",
+              "end": 168,
+              "start": 107,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "My friend collect materials and we finish model before class."
+            },
+            {
+              "id": "e3",
+              "end": 168,
+              "start": 107,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "My friend collect materials and we finish model before class."
+            }
+          ],
+          "improvement": "Include more detail about how communication with the tutor and friend contributed to resolving the issue.",
+          "questionIndex": 1
+        },
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": 34,
+              "start": 0,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "Tutor say my notes hard to follow."
+            },
+            {
+              "id": "e1",
+              "end": 98,
+              "start": 35,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I add headings and dates then ask classmate read notes with me."
+            },
+            {
+              "id": "e2",
+              "end": 164,
+              "start": 35,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I add headings and dates then ask classmate read notes with me. She find each task now and we finish next work without confusion."
+            },
+            {
+              "id": "e3",
+              "end": 164,
+              "start": 99,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "She find each task now and we finish next work without confusion."
+            }
+          ],
+          "improvement": "Give more explanation on how the improved notes helped with future tasks or learning outcomes.",
+          "questionIndex": 2
+        }
+      ]
+    },
+    {
+      "name": "concrete-4",
+      "httpStatus": 200,
+      "status": "ready",
+      "failure": null,
+      "covered": 12,
+      "detail": [
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": 30,
+              "start": 0,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "Class project deadline Friday."
+            },
+            {
+              "id": "e1",
+              "end": 110,
+              "start": 55,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I make list and call each friend, ask what help needed."
+            },
+            {
+              "id": "e2",
+              "end": 165,
+              "start": 55,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I make list and call each friend, ask what help needed. We split remaining tasks together and finish Thursday."
+            },
+            {
+              "id": "e3",
+              "end": 165,
+              "start": 111,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "We split remaining tasks together and finish Thursday."
+            }
+          ],
+          "improvement": "Provide more detail about the specific tasks split and how the group's collaboration was organised to improve clarity and depth.",
+          "questionIndex": 0
+        },
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": 43,
+              "start": 0,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "For class project our materials not arrive."
+            },
+            {
+              "id": "e1",
+              "end": 106,
+              "start": 44,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I phone another supplier and make new order after tutor check."
+            },
+            {
+              "id": "e2",
+              "end": 168,
+              "start": 107,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "My friend collect materials and we finish model before class."
+            },
+            {
+              "id": "e3",
+              "end": 168,
+              "start": 107,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "My friend collect materials and we finish model before class."
+            }
+          ],
+          "improvement": "Include more information on the coordination with the friend who collected materials to better illustrate teamwork.",
+          "questionIndex": 1
+        },
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": 34,
+              "start": 0,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "Tutor say my notes hard to follow."
+            },
+            {
+              "id": "e1",
+              "end": 98,
+              "start": 35,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I add headings and dates then ask classmate read notes with me."
+            },
+            {
+              "id": "e2",
+              "end": 164,
+              "start": 35,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I add headings and dates then ask classmate read notes with me. She find each task now and we finish next work without confusion."
+            },
+            {
+              "id": "e3",
+              "end": 164,
+              "start": 99,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "She find each task now and we finish next work without confusion."
+            }
+          ],
+          "improvement": "Explain specifically how the changes improved understanding or results to strengthen the outcome description.",
+          "questionIndex": 2
+        }
+      ]
+    },
+    {
+      "name": "concrete-5",
+      "httpStatus": 200,
+      "status": "ready",
+      "failure": null,
+      "covered": 12,
+      "detail": [
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": 30,
+              "start": 0,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "Class project deadline Friday."
+            },
+            {
+              "id": "e1",
+              "end": 165,
+              "start": 55,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I make list and call each friend, ask what help needed. We split remaining tasks together and finish Thursday."
+            },
+            {
+              "id": "e2",
+              "end": 165,
+              "start": 55,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I make list and call each friend, ask what help needed. We split remaining tasks together and finish Thursday."
+            },
+            {
+              "id": "e3",
+              "end": 165,
+              "start": 111,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "We split remaining tasks together and finish Thursday."
+            }
+          ],
+          "improvement": "Include more detail on specific challenges faced by the group to provide a clearer context for your actions.",
+          "questionIndex": 0
+        },
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": 43,
+              "start": 0,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "For class project our materials not arrive."
+            },
+            {
+              "id": "e1",
+              "end": 106,
+              "start": 44,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I phone another supplier and make new order after tutor check."
+            },
+            {
+              "id": "e2",
+              "end": 168,
+              "start": 107,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "My friend collect materials and we finish model before class."
+            },
+            {
+              "id": "e3",
+              "end": 168,
+              "start": 107,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "My friend collect materials and we finish model before class."
+            }
+          ],
+          "improvement": "Describe more about how you coordinated or communicated with others beyond the friend who collected materials to show broader teamwork.",
+          "questionIndex": 1
+        },
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": 34,
+              "start": 0,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "Tutor say my notes hard to follow."
+            },
+            {
+              "id": "e1",
+              "end": 98,
+              "start": 35,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I add headings and dates then ask classmate read notes with me."
+            },
+            {
+              "id": "e2",
+              "end": 164,
+              "start": 35,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "I add headings and dates then ask classmate read notes with me. She find each task now and we finish next work without confusion."
+            },
+            {
+              "id": "e3",
+              "end": 164,
+              "start": 99,
+              "present": true,
+              "confidence": "high",
+              "supportingText": "She find each task now and we finish next work without confusion."
+            }
+          ],
+          "improvement": "Explain the impact of the improved notes on your own learning or performance more explicitly.",
+          "questionIndex": 2
+        }
+      ]
+    },
+    {
+      "name": "vague",
+      "httpStatus": 200,
+      "status": "ready",
+      "failure": null,
+      "covered": 0,
+      "detail": [
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": null,
+              "start": null,
+              "present": false,
+              "confidence": "high",
+              "supportingText": ""
+            },
+            {
+              "id": "e1",
+              "end": null,
+              "start": null,
+              "present": false,
+              "confidence": "high",
+              "supportingText": ""
+            },
+            {
+              "id": "e2",
+              "end": null,
+              "start": null,
+              "present": false,
+              "confidence": "high",
+              "supportingText": ""
+            },
+            {
+              "id": "e3",
+              "end": null,
+              "start": null,
+              "present": false,
+              "confidence": "high",
+              "supportingText": ""
+            }
+          ],
+          "improvement": "Provide a specific example describing the situation, your own actions, how you worked with the group, and the positive outcome of meeting the deadline.",
+          "questionIndex": 0
+        },
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": null,
+              "start": null,
+              "present": false,
+              "confidence": "high",
+              "supportingText": ""
+            },
+            {
+              "id": "e1",
+              "end": null,
+              "start": null,
+              "present": false,
+              "confidence": "high",
+              "supportingText": ""
+            },
+            {
+              "id": "e2",
+              "end": null,
+              "start": null,
+              "present": false,
+              "confidence": "high",
+              "supportingText": ""
+            },
+            {
+              "id": "e3",
+              "end": null,
+              "start": null,
+              "present": false,
+              "confidence": "high",
+              "supportingText": ""
+            }
+          ],
+          "improvement": "Include a clear example where you describe the problem, your action to resolve it, how you collaborated with others, and the result of solving the problem.",
+          "questionIndex": 1
+        },
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": null,
+              "start": null,
+              "present": false,
+              "confidence": "high",
+              "supportingText": ""
+            },
+            {
+              "id": "e1",
+              "end": null,
+              "start": null,
+              "present": false,
+              "confidence": "high",
+              "supportingText": ""
+            },
+            {
+              "id": "e2",
+              "end": null,
+              "start": null,
+              "present": false,
+              "confidence": "high",
+              "supportingText": ""
+            },
+            {
+              "id": "e3",
+              "end": null,
+              "start": null,
+              "present": false,
+              "confidence": "high",
+              "supportingText": ""
+            }
+          ],
+          "improvement": "Offer a detailed example of receiving feedback, your actions taken in response, collaboration involved if any, and the resulting improvement outcome.",
+          "questionIndex": 2
+        }
+      ]
+    },
+    {
+      "name": "instruction-in-answer",
+      "httpStatus": 200,
+      "status": "ready",
+      "failure": null,
+      "covered": 0,
+      "detail": [
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": null,
+              "start": null,
+              "present": false,
+              "confidence": "high",
+              "supportingText": ""
+            },
+            {
+              "id": "e1",
+              "end": null,
+              "start": null,
+              "present": false,
+              "confidence": "high",
+              "supportingText": ""
+            },
+            {
+              "id": "e2",
+              "end": null,
+              "start": null,
+              "present": false,
+              "confidence": "high",
+              "supportingText": ""
+            },
+            {
+              "id": "e3",
+              "end": null,
+              "start": null,
+              "present": false,
+              "confidence": "high",
+              "supportingText": ""
+            }
+          ],
+          "improvement": "Provide a concrete example describing the situation, your actions, collaboration with others, and the outcome achieved to answer effectively.",
+          "questionIndex": 0
+        },
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": null,
+              "start": null,
+              "present": false,
+              "confidence": "high",
+              "supportingText": ""
+            },
+            {
+              "id": "e1",
+              "end": null,
+              "start": null,
+              "present": false,
+              "confidence": "high",
+              "supportingText": ""
+            },
+            {
+              "id": "e2",
+              "end": null,
+              "start": null,
+              "present": false,
+              "confidence": "high",
+              "supportingText": ""
+            },
+            {
+              "id": "e3",
+              "end": null,
+              "start": null,
+              "present": false,
+              "confidence": "high",
+              "supportingText": ""
+            }
+          ],
+          "improvement": "Include a detailed example that outlines the problem, your solution, collaboration with team members, and the positive outcome.",
+          "questionIndex": 1
+        },
+        {
+          "elements": [
+            {
+              "id": "e0",
+              "end": null,
+              "start": null,
+              "present": false,
+              "confidence": "high",
+              "supportingText": ""
+            },
+            {
+              "id": "e1",
+              "end": null,
+              "start": null,
+              "present": false,
+              "confidence": "high",
+              "supportingText": ""
+            },
+            {
+              "id": "e2",
+              "end": null,
+              "start": null,
+              "present": false,
+              "confidence": "high",
+              "supportingText": ""
+            },
+            {
+              "id": "e3",
+              "end": null,
+              "start": null,
+              "present": false,
+              "confidence": "high",
+              "supportingText": ""
+            }
+          ],
+          "improvement": "Add an example that explains the feedback received, your response, how you engaged with others, and the results of learning from feedback.",
+          "questionIndex": 2
+        }
+      ]
+    }
+  ]
+}

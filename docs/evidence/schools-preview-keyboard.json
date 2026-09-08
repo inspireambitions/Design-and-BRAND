@@ -1,0 +1,12 @@
+{
+  "checkedAt": "2026-09-08T15:21:09.325Z",
+  "previewOrigin": "https://muqabala-schools-pilot-20260908-inspire14.vercel.app",
+  "syntheticOnly": true,
+  "checks": [
+    "Existing synthetic learner reused for focused network diagnosis",
+    "Keyboard answers and blur saves survive refresh on the preview",
+    "Keyboard recovery from a lost submission response on Vercel",
+    "Keyboard-only live feedback reading",
+    "Keyboard sign out everywhere closes access"
+  ]
+}
