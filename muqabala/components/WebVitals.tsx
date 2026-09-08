@@ -11,6 +11,7 @@ const REPORTED = new Set(['LCP', 'INP', 'CLS', 'FCP', 'TTFB']);
 export function WebVitals() {
   const pathname = usePathname();
   useReportWebVitals((metric) => {
+    if (pathname === '/schools' || pathname?.startsWith('/schools/')) return;
     if (!REPORTED.has(metric.name)) return;
     track('web_vital', {
       metric: metric.name,

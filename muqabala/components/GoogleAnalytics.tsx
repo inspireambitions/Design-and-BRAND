@@ -18,6 +18,7 @@ export function GoogleAnalytics() {
   const lastPage = useRef('');
 
   useEffect(() => {
+    if (pathname === '/schools' || pathname?.startsWith('/schools/')) return;
     if (!configured || typeof window.gtag !== 'function') return;
     const pagePath = analyticsPagePath(pathname);
     if (lastPage.current === pagePath) return;
@@ -29,6 +30,7 @@ export function GoogleAnalytics() {
     });
   }, [configured, pathname]);
 
+  if (pathname === '/schools' || pathname?.startsWith('/schools/')) return null;
   return (
     <>
       <Script

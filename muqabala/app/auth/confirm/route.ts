@@ -1,10 +1,12 @@
 import type { EmailOtpType } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
-import { shouldClaimPracticeAttempt } from '@/lib/auth-destination';
+import { isSchoolsDestination, shouldClaimPracticeAttempt } from '@/lib/auth-destination';
 import { claimCurrentAttempt } from '@/lib/server/claim-attempt';
 import { configuredOrigin, isOpaqueToken, safeNext } from '@/lib/server/security';
 import { createClient } from '@/lib/supabase/server';
 import { trackServer } from '@/lib/server/analytics';
+import { schoolsEnabled } from '@/lib/schools/config';
+import { registerSchoolsSession } from '@/lib/schools/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,11 +15,14 @@ export async function GET(request: Request) {
   const tokenHash = url.searchParams.get('token_hash');
   const type = url.searchParams.get('type') as EmailOtpType | null;
   const next = safeNext(url.searchParams.get('next'), '/account');
+  const schoolsDestination = isSchoolsDestination(next);
+  if (schoolsDestination && !schoolsEnabled()) return new Response('Not found',{status:404});
   const claim = shouldClaimPracticeAttempt(next) ? url.searchParams.get('claim') : null;
   const client = await createClient();
   if (client && tokenHash && type) {
     const { data, error } = await client.auth.verifyOtp({ type, token_hash: tokenHash });
     if (!error && data.user) {
+      if (schoolsDestination && !await registerSchoolsSession(client)) return new Response('Could not start your schools session. Request a new link.',{status:503});
       if (claim && !isOpaqueToken(claim)) {
         await client.auth.signOut();
         return NextResponse.redirect(`${configuredOrigin()}/sign-in?error=invalid_claim&next=${encodeURIComponent(next)}`);

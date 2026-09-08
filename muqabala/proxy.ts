@@ -1,7 +1,12 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { schoolsEnabled } from './lib/schools/config';
 
 export async function proxy(request: NextRequest) {
+  const path=request.nextUrl.pathname;
+  if ((path==='/schools'||path.startsWith('/schools/')||path==='/api/schools'||path.startsWith('/api/schools/'))&&!schoolsEnabled()) {
+    return new NextResponse('Not found',{status:404,headers:{'Cache-Control':'no-store'}});
+  }
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   if (!url || !key) return NextResponse.next({ request });

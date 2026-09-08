@@ -3,15 +3,17 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 import ts from 'typescript';
-import { shouldClaimPracticeAttempt } from '../lib/auth-destination.ts';
+import { isSchoolsDestination, shouldClaimPracticeAttempt } from '../lib/auth-destination.ts';
 
 async function loadRoute(path, next, claim = 'stale-claim') {
   const state = new Map([['attempt', 'old-attempt'], ['auth-state', claim]]);
   let claimed = 0, callback;
   const deps = {
+    '@/lib/schools/config': { schoolsEnabled: () => false },
+    '@/lib/schools/session': { registerSchoolsSession: () => assert.fail('Existing product sign-in must not create a schools session') },
     'next/headers': { cookies: async () => ({ get: k => ({ value: state.get(k) }), delete: k => state.delete(k) }) },
     'next/server': { NextResponse: { redirect: url => new Response(null, { status: 307, headers: { location: url } }) } },
-    '@/lib/auth-destination': { shouldClaimPracticeAttempt },
+    '@/lib/auth-destination': { isSchoolsDestination, shouldClaimPracticeAttempt },
     '@/lib/interviews': { OtpVerifySchema: { safeParse: () => ({ success: true, data: { email: 'test@example.test', token: '123456', next } }) }, AuthRequestSchema: { safeParse: () => ({ success: true, data: { email: 'test@example.test', next } }) } },
     '@/lib/rate-limit': { limitAuth: async () => ({ limited: false }) },
     '@/lib/server/claim-attempt': { claimCurrentAttempt: async () => { claimed++; return { id: 'old-report', roleId: 'nurse', status: 'completed' }; } },
@@ -61,4 +63,16 @@ test('practice report verification still redeems its claim', async () => {
 test('employer destination matching respects path boundaries and query strings', () => {
   for (const next of ['/employer?tab=roles', '/for-employers#start', '/employer/roles/a']) assert.equal(shouldClaimPracticeAttempt(next), false);
   for (const next of ['/account', '/practice/nurse?resume=a', '/employer-career']) assert.equal(shouldClaimPracticeAttempt(next), true);
+});
+
+test('disabled schools rejects each shared authentication entry before issuing a code', async()=>{
+  for(const next of ['/schools','/schools?pilot=one','/schools/me#assignment']) {
+    for(const route of ['request','verify']) {
+      const run=await loadRoute('../app/api/auth/'+route+'/route.ts',next);
+      assert.equal((await run.exports.POST({json:async()=>({})})).status,404);
+      assert.equal(run.callback(),undefined);assert.equal(run.claimed(),0);
+    }
+    const run=await loadRoute('../app/auth/confirm/route.ts',next);
+    assert.equal((await run.exports.GET(new Request('https://trymuqabala.com/auth/confirm?token_hash=test&type=email&next='+encodeURIComponent(next)))).status,404);
+  }
 });

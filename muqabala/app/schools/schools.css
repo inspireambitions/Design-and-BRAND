@@ -1,0 +1,17 @@
+.schools-shell{min-height:100vh;background:#f8f6ef;color:#163e39;font-family:Arial,sans-serif}
+.schools-shell main{max-width:1000px;margin:auto;padding:48px 24px}
+.schools-header{display:flex;gap:24px;align-items:center;justify-content:space-between;padding:24px;border-bottom:1px solid #c9d8d0}
+.schools-header>a{font-size:24px;font-weight:bold}.schools-header span{display:block;font-size:13px;font-weight:normal}
+.schools-header nav{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.schools-shell a{text-decoration:underline;text-underline-offset:3px}
+.schools-shell h1{font-size:clamp(30px,5vw,48px);line-height:1.15;margin-bottom:24px}
+.schools-shell h2{font-size:24px;margin:20px 0 12px}.schools-shell p{line-height:1.6;margin:12px 0}
+.schools-shell button,.schools-button{background:#075c50;color:white;border:2px solid transparent;border-radius:8px;padding:12px 18px;font-weight:bold;cursor:pointer;display:inline-block}
+.schools-shell button:disabled{opacity:.65;cursor:wait}.schools-shell :focus-visible{outline:3px solid #b44e0d;outline-offset:4px}
+.schools-shell textarea,.schools-shell select,.schools-shell input{display:block;width:100%;padding:12px;border:1px solid #54796e;border-radius:6px;color:#163e39;background:white;margin:8px 0 16px}
+.schools-card{background:white;border:1px solid #c9d8d0;border-radius:12px;padding:24px;margin:20px 0}
+.schools-shell label{display:block;font-weight:bold}.schools-shell fieldset{margin:24px 0;border:0;padding:0}.schools-shell legend{font-size:21px;font-weight:bold}
+.schools-shell footer{padding:28px 24px;border-top:1px solid #c9d8d0;text-align:center;font-size:14px}
+.schools-skip{position:absolute;left:-10000px}.schools-skip:focus{left:12px;top:12px;background:white;padding:16px;z-index:20}
+.schools-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.schools-shell mark{background:#d9eadc;color:#123c31}
+@media(max-width:600px){.schools-header{align-items:flex-start;flex-direction:column}.schools-card{padding:18px}.schools-header nav{gap:12px}}

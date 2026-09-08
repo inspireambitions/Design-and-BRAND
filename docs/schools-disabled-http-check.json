@@ -1,0 +1,281 @@
+{
+  "checkedAt": "2026-09-08T11:38:19.161Z",
+  "origin": "http://127.0.0.1:3109",
+  "results": [
+    {
+      "method": "GET",
+      "route": "/schools",
+      "status": 404
+    },
+    {
+      "method": "HEAD",
+      "route": "/schools",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "route": "/schools/sign-in",
+      "status": 404
+    },
+    {
+      "method": "HEAD",
+      "route": "/schools/sign-in",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "route": "/schools/me",
+      "status": 404
+    },
+    {
+      "method": "HEAD",
+      "route": "/schools/me",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "route": "/schools/me/00000000-0000-4000-8000-000000000001",
+      "status": 404
+    },
+    {
+      "method": "HEAD",
+      "route": "/schools/me/00000000-0000-4000-8000-000000000001",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "route": "/schools/me/settings",
+      "status": 404
+    },
+    {
+      "method": "HEAD",
+      "route": "/schools/me/settings",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "route": "/schools/me/reports/00000000-0000-4000-8000-000000000001",
+      "status": 404
+    },
+    {
+      "method": "HEAD",
+      "route": "/schools/me/reports/00000000-0000-4000-8000-000000000001",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "route": "/schools/founder",
+      "status": 404
+    },
+    {
+      "method": "HEAD",
+      "route": "/schools/founder",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "route": "/schools/cohorts",
+      "status": 404
+    },
+    {
+      "method": "HEAD",
+      "route": "/schools/cohorts",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "route": "/schools/cohorts/00000000-0000-4000-8000-000000000001",
+      "status": 404
+    },
+    {
+      "method": "HEAD",
+      "route": "/schools/cohorts/00000000-0000-4000-8000-000000000001",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "route": "/schools/cohorts/00000000-0000-4000-8000-000000000001/review",
+      "status": 404
+    },
+    {
+      "method": "HEAD",
+      "route": "/schools/cohorts/00000000-0000-4000-8000-000000000001/review",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "route": "/schools/cohorts/00000000-0000-4000-8000-000000000001/assign",
+      "status": 404
+    },
+    {
+      "method": "HEAD",
+      "route": "/schools/cohorts/00000000-0000-4000-8000-000000000001/assign",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "route": "/schools/admin",
+      "status": 404
+    },
+    {
+      "method": "HEAD",
+      "route": "/schools/admin",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "route": "/api/schools",
+      "status": 404
+    },
+    {
+      "method": "POST",
+      "route": "/api/schools",
+      "status": 404
+    },
+    {
+      "method": "PUT",
+      "route": "/api/schools",
+      "status": 404
+    },
+    {
+      "method": "PATCH",
+      "route": "/api/schools",
+      "status": 404
+    },
+    {
+      "method": "DELETE",
+      "route": "/api/schools",
+      "status": 404
+    },
+    {
+      "method": "HEAD",
+      "route": "/api/schools",
+      "status": 404
+    },
+    {
+      "method": "OPTIONS",
+      "route": "/api/schools",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "route": "/api/schools/sign-out",
+      "status": 404
+    },
+    {
+      "method": "POST",
+      "route": "/api/schools/sign-out",
+      "status": 404
+    },
+    {
+      "method": "PUT",
+      "route": "/api/schools/sign-out",
+      "status": 404
+    },
+    {
+      "method": "PATCH",
+      "route": "/api/schools/sign-out",
+      "status": 404
+    },
+    {
+      "method": "DELETE",
+      "route": "/api/schools/sign-out",
+      "status": 404
+    },
+    {
+      "method": "HEAD",
+      "route": "/api/schools/sign-out",
+      "status": 404
+    },
+    {
+      "method": "OPTIONS",
+      "route": "/api/schools/sign-out",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "route": "/api/schools/manage",
+      "status": 404
+    },
+    {
+      "method": "POST",
+      "route": "/api/schools/manage",
+      "status": 404
+    },
+    {
+      "method": "PUT",
+      "route": "/api/schools/manage",
+      "status": 404
+    },
+    {
+      "method": "PATCH",
+      "route": "/api/schools/manage",
+      "status": 404
+    },
+    {
+      "method": "DELETE",
+      "route": "/api/schools/manage",
+      "status": 404
+    },
+    {
+      "method": "HEAD",
+      "route": "/api/schools/manage",
+      "status": 404
+    },
+    {
+      "method": "OPTIONS",
+      "route": "/api/schools/manage",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "route": "/api/schools/feedback",
+      "status": 404
+    },
+    {
+      "method": "POST",
+      "route": "/api/schools/feedback",
+      "status": 404
+    },
+    {
+      "method": "PUT",
+      "route": "/api/schools/feedback",
+      "status": 404
+    },
+    {
+      "method": "PATCH",
+      "route": "/api/schools/feedback",
+      "status": 404
+    },
+    {
+      "method": "DELETE",
+      "route": "/api/schools/feedback",
+      "status": 404
+    },
+    {
+      "method": "HEAD",
+      "route": "/api/schools/feedback",
+      "status": 404
+    },
+    {
+      "method": "OPTIONS",
+      "route": "/api/schools/feedback",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "route": "/",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "route": "/practice",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "route": "/for-employers",
+      "status": 200
+    }
+  ]
+}

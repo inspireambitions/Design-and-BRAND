@@ -36,6 +36,8 @@ test('em dashes: none anywhere in candidate-facing source', () => {
 test('site copy uses the preferred Practice spelling', () => {
   const problems = [];
   for (const file of copyFiles) {
+    // The approved schools v2 brief explicitly requires the British verb "practise".
+    if (/(?:app|components)[\\/]schools[\\/]/.test(file)) continue;
     const source = read(file).replace(/\/\*[\s\S]*?\*\//g, '');
     for (const match of source.matchAll(/(?<![\w-])practise(?![\w-])/gi)) problems.push(`${file}: "${match[0]}"`);
   }

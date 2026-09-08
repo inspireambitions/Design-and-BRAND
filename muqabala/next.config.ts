@@ -21,6 +21,12 @@ const nextConfig: NextConfig = {
     const immutable = { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' };
     return [
       { source: '/:path*', headers: baseline },
+      ...['/schools/:path*', '/api/schools/:path*'].map(source => ({ source, headers: [
+        { key: 'Referrer-Policy', value: 'no-referrer' },
+        { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+        { key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' },
+        { key: 'Cache-Control', value: 'private, no-store, max-age=0' },
+      ] })),
       { source: '/icon.svg', headers: [immutable] },
       { source: '/opengraph-image', headers: [immutable] },
       { source: '/twitter-image', headers: [immutable] },

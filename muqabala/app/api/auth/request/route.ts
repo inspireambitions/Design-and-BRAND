@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
-import { shouldClaimPracticeAttempt } from '@/lib/auth-destination';
+import { isSchoolsDestination, shouldClaimPracticeAttempt } from '@/lib/auth-destination';
+import { schoolsEnabled } from '@/lib/schools/config';
 import { AuthRequestSchema } from '@/lib/interviews';
 import { limitAuth } from '@/lib/rate-limit';
 import {
@@ -23,6 +24,9 @@ export async function POST(request: Request) {
   if (!hasTrustedOrigin(request)) return Response.json({ error: 'Invalid request origin.' }, { status: 403 });
   const parsed = AuthRequestSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: 'Enter a valid email address.' }, { status: 400 });
+  if (isSchoolsDestination(parsed.data.next) && !schoolsEnabled()) {
+    return Response.json({ error: 'Not found' }, { status: 404 });
+  }
   const message = (english: string, arabic: string) => parsed.data.lang === 'ar' ? arabic : english;
   const limited = await limitAuth(request, parsed.data.email);
   if (limited.limited) {

@@ -1,6 +1,7 @@
 'use client';
 
 import type { PostHog } from 'posthog-js';
+import { isSchoolsDestination } from './auth-destination';
 
 /**
  * Anonymous usage analytics (PostHog EU), active only when
@@ -30,10 +31,12 @@ const pending: Array<{ event: EventName; props: EventProps }> = [];
 const MAX_PENDING = 32;
 
 export function initAnalytics(): void {
+  if (typeof window !== 'undefined' && isSchoolsDestination(window.location.pathname)) return;
   const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
   if (!key || posthog || loading || typeof window === 'undefined') return;
   loading = import('posthog-js')
     .then(({ default: client }) => {
+      if (isSchoolsDestination(window.location.pathname)) { loading=null; pending.length=0; return; }
       client.init(key, {
         api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://eu.i.posthog.com',
         autocapture: false,
@@ -153,6 +156,7 @@ export function employerVolumeProps(flagOn: boolean, extra: Omit<EventProps, 'de
 }
 
 export function track(event: EventName, props: EventProps = {}): void {
+  if (typeof window !== 'undefined' && isSchoolsDestination(window.location.pathname)) return;
   if (!posthog) {
     if (pending.length < MAX_PENDING) pending.push({ event, props });
     return;

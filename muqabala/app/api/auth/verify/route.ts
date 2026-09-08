@@ -1,10 +1,12 @@
 import { cookies } from 'next/headers';
-import { shouldClaimPracticeAttempt } from '@/lib/auth-destination';
+import { isSchoolsDestination, shouldClaimPracticeAttempt } from '@/lib/auth-destination';
 import { OtpVerifySchema } from '@/lib/interviews';
 import { limitAuth } from '@/lib/rate-limit';
 import { claimCurrentAttempt } from '@/lib/server/claim-attempt';
 import { AUTH_STATE_COOKIE, hasTrustedOrigin, isOpaqueToken, privateNoStoreHeaders, safeNext } from '@/lib/server/security';
 import { createClient } from '@/lib/supabase/server';
+import { schoolsEnabled } from '@/lib/schools/config';
+import { registerSchoolsSession } from '@/lib/schools/session';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -13,6 +15,8 @@ export async function POST(request: Request) {
   if (!hasTrustedOrigin(request)) return Response.json({ error: 'Invalid request origin.' }, { status: 403 });
   const parsed = OtpVerifySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: 'Enter the six-digit code.' }, { status: 400 });
+  const schoolsDestination = isSchoolsDestination(parsed.data.next);
+  if (schoolsDestination && !schoolsEnabled()) return Response.json({error:'Not found'},{status:404});
   const message = (english: string, arabic: string) => parsed.data.lang === 'ar' ? arabic : english;
   const limited = await limitAuth(request, parsed.data.email);
   if (limited.limited) return Response.json({ error: message('Too many attempts. Please wait and try again.', 'محاولات كثيرة. انتظر قليلاً ثم حاول مرة أخرى.') }, { status: 429 });
@@ -24,6 +28,7 @@ export async function POST(request: Request) {
     type: 'email',
   });
   if (error || !data.user) return Response.json({ error: message('That code is invalid or has expired.', 'هذا الرمز غير صحيح أو انتهت صلاحيته.') }, { status: 400 });
+  if (schoolsDestination && !await registerSchoolsSession(client)) return Response.json({error:'Could not start your schools session. Request a new code.'},{status:503});
   const cookieStore = await cookies();
   const requestedNext = safeNext(parsed.data.next, '/account');
   const claimState = shouldClaimPracticeAttempt(requestedNext)

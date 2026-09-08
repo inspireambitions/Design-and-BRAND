@@ -101,6 +101,7 @@ function FooterGroup({ group, mobile = false }: { group: (typeof groups)[number]
 export function SiteFooter() {
   const { t, lang } = useLang();
   const path = usePathname();
+  if (path === '/schools' || path?.startsWith('/schools/')) return null;
   const employer = path === '/for-employers' || path.startsWith('/for-employers/') || path === '/employer' || path.startsWith('/employer/');
   const trackSupport = (id: string) => track('footer_link_clicked', { link_id: id });
 
