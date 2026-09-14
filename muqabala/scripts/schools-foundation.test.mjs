@@ -43,6 +43,7 @@ test('schools database denies cross-institution, draft and employer access', asy
     await db.exec(readFileSync(new URL('../supabase/migrations/20260908130227_schools_tester_readiness.sql',import.meta.url),'utf8'));
     await db.exec(readFileSync(new URL('../supabase/migrations/20260908131853_schools_cleanup_worker.sql',import.meta.url),'utf8'));
     await db.exec(readFileSync(new URL('../supabase/migrations/20260908135304_schools_feedback_recovery.sql',import.meta.url),'utf8'));
+    await db.exec(readFileSync(new URL('../supabase/migrations/20260914052511_schools_dashboard_performance.sql',import.meta.url),'utf8'));
     await db.exec(`
       insert into auth.users values ('${id(1)}'),('${id(2)}'),('${id(3)}'),('${id(4)}'),('${id(5)}'),('${id(6)}');
       insert into public.schools_institutions(id,name,country,language) values ('${id(10)}','A','UAE','en'),('${id(11)}','B','UAE','en');

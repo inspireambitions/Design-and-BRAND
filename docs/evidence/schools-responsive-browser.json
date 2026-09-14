@@ -1,0 +1,248 @@
+{
+  "checkedAt": "2026-09-14T05:55:00.596Z",
+  "stagingRef": "okrsezhospztwtptqhpo",
+  "emulatedViewports": true,
+  "checks": [
+    {
+      "route": "/schools",
+      "width": 320,
+      "height": 568,
+      "noHorizontalOverflow": true,
+      "noPageErrors": true,
+      "visibleKeyboardFocus": true
+    },
+    {
+      "route": "/schools/me",
+      "width": 320,
+      "height": 568,
+      "noHorizontalOverflow": true,
+      "noPageErrors": true,
+      "visibleKeyboardFocus": true
+    },
+    {
+      "route": "/schools/cohorts/7c13d408-3ef7-43a8-8af1-0795d26ccc63",
+      "width": 320,
+      "height": 568,
+      "noHorizontalOverflow": true,
+      "noPageErrors": true,
+      "visibleKeyboardFocus": true
+    },
+    {
+      "route": "/schools/cohorts/7c13d408-3ef7-43a8-8af1-0795d26ccc63/review",
+      "width": 320,
+      "height": 568,
+      "noHorizontalOverflow": true,
+      "noPageErrors": true,
+      "visibleKeyboardFocus": true
+    },
+    {
+      "route": "/schools/admin",
+      "width": 320,
+      "height": 568,
+      "noHorizontalOverflow": true,
+      "noPageErrors": true,
+      "visibleKeyboardFocus": true
+    },
+    {
+      "route": "/schools",
+      "width": 375,
+      "height": 812,
+      "noHorizontalOverflow": true,
+      "noPageErrors": true,
+      "visibleKeyboardFocus": true
+    },
+    {
+      "route": "/schools/me",
+      "width": 375,
+      "height": 812,
+      "noHorizontalOverflow": true,
+      "noPageErrors": true,
+      "visibleKeyboardFocus": true
+    },
+    {
+      "route": "/schools/cohorts/7c13d408-3ef7-43a8-8af1-0795d26ccc63",
+      "width": 375,
+      "height": 812,
+      "noHorizontalOverflow": true,
+      "noPageErrors": true,
+      "visibleKeyboardFocus": true
+    },
+    {
+      "route": "/schools/cohorts/7c13d408-3ef7-43a8-8af1-0795d26ccc63/review",
+      "width": 375,
+      "height": 812,
+      "noHorizontalOverflow": true,
+      "noPageErrors": true,
+      "visibleKeyboardFocus": true
+    },
+    {
+      "route": "/schools/admin",
+      "width": 375,
+      "height": 812,
+      "noHorizontalOverflow": true,
+      "noPageErrors": true,
+      "visibleKeyboardFocus": true
+    },
+    {
+      "route": "/schools",
+      "width": 390,
+      "height": 844,
+      "noHorizontalOverflow": true,
+      "noPageErrors": true,
+      "visibleKeyboardFocus": true
+    },
+    {
+      "route": "/schools/me",
+      "width": 390,
+      "height": 844,
+      "noHorizontalOverflow": true,
+      "noPageErrors": true,
+      "visibleKeyboardFocus": true
+    },
+    {
+      "route": "/schools/cohorts/7c13d408-3ef7-43a8-8af1-0795d26ccc63",
+      "width": 390,
+      "height": 844,
+      "noHorizontalOverflow": true,
+      "noPageErrors": true,
+      "visibleKeyboardFocus": true
+    },
+    {
+      "route": "/schools/cohorts/7c13d408-3ef7-43a8-8af1-0795d26ccc63/review",
+      "width": 390,
+      "height": 844,
+      "noHorizontalOverflow": true,
+      "noPageErrors": true,
+      "visibleKeyboardFocus": true
+    },
+    {
+      "route": "/schools/admin",
+      "width": 390,
+      "height": 844,
+      "noHorizontalOverflow": true,
+      "noPageErrors": true,
+      "visibleKeyboardFocus": true
+    },
+    {
+      "route": "/schools",
+      "width": 768,
+      "height": 1024,
+      "noHorizontalOverflow": true,
+      "noPageErrors": true,
+      "visibleKeyboardFocus": true
+    },
+    {
+      "route": "/schools/me",
+      "width": 768,
+      "height": 1024,
+      "noHorizontalOverflow": true,
+      "noPageErrors": true,
+      "visibleKeyboardFocus": true
+    },
+    {
+      "route": "/schools/cohorts/7c13d408-3ef7-43a8-8af1-0795d26ccc63",
+      "width": 768,
+      "height": 1024,
+      "noHorizontalOverflow": true,
+      "noPageErrors": true,
+      "visibleKeyboardFocus": true
+    },
+    {
+      "route": "/schools/cohorts/7c13d408-3ef7-43a8-8af1-0795d26ccc63/review",
+      "width": 768,
+      "height": 1024,
+      "noHorizontalOverflow": true,
+      "noPageErrors": true,
+      "visibleKeyboardFocus": true
+    },
+    {
+      "route": "/schools/admin",
+      "width": 768,
+      "height": 1024,
+      "noHorizontalOverflow": true,
+      "noPageErrors": true,
+      "visibleKeyboardFocus": true
+    },
+    {
+      "route": "/schools",
+      "width": 1280,
+      "height": 800,
+      "noHorizontalOverflow": true,
+      "noPageErrors": true,
+      "visibleKeyboardFocus": true
+    },
+    {
+      "route": "/schools/me",
+      "width": 1280,
+      "height": 800,
+      "noHorizontalOverflow": true,
+      "noPageErrors": true,
+      "visibleKeyboardFocus": true
+    },
+    {
+      "route": "/schools/cohorts/7c13d408-3ef7-43a8-8af1-0795d26ccc63",
+      "width": 1280,
+      "height": 800,
+      "noHorizontalOverflow": true,
+      "noPageErrors": true,
+      "visibleKeyboardFocus": true
+    },
+    {
+      "route": "/schools/cohorts/7c13d408-3ef7-43a8-8af1-0795d26ccc63/review",
+      "width": 1280,
+      "height": 800,
+      "noHorizontalOverflow": true,
+      "noPageErrors": true,
+      "visibleKeyboardFocus": true
+    },
+    {
+      "route": "/schools/admin",
+      "width": 1280,
+      "height": 800,
+      "noHorizontalOverflow": true,
+      "noPageErrors": true,
+      "visibleKeyboardFocus": true
+    },
+    {
+      "route": "/schools",
+      "width": 1440,
+      "height": 900,
+      "noHorizontalOverflow": true,
+      "noPageErrors": true,
+      "visibleKeyboardFocus": true
+    },
+    {
+      "route": "/schools/me",
+      "width": 1440,
+      "height": 900,
+      "noHorizontalOverflow": true,
+      "noPageErrors": true,
+      "visibleKeyboardFocus": true
+    },
+    {
+      "route": "/schools/cohorts/7c13d408-3ef7-43a8-8af1-0795d26ccc63",
+      "width": 1440,
+      "height": 900,
+      "noHorizontalOverflow": true,
+      "noPageErrors": true,
+      "visibleKeyboardFocus": true
+    },
+    {
+      "route": "/schools/cohorts/7c13d408-3ef7-43a8-8af1-0795d26ccc63/review",
+      "width": 1440,
+      "height": 900,
+      "noHorizontalOverflow": true,
+      "noPageErrors": true,
+      "visibleKeyboardFocus": true
+    },
+    {
+      "route": "/schools/admin",
+      "width": 1440,
+      "height": 900,
+      "noHorizontalOverflow": true,
+      "noPageErrors": true,
+      "visibleKeyboardFocus": true
+    }
+  ],
+  "limitation": "Browser emulation is not a physical-device test."
+}

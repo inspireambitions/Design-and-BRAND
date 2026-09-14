@@ -44,3 +44,40 @@
 .schools-shell textarea{resize:vertical}
 .schools-shell progress{max-width:100%;accent-color:#075c50}
 @media(max-width:900px){.schools-header{flex-wrap:wrap}.schools-shell main{padding-inline:20px}}
+
+/* Educator and institution dashboards. Keep dense status readable without
+   exposing answer content or requiring horizontal scrolling. */
+.schools-page-heading{max-width:720px;margin-bottom:28px}
+.schools-page-heading h1{margin-bottom:8px}.schools-page-heading>p:last-child{font-size:18px;color:#42665b}
+.schools-dashboard-list{display:grid;gap:18px}
+.schools-dashboard-card{margin:0}
+.schools-dashboard-card-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:24px}
+.schools-dashboard-card-heading h2{margin:4px 0}.schools-dashboard-card-heading .schools-button{flex:0 0 auto;text-align:center}
+.schools-metric-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;margin:22px 0 0;border-top:1px solid #c9d8d0}
+.schools-metric-grid>div{min-width:0;padding:18px 14px 4px;border-right:1px solid #d9e3dc}
+.schools-metric-grid>div:first-child{padding-left:0}.schools-metric-grid>div:last-child{border-right:0;padding-right:0}
+.schools-metric-grid dt{font-size:13px;line-height:1.35;color:#42665b}
+.schools-metric-grid dd{margin:7px 0 0;font-size:25px;font-weight:bold;line-height:1.15}
+.schools-metric-grid .schools-metric-text{font-size:16px;line-height:1.35}
+.schools-institution{margin-bottom:34px}.schools-overview-card{border-color:#9eb8ac}
+.schools-admin-metrics{grid-template-columns:repeat(6,minmax(0,1fr));margin-bottom:28px}
+.schools-assignment-list{list-style:none;margin:12px 0 0;padding:0;border-top:1px solid #c9d8d0}
+.schools-assignment-list li{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:14px 0;border-bottom:1px solid #d9e3dc}
+.schools-assignment-list span:first-child{display:grid;gap:3px}.schools-assignment-list small{color:#42665b}
+.schools-privacy-note{padding:14px 16px;border-left:3px solid #075c50;background:#eef4ec;font-size:14px}
+.schools-management-row{padding-top:18px;margin-top:24px;border-top:1px solid #c9d8d0}
+@media(max-width:760px){
+  .schools-metric-grid,.schools-admin-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .schools-metric-grid>div,.schools-metric-grid>div:first-child,.schools-metric-grid>div:last-child{padding:14px 10px;border-right:0;border-bottom:1px solid #d9e3dc}
+  .schools-metric-grid>div:nth-child(odd){padding-left:0;border-right:1px solid #d9e3dc}.schools-metric-grid>div:nth-child(even){padding-right:0}
+  .schools-metric-grid>div:last-child{border-bottom:0}
+}
+@media(max-width:520px){
+  .schools-shell main{padding:30px 16px}.schools-page-heading>p:last-child{font-size:16px}
+  .schools-dashboard-card-heading{display:grid;gap:14px}.schools-dashboard-card-heading .schools-button{width:100%}
+  .schools-assignment-list li{align-items:flex-start;flex-direction:column;gap:5px}
+}
+@media(max-width:340px){
+  .schools-metric-grid,.schools-admin-metrics{grid-template-columns:1fr}
+  .schools-metric-grid>div,.schools-metric-grid>div:nth-child(odd),.schools-metric-grid>div:nth-child(even){padding-inline:0;border-right:0}
+}
