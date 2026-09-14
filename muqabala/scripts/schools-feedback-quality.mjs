@@ -25,7 +25,7 @@ try{
     const response=await context.post('/api/schools/feedback',{data:{attemptId},timeout:60000});
     const result=await admin.from('schools_assignment_attempts').select('feedback_status,feedback_failure_code,evidence_covered,evidence_detail').eq('id',attemptId).single();assert(!result.error);
     results.push({name:example.name,httpStatus:response.status(),status:result.data.feedback_status,failure:result.data.feedback_failure_code,covered:result.data.evidence_covered,detail:result.data.evidence_detail});
-    await writeFile('../docs/evidence/'+(repeatOriginal?'schools-feedback-original-repeat':'schools-feedback-quality')+'.json',JSON.stringify({checkedAt:new Date().toISOString(),syntheticOnly:true,model:'gpt-4.1-mini',results},null,2)+'\n');
+    await writeFile('../docs/evidence/'+(grounding?'schools-feedback-grounding':repeatOriginal?'schools-feedback-original-repeat':'schools-feedback-quality')+'.json',JSON.stringify({checkedAt:new Date().toISOString(),syntheticOnly:true,model:'gpt-4.1-mini',results},null,2)+'\n');
     console.log(JSON.stringify({case:example.name,status:result.data.feedback_status,failure:result.data.feedback_failure_code,covered:result.data.evidence_covered}));
   }
   assert(results.every(r=>r.status==='ready'),'At least one feedback request failed');
