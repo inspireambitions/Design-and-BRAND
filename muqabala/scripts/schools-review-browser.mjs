@@ -6,12 +6,19 @@ const require=createRequire(import.meta.url);
 const {chromium}=require(process.env.SCHOOLS_QA_PLAYWRIGHT);
 const browser=await chromium.launch({channel:'chrome',headless:true});
 const checks=[];
+const hosted=process.argv.includes('--hosted');
+const {previewOrigin,previewAccess}=await import('./schools-preview-access.mjs');
+const origin=hosted?previewOrigin:'http://localhost:3110';
+const access=hosted?await previewAccess():null;
+const mapCookies=cookies=>hosted?cookies.map(c=>({...c,domain:new URL(origin).hostname,secure:true})):cookies;
+async function unlock(page){if(hosted)await page.goto(origin+'/schools?_vercel_share='+encodeURIComponent(Object.keys(access.protectionBypass)[0]));}
 try{
   const educator=await login('educator'),f=educator.fixture;
   const attempts=await educator.session.from('schools_assignment_attempts').select('id').eq('assignment_id',f.assignments[0]).eq('status','submitted').order('attempt_number');
   if(attempts.error||!attempts.data.length)throw new Error('Run the student browser journey first');
-  const attempt=attempts.data[0];const context=await browser.newContext();await context.addCookies(educator.cookies);const page=await context.newPage();
-  await page.goto('http://localhost:3110/schools/cohorts/'+f.cohorts[0]+'/review?attempt='+attempt.id);
+  const attempt=attempts.data[0];const context=await browser.newContext();await context.addCookies(mapCookies(educator.cookies));const page=await context.newPage();
+  await unlock(page);
+  await page.goto(origin+'/schools/cohorts/'+f.cohorts[0]+'/review?attempt='+attempt.id);
   await page.getByLabel('Your view',{exact:true}).selectOption('needs_more');
   await page.getByLabel('Comment, up to 280 characters',{exact:true}).fill('Synthetic original adviser comment.');
   await page.getByRole('button',{name:'Save review',exact:true}).click();await page.getByRole('status').filter({hasText:'Review saved.'}).waitFor();
@@ -21,10 +28,12 @@ try{
   await page.getByRole('button',{name:'Undo',exact:true}).click();await page.getByRole('status').filter({hasText:'Previous review restored.'}).waitFor();
   if(await page.getByLabel('Your view',{exact:true}).inputValue()!=='needs_more'||await page.getByLabel('Comment, up to 280 characters',{exact:true}).inputValue()!=='Synthetic original adviser comment.')throw new Error('Undo did not restore the exact review');
   checks.push('Hosted browser review undo restores exact state and comment');
-  const student=await login('student');const studentContext=await browser.newContext({viewport:{width:390,height:844}});await studentContext.addCookies(student.cookies);const studentPage=await studentContext.newPage();
-  await studentPage.goto('http://localhost:3110/schools/me/reports/'+attempt.id);
+  const student=await login('student');const studentContext=await browser.newContext({viewport:{width:390,height:844}});await studentContext.addCookies(mapCookies(student.cookies));const studentPage=await studentContext.newPage();
+  await unlock(studentPage);
+  await studentPage.goto(origin+'/schools/me/reports/'+attempt.id);
   await studentPage.getByText('Synthetic original adviser comment.',{exact:true}).waitFor();checks.push('Private report displays adviser comment');
-  await studentPage.goto('http://localhost:3110/schools/me/'+f.assignments[0]+'?retry=1');
+  await unlock(studentPage);
+  await studentPage.goto(origin+'/schools/me/'+f.assignments[0]+'?retry=1');
   const answer=studentPage.getByRole('textbox',{name:'Your answer',exact:true}).first();await answer.waitFor();
   await answer.fill('Our class project finished on Friday. I checked every remaining task with the group. Everyone completed their part.');
   await studentPage.getByRole('button',{name:'I cannot think of an example',exact:true}).first().click();
@@ -35,7 +44,8 @@ try{
   if(latest.error||latest.data.id===attempt.id)throw new Error('Retry did not create a separate attempt');
   const review=await educator.session.from('schools_reviews').select('id').eq('assignment_attempt_id',latest.data.id);
   if(review.error||review.data.length)throw new Error('Old review leaked onto the new attempt');checks.push('New submission has no carried-over review');
-  await studentPage.goto('http://localhost:3110/schools/me/reports/'+latest.data.id);await studentPage.getByText('Not reviewed',{exact:true}).waitFor();
+  await unlock(studentPage);
+  await studentPage.goto(origin+'/schools/me/reports/'+latest.data.id);await studentPage.getByText('Not reviewed',{exact:true}).waitFor();
   await studentPage.screenshot({path:'output/playwright/schools-retry-not-reviewed.png',fullPage:true});
   await writeFile('../docs/evidence/schools-review-browser.json',JSON.stringify({checkedAt:new Date().toISOString(),checks,syntheticOnly:true},null,2)+'\n');
   console.log(JSON.stringify({checks}));
