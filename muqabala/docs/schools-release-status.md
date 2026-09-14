@@ -17,6 +17,12 @@ Updated 14 September 2026. This is the current evidence boundary for the Educato
 - The institution page now shows privacy-safe participation totals and active assignment dates. It does not show drafts, answers, feedback, evidence or adviser comments.
 - Migration `20260914052511_schools_dashboard_performance.sql` adds the missing Schools foreign-key indexes and optimises three RLS policies without changing their access rules.
 - This migration must remain on staging until Astra has reviewed the pull request and the owner has approved any production release.
+- The full automated suite passes 543 of 543 tests. TypeScript, the production build, release ancestry and the bundle limit pass.
+- Lighthouse accessibility is 100 on the public Schools page, student home, cohort page, review queue and institution administration page.
+- Thirty responsive route and viewport checks pass from 320 to 1440 pixels with no horizontal overflow, browser errors or hidden keyboard focus.
+- Five simultaneous synthetic feedback journeys completed with five model calls. Stored usage was 5,240 input tokens and 1,815 output tokens. At the verified GPT-4.1 mini rates, the estimated total was USD 0.005.
+- A clean synthetic student journey proved timed autosave, refresh recovery, adviser draft privacy and exactly-once submission after a lost response.
+- A new Vercel preview is not deployed yet. Its release requires explicit approval to send the staging service credential to the protected preview environment. Production is unchanged.
 
 ## Human gates still open
 
@@ -24,6 +30,7 @@ Updated 14 September 2026. This is the current evidence boundary for the Educato
 - WhatsApp, iMessage and LinkedIn preview checks on real services.
 - A supervised five-person pilot using approved fictional test content before any wider group.
 - Independent review of feedback usefulness and hiring validity.
+- Provider-accepted email delivery to the controlled inbox. The test needs explicit approval because the invitation contains a temporary access secret.
 
 ## Founder inputs still required
 
