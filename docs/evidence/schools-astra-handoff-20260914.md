@@ -8,7 +8,10 @@ Date: 14 September 2026
 - App: `muqabala/`
 - Base branch: `claude/gulf-hospitality-video-interview-m9skfu`
 - Review branch: `codex/schools-finish-20260914`
-- Current local commit: `68aa74c`
+- Current review commit: `d809e88`
+- Pull request: <https://github.com/inspireambitions/Design-and-BRAND/pull/21>
+- Protected preview: <https://muqabala-schools-pilot-20260908-inspire14.vercel.app>
+- Immutable preview deployment: <https://muqabala-puhd99s0i-inspire14.vercel.app>
 - Production was not changed.
 - Supabase production was not changed.
 - The database migration was applied only to the disposable Supabase branch `okrsezhospztwtptqhpo`.
@@ -22,6 +25,7 @@ Date: 14 September 2026
 - Rewrote three Schools RLS policies to use the Supabase init-plan pattern without changing access predicates.
 - Updated the Schools release document and the root release guide so future agents see the current public, private and human-gate boundaries.
 - Added reusable dashboard, responsive, accessibility and five-call feedback checks.
+- Fixed the institution dashboard to use its server-only service client for operational cohort columns only after the signed-in user is verified as an institution administrator. The learner-safe database grant remains limited to cohort ID and name.
 
 ## Automated evidence
 
@@ -34,6 +38,7 @@ Date: 14 September 2026
 - Responsive browser check: 30 of 30 route and viewport combinations passed at 320, 375, 390, 768, 1280 and 1440 pixels.
 - Synthetic student journey: timed autosave, refresh recovery, adviser draft privacy and exactly-once retry after a lost submission response passed.
 - Database security suite includes cross-institution denial, employer denial, draft privacy, direct-write denial, idle and revoked session denial, deletion and retention boundaries.
+- The corrected Vercel preview built all 135 routes and passed fresh live checks on the protected Schools landing page, learner dashboard, adviser cohort dashboard and institution dashboard. Each returned HTTP 200.
 
 ## Bounded provider evidence
 
@@ -54,11 +59,18 @@ Date: 14 September 2026
 - The unrelated project-level leaked-password warning remains unchanged.
 - The staging migration history currently contains two safe, idempotent executions named `schools_dashboard_performance`. This happened because the staging branch was reset and the migration was reapplied. Production contains neither execution.
 
-## Evidence still requiring explicit approval
+## External actions completed
 
-- GitHub push and pull request are blocked by the secure-action gate until the owner explicitly approves sending this source and synthetic evidence to `inspireambitions/Design-and-BRAND`.
-- The new Vercel preview is blocked until the owner explicitly approves sending the staging-only Supabase service credential to the protected Muqabala Vercel preview.
-- A provider-accepted email test is blocked until the owner explicitly approves one temporary staff invitation to the controlled test inbox. Mocked delivery, retries and idempotency pass in the 543-test suite, but inbox receipt is not claimed.
+- The review branch was pushed and pull request 21 is open and mergeable.
+- The corrected Schools build was deployed to a protected Vercel preview using the staging-only Supabase credential.
+- The stable protected preview alias points to deployment `dpl_CGZ13zZ8PL4yYSuyDeqeisX6yZNw`.
+- Production was not deployed or promoted by this work.
+
+## Remaining protected action
+
+- No real email was sent. The old email-configured preview did not contain the current mail route, so the test stopped at HTTP 404 and the temporary invitation was cleaned up.
+- The corrected preview needs the existing preview-only settings `SCHOOLS_RESEND_API_KEY`, `SCHOOLS_EMAIL_FROM` and `CRON_SECRET` copied from the old Schools branch. Values must not be printed. This narrower secret transfer requires explicit owner approval.
+- After that approval, run exactly one temporary staff invitation to the controlled test inbox. Record provider acceptance, concurrent-worker exactly-once behaviour and replay idempotency. Inbox receipt must remain labelled unverified unless the inbox is read back.
 
 ## Human gates
 
@@ -77,4 +89,4 @@ Date: 14 September 2026
 
 ## Astra decision requested
 
-Inspect tenant isolation, draft privacy, service-role use on the institution page, the dashboard aggregation rules, the 28 indexes, the three RLS policy rewrites, responsive accessibility and the release claims. Do not approve production from this handoff alone. Require the protected preview, provider-accepted email evidence and the listed human gates first.
+Inspect tenant isolation, draft privacy, the membership check before service-role reads on the institution page, the dashboard aggregation rules, the 28 indexes, the three RLS policy rewrites, responsive accessibility and the release claims. Do not approve production from this handoff alone. Require provider-accepted email evidence and the listed human gates first.
