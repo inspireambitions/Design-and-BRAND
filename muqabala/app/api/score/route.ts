@@ -145,10 +145,13 @@ function recordProviderFailure(error: ProviderUnavailableError): void {
  */
 async function scoreViaOpenAI(userPrompt: string, onDelta?: (text: string) => void): Promise<ParsedFeedback> {
   const model = process.env.OPENAI_SCORING_MODEL || 'gpt-5.6-sol';
-  const rawEffort = process.env.SCORING_REASONING || 'medium';
+  // The 25-run production gate passed at low reasoning. Keep that measured
+  // setting as the safe default so a missing environment override does not
+  // silently reintroduce the 12-second timeout seen in the incident record.
+  const rawEffort = process.env.SCORING_REASONING || 'low';
   const effort = ['low', 'medium', 'high'].includes(rawEffort)
     ? (rawEffort as 'low' | 'medium' | 'high')
-    : 'medium';
+    : 'low';
   // Fail quickly enough to leave room for the approved fallback provider.
   const client = new OpenAI({ timeout: FEEDBACK_STREAM_TIMEOUT_MS, maxRetries: 0 });
   const request = {

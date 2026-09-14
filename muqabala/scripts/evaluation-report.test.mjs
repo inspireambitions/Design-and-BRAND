@@ -248,6 +248,14 @@ test('server failures have structured monitoring without candidate content', () 
   assert.doesNotMatch(cronAuthSource, /interviewId|candidate|transcript/i);
 });
 
+test('safe report fallbacks and rejected cron probes are operational events, not error issues', async () => {
+  const languageSource = await readFile(new URL('../lib/server/evaluation-report-language.ts', import.meta.url), 'utf8');
+  assert.match(languageSource, /evidence_line_fallback_used/);
+  assert.doesNotMatch(languageSource, /reportOperationalFailure\('evidence_line_rejected'/);
+  assert.match(cronAuthSource, /reportOperationalEvent\('cron_request_rejected'/);
+  assert.doesNotMatch(cronAuthSource, /reportOperationalFailure\([^\n]*invalid_authorisation/);
+});
+
 test('online and print report text remains readable', () => {
   assert.match(reportCssSource, /\.meta dd[^}]*font-size: \.875rem/);
   assert.match(reportCssSource, /\.evidenceList p[^}]*font-size: \.875rem/);

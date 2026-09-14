@@ -34,6 +34,12 @@ test('Claude fallback is explicit and OpenRouter is never a third sequential hop
   assert.deepEqual(scoringProviderOrder({ OPENROUTER_API_KEY: 'router' }), ['openrouter']);
 });
 
+test('the scored production route defaults to the measured low reasoning setting', async () => {
+  const route = await import('node:fs/promises').then(({ readFile }) => readFile(new URL('../app/api/score/route.ts', import.meta.url), 'utf8'));
+  assert.match(route, /process\.env\.SCORING_REASONING \|\| 'low'/);
+  assert.match(route, /\? \(rawEffort as 'low' \| 'medium' \| 'high'\)\s*:\s*'low'/);
+});
+
 test('the provider schema and server validator enforce the same text limits', () => {
   assert.equal(FEEDBACK_JSON_SCHEMA.properties.headline.maxLength, 160);
   assert.equal(FEEDBACK_JSON_SCHEMA.properties.strengths.maxItems, 3);

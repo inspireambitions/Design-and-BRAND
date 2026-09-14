@@ -1,5 +1,5 @@
 import 'server-only';
-import { reportOperationalFailure } from '@/lib/sentry-server';
+import { reportOperationalEvent, reportOperationalFailure } from '@/lib/sentry-server';
 
 export function rejectUnauthorisedCron(request: Request, job: string): Response | null {
   const secret = process.env.CRON_SECRET;
@@ -8,7 +8,9 @@ export function rejectUnauthorisedCron(request: Request, job: string): Response 
     return Response.json({ error: 'Scheduled job is not configured.' }, { status: 503 });
   }
   if (request.headers.get('authorization') !== `Bearer ${secret}`) {
-    reportOperationalFailure('cron_auth_failed', { area: 'cron', job, code: 'invalid_authorisation', status: 401 });
+    // Unauthenticated probes are expected internet traffic. Preserve a
+    // content-free audit event, but do not page on a correctly rejected call.
+    reportOperationalEvent('cron_request_rejected', { area: 'cron', job, code: 'invalid_authorisation', status: 401 });
     return Response.json({ error: 'Unauthorized.' }, { status: 401 });
   }
   return null;

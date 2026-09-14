@@ -8,9 +8,9 @@ import {
   type ReportEvidenceLine,
   type StoredEvidenceRecord,
 } from '@/lib/evaluation-report';
-import { reportOperationalFailure } from '@/lib/sentry-server';
+import { reportOperationalEvent } from '@/lib/sentry-server';
 
-const EVIDENCE_PROMPT = `For each evidence record, write one line of under 25 words that restates only what the transcript span says. Do not add facts, interpretations, adjectives about the person, or conclusions. Do not merge records. Return JSON: [{ "evidence_id": "", "text": "" }]. British English. If a span contains no usable evidence, return text "" for that record.`;
+const EVIDENCE_PROMPT = `For each evidence record, write one line of under 25 words that restates only what the transcript span says. Do not add facts, interpretations, adjectives about the person, or conclusions. Do not use these assessment terms: strength, weakness, concern, red flag, risk, fit, personality, attitude, confident, nervous, articulate, fluent, accent, native, age, nationality, gender, religion, appearance, recommend, hire, reject, score, rating, %, /10, or "out of". Do not merge records. Return JSON: [{ "evidence_id": "", "text": "" }]. British English. If a span contains no usable evidence, return text "" for that record.`;
 const FOLLOWUP_PROMPT = `Write one interview question, addressed to "you", under 30 words, British English, one question mark at the end, that would help an interviewer gather evidence for this competency. No preamble.`;
 
 type EvidenceWriterInput = {
@@ -83,7 +83,14 @@ export async function generateEvidenceLines(
       rejectionReasons = ['MODEL_CALL_FAILED'];
     }
   }
-  reportOperationalFailure('evidence_line_rejected', { area: 'evaluation', code: rejectionReasons[0] || 'validation_failed' });
+  // The deterministic quoted fallback is a successful recovery, not a failed
+  // report. Keep a searchable, content-free event without creating a Sentry
+  // error issue for an outcome the employer can safely use.
+  reportOperationalEvent('evidence_line_fallback_used', {
+    area: 'evaluation',
+    code: rejectionReasons[0] || 'validation_failed',
+    count: records.length,
+  });
   return { lines: records.map(quotedEvidenceFallback), rejected: rejectionReasons };
 }
 
