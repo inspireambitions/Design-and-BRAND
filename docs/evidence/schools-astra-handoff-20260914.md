@@ -8,7 +8,7 @@ Date: 14 September 2026
 - App: `muqabala/`
 - Base branch: `claude/gulf-hospitality-video-interview-m9skfu`
 - Review branch: `codex/schools-finish-20260914`
-- Current review commit: `d809e88`
+- Institution dashboard fix commit: `d809e88`
 - Pull request: <https://github.com/inspireambitions/Design-and-BRAND/pull/21>
 - Protected preview: <https://muqabala-schools-pilot-20260908-inspire14.vercel.app>
 - Immutable preview deployment: <https://muqabala-puhd99s0i-inspire14.vercel.app>
