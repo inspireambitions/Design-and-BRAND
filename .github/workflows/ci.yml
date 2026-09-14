@@ -34,7 +34,7 @@ jobs:
         run: npm run typecheck
 
       - name: Unit tests
-        run: node --experimental-strip-types --test scripts/*.test.mjs
+        run: node --experimental-strip-types --import ./scripts/test-hooks/register.mjs --test scripts/*.test.mjs
 
       # Named separately so a copy regression is visible at a glance in the
       # run summary: em dashes, "practice" as a verb, readability grade.
