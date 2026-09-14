@@ -25,7 +25,7 @@ export default async function InstitutionAdmin() {
   if (!admin) notFound();
   const ownIds = membershipsResult.data.map((membership) => membership.institution_id);
   const [cohortsResult, educatorsResult, institutionsResult] = await Promise.all([
-    client.from('schools_cohorts').select('id,name,institution_id,archived_at').in('institution_id', ownIds),
+    admin.from('schools_cohorts').select('id,name,institution_id,archived_at').in('institution_id', ownIds),
     client.from('schools_institution_members').select('user_id,institution_id').eq('role', 'educator').not('accepted_at', 'is', null).in('institution_id', ownIds),
     client.from('schools_institutions').select('id,name,country,language,setup_complete').in('id', ownIds),
   ]);
