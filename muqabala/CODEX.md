@@ -2,6 +2,8 @@
 
 **Current release instructions:** Read [docs/RELEASE.md](docs/RELEASE.md) first. It supersedes the branch, deployment and unreleased-feature claims in this historical briefing. The current integration preserves both the September 5 employer fixes and the September 7 design/spelling release. Run `node scripts/check-release-ancestry.mjs` before deploying.
 
+**Schools and Colleges:** Read [docs/schools-release-status.md](docs/schools-release-status.md) before working on `/schools`. Public marketing is live. Private enrolment is closed. Do not describe the Educators suite as pilot-ready until its founder inputs, staging checks and physical-device gates are complete.
+
 This historical briefing lets another agent build on this
 project or supervise work without re-deriving the strategy.
 

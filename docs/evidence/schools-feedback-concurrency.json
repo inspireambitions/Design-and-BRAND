@@ -1,0 +1,25 @@
+{
+  "checkedAt": "2026-09-14T06:12:38.000Z",
+  "startedAt": "2026-09-14T06:12:35.723Z",
+  "stagingRef": "okrsezhospztwtptqhpo",
+  "previewOrigin": "https://muqabala-schools-pilot-20260908-inspire14.vercel.app",
+  "syntheticOnly": true,
+  "model": "gpt-4.1-mini",
+  "pricingUsdPerMillion": {
+    "input": 0.4,
+    "output": 1.6,
+    "source": "https://developers.openai.com/api/docs/models/gpt-4.1-mini"
+  },
+  "execution": "Five journeys submitted concurrently with Promise.all.",
+  "modelCallCap": 5,
+  "modelCalls": 5,
+  "allHttpResponsesSuccessful": true,
+  "allFeedbackReady": true,
+  "usage": {
+    "inputTokens": 5240,
+    "outputTokens": 1815,
+    "estimatedUsd": 0.005,
+    "calculatedFromStoredTokens": true
+  },
+  "limitation": "Five simultaneous synthetic journeys validate this preview path only. They do not establish classroom-scale or provider-wide capacity."
+}

@@ -13,8 +13,15 @@ const config=()=>{if(cachedConfig)return cachedConfig;const c=stagingEnvironment
 const client=c=>createClient(c.SUPABASE_URL,c.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
 const checked=(result,label)=>{if(result.error)throw new Error(label+': '+(result.error.code??'request failed'));return result.data;};
 export async function seed(){
-  if(existsSync(fixturePath))return JSON.parse(readFileSync(fixturePath,'utf8'));
-  const c=config(),admin=client(c),f={stagingRef:'okrsezhospztwtptqhpo',syntheticOnly:true,users:{},institutions:[randomUUID(),randomUUID()],cohorts:[randomUUID(),randomUUID()],assignments:[]};
+  const c=config(),admin=client(c);
+  if(existsSync(fixturePath)){
+    const saved=JSON.parse(readFileSync(fixturePath,'utf8'));
+    if(saved.stagingRef==='okrsezhospztwtptqhpo'&&Array.isArray(saved.institutions)&&saved.institutions.length){
+      const present=await admin.from('schools_institutions').select('id').in('id',saved.institutions);
+      if(!present.error&&present.data.length===saved.institutions.length)return saved;
+    }
+  }
+  const f={stagingRef:'okrsezhospztwtptqhpo',syntheticOnly:true,users:{},institutions:[randomUUID(),randomUUID()],cohorts:[randomUUID(),randomUUID()],assignments:[]};
   for(const role of ['founder','admin','educator','student','otherEducator','otherStudent','employer']){
     const email='schools-qa-'+role+'-'+randomUUID()+'@example.invalid';
     const created=checked(await admin.auth.admin.createUser({email,email_confirm:true}), 'Create synthetic '+role);

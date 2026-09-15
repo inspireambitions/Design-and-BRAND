@@ -30,3 +30,7 @@ Keep the updated report timestamp handling, legacy-report recovery, microphone p
 ## Pilot boundary
 
 Five controlled testers precede the remaining 25. Human phone recording, playback listening and feedback usefulness cannot be replaced by automated tests. Use Nebiyu's authorised personal Gmail for the controlled test; keep personal addresses and access links out of committed files. Record each outstanding check as unverified until evidence exists. Technical tests do not establish hiring validity or real candidate outcomes.
+
+## Schools and Colleges release status
+
+Read [schools-release-status.md](schools-release-status.md) before changing or describing the Educators suite. Its evidence boundary is stricter than older planning notes. The public `/schools` page is live, but private enrolment stays closed until the founder inputs and supervised human gates in that file are complete.

@@ -1,29 +1,29 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { SchoolsFeedback } from './Feedback';
-import { useRouter } from 'next/navigation';
 type Attempt={id:string;status:string;answers:string[];revision:number;attempt_number:number;feedback_status:string;evidence_detail:unknown;evidence_covered:number|null};
 export function SchoolsPractice({assignmentId,cohortId,questions,initial,dueAt,retryQuestion}:{
   assignmentId:string;cohortId:string;questions:{text:string;followUp:string;rubric:{id:string;label:string}[]}[];initial:Attempt|null;dueAt:string;retryQuestion?:number;
 }) {
-  const router=useRouter();
   const [answers,setAnswers]=useState<string[]>(initial?.answers??['','','']);
   const [attempt,setAttempt]=useState(initial);
   const [message,setMessage]=useState('');
   const [error,setError]=useState('');
   const [busy,setBusy]=useState(false);
   const [prompts,setPrompts]=useState<number|null>(null);
-  const latest=useRef(answers); latest.current=answers;
+  const latest=useRef(answers);
   const stored=useRef(initial?.answers??['','','']);
   const version=useRef(initial);
   const pendingId=useRef<string|null>(initial?.id??null);
   const locked=useRef(false);
   const queuedSubmission=useRef(false);
+  // Due-date enforcement intentionally compares against the current request/render time.
+  // eslint-disable-next-line react-hooks/purity
   const closed=Date.now()>=new Date(dueAt).getTime();
   const submitted=attempt?.status==='submitted';
   useEffect(()=>{if(!submitted&&retryQuestion)document.getElementById('answer-'+(retryQuestion-1))?.focus();},[submitted,retryQuestion]);
   const retryStarted=useRef(false);
-  async function startRetry(question?:number) {
+  const startRetry=useCallback(async (question?:number) => {
     if(locked.current||!attempt||closed)return;
     locked.current=true;setBusy(true);setError('');
     try {
@@ -34,10 +34,10 @@ export function SchoolsPractice({assignmentId,cohortId,questions,initial,dueAt,r
       requestAnimationFrame(()=>document.getElementById('answer-'+((question??1)-1))?.focus());
     }catch(error){setError(error instanceof Error?error.message:'Could not start a retry. Please try again.');}
     finally{locked.current=false;setBusy(false);}
-  }
+  },[attempt,closed]);
   useEffect(()=>{
     if(retryQuestion&&submitted&&!closed&&!retryStarted.current){retryStarted.current=true;void startRetry(retryQuestion);}
-  },[retryQuestion,submitted,closed]);
+  },[retryQuestion,submitted,closed,startRetry]);
   async function save(submit=false) {
     if(submitted||closed)return;
     if(locked.current){if(submit){queuedSubmission.current=true;setBusy(true);}return;}
@@ -60,7 +60,8 @@ export function SchoolsPractice({assignmentId,cohortId,questions,initial,dueAt,r
       if(shouldSubmit)void saveLatest.current(true);else setBusy(false);
     }
   }
-  const saveLatest=useRef(save);saveLatest.current=save;
+  const saveLatest=useRef(save);
+  useEffect(()=>{saveLatest.current=save;});
   useEffect(()=>{const timer=setInterval(()=>void saveLatest.current(),10000);return()=>clearInterval(timer);},[]);
   useEffect(()=>{
     const warn=(event:BeforeUnloadEvent)=>{if(JSON.stringify(latest.current)!==JSON.stringify(stored.current)){event.preventDefault();event.returnValue='';}};
@@ -72,7 +73,7 @@ export function SchoolsPractice({assignmentId,cohortId,questions,initial,dueAt,r
     {submitted&&!closed&&<button disabled={busy} onClick={()=>void startRetry(retryQuestion)}>{busy?'Opening your new draft...':retryQuestion?'Retry question '+retryQuestion:'Start a new attempt'}</button>}
     {questions.map((question,index)=><fieldset key={index}><legend>Question {index+1}: {question.text}</legend>
       <label htmlFor={'answer-'+index}>Your answer</label><textarea id={'answer-'+index} rows={8} maxLength={12000} value={answers[index]} disabled={submitted||closed}
-        onChange={e=>{const next=[...answers];next[index]=e.target.value;setAnswers(next);}} onBlur={()=>void save()}/>
+        onChange={e=>{const next=[...answers];next[index]=e.target.value;latest.current=next;setAnswers(next);}} onBlur={()=>void save()}/>
       {!submitted&&<button type="button" onClick={()=>{setPrompts(prompts===index?null:index);if(prompts!==index)void fetch('/api/schools',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({operation:'no_example',payload:{cohortId}})}).catch(()=>{});}} aria-expanded={prompts===index}>I cannot think of an example</button>}
       {prompts===index&&<div className="schools-card"><p>Think about one of these experiences:</p><ul>
         <li>Coursework or projects</li><li>Volunteering or community</li><li>Caring or family responsibilities</li><li>Part-time or casual work</li></ul>

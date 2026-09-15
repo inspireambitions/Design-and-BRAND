@@ -1,0 +1,32 @@
+{
+  "checkedAt": "2026-09-14T06:48:17.633Z",
+  "pullRequest": "https://github.com/inspireambitions/Design-and-BRAND/pull/21",
+  "commit": "d809e88",
+  "previewOrigin": "https://muqabala-schools-pilot-20260908-inspire14.vercel.app",
+  "deploymentUrl": "https://muqabala-puhd99s0i-inspire14.vercel.app",
+  "deploymentId": "dpl_CGZ13zZ8PL4yYSuyDeqeisX6yZNw",
+  "productionChanged": false,
+  "checks": [
+    {
+      "check": "Protected Schools landing page returns HTTP 200",
+      "passed": true
+    },
+    {
+      "check": "Learner dashboard returns HTTP 200",
+      "passed": true
+    },
+    {
+      "check": "Adviser cohort dashboard returns HTTP 200",
+      "passed": true
+    },
+    {
+      "check": "Institution dashboard returns HTTP 200 after the server-side access fix",
+      "passed": true
+    }
+  ],
+  "emailProviderTest": {
+    "sent": false,
+    "reason": "The old email-configured preview did not contain the current mail route. The corrected preview still needs the approved preview-only Resend and cron settings.",
+    "temporaryInvitationCleaned": true
+  }
+}

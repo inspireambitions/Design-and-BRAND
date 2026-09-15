@@ -8,6 +8,8 @@ const {default:lighthouse}=await import(pathToFileURL(process.env.SCHOOLS_QA_LIG
 const browser=await chromium.launch({channel:'chrome',headless:true,args:['--remote-debugging-port=9333']});
 const results=[];
 try{
+  const publicResult=await lighthouse('http://localhost:3110/schools',{port:9333,onlyCategories:['accessibility'],output:'json',logLevel:'error'});
+  results.push({route:'/schools',accessibility:publicResult.lhr.categories.accessibility.score*100,finalUrl:publicResult.lhr.finalDisplayedUrl,failures:Object.values(publicResult.lhr.audits).filter(a=>a.score===0).map(a=>({id:a.id,title:a.title,items:a.details?.items}))});
   for(const role of ['student','educator']){
     const identity=await login(role),f=identity.fixture;
     const routes=role==='student'?['/schools/me']:['/schools/cohorts/'+f.cohorts[0],'/schools/cohorts/'+f.cohorts[0]+'/review'];
@@ -17,6 +19,9 @@ try{
       results.push({route,accessibility:report.categories.accessibility.score*100,finalUrl:report.finalDisplayedUrl,failures:Object.values(report.audits).filter(a=>a.score===0).map(a=>({id:a.id,title:a.title,items:a.details?.items}))});
     }
   }
+  const admin=await login('admin');
+  const adminResult=await lighthouse('http://localhost:3110/schools/admin',{port:9333,onlyCategories:['accessibility'],output:'json',logLevel:'error',extraHeaders:{Cookie:admin.cookies.map(c=>c.name+'='+c.value).join('; ')}});
+  results.push({route:'/schools/admin',accessibility:adminResult.lhr.categories.accessibility.score*100,finalUrl:adminResult.lhr.finalDisplayedUrl,failures:Object.values(adminResult.lhr.audits).filter(a=>a.score===0).map(a=>({id:a.id,title:a.title,items:a.details?.items}))});
   await writeFile('../docs/evidence/schools-authenticated-accessibility.json',JSON.stringify({checkedAt:new Date().toISOString(),results},null,2)+'\n');
   console.log(JSON.stringify({results}));
 }finally{await browser.close();}

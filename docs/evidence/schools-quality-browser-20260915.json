@@ -1,0 +1,43 @@
+{
+  "checkedAt": "2026-09-15T10:49:08Z",
+  "origin": "http://127.0.0.1:3110",
+  "productionBuild": true,
+  "schoolsEnabled": true,
+  "browser": "Microsoft Edge headless",
+  "physicalDevice": false,
+  "checks": [
+    {
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "horizontalOverflow": false,
+      "title": "Muqabala for Schools and Colleges",
+      "mainPresent": true,
+      "pilotFormPresent": true,
+      "sampleReportPresent": true,
+      "uncaughtExceptions": 0
+    },
+    {
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 1200,
+      "documentWidth": 1440,
+      "horizontalOverflow": false,
+      "title": "Muqabala for Schools and Colleges",
+      "mainPresent": true,
+      "pilotFormPresent": true,
+      "sampleReportPresent": true,
+      "uncaughtExceptions": 0
+    }
+  ],
+  "observations": [
+    "One navigation-related React Server Component fetch was canceled with net::ERR_ABORTED.",
+    "No uncaught exception or browser log warning was recorded.",
+    "The canceled navigation fetch did not prevent the page from rendering."
+  ],
+  "screenshots": [
+    "schools-quality-20260915-mobile.png",
+    "schools-quality-20260915-desktop.png"
+  ]
+}

@@ -8,6 +8,8 @@ export function SchoolsAssign({cohortId,questions}:{cohortId:string;questions:Qu
   const [search,setSearch]=useState('');
   const pool=questions.filter(q=>q.role_id===role);
   const [chosen,setChosen]=useState<string[]>(pool.slice(0,3).map(q=>q.id));
+  // The assignment form deliberately seeds a request-time convenience default.
+  // eslint-disable-next-line react-hooks/purity
   const [due,setDue]=useState(new Date(Date.now()+7*86400000).toISOString().slice(0,10));
   const [message,setMessage]=useState('');const [busy,setBusy]=useState(false);const router=useRouter();
   return <form method="post" className="schools-card" onSubmit={async event=>{event.preventDefault();setBusy(true);try{
