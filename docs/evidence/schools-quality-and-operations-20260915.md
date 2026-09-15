@@ -4,7 +4,7 @@ Checked 15 September 2026. This report covers the review branch `codex/schools-f
 
 ## Release decision
 
-The branch is ready for an updated protected preview after the final commit and review. Automated code, build, dependency, responsive-layout and isolated database-operation checks pass. The supervised pilot is not yet complete and must not be represented as complete.
+Pull request 21 is mergeable and its updated protected preview deployed successfully from release-code commit `35a1fc4`. GitHub CI, both question-pipeline jobs and Vercel passed. Automated code, build, dependency, responsive-layout and isolated database-operation checks pass. The supervised pilot is not yet complete and must not be represented as complete.
 
 ## Repairs completed
 
@@ -78,7 +78,7 @@ This is a schema-and-operations recovery drill, not proof that a real production
 ## Still open before a wider pilot
 
 1. Reauthorise the Vercel connector for the `inspire14` team. It still returns HTTP 403, so grouped runtime-error monitoring and protected-preview administration cannot be inspected from this task.
-2. Push the reviewed branch and wait for the updated protected preview checks. Do not promote it to production.
+2. Give Neb Vercel SSO access, or create an authenticated share URL for `https://muqabala-git-codex-schools-finish-20260914-inspire14.vercel.app`. An unauthenticated request correctly redirects to Vercel SSO.
 3. On that exact preview, send one controlled staff invitation and one assignment notification to the authorised inbox; verify provider acceptance, inbox receipt, scheduler invocation and privacy notification.
 4. Complete one real production-backup clone/restore check in an isolated project, including Auth configuration, Storage, functions, secrets and project settings. Migration replay alone is insufficient proof.
 5. Run physical iPhone Safari and Android Chrome journeys, including camera/microphone interruption and network recovery where applicable.

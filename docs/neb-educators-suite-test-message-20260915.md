@@ -1,6 +1,10 @@
 # Message for Neb
 
-Hi Neb — please run a full controlled QA pass of the Muqabala Educators suite on the protected preview we send you. Please use fictional data only, confirm every tester is an adult, and do not test against production.
+Hi Neb — please run a full controlled QA pass of the Muqabala Educators suite on this protected preview:
+
+https://muqabala-git-codex-schools-finish-20260914-inspire14.vercel.app
+
+The preview is protected by Vercel SSO. Please tell Kim if access is blocked so she can add you to the team or send an authenticated share link. Please use fictional data only, confirm every tester is an adult, and do not test against production.
 
 Please cover these journeys:
 
