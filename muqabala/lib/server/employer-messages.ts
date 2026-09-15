@@ -181,22 +181,32 @@ export async function processEmployerMessages(options: { roleId?: string; limit?
     }
     const inviteRow = invite as InviteRow | null;
     let validManualRetry = false;
-    if (job.kind === 'manual_reminder' && job.retry_of) {
-      const { data: retrySource, error: retrySourceError } = await admin.from('employer_message_outbox')
-        .select('id,role_id,invite_id,kind,status,last_error_code')
-        .eq('id', job.retry_of)
+    let previousManualDeliveryAt: string | null = null;
+    if (job.kind === 'manual_reminder') {
+      const historyQuery = admin.from('employer_message_outbox')
+        .select('id,role_id,invite_id,kind,status,last_error_code,created_at,updated_at')
         .eq('role_id', job.role_id)
         .eq('invite_id', job.invite_id)
-        .eq('kind', 'manual_reminder')
-        .maybeSingle();
-      if (retrySourceError) {
+        .eq('kind', 'manual_reminder');
+      const { data: previousManual, error: historyError } = job.retry_of
+        ? await historyQuery.eq('id', job.retry_of).maybeSingle()
+        : await historyQuery.neq('id', job.id).order('created_at', { ascending: false }).limit(1).maybeSingle();
+      if (historyError) {
         await retry(job, null, 'retry_source_lookup_failed');
         failed += 1;
         continue;
       }
-      validManualRetry = Boolean(retrySource
-        && manualReminderFailureCanRetry(retrySource.status, retrySource.last_error_code));
-      if (!validManualRetry) {
+      if (job.retry_of) {
+        validManualRetry = Boolean(previousManual
+          && manualReminderFailureCanRetry(previousManual.status, previousManual.last_error_code));
+      } else if (previousManual && !['accepted', 'delivered'].includes(previousManual.status)) {
+        await mark(job, { status: 'cancelled', locked_until: null, lease_token: null, last_error_code: 'invalid_previous_delivery' });
+        failed += 1;
+        continue;
+      } else if (previousManual) {
+        previousManualDeliveryAt = previousManual.updated_at ?? previousManual.created_at ?? null;
+      }
+      if (job.retry_of && !validManualRetry) {
         await mark(job, { status: 'cancelled', locked_until: null, lease_token: null, last_error_code: 'invalid_retry_source' });
         failed += 1;
         continue;
@@ -227,8 +237,12 @@ export async function processEmployerMessages(options: { roleId?: string; limit?
       failed += 1;
       continue;
     }
-    if (job.kind === 'manual_reminder' && !validManualRetry && inviteRow?.last_manual_reminder_at
-      && Date.now() - Date.parse(inviteRow.last_manual_reminder_at) < 24 * 60 * 60 * 1_000) {
+    if (job.kind === 'manual_reminder' && !validManualRetry && (
+      (inviteRow?.last_manual_reminder_at
+        && Date.now() - Date.parse(inviteRow.last_manual_reminder_at) < 24 * 60 * 60 * 1_000)
+      || (previousManualDeliveryAt
+        && Date.now() - Date.parse(previousManualDeliveryAt) < 24 * 60 * 60 * 1_000)
+    )) {
       await mark(job, { status: 'cancelled', locked_until: null, lease_token: null, last_error_code: 'recently_reminded' });
       failed += 1;
       continue;

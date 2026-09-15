@@ -203,12 +203,13 @@ test('employer delivery SQL executes against an isolated PostgreSQL engine', asy
         [role, owner, invites.map(row => row.id), 'Corrected reminder {{invitation_link}}', retryBatch],
       )).rows[0].result, { queued: 1, skipped: 1, batchKey: retryBatch, reused: true });
     });
-    await t.test('bounce, complaint, suppression and cancellation outcomes cannot be manually retried', async () => {
+    await t.test('bounce, complaint, suppression, cancellation and unverified failures cannot be manually retried', async () => {
       for (const [status, errorCode] of [
         ['failed', 'email.bounced'],
         ['failed', 'email.complained'],
         ['failed', 'email.suppressed'],
         ['cancelled', 'contact_disallowed'],
+        ['failed', null],
       ]) {
         await reset(); await queue([contact()]);
         const inviteId = (await db.query('select id from public.role_invites')).rows[0].id;
@@ -218,13 +219,44 @@ test('employer delivery SQL executes against an isolated PostgreSQL engine', asy
         );
         await db.exec("update public.employer_message_outbox set status='accepted',accepted_at=now() where kind='manual_reminder'");
         await db.query("update public.employer_message_outbox set status=$1,last_error_code=$2 where kind='manual_reminder'", [status, errorCode]);
-        if (status === 'failed') await db.exec("update public.role_invites set last_manual_reminder_at=now()-interval '25 hours'");
+        await db.exec("update public.role_invites set last_manual_reminder_at=now()-interval '25 hours'");
         const retry = (await db.query(
           'select public.queue_manual_employer_reminders($1,$2,$3::uuid[],$4,$5) as result',
           [role, owner, [inviteId], 'Retry {{invitation_link}}', randomUUID()],
         )).rows[0].result;
-        assert.equal(retry.queued, 0, `${errorCode} must stay suppressed`);
+        assert.equal(retry.queued, 0, `${errorCode ?? 'missing failure code'} must stay suppressed`);
       }
+    });
+    await t.test('a cancelled reminder that never reached acceptance cannot be re-queued', async () => {
+      await reset(); await queue([contact()]);
+      const inviteId = (await db.query('select id from public.role_invites')).rows[0].id;
+      await db.query(
+        'select public.queue_manual_employer_reminders($1,$2,$3::uuid[],$4,$5)',
+        [role, owner, [inviteId], 'Reminder {{invitation_link}}', randomUUID()],
+      );
+      await db.exec("update public.employer_message_outbox set status='cancelled',last_error_code='contact_disallowed' where kind='manual_reminder'");
+      assert.equal((await db.query('select last_manual_reminder_at from public.role_invites')).rows[0].last_manual_reminder_at, null);
+      const retry = (await db.query(
+        'select public.queue_manual_employer_reminders($1,$2,$3::uuid[],$4,$5) as result',
+        [role, owner, [inviteId], 'Retry {{invitation_link}}', randomUUID()],
+      )).rows[0].result;
+      assert.equal(retry.queued, 0);
+    });
+    await t.test('a delayed delivered update restarts the SQL reminder cooldown', async () => {
+      await reset(); await queue([contact()]);
+      const inviteId = (await db.query('select id from public.role_invites')).rows[0].id;
+      await db.query(
+        'select public.queue_manual_employer_reminders($1,$2,$3::uuid[],$4,$5)',
+        [role, owner, [inviteId], 'Reminder {{invitation_link}}', randomUUID()],
+      );
+      await db.exec("update public.employer_message_outbox set status='accepted',accepted_at=now()-interval '25 hours',updated_at=now()-interval '25 hours' where kind='manual_reminder'");
+      await db.exec("update public.role_invites set last_manual_reminder_at=now()-interval '25 hours'");
+      await db.exec("update public.employer_message_outbox set status='delivered',delivered_at=now(),updated_at=now() where kind='manual_reminder'");
+      const retry = (await db.query(
+        'select public.queue_manual_employer_reminders($1,$2,$3::uuid[],$4,$5) as result',
+        [role, owner, [inviteId], 'Retry {{invitation_link}}', randomUUID()],
+      )).rows[0].result;
+      assert.equal(retry.queued, 0);
     });
     await t.test('manual reminder acceptance stamps only the selected invite and delivered is a valid provider state', async () => {
       await reset(); await queue([contact()]);

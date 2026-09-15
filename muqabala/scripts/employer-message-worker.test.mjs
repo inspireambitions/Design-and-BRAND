@@ -22,6 +22,9 @@ test('employer sender retries safely and reports provider acceptance honestly', 
         const builder = {
           select() { return builder; },
           eq(key, value) { filters.push([table, key, value]); return builder; },
+          neq(key, value) { filters.push([table, `not.${key}`, value]); return builder; },
+          order() { return builder; },
+          limit() { return builder; },
           update(value) { patch = value; patches.push(value); return builder; },
           async maybeSingle() {
             if (lookupError) return { data: null, error: { code: 'temporary' } };
@@ -106,6 +109,30 @@ test('employer sender retries safely and reports provider acceptance honestly', 
         assert.equal(fixture.patches[0].last_error_code, 'invalid_retry_source');
         assert.deepEqual(fixture.requests, []);
       }
+    });
+    await t.test('unlinked cancelled or unverified failed history cannot dispatch after the timestamp ages out', async () => {
+      const old = new Date(Date.now() - 25 * 60 * 60 * 1_000).toISOString();
+      for (const [status, last_error_code] of [['cancelled', 'contact_disallowed'], ['failed', null]]) {
+        const fixture = make({
+          kind: 'manual_reminder',
+          invitePatch: { last_manual_reminder_at: old },
+          retrySource: { id: 'previous-job', role_id: 'test-role', invite_id: 'test-invite', kind: 'manual_reminder', status, last_error_code, created_at: old, updated_at: old },
+        });
+        assert.equal((await fixture.run()).failed, 1);
+        assert.equal(fixture.patches[0].last_error_code, 'invalid_previous_delivery');
+        assert.deepEqual(fixture.requests, []);
+      }
+    });
+    await t.test('a delayed delivered update restarts the ordinary reminder cooldown', async () => {
+      const old = new Date(Date.now() - 25 * 60 * 60 * 1_000).toISOString();
+      const fixture = make({
+        kind: 'manual_reminder',
+        invitePatch: { last_manual_reminder_at: old },
+        retrySource: { id: 'previous-job', role_id: 'test-role', invite_id: 'test-invite', kind: 'manual_reminder', status: 'delivered', last_error_code: null, created_at: old, updated_at: new Date().toISOString() },
+      });
+      assert.equal((await fixture.run()).failed, 1);
+      assert.equal(fixture.patches[0].last_error_code, 'recently_reminded');
+      assert.deepEqual(fixture.requests, []);
     });
     await t.test('failed acceptance write is not reported as successful', async () => {
       const fixture = make({ saveError: true });

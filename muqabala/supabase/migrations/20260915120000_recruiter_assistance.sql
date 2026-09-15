@@ -206,6 +206,13 @@ begin
       and i.status in ('invited', 'started') and i.email is not null
       and i.contact_allowed and i.opted_out_at is null
       and i.withdrawn_at is null and i.deleted_at is null
+      and (
+        terminal.id is null
+        or terminal.status in ('accepted', 'delivered')
+        or (terminal.status = 'failed'
+          and terminal.last_error_code is not null
+          and terminal.last_error_code not in ('email.bounced', 'email.complained', 'email.suppressed', 'hard_bounce', 'complaint', 'provider_suppressed'))
+      )
       and not coalesce(terminal.status = 'failed'
         and terminal.last_error_code in ('email.bounced', 'email.complained', 'email.suppressed', 'hard_bounce', 'complaint', 'provider_suppressed'), false)
       and greatest(
@@ -226,7 +233,7 @@ begin
             existing.status in ('pending', 'processing')
             or (
               existing.status in ('accepted', 'delivered')
-              and existing.created_at > now() - interval '24 hours'
+              and greatest(existing.created_at, existing.updated_at) > now() - interval '24 hours'
             )
           )
       )
