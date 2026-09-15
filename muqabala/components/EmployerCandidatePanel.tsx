@@ -49,9 +49,11 @@ export function EmployerReviewPanelProvider({ children }: { children: ReactNode 
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
   const openerRef = useRef<HTMLElement | null>(null);
+  const scrollPositionRef = useRef({ x: 0, y: 0 });
 
   const openReview = useCallback<OpenReview>((interviewId, candidateLabel, opener) => {
     openerRef.current = opener;
+    scrollPositionRef.current = { x: window.scrollX, y: window.scrollY };
     setSelected({ interviewId, candidateLabel });
     setLoadState('loading');
     setData(null);
@@ -67,7 +69,10 @@ export function EmployerReviewPanelProvider({ children }: { children: ReactNode 
     setSelected(null);
     setData(null);
     setNote('');
-    window.requestAnimationFrame(() => openerRef.current?.focus());
+    window.requestAnimationFrame(() => {
+      openerRef.current?.focus({ preventScroll: true });
+      window.scrollTo(scrollPositionRef.current.x, scrollPositionRef.current.y);
+    });
   }, [note, t]);
 
   useEffect(() => {

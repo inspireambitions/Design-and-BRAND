@@ -243,7 +243,7 @@ export function MarketingHome({ roles, stats, schools=false }: { roles: Marketin
       </main>
       {schools&&<section className="marketing-wrap schools-product-strip" aria-labelledby="schools-products-heading"><h2 id="schools-products-heading">Also from Muqabala</h2>
         <div><article><h3>Hiring teams</h3><p>Invite candidates and review answers in their own words.</p><Link href="/for-employers">Explore Muqabala for Hiring Teams</Link></article>
-          <article><h3>Educators</h3><p>Assign role-relevant interview practice. Review each student's submitted work.</p><Link href="/schools">Explore Muqabala for Schools and Colleges</Link></article></div>
+          <article><h3>Educators</h3><p>Assign role-relevant interview practice. Review each student’s submitted work.</p><Link href="/schools">Explore Muqabala for Schools and Colleges</Link></article></div>
         <nav aria-label="Muqabala products"><Link href="/for-employers">Hiring teams</Link> · <Link href="/schools">Educators</Link> · <Link href="/how-feedback-works">Your feedback</Link></nav>
       </section>}
       <MobilePracticeCta label={marketingNav[lang].practice} anchorId="hero-practice-action" />
