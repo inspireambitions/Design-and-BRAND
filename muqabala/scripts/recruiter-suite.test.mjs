@@ -6,6 +6,7 @@ import { signProofPack, verifyInterview, verifyStoredInterview } from '../lib/in
 import { trustedInterviewPlan } from '../lib/interview-plan.ts';
 import { ScreeningPackRequestSchema } from '../lib/screening-pack-request.ts';
 import { formatZonedLocalDateTime, zonedLocalDateTimeToIso } from '../lib/timezone.ts';
+import { pageCount, pageRange, positivePage } from '../lib/pagination.ts';
 import { employerManualReviewFeedback } from '../lib/scoring.ts';
 import {
   answerCandidateRoleQuestion,
@@ -85,7 +86,8 @@ test('reminder eligibility rechecks submission, consent, expiry, contact channel
   assert.match(reminderEligibility({ ...base, lastManualReminderAt: '2026-09-15T07:00:00Z' }, role, now).reason, /24 hours/);
   assert.match(reminderEligibility(base, { ...role, expiresAt: '2026-09-15T07:59:00Z' }, now).reason, /closed/);
   assert.match(reminderEligibility({ ...base, deliveryStatus: 'processing' }, role, now).reason, /already queued/);
-  assert.equal(reminderEligibility({ ...base, deliveryStatus: 'failed', lastManualReminderAt: '2026-09-15T07:00:00Z' }, role, now).eligible, true);
+  assert.equal(reminderEligibility({ ...base, deliveryStatus: 'failed', deliveryErrorCode: 'email.failed', lastManualReminderAt: '2026-09-15T07:00:00Z' }, role, now).eligible, true);
+  assert.match(reminderEligibility({ ...base, deliveryStatus: 'failed', deliveryErrorCode: 'email.complained', lastManualReminderAt: '2026-09-15T07:00:00Z' }, role, now).reason, /not safe/);
   assert.match(reminderEligibility({ ...base, deliveryStatus: 'delivered', deliveryUpdatedAt: '2026-09-15T07:00:00Z' }, role, now).reason, /24 hours/);
 });
 
@@ -115,6 +117,28 @@ test('candidate fact answers use explicit intents, conservative matching, and vi
   const arabicFaq = answerCandidateRoleQuestion('هل توجد مواصلات للموظفين؟', { ...facts, faqs: [{ question: 'هل توجد مواصلات للموظفين؟', answer: 'تتوفر حافلة يومية.' }] }, 'ar');
   assert.equal(arabicFaq.answer, 'تتوفر حافلة يومية.');
   assert.equal(arabicFaq.sourceId, 'candidate-role-faq-0');
+  const englishAccommodationFaq = answerCandidateRoleQuestion('Is accommodation provided?', { ...facts, faqs: [{ question: 'Is accommodation provided?', answer: 'Shared staff housing is available.' }] }, 'en');
+  assert.equal(englishAccommodationFaq.answer, 'Shared staff housing is available.');
+  assert.equal(englishAccommodationFaq.sourceId, 'candidate-role-faq-0');
+  const arabicAccommodationFaq = answerCandidateRoleQuestion('هل يوجد سكن؟', { ...facts, faqs: [{ question: 'هل يوجد سكن؟', answer: 'يتوفر سكن مشترك للموظفين.' }] }, 'ar');
+  assert.equal(arabicAccommodationFaq.answer, 'يتوفر سكن مشترك للموظفين.');
+  assert.equal(arabicAccommodationFaq.sourceId, 'candidate-role-faq-0');
+  assert.equal(answerCandidateRoleQuestion('Is accommodation provided?', { ...facts, accommodation: 'Live structured fact', faqs: [{ question: 'Is accommodation provided?', answer: 'Older FAQ value' }] }, 'en').answer, 'Live structured fact');
+});
+
+test('bounded recruiter queues expose every later page instead of capping work', async () => {
+  assert.equal(positivePage('0'), 1);
+  assert.deepEqual(pageRange(2, 50), { from: 50, to: 99 });
+  assert.deepEqual(pageRange(6, 100), { from: 500, to: 599 });
+  assert.equal(pageCount(501, 100), 6);
+  const rolePage = await readFile(new URL('../app/employer/roles/[roleId]/page.tsx', import.meta.url), 'utf8');
+  const questionPage = await readFile(new URL('../app/employer/questions/page.tsx', import.meta.url), 'utf8');
+  const reminderRoute = await readFile(new URL('../app/api/employer/roles/[roleId]/reminders/route.ts', import.meta.url), 'utf8');
+  assert.match(rolePage, /\.range\(candidateRange\.from, candidateRange\.to\)/);
+  assert.match(rolePage, /\.range\(questionRange\.from, questionRange\.to\)/);
+  assert.match(questionPage, /\.range\(range\.from, range\.to\)/);
+  assert.doesNotMatch(questionPage, /limit\(500\)/);
+  assert.match(reminderRoute, /pagination: \{ page, pageSize: RECIPIENT_PAGE_SIZE/);
 });
 
 test('extractive summaries remain candidate claims and every point references its answer', () => {
@@ -240,8 +264,8 @@ test('server and database sources keep employer submissions, questions and actio
   assert.match(rolePage, /head: true/);
   assert.match(rolePage, /Submission activity is unavailable, so no next action has been selected/);
   assert.match(rolePage, /submissionUnavailable[\s\S]*RetryState/);
-  assert.match(questionPage, /packError/);
-  assert.match(questionPage, /questionResult\.error \|\| countResult\.error/);
+  assert.match(questionPage, /questionResult\.error/);
+  assert.match(questionPage, /packResult\.error/);
   assert.match(candidateQuestions, /\.eq\('candidate_id', candidate\.id\)/);
   assert.match(summaryRoute, /\.not\('submitted_at', 'is', null\)/);
   assert.match(migration, /enable row level security/g);

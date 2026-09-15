@@ -23,6 +23,7 @@ export type ReminderPreviewData = {
   publicUrl: string;
   defaultMessage: string;
   delivery: { queued: number; accepted: number; delivered: number; failed: number; cancelled: number };
+  pagination?: { page: number; pageSize: number; total: number; totalPages: number };
 };
 
 const COPY = {
@@ -34,8 +35,9 @@ const COPY = {
     send: 'Send reminders', sending: 'Queueing reminders…', copy: 'Copy reminder', copied: 'Reminder copied.',
     manual: 'Muqabala cannot identify non-submitters from a public link. Copy this reusable reminder and share it manually.',
     missing: 'Automated email is not configured. Nothing will be marked sent; use the copy action.',
-    queued: 'reminders queued', skipped: 'became ineligible before dispatch', delivery: 'Delivery status', close: 'Close preview',
+    queued: 'reminders queued', skipped: 'became ineligible before dispatch', delivery: 'Delivery status on this page', close: 'Close preview',
     retryFailed: 'Select failed recipients',
+    previous: 'Previous recipients', next: 'Next recipients', page: 'Page', of: 'of',
   },
   ar: {
     open: 'معاينة التذكير', title: 'معاينة التذكير', body: 'راجع المستلمين والرسالة الدقيقة قبل إضافة أي شيء إلى قائمة الإرسال.',
@@ -45,8 +47,9 @@ const COPY = {
     send: 'إرسال التذكيرات', sending: 'جارٍ إدراج التذكيرات…', copy: 'نسخ التذكير', copied: 'تم نسخ التذكير.',
     manual: 'لا يمكن لمقابلة معرفة من لم يرسل عبر رابط عام. انسخ هذا التذكير وشاركه يدوياً.',
     missing: 'الإرسال الآلي عبر البريد غير مُعدّ. لن يظهر أي إرسال؛ استخدم النسخ.',
-    queued: 'تذكيرات أُدرجت', skipped: 'لم يعودوا مؤهلين قبل الإرسال', delivery: 'حالة التسليم', close: 'إغلاق المعاينة',
+    queued: 'تذكيرات أُدرجت', skipped: 'لم يعودوا مؤهلين قبل الإرسال', delivery: 'حالة التسليم في هذه الصفحة', close: 'إغلاق المعاينة',
     retryFailed: 'تحديد المستلمين الذين فشل إرسالهم',
+    previous: 'المستلمون السابقون', next: 'المستلمون التاليون', page: 'صفحة', of: 'من',
   },
 } as const;
 
@@ -61,6 +64,7 @@ export function ReminderPreview({ roleId, initialData }: { roleId: string; initi
   const [result, setResult] = useState('');
   const [reload, setReload] = useState(0);
   const [batchKey, setBatchKey] = useState('');
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     if (!open) return;
@@ -74,7 +78,7 @@ export function ReminderPreview({ roleId, initialData }: { roleId: string; initi
     }
     const controller = new AbortController();
     setState('loading');
-    void fetch(`/api/employer/roles/${encodeURIComponent(roleId)}/reminders`, { cache: 'no-store', signal: controller.signal })
+    void fetch(`/api/employer/roles/${encodeURIComponent(roleId)}/reminders?page=${page}`, { cache: 'no-store', signal: controller.signal })
       .then(async (response) => {
         const body = await response.json().catch(() => ({})) as ReminderPreviewData & { error?: string };
         if (!response.ok || !body.recipients) throw new Error(body.error || 'load_failed');
@@ -86,7 +90,7 @@ export function ReminderPreview({ roleId, initialData }: { roleId: string; initi
       })
       .catch(() => { if (!controller.signal.aborted) setState('error'); });
     return () => controller.abort();
-  }, [initialData, open, reload, roleId]);
+  }, [initialData, open, page, reload, roleId]);
 
   const eligible = useMemo(() => data?.recipients.filter((recipient) => recipient.eligible) ?? [], [data]);
   const excluded = useMemo(() => data?.recipients.filter((recipient) => !recipient.eligible) ?? [], [data]);
@@ -129,6 +133,7 @@ export function ReminderPreview({ roleId, initialData }: { roleId: string; initi
         {eligible.some((recipient) => recipient.deliveryStatus === 'failed' || recipient.deliveryStatus === 'cancelled') && <button type="button" onClick={() => setSelected(new Set(eligible.filter((recipient) => recipient.deliveryStatus === 'failed' || recipient.deliveryStatus === 'cancelled').map((recipient) => recipient.id)))}>{c.retryFailed}</button>}
         {excluded.length > 0 && <details className={styles.excluded}><summary>{c.excluded} · {excluded.length}</summary>{excluded.map((recipient) => <p key={recipient.id}><bdi dir="auto">{recipient.name || recipient.email || 'Candidate'}</bdi> - {recipient.reason}</p>)}</details>}
         <dl className={styles.meta}><div><dt>{c.channel}</dt><dd>Email</dd></div><div><dt>{c.delivery}</dt><dd>{data.delivery.queued} queued · {data.delivery.accepted} accepted · {data.delivery.delivered} delivered · {data.delivery.failed} failed</dd></div></dl>
+        {data.pagination && data.pagination.totalPages > 1 && <nav className={styles.pagination} aria-label={c.recipients}><button type="button" disabled={page <= 1 || state === 'sending'} onClick={() => { setResult(''); setPage((value) => Math.max(1, value - 1)); }}>{c.previous}</button><span>{c.page} {data.pagination.page} {c.of} {data.pagination.totalPages} · {data.pagination.total} {c.recipients.toLocaleLowerCase()}</span><button type="button" disabled={page >= data.pagination.totalPages || state === 'sending'} onClick={() => { setResult(''); setPage((value) => value + 1); }}>{c.next}</button></nav>}
         <label className={styles.message}><span>{c.message}</span><textarea rows={8} maxLength={2000} value={message} onChange={(event) => setMessage(event.target.value)} /></label>
         <p className={styles.linkNote}>{c.linkNote}</p>
         <div className={styles.actions}>

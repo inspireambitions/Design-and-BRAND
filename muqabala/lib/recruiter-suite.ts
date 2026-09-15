@@ -188,6 +188,7 @@ export type ReminderInvite = {
   completionReminderAt?: string | null;
   deliveryStatus?: string | null;
   deliveryUpdatedAt?: string | null;
+  deliveryErrorCode?: string | null;
 };
 
 export type ReminderEligibility = ReminderInvite & {
@@ -196,13 +197,26 @@ export type ReminderEligibility = ReminderInvite & {
   lastReminderAt: string | null;
 };
 
+const NON_RETRYABLE_DELIVERY_FAILURES = new Set([
+  'email.bounced',
+  'email.complained',
+  'email.suppressed',
+  'hard_bounce',
+  'complaint',
+  'provider_suppressed',
+]);
+
+export function manualReminderFailureCanRetry(status?: string | null, errorCode?: string | null): boolean {
+  return status === 'failed' && Boolean(errorCode) && !NON_RETRYABLE_DELIVERY_FAILURES.has(errorCode!);
+}
+
 export function reminderEligibility(
   invite: ReminderInvite,
   role: { expiresAt: string; remindersEnabled: boolean },
   now = new Date(),
   intervalHours = MANUAL_REMINDER_INTERVAL_HOURS,
 ): ReminderEligibility {
-  const terminalFailure = invite.deliveryStatus === 'failed' || invite.deliveryStatus === 'cancelled';
+  const terminalFailure = manualReminderFailureCanRetry(invite.deliveryStatus, invite.deliveryErrorCode);
   const lastReminderAt = [
     terminalFailure ? null : invite.lastManualReminderAt,
     invite.firstReminderAt,
@@ -221,6 +235,8 @@ export function reminderEligibility(
   else if ((invite.deliveryStatus === 'accepted' || invite.deliveryStatus === 'delivered')
     && invite.deliveryUpdatedAt
     && now.getTime() - Date.parse(invite.deliveryUpdatedAt) < intervalHours * HOUR_MS) reason = `Already reminded within ${intervalHours} hours.`;
+  else if (invite.deliveryStatus === 'failed' && !terminalFailure) reason = 'This delivery failure is not safe to retry automatically.';
+  else if (invite.deliveryStatus === 'cancelled') reason = 'The previous reminder was cancelled.';
   else if (lastReminderAt && now.getTime() - Date.parse(lastReminderAt) < intervalHours * HOUR_MS) reason = `Already reminded within ${intervalHours} hours.`;
   return { ...invite, eligible: reason === null, reason, lastReminderAt };
 }
@@ -307,6 +323,12 @@ export function answerCandidateRoleQuestion(
   const value = normaliseSearchText(question, lang);
   const intent = requestedIntent ?? freeTextIntent(value);
   const answer = (text: string, sourceLabel: string, sourceId: string): CandidateFactAnswer => ({ supported: true, answer: text, sourceId, sourceLabel });
+  const faqAnswer = (index: number): CandidateFactAnswer | null => {
+    const faq = index >= 0 ? facts.faqs?.[index] : null;
+    return faq ? answer(faq.answer, lang === 'ar' ? 'معلومات الوظيفة المنشورة' : 'Published role information', `candidate-role-faq-${index}`) : null;
+  };
+  const exactFaqIndex = facts.faqs?.findIndex((item) => normaliseSearchText(item.question, lang) === value) ?? -1;
+  const missingOrExactFaq = () => faqAnswer(exactFaqIndex) ?? missingFact(lang);
   if (intent === 'deadline') {
     const formatted = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-AE' : 'en-GB', {
       dateStyle: 'long', timeStyle: 'short', timeZone: facts.timezone,
@@ -327,26 +349,25 @@ export function answerCandidateRoleQuestion(
   if (intent === 'location') {
     return facts.location
       ? answer(lang === 'ar' ? `الموقع المنشور هو ${facts.location}.` : `The published location is ${facts.location}.`, lang === 'ar' ? 'الموقع' : 'Location', 'candidate-role-fact-location')
-      : missingFact(lang);
+      : missingOrExactFaq();
   }
   if (intent === 'salary') {
     return facts.salary
       ? answer(facts.salary, lang === 'ar' ? 'الراتب المنشور' : 'Published salary', 'candidate-role-fact-salary')
-      : missingFact(lang);
+      : missingOrExactFaq();
   }
   if (intent === 'accommodation') {
     return facts.accommodation
       ? answer(facts.accommodation, lang === 'ar' ? 'تفاصيل السكن المنشورة' : 'Published accommodation details', 'candidate-role-fact-accommodation')
-      : missingFact(lang);
+      : missingOrExactFaq();
   }
   if (intent === 'interview') {
     return facts.interviewDetails
       ? answer(facts.interviewDetails, lang === 'ar' ? 'تفاصيل المقابلة المنشورة' : 'Published interview details', 'candidate-role-fact-interview')
-      : missingFact(lang);
+      : missingOrExactFaq();
   }
   const faqIndex = facts.faqs?.findIndex((item) => faqMatches(item.question, value, lang)) ?? -1;
-  const faq = faqIndex >= 0 ? facts.faqs?.[faqIndex] : null;
-  return faq ? answer(faq.answer, lang === 'ar' ? 'معلومات الوظيفة المنشورة' : 'Published role information', `candidate-role-faq-${faqIndex}`) : missingFact(lang);
+  return faqAnswer(faqIndex) ?? missingFact(lang);
 }
 
 export type EvidenceSummaryPoint = { text: string; questionIndex: number; sourceLabel: string };

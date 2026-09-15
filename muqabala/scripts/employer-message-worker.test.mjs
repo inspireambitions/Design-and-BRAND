@@ -11,10 +11,10 @@ test('employer sender retries safely and reports provider acceptance honestly', 
   process.env.RESEND_TRANSACTIONAL_API_KEY = 'synthetic-test-key';
   delete process.env.RESEND_FEEDBACK_API_KEY;
   process.env.INTERVIEW_SECRET = 'synthetic-test-secret-never-used-outside-tests';
-  const make = ({ lookupError = false, saveError = false, code = 200, kind = 'invite', invitePatch = {} } = {}) => {
+  const make = ({ lookupError = false, retrySourceError = false, saveError = false, code = 200, kind = 'invite', invitePatch = {}, jobPatch = {}, retrySource = null } = {}) => {
     const patches = []; const requests = []; const filters = [];
     const token = newInviteToken();
-    const job = { id: 'test-job', role_id: 'test-role', invite_id: 'test-invite', kind, channel: 'email', attempt_count: 1, message_body: kind === 'manual_reminder' ? 'Reminder {{invitation_link}}' : null };
+    const job = { id: 'test-job', role_id: 'test-role', invite_id: 'test-invite', kind, channel: 'email', attempt_count: 1, message_body: kind === 'manual_reminder' ? 'Reminder {{invitation_link}}' : null, retry_of: null, ...jobPatch };
     const adminClient = {
       rpc: async (_name, args) => { assert.equal(args.p_limit, 5); return { data: [job], error: null }; },
       from(table) {
@@ -25,6 +25,7 @@ test('employer sender retries safely and reports provider acceptance honestly', 
           update(value) { patch = value; patches.push(value); return builder; },
           async maybeSingle() {
             if (lookupError) return { data: null, error: { code: 'temporary' } };
+            if (table === 'employer_message_outbox') return { data: retrySource, error: retrySourceError ? { code: 'temporary' } : null };
             return { error: null, data: table === 'screening_packs'
               ? { id: 'test-role', public_code: 'test-public', workplace: 'Fictional Test', signed_token: '', expires_at: '2099-01-01T00:00:00Z' }
               : { id: 'test-invite', email: 'test@example.test', status: 'invited', token_cipher: token.cipher, contact_allowed: true, opted_out_at: null, withdrawn_at: null, deleted_at: null, last_manual_reminder_at: null, ...invitePatch } };
@@ -81,6 +82,30 @@ test('employer sender retries safely and reports provider acceptance honestly', 
       assert.equal(fixture.patches[0].status, 'cancelled');
       assert.equal(fixture.patches[0].last_error_code, 'contact_disallowed');
       assert.deepEqual(fixture.requests, []);
+    });
+    await t.test('accepted then delivery-failed manual reminder can use one verified retry job', async () => {
+      const fixture = make({
+        kind: 'manual_reminder',
+        invitePatch: { last_manual_reminder_at: new Date().toISOString() },
+        jobPatch: { retry_of: 'failed-job' },
+        retrySource: { id: 'failed-job', role_id: 'test-role', invite_id: 'test-invite', kind: 'manual_reminder', status: 'failed', last_error_code: 'email.failed' },
+      });
+      assert.equal((await fixture.run()).accepted, 1);
+      assert.equal(fixture.patches.at(-1).status, 'accepted');
+      assert.equal(fixture.requests.length, 1);
+    });
+    await t.test('complaint, bounce or unverified retry sources never bypass the recent-send guard', async () => {
+      for (const last_error_code of ['email.complained', 'email.bounced', 'email.suppressed']) {
+        const fixture = make({
+          kind: 'manual_reminder',
+          invitePatch: { last_manual_reminder_at: new Date().toISOString() },
+          jobPatch: { retry_of: 'failed-job' },
+          retrySource: { id: 'failed-job', role_id: 'test-role', invite_id: 'test-invite', kind: 'manual_reminder', status: 'failed', last_error_code },
+        });
+        assert.equal((await fixture.run()).failed, 1);
+        assert.equal(fixture.patches[0].last_error_code, 'invalid_retry_source');
+        assert.deepEqual(fixture.requests, []);
+      }
     });
     await t.test('failed acceptance write is not reported as successful', async () => {
       const fixture = make({ saveError: true });

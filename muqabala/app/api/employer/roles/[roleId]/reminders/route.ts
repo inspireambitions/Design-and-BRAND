@@ -1,6 +1,7 @@
 import { after } from 'next/server';
 import { z } from 'zod';
 import { verifyStoredInterview } from '@/lib/interview-token';
+import { pageCount, pageRange, positivePage } from '@/lib/pagination';
 import { reminderEligibility } from '@/lib/recruiter-suite';
 import { employerEmailConfigured, processEmployerMessages } from '@/lib/server/employer-messages';
 import { hasTrustedOrigin, privateNoStoreHeaders } from '@/lib/server/security';
@@ -16,6 +17,8 @@ const SendSchema = z.object({
   message: z.string().trim().min(1).max(2000),
   batchKey: z.string().uuid(),
 }).strict().refine((value) => value.message.includes('{{invitation_link}}'), { message: 'The invitation link is required.' });
+
+const RECIPIENT_PAGE_SIZE = 100;
 
 async function ownedRole(roleId: string) {
   const employer = await currentUser();
@@ -34,24 +37,31 @@ export async function GET(_request: Request, context: { params: Promise<{ roleId
   const { roleId } = await context.params;
   const owned = await ownedRole(roleId);
   if (!owned) return Response.json({ error: 'Role not found.' }, { status: 404 });
-  const { data: rows, error } = await owned.client.from('role_invites')
-    .select('id,name,email,status,contact_allowed,opted_out_at,withdrawn_at,deleted_at,last_manual_reminder_at,first_reminder_at,second_reminder_at,completion_reminder_at')
+  const page = positivePage(new URL(_request.url).searchParams.get('page'));
+  const range = pageRange(page, RECIPIENT_PAGE_SIZE);
+  const { data: rows, error, count } = await owned.client.from('role_invites')
+    .select('id,name,email,status,contact_allowed,opted_out_at,withdrawn_at,deleted_at,last_manual_reminder_at,first_reminder_at,second_reminder_at,completion_reminder_at', { count: 'exact' })
     .eq('role_id', roleId)
     .order('created_at')
-    .limit(500);
+    .range(range.from, range.to);
   if (error) return Response.json({ error: 'Reminder eligibility could not be loaded.' }, { status: 503 });
+  const inviteIds = (rows ?? []).map((row) => row.id);
   const admin = createAdminClient();
-  const { data: statusRows } = admin ? await admin.from('employer_message_outbox')
-    .select('invite_id,status,updated_at,created_at')
+  if (!admin) return Response.json({ error: 'Reminder delivery status could not be loaded.' }, { status: 503 });
+  const statusResult = inviteIds.length ? await admin.from('employer_message_outbox')
+    .select('invite_id,status,last_error_code,updated_at,created_at')
     .eq('role_id', roleId)
     .eq('kind', 'manual_reminder')
-    .order('updated_at', { ascending: false })
-    .limit(2000) : { data: [] };
+    .in('invite_id', inviteIds)
+    .order('created_at', { ascending: false })
+    .limit(2000) : { data: [], error: null };
+  if (statusResult.error) return Response.json({ error: 'Reminder delivery status could not be loaded.' }, { status: 503 });
+  const statusRows = statusResult.data;
   const delivery = { queued: 0, accepted: 0, delivered: 0, failed: 0, cancelled: 0 };
-  const latestByInvite = new Map<string, { status: string; updatedAt: string }>();
+  const latestByInvite = new Map<string, { status: string; errorCode: string | null; updatedAt: string }>();
   for (const row of statusRows ?? []) {
     if (row.invite_id && !latestByInvite.has(row.invite_id)) {
-      latestByInvite.set(row.invite_id, { status: row.status, updatedAt: row.updated_at || row.created_at });
+      latestByInvite.set(row.invite_id, { status: row.status, errorCode: row.last_error_code, updatedAt: row.updated_at || row.created_at });
     }
   }
   for (const row of latestByInvite.values()) {
@@ -75,6 +85,7 @@ export async function GET(_request: Request, context: { params: Promise<{ roleId
       completionReminderAt: row.completion_reminder_at,
       deliveryStatus: latest?.status,
       deliveryUpdatedAt: latest?.updatedAt,
+      deliveryErrorCode: latest?.errorCode,
     }, { expiresAt: owned.role.expires_at, remindersEnabled: owned.role.reminders_enabled !== false });
   });
   const title = verifyStoredInterview(owned.role.signed_token)?.title ?? 'this role';
@@ -84,10 +95,11 @@ export async function GET(_request: Request, context: { params: Promise<{ roleId
     recipients: recipients.map((recipient) => ({ ...recipient, deliveryStatus: latestByInvite.get(recipient.id)?.status ?? null })),
     eligibleCount: recipients.filter((recipient) => recipient.eligible).length,
     configured: employerEmailConfigured(),
-    publicLinkFallback: recipients.length === 0,
+    publicLinkFallback: (count ?? 0) === 0,
     publicUrl: `${new URL(_request.url).origin}/s/${owned.role.public_code}`,
     defaultMessage,
     delivery,
+    pagination: { page, pageSize: RECIPIENT_PAGE_SIZE, total: count ?? 0, totalPages: pageCount(count ?? 0, RECIPIENT_PAGE_SIZE) },
   }, { headers: privateNoStoreHeaders() });
 }
 

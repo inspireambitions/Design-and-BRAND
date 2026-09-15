@@ -26,7 +26,8 @@ alter table public.role_invites
 alter table public.employer_message_outbox
   add column if not exists message_body text check (message_body is null or length(message_body) between 1 and 2000),
   add column if not exists batch_key uuid,
-  add column if not exists delivered_at timestamptz;
+  add column if not exists delivered_at timestamptz,
+  add column if not exists retry_of uuid references public.employer_message_outbox(id) on delete set null;
 
 drop index if exists public.employer_message_outbox_once_key;
 create unique index employer_message_outbox_once_key
@@ -35,6 +36,11 @@ create unique index employer_message_outbox_once_key
 create unique index if not exists employer_message_outbox_manual_batch_key
   on public.employer_message_outbox (invite_id, batch_key, channel)
   where invite_id is not null and kind = 'manual_reminder';
+create unique index if not exists employer_message_outbox_manual_retry_once
+  on public.employer_message_outbox (retry_of)
+  where retry_of is not null and kind = 'manual_reminder';
+create index if not exists employer_message_outbox_manual_history
+  on public.employer_message_outbox (role_id, kind, invite_id, created_at desc);
 
 alter table public.employer_message_outbox drop constraint if exists employer_message_outbox_kind_check;
 alter table public.employer_message_outbox add constraint employer_message_outbox_kind_check
@@ -183,13 +189,25 @@ begin
   if v_pack.expires_at <= now() then raise exception 'Role closed' using errcode = '22023'; end if;
   if not v_pack.reminders_enabled then raise exception 'Reminders disabled' using errcode = '22023'; end if;
 
-  insert into public.employer_message_outbox(role_id, invite_id, kind, channel, message_body, batch_key)
-    select i.role_id, i.id, 'manual_reminder', 'email', trim(p_message), p_batch_key
+  insert into public.employer_message_outbox(role_id, invite_id, kind, channel, message_body, batch_key, retry_of)
+    select i.role_id, i.id, 'manual_reminder', 'email', trim(p_message), p_batch_key,
+      case when terminal.status = 'failed'
+        and terminal.last_error_code is not null
+        and terminal.last_error_code not in ('email.bounced', 'email.complained', 'email.suppressed', 'hard_bounce', 'complaint', 'provider_suppressed')
+        then terminal.id else null end
     from public.role_invites i
+    left join lateral (
+      select previous.id, previous.status, previous.last_error_code
+      from public.employer_message_outbox previous
+      where previous.invite_id = i.id and previous.kind = 'manual_reminder'
+      order by previous.created_at desc limit 1
+    ) terminal on true
     where i.role_id = p_role_id and i.id = any(p_invite_ids)
       and i.status in ('invited', 'started') and i.email is not null
       and i.contact_allowed and i.opted_out_at is null
       and i.withdrawn_at is null and i.deleted_at is null
+      and not coalesce(terminal.status = 'failed'
+        and terminal.last_error_code in ('email.bounced', 'email.complained', 'email.suppressed', 'hard_bounce', 'complaint', 'provider_suppressed'), false)
       and greatest(
         coalesce(i.first_reminder_at, '-infinity'::timestamptz),
         coalesce(i.second_reminder_at, '-infinity'::timestamptz),
@@ -197,11 +215,9 @@ begin
       ) <= now() - interval '24 hours'
       and (
         coalesce(i.last_manual_reminder_at, '-infinity'::timestamptz) <= now() - interval '24 hours'
-        or (
-          select terminal.status from public.employer_message_outbox terminal
-          where terminal.invite_id = i.id and terminal.kind = 'manual_reminder'
-          order by terminal.created_at desc limit 1
-        ) in ('failed', 'cancelled')
+        or (terminal.status = 'failed'
+          and terminal.last_error_code is not null
+          and terminal.last_error_code not in ('email.bounced', 'email.complained', 'email.suppressed', 'hard_bounce', 'complaint', 'provider_suppressed'))
       )
       and not exists (
         select 1 from public.employer_message_outbox existing

@@ -31,5 +31,8 @@
 .error { padding: 0.8rem; border: 1px solid #e1b2a8; border-radius: 0.7rem; background: #fff4f1; }
 .error p { margin: 0 0 0.35rem; }
 .error a { color: #8e3528; font-weight: 800; }
+.pagination { display: flex !important; align-items: center; justify-content: space-between; gap: 1rem; padding-top: 0.8rem; border-top: 1px solid #e8e5df; color: #536860; font-size: 0.8rem; }
+.pagination a { color: #075e54; font-weight: 800; text-decoration: none; }
+.pagination span[aria-disabled='true'] { color: #9aa7a1; font-weight: 800; }
 @media (max-width: 52rem) { .hero, .facts { grid-template-columns: 1fr; } }
 @media (max-width: 42rem) { .page { width: min(100% - 1rem, 74rem); } .section > header { flex-direction: column; } .facts dl { grid-template-columns: 1fr; } .submissions article { grid-template-columns: 1fr; } }

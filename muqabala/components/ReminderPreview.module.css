@@ -22,6 +22,9 @@
 .message textarea { width: 100%; padding: 0.75rem; border: 1px solid #b9ccc4; border-radius: 0.65rem; background: white; color: #172620; font: inherit; line-height: 1.5; resize: vertical; }
 .linkNote, .result { margin: 0; color: #536860; font-size: 0.82rem; }
 .actions { display: flex; flex-wrap: wrap; gap: 0.65rem; }
+.pagination { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #dbe5e1; color: #536860; font-size: 0.8rem; }
+.pagination button { min-height: 44px; padding: 0.45rem 0.65rem; border: 1px solid #b9ccc4; border-radius: 0.55rem; background: white; color: #075e54; font: inherit; font-weight: 800; }
+.pagination button:disabled { color: #9aa7a1; cursor: default; }
 .send:disabled { opacity: 0.5; cursor: default; }
 @keyframes reminder-in { from { opacity: 0; transform: translateY(var(--motion-distance)); } }
 @media (max-width: 38rem) { .meta { grid-template-columns: 1fr; } .actions { display: grid; } }

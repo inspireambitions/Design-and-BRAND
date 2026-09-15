@@ -187,7 +187,7 @@ test('employer delivery SQL executes against an isolated PostgreSQL engine', asy
         [role, owner, invites.map(row => row.id), 'Reminder {{invitation_link}}', firstBatch],
       )).rows[0].result;
       assert.equal(first.queued, 2);
-      await db.query("update public.employer_message_outbox set status='failed' where kind='manual_reminder' and invite_id=$1", [invites[0].id]);
+      await db.query("update public.employer_message_outbox set status='failed',last_error_code='email.failed' where kind='manual_reminder' and invite_id=$1", [invites[0].id]);
       await db.query("update public.employer_message_outbox set status='accepted',accepted_at=now() where kind='manual_reminder' and invite_id=$1", [invites[1].id]);
       const retryBatch = randomUUID();
       const retry = (await db.query(
@@ -195,12 +195,36 @@ test('employer delivery SQL executes against an isolated PostgreSQL engine', asy
         [role, owner, invites.map(row => row.id), 'Corrected reminder {{invitation_link}}', retryBatch],
       )).rows[0].result;
       assert.deepEqual(retry, { queued: 1, skipped: 1, batchKey: retryBatch });
-      const retried = await db.query("select invite_id from public.employer_message_outbox where kind='manual_reminder' and batch_key=$1", [retryBatch]);
+      const retried = await db.query("select retry.invite_id,retry.retry_of=original.id as linked from public.employer_message_outbox retry join public.employer_message_outbox original on original.invite_id=retry.invite_id and original.batch_key=$2 where retry.kind='manual_reminder' and retry.batch_key=$1", [retryBatch, firstBatch]);
       assert.deepEqual(retried.rows.map(row => row.invite_id), [invites[0].id]);
+      assert.equal(retried.rows[0].linked, true);
       assert.deepEqual((await db.query(
         'select public.queue_manual_employer_reminders($1,$2,$3::uuid[],$4,$5) as result',
         [role, owner, invites.map(row => row.id), 'Corrected reminder {{invitation_link}}', retryBatch],
       )).rows[0].result, { queued: 1, skipped: 1, batchKey: retryBatch, reused: true });
+    });
+    await t.test('bounce, complaint, suppression and cancellation outcomes cannot be manually retried', async () => {
+      for (const [status, errorCode] of [
+        ['failed', 'email.bounced'],
+        ['failed', 'email.complained'],
+        ['failed', 'email.suppressed'],
+        ['cancelled', 'contact_disallowed'],
+      ]) {
+        await reset(); await queue([contact()]);
+        const inviteId = (await db.query('select id from public.role_invites')).rows[0].id;
+        await db.query(
+          'select public.queue_manual_employer_reminders($1,$2,$3::uuid[],$4,$5)',
+          [role, owner, [inviteId], 'Reminder {{invitation_link}}', randomUUID()],
+        );
+        await db.exec("update public.employer_message_outbox set status='accepted',accepted_at=now() where kind='manual_reminder'");
+        await db.query("update public.employer_message_outbox set status=$1,last_error_code=$2 where kind='manual_reminder'", [status, errorCode]);
+        if (status === 'failed') await db.exec("update public.role_invites set last_manual_reminder_at=now()-interval '25 hours'");
+        const retry = (await db.query(
+          'select public.queue_manual_employer_reminders($1,$2,$3::uuid[],$4,$5) as result',
+          [role, owner, [inviteId], 'Retry {{invitation_link}}', randomUUID()],
+        )).rows[0].result;
+        assert.equal(retry.queued, 0, `${errorCode} must stay suppressed`);
+      }
     });
     await t.test('manual reminder acceptance stamps only the selected invite and delivered is a valid provider state', async () => {
       await reset(); await queue([contact()]);

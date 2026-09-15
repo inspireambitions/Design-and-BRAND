@@ -19,6 +19,7 @@ import { trackServer } from '@/lib/server/analytics';
 import { configuredOrigin } from '@/lib/server/security';
 import { openToken } from '@/lib/server/invite-token';
 import { verifyStoredInterview } from '@/lib/interview-token';
+import { manualReminderFailureCanRetry } from '@/lib/recruiter-suite';
 
 type OutboxRow = {
   id: string;
@@ -28,6 +29,7 @@ type OutboxRow = {
   channel: 'email' | 'whatsapp';
   attempt_count: number;
   message_body: string | null;
+  retry_of: string | null;
 };
 
 type InviteRow = {
@@ -178,6 +180,28 @@ export async function processEmployerMessages(options: { roleId?: string; limit?
       continue;
     }
     const inviteRow = invite as InviteRow | null;
+    let validManualRetry = false;
+    if (job.kind === 'manual_reminder' && job.retry_of) {
+      const { data: retrySource, error: retrySourceError } = await admin.from('employer_message_outbox')
+        .select('id,role_id,invite_id,kind,status,last_error_code')
+        .eq('id', job.retry_of)
+        .eq('role_id', job.role_id)
+        .eq('invite_id', job.invite_id)
+        .eq('kind', 'manual_reminder')
+        .maybeSingle();
+      if (retrySourceError) {
+        await retry(job, null, 'retry_source_lookup_failed');
+        failed += 1;
+        continue;
+      }
+      validManualRetry = Boolean(retrySource
+        && manualReminderFailureCanRetry(retrySource.status, retrySource.last_error_code));
+      if (!validManualRetry) {
+        await mark(job, { status: 'cancelled', locked_until: null, lease_token: null, last_error_code: 'invalid_retry_source' });
+        failed += 1;
+        continue;
+      }
+    }
     const rawToken = inviteRow ? openToken(inviteRow.token_cipher) : null;
     const link = pack && rawToken ? { link: inviteLink(pack.public_code, rawToken) } : null;
     if (!pack || (job.kind !== 'shortlist' && (!inviteRow || !link?.link))) {
@@ -203,7 +227,7 @@ export async function processEmployerMessages(options: { roleId?: string; limit?
       failed += 1;
       continue;
     }
-    if (job.kind === 'manual_reminder' && inviteRow?.last_manual_reminder_at
+    if (job.kind === 'manual_reminder' && !validManualRetry && inviteRow?.last_manual_reminder_at
       && Date.now() - Date.parse(inviteRow.last_manual_reminder_at) < 24 * 60 * 60 * 1_000) {
       await mark(job, { status: 'cancelled', locked_until: null, lease_token: null, last_error_code: 'recently_reminded' });
       failed += 1;
