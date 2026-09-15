@@ -15,10 +15,10 @@ export function SchoolsStaffInvite({institutionId,role='educator'}:{institutionI
 }
 export function SchoolsStaffAccept(){
   const [secret,setSecret]=useState('');const [busy,setBusy]=useState(false);const [message,setMessage]=useState('');const [accepted,setAccepted]=useState(false);
-  useEffect(()=>{const fragment=window.location.hash.slice(1);try{
+  useEffect(()=>{const timer=window.setTimeout(()=>{const fragment=window.location.hash.slice(1);try{
     if(/^[A-Za-z0-9_-]{43}$/.test(fragment)){setSecret(fragment);sessionStorage.setItem('schools-staff-invitation',JSON.stringify({secret:fragment,at:Date.now()}));}
     else{const saved=JSON.parse(sessionStorage.getItem('schools-staff-invitation')??'null');if(saved&&Date.now()-saved.at<1200000)setSecret(saved.secret);}
-  }catch{}if(fragment)window.history.replaceState(null,'',window.location.pathname);},[]);
+  }catch{}if(fragment)window.history.replaceState(null,'',window.location.pathname);},0);return()=>window.clearTimeout(timer);},[]);
   if(accepted)return <section className="schools-card"><h1>Invitation accepted</h1><p>Your institution access is available.</p><Link href="/schools/cohorts">View your assigned cohorts</Link><p><Link href="/schools/admin">Institution administration</Link></p></section>;
   return <><h1>Accept your institution invitation</h1><p>First sign in with the email address that received this invitation. Then accept below.</p><EmailSignIn next="/schools/staff"/>
     <form method="post" className="schools-card" onSubmit={async event=>{event.preventDefault();setBusy(true);setMessage('');try{

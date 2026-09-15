@@ -16,21 +16,21 @@ Updated 15 September 2026. This is the current evidence boundary for the Educato
 - The educator cohort list now shows active students, the current assignment, its due date, submitted work, work awaiting review and one next action.
 - The institution page now shows privacy-safe participation totals and active assignment dates. It does not show drafts, answers, feedback, evidence or adviser comments.
 - Migration `20260914052511_schools_dashboard_performance.sql` adds the missing Schools foreign-key indexes and optimises three RLS policies without changing their access rules.
-- This migration must remain on staging until Astra has reviewed the pull request and the owner has approved any production release.
-- The full automated suite passes 558 of 558 tests after merging the latest base branch. ESLint passes with zero errors and 86 visible warnings. TypeScript, the 136-page production build, release ancestry and the bundle limit pass.
+- The review is complete and the owner has authorised a controlled production release for Neb's live-domain QA. Supabase still requires explicit migration-specific approval before the performance migration can be applied; do not bypass that safety control.
+- The full automated suite passes 558 of 558 tests after merging the latest base branch, and the focused Schools suite passes 65 of 65. Schools-specific ESLint passes with zero errors and zero warnings; repository-wide ESLint passes with zero errors and 71 pre-existing non-Schools warnings. TypeScript, the production build, direct release-ancestry checks and the bundle limit pass.
 - A clean dependency install reports zero vulnerabilities after the patched `adm-zip` transitive version was pinned.
-- An isolated Supabase schema-and-operations drill applied all eleven Schools migrations and passed populated synthetic mail, retention, privacy, idempotency and role-isolation checks. This is not yet proof of an actual production-backup restore.
+- An isolated Supabase schema-and-operations drill applied all eleven Schools migrations and passed populated synthetic mail, retention, privacy, idempotency and role-isolation checks. A separate restore project then proved an actual production-backup restore and remains billable until the owner explicitly approves its permanent deletion.
 - Lighthouse accessibility is 100 on the public Schools page, student home, cohort page, review queue and institution administration page.
 - Thirty responsive route and viewport checks pass from 320 to 1440 pixels with no horizontal overflow, browser errors or hidden keyboard focus.
 - Five simultaneous synthetic feedback journeys completed with five model calls. Stored usage was 5,240 input tokens and 1,815 output tokens. At the verified GPT-4.1 mini rates, the estimated total was USD 0.005.
 - A clean synthetic student journey proved timed autosave, refresh recovery, adviser draft privacy and exactly-once submission after a lost response.
-- A new Vercel preview is not deployed yet. Its release requires explicit approval to send the staging service credential to the protected preview environment. Production is unchanged.
+- The reviewed branch has a ready protected Vercel preview. Production remains on commit `7c90f6b` until the performance migration is explicitly approved and the branch is promoted.
 
-## Human gates still open
+## Human gates intentionally retained for Neb and post-release review
 
 - Physical iPhone Safari and Android Chrome journeys.
 - WhatsApp, iMessage and LinkedIn preview checks on real services.
-- A supervised five-person pilot using approved fictional test content before any wider group.
+- Neb's controlled production QA using approved fictional test content, followed by four additional consenting adults before any wider group.
 - Independent review of feedback usefulness and hiring validity.
 - Provider-accepted email delivery to the controlled inbox. The test needs explicit approval because the invitation contains a temporary access secret.
 
@@ -45,4 +45,4 @@ Updated 15 September 2026. This is the current evidence boundary for the Educato
 - AI cost budget and stop rule.
 - The paid continuation offer, if the pilot succeeds.
 
-Do not invent these inputs. Do not open real enrolment until they are recorded and the supervised pilot gate has passed.
+Do not invent these inputs. The owner has approved one controlled, pseudonymous Neb QA account on production, but not general enrolment, real student data or a wider institutional pilot. Review Neb's findings before expanding.

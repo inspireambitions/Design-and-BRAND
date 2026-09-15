@@ -1,10 +1,10 @@
 # Message for Neb
 
-Hi Neb — please run a full controlled QA pass of the Muqabala Educators suite on this protected preview:
+Hi Neb — please run a full controlled QA pass of the Muqabala Educators suite on the live Muqabala site:
 
-https://muqabala-git-codex-schools-finish-20260914-inspire14.vercel.app
+https://trymuqabala.com/schools
 
-The preview is protected by Vercel SSO. Please tell Kim if access is blocked so she can add you to the team or send an authenticated share link. Please use fictional data only, confirm every tester is an adult, and do not test against production.
+Kim will send your private single-use enrolment link separately. Do not forward it or include it in screenshots. This is controlled production QA: please use fictional data only, confirm that you are aged 18 or over, and stop immediately if you see information that does not belong to your test account.
 
 Please cover these journeys:
 
@@ -12,8 +12,8 @@ Please cover these journeys:
 2. **Learner:** accept an invitation; confirm adult status; answer all questions; wait for autosave; refresh and confirm recovery; interrupt the connection once; retry without losing text or creating a duplicate submission; read feedback; retry an answer; confirm the report stays tied to the correct attempt; read the adviser comment; test sign-out, recovery and the deletion request.
 3. **Institution administrator:** confirm participation totals and dates are correct; confirm drafts, answer text, feedback evidence and adviser comments are not exposed on the institution overview; test staff invitation and enrolment recovery.
 4. **Isolation and failure states:** confirm one institution cannot see another institution's data; try an expired or reused link; test a rejected email, a temporarily unavailable request and a refresh during a save. Stop immediately if any private data appears to the wrong role.
-5. **Real devices:** complete the learner journey once on a physical iPhone using Safari and once on a physical Android phone using Chrome. Record camera, microphone, clipboard and network-permission failures if the browser offers those paths.
-6. **Message previews:** inspect the protected link in WhatsApp, iMessage and LinkedIn without posting it publicly.
+5. **Real devices:** complete the learner journey once on a physical iPhone using Safari and once on a physical Android phone using Chrome. Record keyboard, clipboard, reconnection, refresh and low-bandwidth failures. The Schools answer flow is typed and does not require camera or microphone access.
+6. **Message previews:** inspect only the public `https://trymuqabala.com/schools` link in WhatsApp, iMessage and LinkedIn without posting it publicly. Never paste the private enrolment link into a third-party preview service.
 
 For every issue, send the exact time and timezone, device, operating system, browser/version, account role, page URL, steps, expected result, actual result, and a screenshot or short screen recording. Please also say which journeys passed with no issue. Do not include passwords, recovery codes, private invitation fragments or real student information in the evidence.
 

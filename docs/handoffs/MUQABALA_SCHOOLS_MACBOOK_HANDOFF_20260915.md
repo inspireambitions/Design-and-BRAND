@@ -1,236 +1,270 @@
-# Muqabala Educators Suite MacBook handoff
+# Muqabala Educators Suite full handoff
 
-Date: 15 September 2026
+Last reconciled: 15 September 2026, 13:29 UTC / 21:29 UTC+8
 
-This is the working handoff for continuing the Muqabala Educators Suite on a MacBook. Start from this file and the named remote branch. Do not reconstruct the task from chat history.
+This is the canonical handoff for the Muqabala Educators Suite and its remaining pre-pilot work. It supersedes earlier statements that the Vercel connector still returned HTTP 403 and earlier statements that the production-backup restore had not been proved.
+
+## Owner release decision — 15 September 2026
+
+Kim authorised a controlled production release so Neb can test through the custom `trymuqabala.com` domain instead of a protected Vercel preview. This changes the earlier sequencing that required the complete five-person pilot before any production release. The narrower safety boundary remains: fictional adult-only test data, one controlled Neb account, no wider enrolment, and no expansion beyond this test until Neb's feedback and physical-device evidence are reviewed.
+
+Production promotion is still gated on the reviewed Schools performance migration. Supabase rejected the general release instruction as insufficiently specific for recreating three RLS policies, so explicit migration approval is still required. Do not bypass that control. At the latest pre-release check, TypeScript, the production build, all 558 resilience tests, all 65 Schools tests, the dependency audit and bundle budget passed. The seven Schools component files touched by the warning cleanup lint with zero warnings; repository-wide lint has zero errors and 71 pre-existing non-Schools warnings, accepted for this scoped release rather than refactored immediately before production.
+
+## Executive status
+
+The review branch is built, tested, deployed to a protected preview, and ready for controlled human QA. It has not been merged or deployed to production.
+
+Two previously open infrastructure gates have changed:
+
+1. **Vercel team/project access is fixed.** The connector can list the `INSPIRE` team, read the `muqabala` project, inspect deployments, and query grouped runtime errors and logs. The old 403 is not current.
+2. **The database backup-restore gate is complete.** Supabase restored a real 15 September production backup into a separate healthy project, and read-only comparisons proved snapshot data, schema, migration, Auth, Storage metadata, and Schools-table parity.
+
+The remaining work is controlled preview operations and human evidence: Neb needs Vercel SSO access, current-preview email/scheduler proof is still missing, physical iPhone and Android journeys are still missing, and the five-person supervised pilot has not run.
 
 ## Release boundary
 
-- Repository: `https://github.com/inspireambitions/Design-and-BRAND`
-- Application folder: `muqabala/`
-- Review branch: `codex/schools-finish-20260914`
-- Handoff commit before this document: `51b5e6ec312b6d4f0e6b67a445f314b1f959d2d6`
-- Base branch: `claude/gulf-hospitality-video-interview-m9skfu`
-- Base branch head at handoff time: `fd469a7b621316e8932d3ba1c495ea45b8a41a53`
-- Pull request: <https://github.com/inspireambitions/Design-and-BRAND/pull/21>
-- PR state at handoff time: open, no conflicts, all five checks passed
-- Protected branch preview: <https://muqabala-git-codex-schools-finish-20260914-inspire14.vercel.app>
-- Protected stable preview: <https://muqabala-schools-pilot-20260908-inspire14.vercel.app>
-- Corrected immutable deployment: <https://muqabala-puhd99s0i-inspire14.vercel.app>
-- Corrected deployment ID: `dpl_CGZ13zZ8PL4yYSuyDeqeisX6yZNw`
-- Production was not changed by this review branch.
-- Supabase production was not changed by this review branch.
+| Item | Current state |
+|---|---|
+| Repository | `https://github.com/inspireambitions/Design-and-BRAND` |
+| Application folder | `muqabala/` |
+| Review branch | `codex/schools-finish-20260914` |
+| Review head | `d89c8aa2113a4b294f4bec3910cb594b049e4405` |
+| Base branch | `claude/gulf-hospitality-video-interview-m9skfu` |
+| Current base head | `7c90f6bf77db578d6452f109d8a7fefd4581c973` |
+| Pull request | `https://github.com/inspireambitions/Design-and-BRAND/pull/21` |
+| PR state | Open, non-draft, `MERGEABLE`, `CLEAN` |
+| Preview branch alias | `https://muqabala-git-codex-schools-finish-20260914-inspire14.vercel.app` |
+| Current alias deployment | `dpl_CEs9B3Ahv8DMEDXdxzuLd7ji7fet`, `READY`, preview |
+| Commit-linked preview | `dpl_4mQwbKSdiDQj5GsSFWuWSpithGRe`, `READY`, commit `d89c8aa` |
+| Latest production deployment | `dpl_AAGx5x4H47HYeyHcqTRVUUmrhzg6`, `READY`, commit `7c90f6b` |
+| Production change from PR 21 | None |
 
-Do not merge the PR, apply the new migration to production, promote a deployment, expose enrolment, or send a real email without the owner's explicit approval for that action.
+Do not merge PR 21, promote a preview, apply the review-branch migration to production, open enrolment, send real participant email, or modify production data without Kim's explicit approval for that action.
 
-## Start on the MacBook
+## GitHub and CI
 
-For a new checkout:
+PR 21 was rechecked live during this handoff. All reported checks are successful:
 
-```bash
-git clone https://github.com/inspireambitions/Design-and-BRAND.git
-cd Design-and-BRAND
-git fetch origin
-git switch --track origin/codex/schools-finish-20260914
-cd muqabala
-npm ci
-git status --short
-git rev-parse HEAD
-```
+- `Lint, typecheck, test, build, bundle budget`
+- two `validate-candidate-questions` jobs
+- Vercel deployment status
+- Vercel Preview Comments
 
-For an existing checkout:
+The review head and base head are recorded above. Recheck them before a merge because both repository and provider state can change.
 
-```bash
-cd /path/to/Design-and-BRAND
-git fetch origin
-git switch codex/schools-finish-20260914
-git pull --ff-only
-cd muqabala
-npm ci
-git status --short
-git rev-parse HEAD
-```
+### Verified branch quality
 
-The documentation commit containing this handoff will make `HEAD` newer than `51b5e6e`. Record the fetched SHA. Confirm the working tree is clean before changing code. Fetch and inspect PR 21 before considering a rebase because the base branch moved after the application work was completed. Do not rebase merely because the earlier SHA differs.
+| Check | Result |
+|---|---|
+| Clean dependency install | Pass; 1,432 packages audited |
+| Dependency audit | Pass; 0 known vulnerabilities |
+| ESLint | Pass; 0 errors and 86 warnings |
+| TypeScript | Pass |
+| Full resilience suite | Pass; 558/558 |
+| Copy and Arabic parity | Pass; 9/9 |
+| Employer navigation regression | Pass; 24/24 targeted tests |
+| Next.js production build | Pass; 136 pages with live CMS access |
+| Bundle budget | Pass; 69 catalogue pages; largest displayed as 200.0 KB after rounding but below the strict byte limit |
+| Local Edge browser checks | Pass at 390×844 and 1440×1200; no horizontal overflow or uncaught exceptions |
 
-Read these files before acting:
+These are recorded release results for commit `d89c8aa`; they were not rerun during this documentation-only reconciliation. The Mac currently blocks `/usr/bin/git` behind an unaccepted Xcode licence, which is a workstation setup issue rather than a Muqabala failure.
 
-1. `AGENTS.md`
-2. `docs/handoffs/MUQABALA_SCHOOLS_MACBOOK_HANDOFF_20260915.md`
-3. `docs/evidence/schools-astra-handoff-20260914.md`
-4. `docs/evidence/schools-preview-release-20260914.json`
-5. `muqabala/docs/schools-release-status.md`
+## Implemented scope
 
-The sentence in `muqabala/docs/schools-release-status.md` saying a new preview is not deployed is superseded by the corrected deployment listed above. Recheck live state before updating that document.
+The branch includes:
 
-## Access bootstrap
+- educator cohort participation summaries with active students, current assignment, due date, submitted and awaiting-review counts, and one next action;
+- institution participation summaries with active cohorts, enrolment, submissions, missing submissions, awaiting review, open support, and active assignment dates;
+- server-side institution membership verification before service-role aggregation;
+- institution-admin views that exclude student drafts, answers, feedback evidence, and adviser comments;
+- the institution dashboard 500 repair;
+- 28 Schools foreign-key indexes and three RLS init-plan optimisations in `20260914052511_schools_dashboard_performance.sql`;
+- resilient learner autosave, refresh recovery, exactly-once submission recovery, feedback retry, adviser correction/comment, support, and deletion coverage;
+- a repaired ESLint 9 configuration and CI lint execution;
+- the employer interview navigation-warning regression fix;
+- dependency patching that reduced `npm audit` to zero known vulnerabilities;
+- responsive and accessibility evidence across Schools routes;
+- current Sanity guide spelling verification: 20 published guides checked and zero replacements required.
 
-No password, token, API key, OTP or private browser session is stored in this repository. The MacBook must authenticate through each provider's normal private sign-in. Stop and let Kim complete any password, OTP or account-choice screen. Never paste a secret into chat, source code, a commit or command output.
+## Vercel current state
 
-### GitHub
+### Access correction
 
-- Sign in to the GitHub account that can access `inspireambitions/Design-and-BRAND`.
-- Confirm access with `git fetch origin` or `git ls-remote origin`.
-- Continue in this repository. Do not create a replacement repository or copy the application elsewhere.
+The prior statement “Vercel connector still returns 403” is obsolete.
 
-### Vercel
-
-- Required team: `INSPIRE`
+- Team: `INSPIRE`
 - Team slug: `inspire14`
 - Team ID: `team_IlZz8UvetUXPtSvI4hPqy6fn`
-- Required project: `muqabala`
+- Plan: Pro
+- Project: `muqabala`
 - Project ID: `prj_mLU2A8yiW61V4a4da54GryoIcSXX`
-- Project root: `muqabala`
+- Framework: Next.js
+- Configured Node version: 24.x
 
-Sign in through Vercel OAuth, MCP or the CLI, then list the team and project before any write. A team with zero projects, a 403, or the old `Kim K's projects` account means the wrong Vercel identity is connected. Disconnect and reconnect, selecting `INSPIRE`.
+The connector successfully listed the team, read the project, listed deployments, resolved the branch alias, and queried telemetry.
 
-Do not download, print or manually relay environment values. It is safe to list environment variable names and scopes. Any approved copy must happen server-side inside the same Vercel project.
+### Preview access
 
-### Supabase
+The protected branch alias resolves to `dpl_CEs9B3Ahv8DMEDXdxzuLd7ji7fet`, which is `READY` and targets preview, not production.
 
-- Production project ref: `hmaxzpgsefzpflrwzopa`
-- Disposable staging project ref: `okrsezhospztwtptqhpo`
-- Staging branch ID: `2314526a-087d-43d3-a84b-348582bad1dd`
+The connector cannot currently create a temporary protection-bypass URL. Both protected fetching and bypass generation return `409 Conflict` while creating the protection bypass. This does not revoke team/project access and is not the old 403. Until resolved, Neb needs membership in the `INSPIRE` Vercel team and must authenticate through Vercel SSO.
 
-Prefer Supabase MCP OAuth. Confirm the connected account can see both project refs. Work on `okrsezhospztwtptqhpo` only unless Kim explicitly approves a production database action. Production should remain read-only during review.
+### Runtime telemetry
 
-Never expose a service-role key. A `NEXT_PUBLIC_SUPABASE_*` value may be client-facing only when the application already treats it as public. Service credentials must stay private.
+The 24-hour check at approximately 13:29 UTC found:
 
-If Supabase MCP is not ready, confirm `https://mcp.supabase.com/mcp` is reachable, complete OAuth privately, then reload the session. An unauthenticated HTTP 401 confirms the endpoint is reachable but not signed in. Do not create another project or branch.
+- no grouped runtime-error clusters;
+- no production `error` or `fatal` logs;
+- no preview `error` or `fatal` logs.
 
-### Resend and inbox verification
+The seven-day view still retains nine historical groups:
 
-The immediate email check should reuse the existing preview-only Vercel configuration. A separate Resend login is not required if Vercel performs the approved server-side copy.
+| Historical group | Count | Last occurrence UTC |
+|---|---:|---|
+| Schools mail invalid authorisation, 401 | 6 | 2026-09-14 04:49:16 |
+| Schools retention invalid authorisation, 401 | 4 | 2026-09-14 04:49:16 |
+| `/schools/admin` request error, 500 | 3 | 2026-09-14 06:43:56 |
+| Institution details load error | 3 | 2026-09-14 06:43:56 |
+| Schools mail missing cron secret, 503 | 2 | 2026-09-08 15:29:37 |
+| Rejected evaluation evidence line | 2 | 2026-09-11 10:31:05 |
+| Duplicate scoring competency | 1 | 2026-09-11 06:26:15 |
+| Interview-brain 30-second timeout | 1 | 2026-09-10 14:31:24 |
+| Schools retention missing cron secret, 503 | 1 | 2026-09-08 15:29:38 |
 
-Gmail access is required only to prove inbox receipt. Let Kim complete private Gmail sign-in and any OTP. Provider acceptance is not the same as inbox receipt. Never claim inbox receipt without reading the controlled test inbox.
+These are historical records, not current reproductions. The clean 24-hour window supports “no recent recurrence”; it does not prove every route was exercised during that window. Some 401/503 entries are consistent with deliberate negative auth/config tests, but telemetry alone does not prove intent.
 
-## What is completed and verified
+## Supabase current state
 
-- The Educators Suite is substantially built and isolated from the employer and practice products.
-- The educator cohort dashboard shows active students, current assignment, due date, submitted count, awaiting-review count and one next action.
-- The institution participation dashboard shows active cohorts, enrolled students, submissions, missing submissions, awaiting review, open support and active assignment dates.
-- Institution administrators cannot see student drafts, answers, feedback, evidence or adviser comments through the dashboard.
-- An institution dashboard preview HTTP 500 was fixed. Operational cohort columns are now read with a server-only service client only after institution-admin membership is verified. The learner-safe grant remains limited to cohort ID and name.
-- Migration `muqabala/supabase/migrations/20260914052511_schools_dashboard_performance.sql` adds 28 missing Schools foreign-key indexes and optimises three RLS policies without changing access predicates.
-- The migration is applied only to staging. Staging has two idempotent history entries named `schools_dashboard_performance` because the branch was reset and reapplied. Production contains neither entry.
-- Post-migration staging checks found no Schools `unindexed_foreign_keys` or `auth_rls_initplan` findings. Service-only no-policy notices and unused-index information remain expected. The unrelated leaked-password warning remains unchanged.
-- The full automated suite passed 543 tests with zero failures.
-- TypeScript passed.
-- The production build passed with 135 routes.
-- The bundle gate passed all 69 catalogue pages. The largest entry was 198.3 KB against the strict 200 KB limit.
-- Release ancestry passed for required commits `b5d6241` and `47a076f`.
-- Lighthouse accessibility scored 100 on the Schools landing page, student home, cohort, review and institution admin pages.
-- Thirty route and viewport checks passed at 320, 375, 390, 768, 1280 and 1440 pixels. They found no horizontal overflow, browser errors or hidden keyboard focus.
-- A synthetic student journey passed timed autosave, refresh recovery, adviser draft privacy and exactly-once submission after a lost response.
-- Database security checks cover cross-institution denial, employer denial, draft privacy, direct-write denial, idle and revoked session denial, deletion and retention boundaries.
-- Five concurrent synthetic feedback journeys made exactly five model calls. All succeeded and reached `ready`. Usage was 5,240 input and 1,815 output tokens, estimated at USD 0.005 using the verified GPT-4.1 mini rates.
-- Live protected-preview checks returned HTTP 200 for `/schools`, learner dashboard, adviser cohort dashboard and institution dashboard.
+### Production
 
-The five-call check is bounded evidence only. It does not prove classroom-scale or provider-wide capacity.
+- Project: `Muqabala`
+- Project ref: `hmaxzpgsefzpflrwzopa`
+- Region: `ap-south-1`
+- Status: `ACTIVE_HEALTHY`
+- Database: PostgreSQL 17
 
-## Pending work in priority order
+Production was read only during this reconciliation.
 
-### P0: Fresh current-preview email proof
+### Genuine restore verification
 
-Historical email evidence on the old configured preview proves provider acceptance, inbox receipt, exactly-once delivery and replay idempotency. It is not fresh proof for the corrected branch.
+- Project: `Muqabala Restore Verification 2026-09-15`
+- Project ref: `pcicynthmmtcjsoupsfy`
+- Region: `ap-south-1`
+- Status: `ACTIVE_HEALTHY`
+- Source: production's Supabase **Restore to new project** flow
+- Recovery point: completed backup at 2026-09-15 02:13:51 UTC
+- Provider result: restoration `COMPLETED`
+- Quoted cost: USD 9.68/month compute plus USD 0.50/month disk
 
-This session found seven queued messages, proved by aggregate queries that all seven were synthetic, then removed only those synthetic staging rows. A fresh attempt against the old email-enabled deployment returned HTTP 404 because that deployment did not contain the current `/api/schools/mail` route. The temporary staff invitation was cleaned. No new email was sent.
+Read-only verification proved:
 
-The corrected review branch still needs these existing preview-only variables copied from `codex/schools-pilot-20260908` to `codex/schools-finish-20260914`:
+- 43/43 migration records match production;
+- exactly 87 tables exist across `public`, `schools_private`, `auth`, and `storage`, with matching RLS settings;
+- system table/index/RLS counts match by schema;
+- the restore contains 55 Auth users, 91 interviews, 393 interview answers, 41 universal interviews, 2 Schools sessions, 2 Schools pilot contacts, and 250 Storage object metadata rows;
+- current production contains 122 interviews, 426 interview answers, 42 universal interviews, and 253 Storage object metadata rows, consistent with changes after the selected backup;
+- all 26 Schools table counts match between current production and the restored snapshot.
 
-- `SCHOOLS_RESEND_API_KEY`
-- `SCHOOLS_EMAIL_FROM`
-- `CRON_SECRET`
+This closes the database backup-restoration proof. It does not automatically copy or validate every separately managed provider setting. Before treating the restore as a deployable disaster-recovery replacement, verify Auth configuration, actual Storage object retrieval, functions, secrets, custom domains, and third-party credentials.
 
-The values must never be shown. The target must be Preview only and branch `codex/schools-finish-20260914`. Production must not change.
+The earlier empty/schema-only drill `dwpwxtfjrznqvmndfvkf` was permanently deleted. The genuine restore project remains billable and can now be deleted after Kim explicitly confirms that the evidence is accepted.
 
-Kim has not yet given the exact approval required for this three-variable copy and controlled send. Ask for this exact approval before acting:
+### Schools operations boundary
 
-> Approve copying `SCHOOLS_RESEND_API_KEY`, `SCHOOLS_EMAIL_FROM` and `CRON_SECRET` from the old Schools preview branch to the new preview branch without printing their values, then send one temporary staff invitation to the controlled Gmail test inbox.
+The isolated operations drill proved claim-once mail handling, duplicate rejection, failure closure, idempotent retention queuing, local purge boundaries, repeatable privacy completion, access controls, and institution isolation with synthetic data. No external provider was contacted in that drill.
 
-After approval:
+Current production has zero rows in Schools mail outbox, privacy jobs, and privacy receipts. Therefore the following are not yet proved on the current branch preview:
 
-1. Reconfirm Vercel team and project IDs.
-2. Copy the three values server-side without printing them.
-3. Scope them to Preview and `codex/schools-finish-20260914` only.
-4. Redeploy the corrected review branch.
-5. Create one temporary staff invitation for the controlled QA inbox.
-6. Verify an unauthorised mail-worker request returns 401.
-7. Run two concurrent authorised worker calls and prove exactly one provider acceptance.
-8. Prove the provider message ID is stored.
-9. Replay the same job and prove the same provider ID is returned.
-10. Run a third claim and prove it sends zero messages.
-11. Verify the retention endpoint rejects missing cron authorisation.
-12. Clean the temporary invitation and outbox data.
-13. Report provider acceptance separately from inbox receipt.
+- provider acceptance and inbox receipt for a fresh staff invitation and assignment notification;
+- privacy-notification delivery;
+- two actual unattended scheduler invocations;
+- populated scheduled retention execution;
+- genuine supplier-deletion and institution-notification receipts.
 
-Inspect the existing Schools email QA scripts before running them. Several scripts were written for the old branch and must not be run unchanged if they hard-code `codex/schools-pilot-20260908`.
+Historical staging evidence proves manual controlled staff/assignment delivery, exactly-once concurrency, and lost-receipt replay. Do not relabel that historical evidence as current-preview proof.
 
-### P1: Astra review and PR decision
+## CMS state
 
-GPT-6 Astra should inspect:
+The live published Sanity dataset was checked read only:
 
-- tenant and institution isolation
-- adviser draft privacy
-- membership verification before service-role reads
-- dashboard aggregation rules
-- the 28 indexes
-- the three RLS init-plan rewrites
-- responsive and accessibility evidence
-- exact release claims
+- 20 guide documents checked;
+- zero remaining `practice`/`practise` patches required;
+- displayed spelling and stored published content are currently clean.
 
-PR 21 was open, conflict-free and green at handoff time. Fetch the current base and recheck the PR before merging because the base branch moved. Do not treat green automation as production approval. Merge only on Kim's explicit instruction.
+No new CMS publication is required for this issue. Retain the existing before-snapshot for audit history. A separate Sanity write receipt is unnecessary unless content is changed again.
 
-### P2: Human device and sharing checks
+## What Neb can test now
 
-Still required:
+Neb can begin controlled preview QA as soon as Vercel SSO access is confirmed. The remaining operational and pilot gates do not need to be hidden from Neb; they should be tested and recorded through the controlled protocol.
 
-- one complete journey on a physical iPhone using Safari
-- one complete journey on a physical Android device using Chrome
-- real WhatsApp preview-card check
-- real iMessage preview-card check
-- real LinkedIn preview-card check
-- assistive-technology review beyond automated Lighthouse
+Use the prepared message:
 
-Record the device, browser, route, expected result and actual result. Do not call emulation a physical-device test.
+`docs/neb-educators-suite-test-message-20260915.md`
 
-### P3: Supervised pilot and founder inputs
+Required human coverage:
 
-Run a supervised five-person pilot using approved fictional content before any wider cohort. Large-group AI capacity is not proven.
+1. educator assignment, enrolment, dashboard, review, correction/comment, undo/save, and support flows;
+2. learner invitation, adult confirmation, autosave, refresh, interruption/retry, exactly-once submission, feedback, retry, adviser comment, recovery, and deletion flows;
+3. institution-admin totals and dates, plus proof that learner drafts/answers/feedback/comments are not exposed;
+4. cross-institution denial, expired/reused link, unavailable request, and refresh-during-save failure states;
+5. one full physical iPhone Safari journey and one full physical Android Chrome journey;
+6. WhatsApp, iMessage, and LinkedIn preview-card checks without public posting;
+7. independent educator review of feedback usefulness, evidence grounding, rubric alignment, borderline answers, and imperfect English.
 
-Kim must supply or approve:
+Every issue report must include exact timestamp and timezone, device, OS, browser/version, role, URL, steps, expected result, actual result, and screenshot or short recording. Never include passwords, recovery codes, private invitation fragments, or real student data.
 
-- institution name and authorised contact
-- written adult-only confirmation
-- teaching language
-- adviser-approved roles, questions and rubric descriptors
-- signed data-processing terms and approved suppliers
-- evaluation dates, success thresholds and named owner
-- AI budget and stop rule
-- paid continuation offer if the pilot succeeds
+## Remaining actions in order
 
-Also obtain independent review of feedback usefulness and assessment validity. Do not invent these inputs.
+### P0 — Enable Neb's preview access
 
-### P4: Production release, only after the gates above
+Add Neb to the `INSPIRE` Vercel team/project through the provider's normal access controls. Do not send credentials or private cookies. Re-test the temporary bypass-link tool separately; its current 409 is a convenience/access-sharing problem, not an application outage.
 
-Before any production release:
+### P1 — Re-prove current-preview operations
 
-- reverify the production branch, deployment and database state live
-- prove the current-preview email flow
-- complete the physical-device and sharing checks
-- complete the supervised five-person pilot
-- confirm supplier deletion receipts, retention handling, backup expiry and final institutional privacy position
-- prove two actual unattended schedule invocations if schedules will be relied on
-- obtain explicit production deployment and production migration approval
+Using fictional adult-only English data and only the controlled `hello@trymuqabala.com` inbox:
 
-Production currently has the public `/schools` page and Schools migrations recorded by the existing release status, but private enrolment is closed and there is no live institution, cohort, student, assignment or feedback pilot. Reverify this live before relying on it because provider and production state can change.
+1. confirm the current preview has Preview-scoped `SCHOOLS_RESEND_API_KEY`, `SCHOOLS_EMAIL_FROM`, and `CRON_SECRET` without printing values;
+2. send one temporary staff invitation and one assignment notification;
+3. prove provider acceptance and inbox receipt separately;
+4. run two concurrent authorised worker claims and prove exactly one send;
+5. replay the job and prove the stored provider ID is reused;
+6. prove an additional claim sends zero messages;
+7. capture two real unattended scheduler invocations;
+8. run a populated synthetic retention/privacy case and capture notification/receipt evidence;
+9. clean only the temporary QA data.
 
-## Safe verification commands
+No real student data and no production write are authorised by this handoff.
 
-Run from `muqabala/`:
+### P2 — Neb device and usability QA
+
+Execute the prepared Neb protocol on the protected preview. Physical devices are mandatory; desktop emulation is supporting evidence only.
+
+### P3 — Five-person supervised pilot
+
+Run five consenting adult testers with approved fictional content. Record acceptance thresholds and have at least two educators independently review feedback validity. Current approved defaults are English, staging only, synthetic data only, and USD 0 AI spend for operations-only checks. DPA approval remains pending, so do not use real participant/student data.
+
+### P4 — Production decision
+
+Only after P0–P3 pass:
+
+- recheck PR 21, base ancestry, CI, preview, telemetry, and database drift;
+- approve and apply the review-branch performance migration to production;
+- approve merge and production deployment explicitly;
+- verify production email, schedules, monitoring, privacy, and rollback;
+- expand beyond five testers only after written acceptance of the pilot evidence.
+
+### Cleanup — Restore project cost
+
+After Kim accepts the restore evidence, permanently delete `pcicynthmmtcjsoupsfy` to stop the quoted USD 10.18/month charge. Deletion is irreversible and requires explicit confirmation.
+
+## Safe local verification
+
+From the repository root:
 
 ```bash
+cd muqabala
 npm ci
+npm run lint
 npm run typecheck
 npm run test:resilience
 npm run build
@@ -238,38 +272,77 @@ npm run check:bundle
 node --experimental-strip-types --test --test-isolation=none scripts/schools-dashboard.test.mjs
 ```
 
-Do not run `npm audit fix --force`. The last clean install reported 1,212 audited packages and eight moderate vulnerabilities. Review upgrades separately without forcing breaking dependency changes.
+On this Mac, `/usr/bin/git` currently exits with an Xcode licence prompt. Kim or the machine administrator must review and accept the Xcode licence before Git commands will run. Do not bypass that prompt through destructive repository manipulation.
 
-## Evidence files
+## Rollback and safety
 
+- Application: PR 21 is unmerged; the safest rollback is to leave it unmerged. If merged later, revert the merge or named release commits through normal Git review.
+- Vercel: PR 21 has not changed production. No production rollback is required for this branch.
+- Supabase production: no write occurred during restore verification. No production rollback is required.
+- Supabase restore project: delete only after explicit confirmation; deletion is irreversible.
+- QA data: use unique prefixes and delete only records created for the controlled test.
+- Secrets: never place keys, tokens, OTPs, authenticated share parameters, or private invitation fragments in chat, screenshots, logs, or commits.
+
+## Evidence index
+
+- `docs/evidence/schools-quality-and-operations-20260915.md`
 - `docs/evidence/schools-astra-handoff-20260914.md`
 - `docs/evidence/schools-preview-release-20260914.json`
-- `docs/evidence/schools-worker-preview.json`
-- `docs/evidence/schools-assignment-worker-preview.json`
+- `docs/evidence/schools-quality-browser-20260915.json`
+- `docs/evidence/schools-responsive-browser.json`
+- `docs/evidence/schools-feedback-concurrency.json`
+- `docs/evidence/schools-quality-20260915-mobile.png`
+- `docs/evidence/schools-quality-20260915-desktop.png`
+- `docs/neb-educators-suite-test-message-20260915.md`
 - `muqabala/docs/schools-release-status.md`
 - `muqabala/docs/schools-pilot-plan.md`
-- `docs/schools-build-log.md`
+- `muqabala/docs/PILOT_CHECKLIST.md`
 
-The two worker evidence files are historical proof from the earlier configured preview. Do not present them as fresh proof for the corrected branch.
+The current handoff and quality report include live provider checks performed after commit `d89c8aa`; those documentation corrections may be local until the Mac Xcode licence is accepted and Git can commit them.
 
-## First response expected from the new session
+## PR 21 changed-file manifest
 
-Perform a read-only orientation first. Report a compact table with `DONE`, `PENDING` and `BLOCKED` for:
-
-- GitHub access and fetched branch SHA
-- PR 21 state and current base SHA
-- Vercel team and project access
-- corrected preview health
-- Supabase production and staging visibility
-- production unchanged status
-- fresh email proof
-- physical-device checks
-- supervised pilot gates
-
-Then continue with P0 if Kim gives the exact approval above. If a private login or OTP appears, stop for Kim to complete it. Do not ask Kim to restate the project.
+```text
+.github/workflows/ci.yml
+docs/evidence/schools-astra-handoff-20260914.md
+docs/evidence/schools-authenticated-accessibility.json
+docs/evidence/schools-authenticated-browser.json
+docs/evidence/schools-feedback-concurrency.json
+docs/evidence/schools-preview-release-20260914.json
+docs/evidence/schools-quality-20260915-desktop.png
+docs/evidence/schools-quality-20260915-mobile.png
+docs/evidence/schools-quality-and-operations-20260915.md
+docs/evidence/schools-quality-browser-20260915.json
+docs/evidence/schools-responsive-browser.json
+docs/evidence/schools-staging-fixture.json
+docs/handoffs/MUQABALA_SCHOOLS_MACBOOK_HANDOFF_20260915.md
+docs/neb-educators-suite-test-message-20260915.md
+muqabala/CODEX.md
+muqabala/app/schools/admin/page.tsx
+muqabala/app/schools/cohorts/page.tsx
+muqabala/app/schools/schools.css
+muqabala/components/EmployerVideoInterview.tsx
+muqabala/components/ScreeningEmailVerification.tsx
+muqabala/components/schools/PilotContact.tsx
+muqabala/docs/RELEASE.md
+muqabala/docs/schools-release-status.md
+muqabala/lib/schools/admin-participation.ts
+muqabala/lib/schools/dashboard.ts
+muqabala/package-lock.json
+muqabala/scripts/employer-video-screening.test.mjs
+muqabala/scripts/schools-accessibility.mjs
+muqabala/scripts/schools-dashboard.test.mjs
+muqabala/scripts/schools-deploy-preview.mjs
+muqabala/scripts/schools-feedback-concurrency.mjs
+muqabala/scripts/schools-foundation.test.mjs
+muqabala/scripts/schools-landing-review.mjs
+muqabala/scripts/schools-responsive-browser.mjs
+muqabala/scripts/schools-staging-qa.mjs
+muqabala/supabase/migrations/20260914052511_schools_dashboard_performance.sql
+```
 
 ## Copyable continuation prompt
 
 ```text
-Continue the Muqabala Educators Suite from the repository handoff at docs/handoffs/MUQABALA_SCHOOLS_MACBOOK_HANDOFF_20260915.md. Use https://github.com/inspireambitions/Design-and-BRAND, branch codex/schools-finish-20260914, app folder muqabala, and PR https://github.com/inspireambitions/Design-and-BRAND/pull/21. Read AGENTS.md and the handoff fully before acting. Start with a read-only access and current-state check for GitHub, Vercel team INSPIRE/inspire14 project muqabala, and Supabase production hmaxzpgsefzpflrwzopa plus staging okrsezhospztwtptqhpo. Do not expose secrets, create replacement projects, merge, migrate production, promote production, open enrolment or send email without the exact approval required in the handoff. Stop for me at any password, OTP or private account-choice screen. Report DONE, PENDING and BLOCKED, then continue from the first authorised pending action without asking me to restate the project.
+Continue the Muqabala Educators Suite from docs/handoffs/MUQABALA_SCHOOLS_MACBOOK_HANDOFF_20260915.md in https://github.com/inspireambitions/Design-and-BRAND, branch codex/schools-finish-20260914, app folder muqabala, PR 21. Read AGENTS.md and the handoff fully before acting. Start read-only: recheck PR head/base/checks, Vercel INSPIRE/inspire14 project muqabala and its branch alias, the last 24 hours of runtime telemetry, Supabase production hmaxzpgsefzpflrwzopa, and restore project pcicynthmmtcjsoupsfy. The old Vercel 403 is resolved; do not report it as current. The database backup restore is proved; do not repeat it. Current open work is Neb SSO access, current-preview email/scheduler/privacy proof, physical iPhone/Android QA, independent feedback review, and the five-person supervised synthetic adult pilot. Do not expose secrets, delete the restore project, merge, migrate production, promote production, open enrolment, or send real participant email without the exact owner approval described in the handoff. Stop at any password, OTP, or private account-choice screen.
 ```
