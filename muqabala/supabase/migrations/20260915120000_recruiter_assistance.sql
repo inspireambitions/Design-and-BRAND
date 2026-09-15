@@ -5,7 +5,12 @@ alter table public.screening_packs
   add column if not exists location text check (location is null or length(location) between 2 and 160),
   add column if not exists timezone text not null default 'Asia/Dubai' check (length(timezone) between 3 and 64),
   add column if not exists published_facts jsonb not null default '{}'::jsonb check (jsonb_typeof(published_facts) = 'object'),
-  add column if not exists publish_key uuid;
+  add column if not exists publish_key uuid,
+  add column if not exists questionnaire_language text not null default 'both' check (questionnaire_language in ('en', 'both'));
+
+alter table public.screening_packs drop constraint if exists screening_packs_question_source_check;
+alter table public.screening_packs add constraint screening_packs_question_source_check
+  check (question_source in ('legacy', 'catalogue', 'ai', 'employer_reviewed'));
 
 create unique index if not exists screening_packs_employer_publish_key
   on public.screening_packs (employer_id, publish_key)
@@ -153,15 +158,30 @@ declare
   v_pack public.screening_packs%rowtype;
   v_queued integer := 0;
   v_requested integer := coalesce(array_length(p_invite_ids, 1), 0);
+  v_existing jsonb;
 begin
   select * into v_pack from public.screening_packs
     where id = p_role_id and employer_id = p_employer_id for update;
   if not found then raise exception 'Role not found' using errcode = '42501'; end if;
-  if v_pack.expires_at <= now() then raise exception 'Role closed' using errcode = '22023'; end if;
-  if not v_pack.reminders_enabled then raise exception 'Reminders disabled' using errcode = '22023'; end if;
   if v_requested not between 1 and 500 or length(trim(p_message)) not between 1 and 2000 then
     raise exception 'Invalid reminder' using errcode = '22023';
   end if;
+
+  select metadata into v_existing from public.recruiter_audit_events
+    where employer_id = p_employer_id and role_id = p_role_id
+      and record_type = 'reminder_batch' and action = 'reminders_queued'
+      and metadata->>'batch_key' = p_batch_key::text
+    order by created_at desc limit 1;
+  if v_existing is not null then
+    return jsonb_build_object(
+      'queued', coalesce((v_existing->>'queued_count')::integer, 0),
+      'skipped', coalesce((v_existing->>'skipped_count')::integer, 0),
+      'batchKey', p_batch_key,
+      'reused', true
+    );
+  end if;
+  if v_pack.expires_at <= now() then raise exception 'Role closed' using errcode = '22023'; end if;
+  if not v_pack.reminders_enabled then raise exception 'Reminders disabled' using errcode = '22023'; end if;
 
   insert into public.employer_message_outbox(role_id, invite_id, kind, channel, message_body, batch_key)
     select i.role_id, i.id, 'manual_reminder', 'email', trim(p_message), p_batch_key
@@ -171,17 +191,27 @@ begin
       and i.contact_allowed and i.opted_out_at is null
       and i.withdrawn_at is null and i.deleted_at is null
       and greatest(
-        coalesce(i.last_manual_reminder_at, '-infinity'::timestamptz),
         coalesce(i.first_reminder_at, '-infinity'::timestamptz),
         coalesce(i.second_reminder_at, '-infinity'::timestamptz),
         coalesce(i.completion_reminder_at, '-infinity'::timestamptz)
       ) <= now() - interval '24 hours'
+      and (
+        coalesce(i.last_manual_reminder_at, '-infinity'::timestamptz) <= now() - interval '24 hours'
+        or (
+          select terminal.status from public.employer_message_outbox terminal
+          where terminal.invite_id = i.id and terminal.kind = 'manual_reminder'
+          order by terminal.created_at desc limit 1
+        ) in ('failed', 'cancelled')
+      )
       and not exists (
         select 1 from public.employer_message_outbox existing
         where existing.invite_id = i.id and existing.kind = 'manual_reminder'
           and (
             existing.status in ('pending', 'processing')
-            or existing.created_at > now() - interval '24 hours'
+            or (
+              existing.status in ('accepted', 'delivered')
+              and existing.created_at > now() - interval '24 hours'
+            )
           )
       )
     on conflict do nothing;
@@ -191,7 +221,12 @@ begin
     actor_id, employer_id, role_id, record_type, action, result, metadata
   ) values (
     p_employer_id, p_employer_id, p_role_id, 'reminder_batch', 'reminders_queued', 'succeeded',
-    jsonb_build_object('requested_count', v_requested, 'queued_count', v_queued, 'batch_key', p_batch_key)
+    jsonb_build_object(
+      'requested_count', v_requested,
+      'queued_count', v_queued,
+      'skipped_count', greatest(0, v_requested - v_queued),
+      'batch_key', p_batch_key
+    )
   );
   return jsonb_build_object('queued', v_queued, 'skipped', greatest(0, v_requested - v_queued), 'batchKey', p_batch_key);
 end;

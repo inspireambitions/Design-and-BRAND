@@ -11,8 +11,9 @@
 .items article[data-kind='closing'] { border-inline-start-color: #c58a1b; }
 .items strong, .items p { margin: 0; }
 .items p { margin-top: 0.2rem; color: #536860; font-size: 0.82rem; }
-.items a, .all { display: inline-flex; min-height: 44px; align-items: center; color: #075e54; font-weight: 800; text-decoration: none; }
-.all { justify-self: start; }
+.items a, .all summary { display: inline-flex; min-height: 44px; align-items: center; color: #075e54; font-weight: 800; text-decoration: none; }
+.all { justify-self: stretch; }
+.all summary { min-height: 44px; color: #075e54; font-weight: 800; cursor: pointer; }
 .error { padding: 0.85rem; border: 1px solid #e1b2a8; border-radius: 0.7rem; background: #fff4f1; }
 .error p { margin: 0.3rem 0; }
 .error button { min-height: 44px; border: 0; background: transparent; color: #8e3528; font: inherit; font-weight: 800; cursor: pointer; }

@@ -103,8 +103,10 @@ export default async function ProofSittingPage({
         location={pack.location}
         expiresAt={pack.expiresAt}
         timezone={pack.timezone}
+        publishedFacts={pack.publishedFacts}
+        questionnaireLanguage={pack.questionnaireLanguage}
         inviteToken={invite === 'ok' ? query?.i : undefined}
-        brainEnabled={universalInterviewEnabled()}
+        brainEnabled={universalInterviewEnabled() && pack.questionSource !== 'employer_reviewed'}
       />
     </div>
   );

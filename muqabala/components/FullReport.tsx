@@ -35,6 +35,7 @@ const unscoredCopy: Record<UnscoredReason, {
   language_scoring_unavailable: { status: 'reportNotScored', reason: 'reportReasonLanguageUnavailable', action: 'none' },
   question_not_answered: { status: 'reportNotAnswered', reason: 'reportReasonNotAnswered', action: 'answer' },
   feedback_locked: { status: 'reportFeedbackNotReadyBadge', reason: 'reportReasonFeedbackLocked', action: 'none' },
+  question_requires_human_review: { status: 'reportNotScored', reason: 'reportReasonHumanReview', action: 'none' },
   reason_not_recorded: { status: 'reportNotScored', reason: 'reportReasonNotRecorded', action: 'answer' },
 };
 

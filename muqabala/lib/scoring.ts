@@ -16,6 +16,7 @@ export type UnscoredReason =
   | 'language_scoring_unavailable'
   | 'question_not_answered'
   | 'feedback_locked'
+  | 'question_requires_human_review'
   | 'reason_not_recorded';
 
 export type AnswerFeedback = {
@@ -50,6 +51,22 @@ export type AnswerFeedback = {
   scoringVersion?: string;
   rubricVersion?: string;
 };
+
+export function employerManualReviewFeedback(questionId: string): AnswerFeedback {
+  return {
+    questionId,
+    score: 0,
+    status: 'unscored',
+    unscoredReason: 'question_requires_human_review',
+    headline: 'Employer-written question: human review required.',
+    competencies: [],
+    strengths: [],
+    improvements: [],
+    coachTip: '',
+    source: 'none',
+    scoringVersion: 'manual-review-v1',
+  };
+}
 
 /** How the candidate felt afterwards. The product's whole promise is measured here. */
 export type AttemptRating = {

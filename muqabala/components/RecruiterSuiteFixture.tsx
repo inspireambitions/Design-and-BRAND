@@ -9,6 +9,7 @@ import {
   type EmployerSummaryPoint,
 } from './EmployerCandidatePanel';
 import { ReminderPreview, type ReminderPreviewData } from './ReminderPreview';
+import { RoleDeadlineEditor } from './RoleDeadlineEditor';
 import { RoleHelpPanel } from './RoleHelpPanel';
 import { RecruiterQuestions, type RecruiterQuestionRow } from './RecruiterQuestions';
 import { useLang } from './LanguageProvider';
@@ -20,9 +21,10 @@ const roleId = '11111111-1111-4111-8111-111111111111';
 const closesAt = '2026-09-17T16:00:00.000Z';
 
 const attentionItems: AttentionItem[] = [
-  { id: 'reviews', kind: 'reviews', title: '2 submissions awaiting review', detail: 'Open the combined queue; no role is selected arbitrarily.', action: 'Review submissions', href: '#candidate-review' },
+  { id: 'reviews', kind: 'reviews', title: '2 submissions awaiting review', detail: 'Open the combined queue to review the oldest submissions first.', action: 'Review submissions', href: '#candidate-review' },
   { id: 'questions', kind: 'questions', title: '1 unresolved candidate question', detail: 'Reply and resolution remain separate actions.', action: 'View questions', href: '#candidate-questions' },
   { id: 'closing', kind: 'closing', title: 'Front Office Supervisor invitation closes soon', detail: 'Closing time is shown in Asia/Dubai on the role page.', action: 'View role', href: '#role-help' },
+  { id: 'closing-second', kind: 'closing', title: 'Restaurant Manager invitation closes soon', detail: 'Closing time is shown in Asia/Dubai on the role page.', action: 'View role', href: '#role-help' },
 ];
 
 const reminderData: ReminderPreviewData = {
@@ -96,7 +98,8 @@ export function RecruiterSuiteFixture({ state = 'populated' }: { state?: 'popula
       <section className={styles.block} id="attention-state">
         <h2>Dashboard briefing</h2>
         <AttentionBriefing
-          items={state === 'populated' ? attentionItems : []}
+          items={state === 'populated' ? attentionItems.slice(0, 3) : []}
+          allItems={state === 'populated' ? attentionItems : []}
           total={state === 'populated' ? attentionItems.length : 0}
           failed={state === 'error'}
         />
@@ -108,12 +111,13 @@ export function RecruiterSuiteFixture({ state = 'populated' }: { state?: 'popula
         <div className={styles.grid}>
           <div><h3>Candidate reminders</h3><ReminderPreview roleId={roleId} initialData={reminderData} /></div>
           <div><h3>Constrained role help</h3><RoleHelpPanel roleId={roleId} roleTitle="Front Office Supervisor" unreviewed={2} unresolvedQuestions={1} expiresAt={closesAt} timezone="Asia/Dubai" /></div>
+          <div><h3>Role closing time</h3><RoleDeadlineEditor roleId={roleId} expiresAt={closesAt} timezone="Asia/Dubai" /></div>
         </div>
       </section>
 
       <section className={styles.block} id="candidate-questions">
         <h2>Candidate role questions</h2>
-        <CandidateRoleQuestions publicCode="MQ-FIXTURE" roleTitle="Front Office Supervisor" location="Dubai Marina" expiresAt={closesAt} timezone="Asia/Dubai" questionCount={3} fixtureMode />
+        <CandidateRoleQuestions publicCode="MQ-FIXTURE" roleTitle="Front Office Supervisor" location="Dubai Marina" expiresAt={closesAt} timezone="Asia/Dubai" questionCount={3} publishedFacts={{ salary: 'AED 8,000 monthly', accommodation: 'Shared staff accommodation is provided.', interviewDetails: 'Shortlisted candidates meet the hiring manager online.', faqs: [{ question: 'هل توجد مواصلات للموظفين؟', answer: 'تتوفر حافلة للموظفين من موقع السكن.' }] }} fixtureMode />
         <h3>Recruiter handoff queue</h3>
         <RecruiterQuestions questions={recruiterQuestions} />
       </section>

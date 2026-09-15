@@ -18,7 +18,7 @@ import { rankedCandidates } from '@/lib/server/employer-candidates';
 import { trackServer } from '@/lib/server/analytics';
 import { configuredOrigin } from '@/lib/server/security';
 import { openToken } from '@/lib/server/invite-token';
-import { verifyInterview } from '@/lib/interview-token';
+import { verifyStoredInterview } from '@/lib/interview-token';
 
 type OutboxRow = {
   id: string;
@@ -215,7 +215,7 @@ export async function processEmployerMessages(options: { roleId?: string; limit?
       continue;
     }
 
-    const roleTitle = verifyInterview(pack.signed_token)?.title ?? 'this role';
+    const roleTitle = verifyStoredInterview(pack.signed_token)?.title ?? 'this role';
     const message = { employerName: pack.workplace || 'The hiring team', roleTitle, link: link?.link ?? '' };
     let subject: string;
     let text: string;

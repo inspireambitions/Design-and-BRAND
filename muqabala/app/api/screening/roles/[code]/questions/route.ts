@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
-import { verifyInterview } from '@/lib/interview-token';
-import { answerCandidateRoleQuestion, type PublishedRoleFacts } from '@/lib/recruiter-suite';
+import { verifyStoredInterview } from '@/lib/interview-token';
+import { answerCandidateRoleQuestion, type CandidateFactIntent, type PublishedRoleFacts } from '@/lib/recruiter-suite';
 import { limitRoleQuestion } from '@/lib/rate-limit';
 import { hasTrustedOrigin, privateNoStoreHeaders } from '@/lib/server/security';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -14,6 +14,7 @@ const CODE = /^[A-Za-z0-9_-]{6,16}$/;
 const QuestionSchema = z.object({
   question: z.string().trim().min(4).max(500),
   lang: z.enum(['en', 'ar']).default('en'),
+  intent: z.enum(['deadline', 'format', 'location', 'salary', 'accommodation', 'interview']).optional(),
   escalate: z.boolean().default(false),
 }).strict();
 
@@ -27,7 +28,8 @@ async function loadRole(code: string) {
     .not('employer_id', 'is', null)
     .maybeSingle();
   if (!data?.employer_id) return null;
-  const payload = verifyInterview(data.signed_token);
+  if (Date.parse(data.expires_at) <= Date.now()) return null;
+  const payload = verifyStoredInterview(data.signed_token);
   if (!payload || payload.kind !== 'proof') return null;
   const published = (data.published_facts && typeof data.published_facts === 'object' ? data.published_facts : {}) as Record<string, unknown>;
   const facts: PublishedRoleFacts = {
@@ -75,7 +77,7 @@ export async function POST(request: Request, context: { params: Promise<{ code: 
   const loaded = await loadRole(code);
   if (!loaded) return Response.json({ error: 'Role not found.' }, { status: 404 });
 
-  const factAnswer = answerCandidateRoleQuestion(parsed.data.question, loaded.facts, parsed.data.lang);
+  const factAnswer = answerCandidateRoleQuestion(parsed.data.question, loaded.facts, parsed.data.lang, parsed.data.intent as CandidateFactIntent | undefined);
   if (!parsed.data.escalate) {
     return Response.json({
       ...factAnswer,

@@ -36,6 +36,7 @@ type LinkDetails = {
 
 type Channel = 'email' | 'whatsapp';
 type QuestionDraft = { id: string; text: string; textAr: string };
+type QuestionnaireLanguage = 'en' | 'both';
 
 const ROLE_TIMEZONES = ['Asia/Dubai', 'Asia/Riyadh', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Kuwait', 'Asia/Muscat', 'Asia/Manila'] as const;
 const FALLBACK_QUESTIONS: QuestionDraft[] = [
@@ -249,6 +250,7 @@ export function EmployerProofCreate({
 
 export function EmployerCreateForm({ volume, fixtureMode = false }: { volume: boolean; fixtureMode?: boolean }) {
   const { lang, t } = useLang();
+  const ar = lang === 'ar';
   const [step, setStep] = useState<0 | 1 | 2 | 3>(0);
   const [companyName, setCompanyName] = useState('');
   const [recruiterName, setRecruiterName] = useState('');
@@ -260,6 +262,7 @@ export function EmployerCreateForm({ volume, fixtureMode = false }: { volume: bo
   const [interviewDetails, setInterviewDetails] = useState('');
   const [jobText, setJobText] = useState('');
   const [questions, setQuestions] = useState<QuestionDraft[]>(FALLBACK_QUESTIONS);
+  const [questionnaireLanguage, setQuestionnaireLanguage] = useState<QuestionnaireLanguage>('both');
   const [suggesting, setSuggesting] = useState(false);
   const [suggestionFallback, setSuggestionFallback] = useState(false);
   const [suggestedFor, setSuggestedFor] = useState('');
@@ -281,6 +284,7 @@ export function EmployerCreateForm({ volume, fixtureMode = false }: { volume: bo
   const publishKeyRef = useRef<string | null>(null);
   const setupStartedAtRef = useRef<number | null>(null);
   const mounted = useRef(false);
+  const questionsDirtyRef = useRef(false);
 
   useEffect(() => {
     if (!mounted.current) {
@@ -295,16 +299,16 @@ export function EmployerCreateForm({ volume, fixtureMode = false }: { volume: bo
   const locationReady = location.trim().length >= 2;
   const jobReady = jobText.trim().length >= MIN_ADVERT_CHARS;
   const questionsReady = questions.length >= 3 && questions.length <= 8
-    && questions.every((question) => question.text.trim().length >= 15 && question.textAr.trim().length >= 10);
+    && questions.every((question) => question.text.trim().length >= 15
+      && (questionnaireLanguage === 'en' || question.textAr.trim().length >= 10));
   const settingsReady = Number.isInteger(maxCandidates) && maxCandidates >= 1 && maxCandidates <= 1000;
   const canGenerate = companyReady && titleReady && !generating && !creating;
   const canCreate = companyReady && titleReady && locationReady && questionsReady && settingsReady && !generating && !creating;
   const link = linkDetails?.url ?? '';
+  const plannedExpiryIso = new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000).toISOString();
   const plannedExpiryDate = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-AE' : 'en-GB', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }).format(new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000));
+    dateStyle: 'long', timeStyle: 'short', timeZone: timezone,
+  }).format(new Date(plannedExpiryIso));
 
   const send = (key: StringKey) => translate(sendLang, key);
   const sendCompany = companyName.trim() || send('proofCompanyPlaceholder');
@@ -330,11 +334,12 @@ export function EmployerCreateForm({ volume, fixtureMode = false }: { volume: bo
     setLinkDetails(null);
   }
 
-  async function loadQuestionSuggestions() {
-    if (suggesting || suggestedFor === jobTitle.trim()) return;
+  async function loadQuestionSuggestions(force = false) {
+    if (suggesting || (!force && suggestedFor === jobTitle.trim())) return;
+    const requestedTitle = jobTitle.trim();
     if (fixtureMode) {
-      setQuestions(FALLBACK_QUESTIONS);
-      setSuggestedFor(jobTitle.trim());
+      if (force || !questionsDirtyRef.current) setQuestions(FALLBACK_QUESTIONS);
+      setSuggestedFor(requestedTitle);
       return;
     }
     setSuggesting(true);
@@ -347,8 +352,8 @@ export function EmployerCreateForm({ volume, fixtureMode = false }: { volume: bo
       });
       const body = await response.json().catch(() => ({})) as { questions?: QuestionDraft[] };
       if (!response.ok || !body.questions || body.questions.length < 3) throw new Error('suggestions_unavailable');
-      setQuestions(body.questions.slice(0, 8));
-      setSuggestedFor(jobTitle.trim());
+      if (force || !questionsDirtyRef.current) setQuestions(body.questions.slice(0, 8));
+      setSuggestedFor(requestedTitle);
     } catch {
       setQuestions((current) => current.length >= 3 ? current : FALLBACK_QUESTIONS);
       setSuggestionFallback(true);
@@ -382,12 +387,14 @@ export function EmployerCreateForm({ volume, fixtureMode = false }: { volume: bo
   }
 
   function updateQuestion(index: number, patch: Partial<QuestionDraft>) {
+    questionsDirtyRef.current = true;
     setQuestions((current) => current.map((question, questionIndex) => questionIndex === index ? { ...question, ...patch } : question));
     setValidationError(null);
     setLinkDetails(null);
   }
 
   function moveQuestion(index: number, direction: -1 | 1) {
+    questionsDirtyRef.current = true;
     setQuestions((current) => {
       const target = index + direction;
       if (target < 0 || target >= current.length) return current;
@@ -450,6 +457,7 @@ export function EmployerCreateForm({ volume, fixtureMode = false }: { volume: bo
             accommodation: accommodation.trim() || undefined,
             interviewDetails: interviewDetails.trim() || undefined,
           },
+          questionnaireLanguage,
           questions,
           publishKey: publishKeyRef.current,
           maxCandidates,
@@ -604,10 +612,15 @@ export function EmployerCreateForm({ volume, fixtureMode = false }: { volume: bo
           </div>
           <div className={styles.questionHeading}>
             <div><strong>{t('proofQuestionSuggestions')}</strong><p>{t('proofQuestionTemplateNote')}</p></div>
-            <button type="button" className={styles.generate} disabled={suggesting} onClick={() => { setSuggestedFor(''); void loadQuestionSuggestions(); }}>
+            <button type="button" className={styles.generate} disabled={suggesting} onClick={() => { questionsDirtyRef.current = false; void loadQuestionSuggestions(true); }}>
               {suggesting ? t('proofQuestionsLoading') : t('proofQuestionSuggestions')}
             </button>
           </div>
+          <fieldset className={styles.linkSettings}>
+            <legend>{ar ? 'لغة أسئلة المرشح' : 'Candidate question language'}</legend>
+            <label><input type="radio" name="questionnaire-language" checked={questionnaireLanguage === 'both'} onChange={() => { setQuestionnaireLanguage('both'); setLinkDetails(null); }} /> {ar ? 'الإنجليزية والعربية' : 'English and Arabic'}</label>
+            <label><input type="radio" name="questionnaire-language" checked={questionnaireLanguage === 'en'} onChange={() => { setQuestionnaireLanguage('en'); setLinkDetails(null); }} /> {ar ? 'الإنجليزية فقط' : 'English only'}</label>
+          </fieldset>
           {suggestionFallback && <p className={styles.status} role="status">{t('proofQuestionsFallback')}</p>}
           <ol className={styles.questionEditor} aria-label={t('proofQuestionSuggestions')}>
             {questions.map((question, index) => (
@@ -616,14 +629,14 @@ export function EmployerCreateForm({ volume, fixtureMode = false }: { volume: bo
                   <strong>{index + 1}</strong>
                   <button type="button" disabled={index === 0} onClick={() => moveQuestion(index, -1)}>{t('proofQuestionMoveUp')}</button>
                   <button type="button" disabled={index === questions.length - 1} onClick={() => moveQuestion(index, 1)}>{t('proofQuestionMoveDown')}</button>
-                  <button type="button" disabled={questions.length <= 3} onClick={() => setQuestions((current) => current.filter((_, questionIndex) => questionIndex !== index))}>{t('proofQuestionRemove')}</button>
+                  <button type="button" disabled={questions.length <= 3} onClick={() => { questionsDirtyRef.current = true; setQuestions((current) => current.filter((_, questionIndex) => questionIndex !== index)); }}>{t('proofQuestionRemove')}</button>
                 </div>
                 <label className={styles.field}><span>{t('proofQuestionEnglish')}</span><textarea dir="ltr" rows={2} maxLength={500} value={question.text} onChange={(event) => updateQuestion(index, { text: event.target.value })} /></label>
-                <label className={styles.field}><span>{t('proofQuestionArabic')}</span><textarea dir="rtl" rows={2} maxLength={500} value={question.textAr} onChange={(event) => updateQuestion(index, { textAr: event.target.value })} /></label>
+                {questionnaireLanguage === 'both' && <label className={styles.field}><span>{t('proofQuestionArabic')}</span><textarea dir="rtl" rows={2} maxLength={500} value={question.textAr} onChange={(event) => updateQuestion(index, { textAr: event.target.value })} /></label>}
               </li>
             ))}
           </ol>
-          {questions.length < 8 && <button type="button" className={styles.generate} onClick={() => setQuestions((current) => [...current, { id: `custom-${crypto.randomUUID()}`, text: '', textAr: '' }])}>{t('proofQuestionAdd')}</button>}
+          {questions.length < 8 && <button type="button" className={styles.generate} onClick={() => { questionsDirtyRef.current = true; setQuestions((current) => [...current, { id: `custom-${crypto.randomUUID()}`, text: '', textAr: '' }]); }}>{t('proofQuestionAdd')}</button>}
           <p className={styles.status} aria-live="polite">{withValues(t('proofQuestionsCount'), { count: questions.length })}</p>
           <details className={styles.optionalFacts}>
             <summary>{t('proofAdvertLabel')} · {t('proofOptionalLabel')}</summary>
@@ -654,13 +667,17 @@ export function EmployerCreateForm({ volume, fixtureMode = false }: { volume: bo
             <div><dt>{t('proofWizardSourceSummary')}</dt><dd>{withValues(t('proofQuestionsCount'), { count: questions.length })}</dd></div>
             <div><dt>{t('proofWizardLimitSummary')}</dt><dd>{maxCandidates}</dd></div>
             <div><dt>{t('proofWizardExpirySummary')}</dt><dd suppressHydrationWarning>{plannedExpiryDate}</dd></div>
+            <div><dt>{ar ? 'لغة الأسئلة' : 'Question language'}</dt><dd>{questionnaireLanguage === 'en' ? 'English' : (ar ? 'الإنجليزية والعربية' : 'English and Arabic')}</dd></div>
           </dl>
           <div className={styles.candidatePreview} id="role-facts">
             <p className={styles.eyebrow}>{companyName}</p>
             <h4 dir="auto">{jobTitle}</h4>
             <p dir="auto">{location}</p>
             <p>{withValues(t('proofQuestionsCount'), { count: questions.length })}</p>
-            <ol>{questions.map((question) => <li key={question.id} dir={lang === 'ar' ? 'rtl' : 'ltr'}>{lang === 'ar' ? question.textAr : question.text}</li>)}</ol>
+            <ol>{questions.map((question) => <li key={question.id} dir={lang === 'ar' && questionnaireLanguage === 'both' ? 'rtl' : 'ltr'}>{lang === 'ar' && questionnaireLanguage === 'both' ? question.textAr : question.text}</li>)}</ol>
+            {salary.trim() && <p dir="auto"><strong>{t('proofSalaryLabel')}:</strong> {salary.trim()}</p>}
+            {accommodation.trim() && <p dir="auto"><strong>{t('proofAccommodationLabel')}:</strong> {accommodation.trim()}</p>}
+            {interviewDetails.trim() && <p dir="auto"><strong>{t('proofInterviewDetailsLabel')}:</strong> {interviewDetails.trim()}</p>}
             <small>{t('proofWizardExpirySummary')}: {plannedExpiryDate} · {timezone}</small>
           </div>
           <fieldset className={styles.linkSettings} aria-labelledby="link-settings-label">
@@ -725,9 +742,9 @@ export function EmployerCreateForm({ volume, fixtureMode = false }: { volume: bo
             {linkDetails && withValues(t('proofLinkReady'), {
               count: linkDetails.maxCandidates,
               date: new Intl.DateTimeFormat(lang === 'ar' ? 'ar-AE' : 'en-GB', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
+                dateStyle: 'long',
+                timeStyle: 'short',
+                timeZone: linkDetails.timezone || timezone,
               }).format(new Date(linkDetails.expiresAt)),
             })}
           </p>

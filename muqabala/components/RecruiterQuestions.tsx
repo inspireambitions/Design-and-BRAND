@@ -31,18 +31,23 @@ function QuestionCard({ item }: { item: RecruiterQuestionRow }) {
     if (busy) return;
     setBusy(kind);
     setMessage('');
-    const result = kind === 'reply'
-      ? await replyCandidateQuestion({ questionId: item.id, reply })
-      : kind === 'resolve'
-        ? await resolveCandidateQuestion(item.id)
-        : await publishCandidateQuestionAsFaq({ questionId: item.id, publicQuestion, publicAnswer });
-    if ('error' in result) setMessage(result.error);
-    else {
-      setMessage(kind === 'reply' ? 'Reply saved. It is visible when the candidate returns to this invitation.' : kind === 'resolve' ? 'Question resolved.' : 'Added to published role information.');
-      if (kind === 'resolve') track('candidate_question_resolved', { role_id: item.role_id });
-      router.refresh();
+    try {
+      const result = kind === 'reply'
+        ? await replyCandidateQuestion({ questionId: item.id, reply })
+        : kind === 'resolve'
+          ? await resolveCandidateQuestion(item.id)
+          : await publishCandidateQuestionAsFaq({ questionId: item.id, publicQuestion, publicAnswer });
+      if ('error' in result) setMessage(result.error);
+      else {
+        setMessage(kind === 'reply' ? 'Reply saved. It is visible when the candidate returns to this invitation.' : kind === 'resolve' ? 'Question resolved.' : 'Added to published role information.');
+        if (kind === 'resolve') track('candidate_question_resolved', { role_id: item.role_id });
+        router.refresh();
+      }
+    } catch {
+      setMessage('The action could not be completed. Your text is still here; try again.');
+    } finally {
+      setBusy(null);
     }
-    setBusy(null);
   }
 
   return (

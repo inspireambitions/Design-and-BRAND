@@ -28,5 +28,8 @@
 .submissions { display: grid; gap: 0.55rem; }
 .submissions article { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 0.75rem; padding: 0.75rem; border: 1px solid #dbe5e1; border-radius: 0.7rem; }
 .submissions p, .empty { margin: 0.25rem 0 0; color: #536860; font-size: 0.84rem; }
+.error { padding: 0.8rem; border: 1px solid #e1b2a8; border-radius: 0.7rem; background: #fff4f1; }
+.error p { margin: 0 0 0.35rem; }
+.error a { color: #8e3528; font-weight: 800; }
 @media (max-width: 52rem) { .hero, .facts { grid-template-columns: 1fr; } }
 @media (max-width: 42rem) { .page { width: min(100% - 1rem, 74rem); } .section > header { flex-direction: column; } .facts dl { grid-template-columns: 1fr; } .submissions article { grid-template-columns: 1fr; } }

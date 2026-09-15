@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { cache } from 'react';
-import { roleFromToken, verifyInterview } from '@/lib/interview-token';
+import { roleFromToken, verifyStoredInterview } from '@/lib/interview-token';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 const PUBLIC_CODE = /^[A-Za-z0-9_-]{6,16}$/;
@@ -11,7 +11,7 @@ export const getScreeningPack = cache(async (code: string) => {
 
   const admin = createAdminClient();
   if (!admin) return { status: 'unavailable' as const };
-  const columns = 'id, signed_token, workplace, expires_at, max_candidates, starts_used, location, timezone, published_facts';
+  const columns = 'id, signed_token, workplace, expires_at, max_candidates, starts_used, location, timezone, published_facts, question_source, questionnaire_language';
   const openedAt = new Date().toISOString();
 
   // Freeze the signed questions before returning them. This conditional update
@@ -41,8 +41,8 @@ export const getScreeningPack = cache(async (code: string) => {
   if (!data) return { status: 'unavailable' as const };
   if (new Date(data.expires_at).getTime() <= Date.now()) return { status: 'expired' as const };
 
-  const payload = verifyInterview(data.signed_token);
-  if (!payload || payload.kind !== 'proof' || (payload.questions.length !== 3 && payload.questions.length !== 8)) {
+  const payload = verifyStoredInterview(data.signed_token);
+  if (!payload || payload.kind !== 'proof' || payload.questions.length < 3 || payload.questions.length > 8) {
     return { status: 'unavailable' as const };
   }
 
@@ -55,6 +55,8 @@ export const getScreeningPack = cache(async (code: string) => {
     location: typeof data.location === 'string' ? data.location : null,
     timezone: typeof data.timezone === 'string' ? data.timezone : 'Asia/Dubai',
     publishedFacts: data.published_facts && typeof data.published_facts === 'object' ? data.published_facts : {},
+    questionSource: typeof data.question_source === 'string' ? data.question_source : 'legacy',
+    questionnaireLanguage: data.questionnaire_language === 'en' ? 'en' as const : 'both' as const,
     expiresAt: data.expires_at as string,
     payload,
     role: roleFromToken(payload),

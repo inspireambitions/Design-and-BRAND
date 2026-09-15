@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useLang } from './LanguageProvider';
 import { track } from '@/lib/analytics';
+import type { CandidateFactIntent } from '@/lib/recruiter-suite';
 import styles from './CandidateRoleQuestions.module.css';
 
 type Answer = {
@@ -29,6 +30,7 @@ export function CandidateRoleQuestions({
   expiresAt,
   timezone,
   questionCount,
+  publishedFacts = {},
   fixtureMode = false,
 }: {
   publicCode: string;
@@ -37,6 +39,7 @@ export function CandidateRoleQuestions({
   expiresAt: string;
   timezone: string;
   questionCount: number;
+  publishedFacts?: Record<string, unknown>;
   fixtureMode?: boolean;
 }) {
   const { lang, t } = useLang();
@@ -57,7 +60,7 @@ export function CandidateRoleQuestions({
     return () => controller.abort();
   }, [fixtureMode, publicCode]);
 
-  async function ask(value = question) {
+  async function ask(value = question, intent?: CandidateFactIntent) {
     const clean = value.trim();
     if (clean.length < 4 || busy) return;
     setQuestion(clean);
@@ -67,7 +70,7 @@ export function CandidateRoleQuestions({
       const response = await fetch(`/api/screening/roles/${encodeURIComponent(publicCode)}/questions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: clean, lang, escalate: false }),
+        body: JSON.stringify({ question: clean, lang, intent, escalate: false }),
       });
       const body = await response.json().catch(() => ({})) as Answer & { error?: string };
       if (!response.ok || !body.answer) throw new Error(body.error || 'unavailable');
@@ -107,6 +110,23 @@ export function CandidateRoleQuestions({
   const closes = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-AE' : 'en-GB', {
     dateStyle: 'medium', timeStyle: 'short', timeZone: timezone,
   }).format(new Date(expiresAt));
+  const salary = typeof publishedFacts.salary === 'string' ? publishedFacts.salary : null;
+  const accommodation = typeof publishedFacts.accommodation === 'string' ? publishedFacts.accommodation : null;
+  const interviewDetails = typeof publishedFacts.interviewDetails === 'string' ? publishedFacts.interviewDetails : null;
+  const faqs = Array.isArray(publishedFacts.faqs)
+    ? publishedFacts.faqs.filter((item): item is { question: string; answer: string } => Boolean(
+      item && typeof item === 'object' && 'question' in item && typeof item.question === 'string'
+      && 'answer' in item && typeof item.answer === 'string',
+    )).slice(0, 20)
+    : [];
+  const suggestions: Array<{ label: string; intent: CandidateFactIntent }> = [
+    { label: t('candidateRoleQuestionDeadline'), intent: 'deadline' },
+    { label: t('candidateRoleQuestionFormat'), intent: 'format' },
+    { label: t('candidateRoleQuestionLocation'), intent: 'location' },
+  ];
+  if (salary) suggestions.push({ label: lang === 'ar' ? 'ما الراتب المنشور؟' : 'What salary is published?', intent: 'salary' });
+  if (accommodation) suggestions.push({ label: lang === 'ar' ? 'هل يتوفر سكن؟' : 'Is accommodation provided?', intent: 'accommodation' });
+  if (interviewDetails) suggestions.push({ label: lang === 'ar' ? 'ما الخطوة التالية في المقابلة؟' : 'What is the next interview step?', intent: 'interview' });
 
   return (
     <details className={styles.questions}>
@@ -115,13 +135,20 @@ export function CandidateRoleQuestions({
         <p>{t('candidateRoleQuestionsBody')}</p>
         <dl className={styles.facts} id="role-facts">
           <div><dt>{lang === 'ar' ? 'الوظيفة' : 'Role'}</dt><dd dir="auto">{roleTitle}</dd></div>
-          <div><dt>{lang === 'ar' ? 'الموقع' : 'Location'}</dt><dd dir="auto">{location || (lang === 'ar' ? 'لم يُنشر' : 'Not published')}</dd></div>
-          <div><dt>{lang === 'ar' ? 'الإغلاق' : 'Closes'}</dt><dd>{closes} · {timezone}</dd></div>
-          <div><dt>{lang === 'ar' ? 'الصيغة' : 'Format'}</dt><dd>{questionCount} {lang === 'ar' ? 'أسئلة فيديو' : 'video questions'}</dd></div>
+          {location && <div id="candidate-role-fact-location"><dt>{lang === 'ar' ? 'الموقع' : 'Location'}</dt><dd dir="auto">{location}</dd></div>}
+          <div id="candidate-role-fact-deadline"><dt>{lang === 'ar' ? 'الإغلاق' : 'Closes'}</dt><dd>{closes} · {timezone}</dd></div>
+          <div id="candidate-role-fact-format"><dt>{lang === 'ar' ? 'الصيغة' : 'Format'}</dt><dd>{questionCount} {lang === 'ar' ? 'أسئلة فيديو' : 'video questions'}</dd></div>
+          {salary && <div id="candidate-role-fact-salary"><dt>{lang === 'ar' ? 'الراتب' : 'Salary'}</dt><dd dir="auto">{salary}</dd></div>}
+          {accommodation && <div id="candidate-role-fact-accommodation"><dt>{lang === 'ar' ? 'السكن' : 'Accommodation'}</dt><dd dir="auto">{accommodation}</dd></div>}
+          {interviewDetails && <div id="candidate-role-fact-interview"><dt>{lang === 'ar' ? 'تفاصيل المقابلة' : 'Interview details'}</dt><dd dir="auto">{interviewDetails}</dd></div>}
         </dl>
+        {faqs.length > 0 && <section className={styles.history} aria-labelledby="candidate-role-faq-title">
+          <h3 id="candidate-role-faq-title">{lang === 'ar' ? 'معلومات منشورة من جهة العمل' : 'Published employer information'}</h3>
+          {faqs.map((faq, index) => <article key={`${faq.question}-${index}`} id={`candidate-role-faq-${index}`}><strong dir="auto">{faq.question}</strong><p dir="auto">{faq.answer}</p></article>)}
+        </section>}
         <div className={styles.suggestions} aria-label={t('candidateRoleQuestionLabel')}>
-          {[t('candidateRoleQuestionDeadline'), t('candidateRoleQuestionFormat'), t('candidateRoleQuestionLocation')].map((suggestion) => (
-            <button type="button" key={suggestion} onClick={() => void ask(suggestion)}>{suggestion}</button>
+          {suggestions.map((suggestion) => (
+            <button type="button" key={suggestion.intent} onClick={() => void ask(suggestion.label, suggestion.intent)}>{suggestion.label}</button>
           ))}
         </div>
         <label className={styles.field}>

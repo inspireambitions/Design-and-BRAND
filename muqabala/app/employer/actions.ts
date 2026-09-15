@@ -6,6 +6,7 @@ import { configuredOrigin, newOpaqueToken, tokenHash } from '@/lib/server/securi
 import { preparePublishedFaq } from '@/lib/recruiter-suite';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient, currentUser } from '@/lib/supabase/server';
+import { zonedLocalDateTimeToIso } from '@/lib/timezone';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -93,6 +94,46 @@ export async function setRemindersEnabled(formData: FormData) {
   if (!client) return;
   await client.from('screening_packs').update({ reminders_enabled: enabled }).eq('id', roleId);
   revalidatePath('/employer');
+}
+
+export async function updateRoleClosingDate(input: { roleId: string; localClosing: string; timezone: string }): Promise<{ ok: true } | { error: string }> {
+  const user = await currentUser();
+  if (!user || !UUID_PATTERN.test(input.roleId)) return { error: 'This role is not available.' };
+  const expiresAt = zonedLocalDateTimeToIso(input.localClosing, input.timezone);
+  if (!expiresAt) return { error: 'Enter a valid date and time for this role timezone.' };
+  const expires = Date.parse(expiresAt);
+  if (expires <= Date.now() + 5 * 60 * 1000 || expires > Date.now() + 30 * 24 * 60 * 60 * 1000) {
+    return { error: 'Choose a closing time between five minutes and 30 days from now.' };
+  }
+  const client = await createClient();
+  if (!client) return { error: 'Role storage is unavailable.' };
+  const { data: ownedRole } = await client.from('screening_packs')
+    .select('id,timezone')
+    .eq('id', input.roleId)
+    .eq('employer_id', user.id)
+    .maybeSingle();
+  if (!ownedRole || (ownedRole.timezone || 'Asia/Dubai') !== input.timezone) return { error: 'This role is not available.' };
+  const { data, error } = await client.from('screening_packs')
+    .update({ expires_at: expiresAt })
+    .eq('id', input.roleId)
+    .eq('employer_id', user.id)
+    .select('id')
+    .maybeSingle();
+  if (error || !data) return { error: 'The closing date could not be saved.' };
+  const admin = createAdminClient();
+  await admin?.from('recruiter_audit_events').insert({
+    actor_id: user.id,
+    employer_id: user.id,
+    role_id: input.roleId,
+    record_type: 'role',
+    record_id: input.roleId,
+    action: 'closing_date_updated',
+    result: 'succeeded',
+    metadata: { expires_at: expiresAt, timezone: input.timezone },
+  });
+  revalidatePath('/employer');
+  revalidatePath(`/employer/roles/${input.roleId}`);
+  return { ok: true };
 }
 
 type VolumeDecision = 'shortlist' | 'pass' | 'later';

@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const ScreeningQuestionDraftSchema = z.object({
   id: z.string().trim().min(1).max(80),
   text: z.string().trim().min(15).max(500),
-  textAr: z.string().trim().min(10).max(500),
+  textAr: z.string().trim().max(500).optional().default(''),
 }).strict();
 
 const PublishedFactsSchema = z.object({
@@ -30,6 +30,7 @@ export const ScreeningPackRequestSchema = z.object({
   location: z.string().trim().min(2).max(160).optional(),
   timezone: z.string().trim().min(3).max(64).refine(validTimezone).default('Asia/Dubai'),
   publishedFacts: PublishedFactsSchema.optional(),
+  questionnaireLanguage: z.enum(['en', 'both']).default('both'),
   questions: z.array(ScreeningQuestionDraftSchema).min(3).max(8).optional(),
   publishKey: z.string().uuid().optional(),
   // Kept optional for a safe rolling deployment. Old browser bundles can send
@@ -37,7 +38,15 @@ export const ScreeningPackRequestSchema = z.object({
   interviewToken: z.string().min(1).max(64_000).optional(),
   maxCandidates: z.number().int().min(1).max(1000).default(100),
   expiryDays: z.number().int().min(1).max(30).default(14),
-}).strict().refine((value) => Boolean(value.companyName || value.workplace), {
+}).strict().superRefine((value, context) => {
+  if (value.questionnaireLanguage === 'both') {
+    value.questions?.forEach((question, index) => {
+      if (question.textAr.trim().length < 10) {
+        context.addIssue({ code: 'custom', path: ['questions', index, 'textAr'], message: 'Arabic wording is required for a bilingual questionnaire.' });
+      }
+    });
+  }
+}).refine((value) => Boolean(value.companyName || value.workplace), {
   message: 'Company name is required.',
 }).refine((value) => Boolean(value.interviewToken || value.jobTitle), {
   message: 'Job title or signed interview token is required.',

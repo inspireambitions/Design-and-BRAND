@@ -1,6 +1,6 @@
 import { after } from 'next/server';
 import { z } from 'zod';
-import { verifyInterview } from '@/lib/interview-token';
+import { verifyStoredInterview } from '@/lib/interview-token';
 import { reminderEligibility } from '@/lib/recruiter-suite';
 import { employerEmailConfigured, processEmployerMessages } from '@/lib/server/employer-messages';
 import { hasTrustedOrigin, privateNoStoreHeaders } from '@/lib/server/security';
@@ -37,42 +37,51 @@ export async function GET(_request: Request, context: { params: Promise<{ roleId
   const { data: rows, error } = await owned.client.from('role_invites')
     .select('id,name,email,status,contact_allowed,opted_out_at,withdrawn_at,deleted_at,last_manual_reminder_at,first_reminder_at,second_reminder_at,completion_reminder_at')
     .eq('role_id', roleId)
-    .order('created_at');
+    .order('created_at')
+    .limit(500);
   if (error) return Response.json({ error: 'Reminder eligibility could not be loaded.' }, { status: 503 });
-  const recipients = (rows ?? []).map((row) => reminderEligibility({
-    id: row.id,
-    name: row.name,
-    email: row.email,
-    status: row.status,
-    contactAllowed: row.contact_allowed,
-    optedOutAt: row.opted_out_at,
-    withdrawnAt: row.withdrawn_at,
-    deletedAt: row.deleted_at,
-    lastManualReminderAt: row.last_manual_reminder_at,
-    firstReminderAt: row.first_reminder_at,
-    secondReminderAt: row.second_reminder_at,
-    completionReminderAt: row.completion_reminder_at,
-  }, { expiresAt: owned.role.expires_at, remindersEnabled: owned.role.reminders_enabled !== false }));
   const admin = createAdminClient();
   const { data: statusRows } = admin ? await admin.from('employer_message_outbox')
-    .select('invite_id,status,updated_at')
+    .select('invite_id,status,updated_at,created_at')
     .eq('role_id', roleId)
     .eq('kind', 'manual_reminder')
-    .order('updated_at', { ascending: false }) : { data: [] };
+    .order('updated_at', { ascending: false })
+    .limit(2000) : { data: [] };
   const delivery = { queued: 0, accepted: 0, delivered: 0, failed: 0, cancelled: 0 };
+  const latestByInvite = new Map<string, { status: string; updatedAt: string }>();
   for (const row of statusRows ?? []) {
+    if (row.invite_id && !latestByInvite.has(row.invite_id)) {
+      latestByInvite.set(row.invite_id, { status: row.status, updatedAt: row.updated_at || row.created_at });
+    }
+  }
+  for (const row of latestByInvite.values()) {
     const key = row.status === 'pending' || row.status === 'processing' ? 'queued' : row.status;
     if (key in delivery) delivery[key as keyof typeof delivery] += 1;
   }
-  const latestByInvite = new Map<string, string>();
-  for (const row of statusRows ?? []) {
-    if (row.invite_id && !latestByInvite.has(row.invite_id)) latestByInvite.set(row.invite_id, row.status);
-  }
-  const title = verifyInterview(owned.role.signed_token)?.title ?? 'this role';
+  const recipients = (rows ?? []).map((row) => {
+    const latest = latestByInvite.get(row.id);
+    return reminderEligibility({
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      status: row.status,
+      contactAllowed: row.contact_allowed,
+      optedOutAt: row.opted_out_at,
+      withdrawnAt: row.withdrawn_at,
+      deletedAt: row.deleted_at,
+      lastManualReminderAt: row.last_manual_reminder_at,
+      firstReminderAt: row.first_reminder_at,
+      secondReminderAt: row.second_reminder_at,
+      completionReminderAt: row.completion_reminder_at,
+      deliveryStatus: latest?.status,
+      deliveryUpdatedAt: latest?.updatedAt,
+    }, { expiresAt: owned.role.expires_at, remindersEnabled: owned.role.reminders_enabled !== false });
+  });
+  const title = verifyStoredInterview(owned.role.signed_token)?.title ?? 'this role';
   const closes = new Intl.DateTimeFormat('en-GB', { dateStyle: 'long', timeStyle: 'short', timeZone: owned.role.timezone || 'Asia/Dubai' }).format(new Date(owned.role.expires_at));
   const defaultMessage = `Hello,\n\nThis is a reminder to complete the ${title} work sample before ${closes} (${owned.role.timezone || 'Asia/Dubai'}).\n\n{{invitation_link}}\n\nA person from the hiring team will review your answers.`;
   return Response.json({
-    recipients: recipients.map((recipient) => ({ ...recipient, deliveryStatus: latestByInvite.get(recipient.id) ?? null })),
+    recipients: recipients.map((recipient) => ({ ...recipient, deliveryStatus: latestByInvite.get(recipient.id)?.status ?? null })),
     eligibleCount: recipients.filter((recipient) => recipient.eligible).length,
     configured: employerEmailConfigured(),
     publicLinkFallback: recipients.length === 0,

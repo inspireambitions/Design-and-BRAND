@@ -29,7 +29,7 @@ import { DEFAULT_MINUTES_PER_CV, actionLabel, responseRateLine, timeSavedLine } 
 import { loadRoleStrip } from '@/lib/server/employer-role-strip';
 import { RoleCardTools } from '@/components/RoleCardTools';
 import { RoleNextActionControl } from '@/components/RoleNextActionControl';
-import { verifyInterview } from '@/lib/interview-token';
+import { verifyStoredInterview } from '@/lib/interview-token';
 import { configuredOrigin } from '@/lib/server/security';
 import { buildAttentionItems, filterCandidateSubmissions, resolveRoleNextAction } from '@/lib/recruiter-suite';
 import { processScreeningNotifications } from '@/lib/server/screening-notifications';
@@ -250,7 +250,7 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
     interruptedUploads: interruptedInterviewIds.size,
     closingRoles: packs.map((pack) => ({
       id: pack.id,
-      title: verifyInterview(pack.signed_token)?.title || 'Role work sample',
+      title: verifyStoredInterview(pack.signed_token)?.title || 'Role work sample',
       expiresAt: pack.expires_at,
       timezone: pack.timezone || 'Asia/Dubai',
     })),
@@ -295,7 +295,7 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
           </div>
         </section>}
 
-        <AttentionBriefing items={attention.items} total={attention.total} failed={attentionFailed} />
+        <AttentionBriefing items={attention.items} allItems={attention.allItems} total={attention.total} failed={attentionFailed} />
 
         {!dashboardCoreFailed && <>
         <div className={styles.dashboardGrid}>
@@ -337,7 +337,7 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
             {roleList.rows.map((pack) => {
               const status = packHealth(pack);
               const packSubmissions = submissions.filter((submission) => submission.screening_pack_id === pack.id);
-              const role = verifyInterview(pack.signed_token)?.title
+              const role = verifyStoredInterview(pack.signed_token)?.title
                 || detailRows.find((submission) => submission.screening_pack_id === pack.id)?.role_title
                 || 'Role work sample';
               const shortlisted = packSubmissions.filter((submission) => normaliseEmployerDecision(submission.employer_decision) === 'shortlisted').length;

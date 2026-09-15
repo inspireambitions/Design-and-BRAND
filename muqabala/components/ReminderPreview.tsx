@@ -35,6 +35,7 @@ const COPY = {
     manual: 'Muqabala cannot identify non-submitters from a public link. Copy this reusable reminder and share it manually.',
     missing: 'Automated email is not configured. Nothing will be marked sent; use the copy action.',
     queued: 'reminders queued', skipped: 'became ineligible before dispatch', delivery: 'Delivery status', close: 'Close preview',
+    retryFailed: 'Select failed recipients',
   },
   ar: {
     open: 'معاينة التذكير', title: 'معاينة التذكير', body: 'راجع المستلمين والرسالة الدقيقة قبل إضافة أي شيء إلى قائمة الإرسال.',
@@ -45,6 +46,7 @@ const COPY = {
     manual: 'لا يمكن لمقابلة معرفة من لم يرسل عبر رابط عام. انسخ هذا التذكير وشاركه يدوياً.',
     missing: 'الإرسال الآلي عبر البريد غير مُعدّ. لن يظهر أي إرسال؛ استخدم النسخ.',
     queued: 'تذكيرات أُدرجت', skipped: 'لم يعودوا مؤهلين قبل الإرسال', delivery: 'حالة التسليم', close: 'إغلاق المعاينة',
+    retryFailed: 'تحديد المستلمين الذين فشل إرسالهم',
   },
 } as const;
 
@@ -72,7 +74,6 @@ export function ReminderPreview({ roleId, initialData }: { roleId: string; initi
     }
     const controller = new AbortController();
     setState('loading');
-    setResult('');
     void fetch(`/api/employer/roles/${encodeURIComponent(roleId)}/reminders`, { cache: 'no-store', signal: controller.signal })
       .then(async (response) => {
         const body = await response.json().catch(() => ({})) as ReminderPreviewData & { error?: string };
@@ -107,6 +108,7 @@ export function ReminderPreview({ roleId, initialData }: { roleId: string; initi
       track('reminder_batch_queued', { role_id: roleId, count: body.queued, outcome: body.skipped ? 'partially_queued' : 'queued' });
       setSelected(new Set());
       setState('ready');
+      setReload((value) => value + 1);
     } catch (error) {
       setResult(error instanceof Error ? error.message : c.failed);
       setState('ready');
@@ -124,6 +126,7 @@ export function ReminderPreview({ roleId, initialData }: { roleId: string; initi
         {data.publicLinkFallback && <p className={styles.notice}>{c.manual}</p>}
         {!data.configured && <p className={styles.notice}>{c.missing}</p>}
         {eligible.length > 0 && <fieldset className={styles.recipients}><legend>{c.recipients} · {selectedCount}</legend><p>{c.deselect}</p>{eligible.map((recipient) => <label key={recipient.id}><input type="checkbox" checked={selected.has(recipient.id)} onChange={(event) => setSelected((current) => { const next = new Set(current); if (event.target.checked) next.add(recipient.id); else next.delete(recipient.id); return next; })} /><span><bdi dir="auto">{recipient.name || 'Candidate'}</bdi><small>{recipient.email}{recipient.deliveryStatus ? ` · ${recipient.deliveryStatus}` : ''}</small></span></label>)}</fieldset>}
+        {eligible.some((recipient) => recipient.deliveryStatus === 'failed' || recipient.deliveryStatus === 'cancelled') && <button type="button" onClick={() => setSelected(new Set(eligible.filter((recipient) => recipient.deliveryStatus === 'failed' || recipient.deliveryStatus === 'cancelled').map((recipient) => recipient.id)))}>{c.retryFailed}</button>}
         {excluded.length > 0 && <details className={styles.excluded}><summary>{c.excluded} · {excluded.length}</summary>{excluded.map((recipient) => <p key={recipient.id}><bdi dir="auto">{recipient.name || recipient.email || 'Candidate'}</bdi> - {recipient.reason}</p>)}</details>}
         <dl className={styles.meta}><div><dt>{c.channel}</dt><dd>Email</dd></div><div><dt>{c.delivery}</dt><dd>{data.delivery.queued} queued · {data.delivery.accepted} accepted · {data.delivery.delivered} delivered · {data.delivery.failed} failed</dd></div></dl>
         <label className={styles.message}><span>{c.message}</span><textarea rows={8} maxLength={2000} value={message} onChange={(event) => setMessage(event.target.value)} /></label>

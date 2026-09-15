@@ -96,14 +96,24 @@ try {
   await navigate('/dev/recruiter-suite');
   const dashboard = await evaluate(`({
     title: document.title,
-    attentionItems: document.querySelectorAll('#attention-state article').length,
-    attentionLimit: document.querySelectorAll('#attention-state article').length <= 3,
+    attentionItems: [...document.querySelectorAll('#attention-state article')].filter(item => !item.closest('details:not([open])')).length,
+    attentionTotal: document.querySelectorAll('#attention-state article').length,
+    attentionLimit: [...document.querySelectorAll('#attention-state article')].filter(item => !item.closest('details:not([open])')).length <= 3,
     hasChatInput: Boolean(document.querySelector('#role-help input, #role-help textarea')),
     hasPrimaryRecruitmentActions: document.body.innerText.includes('Review submissions') && document.body.innerText.includes('Candidate reminders'),
     scrollWidth: document.documentElement.scrollWidth,
     viewport: innerWidth,
     overlay: Boolean(document.querySelector('[data-nextjs-dialog], #webpack-dev-server-client-overlay')),
   })`);
+  const attentionExpanded = await evaluate(`(() => {
+    const summary = [...document.querySelectorAll('#attention-state summary')].find(item => item.textContent.includes('View all attention items'));
+    summary?.click();
+    return {
+      control: Boolean(summary),
+      visible: [...document.querySelectorAll('#attention-state article')].filter(item => !item.closest('details:not([open])')).length,
+      omittedReachable: document.body.innerText.includes('Restaurant Manager invitation closes soon'),
+    };
+  })()`);
   await screenshot('dashboard-desktop.png');
   const recruiterHandoff = await evaluate(`(() => {
     const root = document.querySelector('#candidate-questions');
@@ -115,6 +125,10 @@ try {
       replyAndResolveSeparate: buttons.includes('Save reply') && buttons.includes('Mark resolved'),
       explicitPublication: Boolean(publicDisclosure) && publicDisclosure.querySelectorAll('input, textarea').length === 2,
       noCandidateContactPreloaded: [...publicDisclosure?.querySelectorAll('input, textarea') || []].every(item => item.value === ''),
+      candidateSourcesVisible: Boolean(root.querySelector('#candidate-role-fact-salary'))
+        && Boolean(root.querySelector('#candidate-role-fact-accommodation'))
+        && Boolean(root.querySelector('#candidate-role-fact-interview'))
+        && Boolean(root.querySelector('#candidate-role-faq-0')),
     };
   })()`);
 
@@ -122,9 +136,16 @@ try {
     const clickText = (text) => [...document.querySelectorAll('button')].find(button => button.textContent.includes(text))?.click();
     clickText('Preview reminder');
     clickText('Ask about this role');
+    clickText('Edit closing date');
     return true;
   })()`);
   await wait(250);
+  const deadlineEditor = await evaluate(`({
+    input: Boolean(document.querySelector('#role-help input[type=datetime-local]')),
+    timezone: document.querySelector('#role-help')?.innerText.includes('Asia/Dubai'),
+    save: [...document.querySelectorAll('#role-help button')].some(button => button.textContent.includes('Save closing date')),
+  })`);
+  await evaluate(`[...document.querySelectorAll('#role-help button')].find(button => button.textContent.trim() === 'Cancel')?.click()`);
   await evaluate(`[...document.querySelectorAll('button')].find(button => button.textContent.includes('Which submissions still need review?'))?.click()`);
   await wait(100);
   const reminder = await evaluate(`({
@@ -172,6 +193,23 @@ try {
     return true;
   })()`);
   await wait(700);
+  await evaluate(`(() => {
+    const root = document.querySelector('#creation-wizard');
+    const label = [...root.querySelectorAll('label')].find(item => item.textContent.includes('English only'));
+    label?.querySelector('input[type=radio]')?.click();
+  })()`);
+  await wait(100);
+  const englishOnlyEditor = await evaluate(`({
+    selected: [...document.querySelectorAll('#creation-wizard label')].find(item => item.textContent.includes('English only'))?.querySelector('input[type=radio]')?.checked === true,
+    englishQuestions: document.querySelectorAll('#creation-wizard ol li textarea[dir=ltr]').length,
+    arabicQuestions: document.querySelectorAll('#creation-wizard ol li textarea[dir=rtl]').length,
+  })`);
+  await evaluate(`(() => {
+    const root = document.querySelector('#creation-wizard');
+    const label = [...root.querySelectorAll('label')].find(item => item.textContent.includes('English and Arabic'));
+    label?.querySelector('input[type=radio]')?.click();
+  })()`);
+  await wait(100);
   await evaluate(`(() => {
     const input = document.querySelector('#creation-wizard textarea[dir=ltr]');
     if (!input) return;
@@ -251,13 +289,16 @@ try {
   const result = {
     baseUrl,
     dashboard,
+    attentionExpanded,
     recruiterHandoff,
     roleActions,
+    deadlineEditor,
     reminder,
     panelOpened,
     panel,
     focusRestored,
     wizardRole,
+    englishOnlyEditor,
     questionEditor,
     wizardPreview,
     draftRetained,
@@ -267,11 +308,14 @@ try {
     emptyState,
     consoleErrors,
   };
-  result.passed = dashboard.attentionItems === 3 && dashboard.attentionLimit && !dashboard.hasChatInput
+  result.passed = dashboard.attentionItems === 3 && dashboard.attentionTotal === 4 && dashboard.attentionLimit
+    && attentionExpanded.control && attentionExpanded.visible === 4 && attentionExpanded.omittedReachable && !dashboard.hasChatInput
     && dashboard.hasPrimaryRecruitmentActions && dashboard.scrollWidth <= dashboard.viewport && !dashboard.overlay
-    && recruiterHandoff.replyAndResolveSeparate && recruiterHandoff.explicitPublication && recruiterHandoff.noCandidateContactPreloaded
-    && roleActions && reminder.preview && reminder.selected === 2 && reminder.excluded && reminder.automationHonest && reminder.roleHelpAnswer
+    && recruiterHandoff.replyAndResolveSeparate && recruiterHandoff.explicitPublication && recruiterHandoff.noCandidateContactPreloaded && recruiterHandoff.candidateSourcesVisible
+    && roleActions && deadlineEditor.input && deadlineEditor.timezone && deadlineEditor.save
+    && reminder.preview && reminder.selected === 2 && reminder.excluded && reminder.automationHonest && reminder.roleHelpAnswer
     && panelOpened && panel.dialog && panel.summaryPoints === 2 && panel.answers === 2 && panel.candidateClaims && focusRestored
+    && englishOnlyEditor.selected && englishOnlyEditor.englishQuestions === 3 && englishOnlyEditor.arabicQuestions === 0
     && questionEditor.questions === 3 && questionEditor.bilingual && wizardPreview.exactRole && wizardPreview.exactLocation
     && wizardPreview.previewQuestions === 3 && wizardPreview.previewCustomQuestion && wizardPreview.confirmLabel
     && draftRetained && publishFailure.preserved && Boolean(publishFailure.error) && publishFailure.stillPreview

@@ -156,7 +156,7 @@ export const STRINGS = {
     proofWizardBack: 'Back',
     proofWizardContinue: 'Continue',
     proofWizardRoleError: 'Add a company name, job title and role location to continue.',
-    proofWizardQuestionsError: 'Choose three to eight questions and complete both English and Arabic wording.',
+    proofWizardQuestionsError: 'Choose three to eight questions and complete the wording required by your language setting.',
     proofLocationLabel: 'Role location',
     proofLocationPlaceholder: 'Dubai, UAE',
     proofTimezoneLabel: 'Role timezone',
@@ -215,7 +215,7 @@ export const STRINGS = {
     proofPracticeStaysPrivate:
       'Nothing is auto-rejected. Practice on Coach stays private.',
     proofRecruiterValue:
-      'Learn how each candidate would approach the role before you shortlist. Muqabala asks follow-ups when an answer needs clearer evidence.',
+      'Candidates receive these approved questions in this order. You review every submitted answer before deciding.',
     proofTrustLabel: 'Why hiring teams use this',
     proofTrustPrivate: 'Private link',
     proofTrustSame: 'Same role blueprint',
@@ -668,6 +668,7 @@ export const STRINGS = {
     reportReasonLanguageUnavailable: 'Fair scoring was not available for this answer\'s language.',
     reportReasonNotAnswered: 'There was no answer to score.',
     reportReasonFeedbackLocked: 'Verify your email to view this feedback.',
+    reportReasonHumanReview: 'This employer-written question requires a person to review the answer.',
     reportReasonNotRecorded: 'A reason was not saved for this answer.',
     reportUnscoredZeroNote: 'This did not count as zero.',
     reportUnscoredOne: '1 answer was not scored',
@@ -1061,7 +1062,7 @@ export const STRINGS = {
     proofWizardBack: 'رجوع',
     proofWizardContinue: 'متابعة',
     proofWizardRoleError: 'أضف اسم الشركة والمسمى الوظيفي وموقع الوظيفة للمتابعة.',
-    proofWizardQuestionsError: 'اختر من ثلاثة إلى ثمانية أسئلة وأكمل النص بالإنجليزية والعربية.',
+    proofWizardQuestionsError: 'اختر من ثلاثة إلى ثمانية أسئلة وأكمل النص المطلوب وفق إعداد اللغة.',
     proofLocationLabel: 'موقع الوظيفة',
     proofLocationPlaceholder: 'دبي، الإمارات',
     proofTimezoneLabel: 'المنطقة الزمنية للوظيفة',
@@ -1120,7 +1121,7 @@ export const STRINGS = {
     proofPracticeStaysPrivate:
       'لا يوجد رفض تلقائي. يبقى التدريب على المدرب خاصاً.',
     proofRecruiterValue:
-      'تعرّف على كيفية تعامل كل مرشح مع الدور قبل إعداد القائمة المختصرة. راجع ثماني إجابات خاصة بالدور في مكان واحد.',
+      'يتلقى المرشحون هذه الأسئلة المعتمدة بالترتيب الظاهر. تراجع كل إجابة مرسلة قبل اتخاذ القرار.',
     proofTrustLabel: 'لماذا تستخدم فرق التوظيف هذا',
     proofTrustPrivate: 'رابط خاص',
     proofTrustSame: 'مخطط الوظيفة نفسه',
@@ -1570,6 +1571,7 @@ export const STRINGS = {
     reportReasonLanguageUnavailable: 'لم يكن التقييم العادل متاحاً للغة هذه الإجابة.',
     reportReasonNotAnswered: 'لم توجد إجابة لتقييمها.',
     reportReasonFeedbackLocked: 'تحقق من بريدك الإلكتروني لعرض هذه الملاحظات.',
+    reportReasonHumanReview: 'يتطلب هذا السؤال الذي كتبه صاحب العمل مراجعة الإجابة من شخص.',
     reportReasonNotRecorded: 'لم يُحفظ سبب عدم تقييم هذه الإجابة.',
     reportUnscoredZeroNote: 'لم تُحتسب هذه الإجابة بصفر.',
     reportUnscoredOne: 'إجابة واحدة لم تُقيَّم',

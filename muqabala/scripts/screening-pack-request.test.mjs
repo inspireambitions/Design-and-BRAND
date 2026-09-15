@@ -10,6 +10,28 @@ test('screening links accept a catalogue-first request and legacy signed tokens'
     }).success,
     false,
   );
+  const englishOnly = ScreeningPackRequestSchema.safeParse({
+    companyName: 'Nour Clinic',
+    jobTitle: 'Receptionist',
+    questionnaireLanguage: 'en',
+    questions: [
+      { id: 'one', text: 'Tell us about a customer problem you solved.' },
+      { id: 'two', text: 'Describe how you organise competing priorities.' },
+      { id: 'three', text: 'What makes your experience relevant to this role?' },
+    ],
+  });
+  assert.equal(englishOnly.success, true);
+  const missingArabic = ScreeningPackRequestSchema.safeParse({
+    companyName: 'Nour Clinic',
+    jobTitle: 'Receptionist',
+    questionnaireLanguage: 'both',
+    questions: [
+      { id: 'one', text: 'Tell us about a customer problem you solved.' },
+      { id: 'two', text: 'Describe how you organise competing priorities.' },
+      { id: 'three', text: 'What makes your experience relevant to this role?' },
+    ],
+  });
+  assert.equal(missingArabic.success, false);
   assert.equal(
     ScreeningPackRequestSchema.safeParse({
       companyName: 'Nour Clinic',

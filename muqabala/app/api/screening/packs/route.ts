@@ -3,7 +3,7 @@ import { after } from 'next/server';
 import { POST as generateInterviewResponse } from '@/app/api/interview/route';
 import { ADVERT_CACHE_VERSION } from '@/lib/advert-cache';
 import { CATALOGUE_INTERVIEW_VERSION, catalogueInterviewRole } from '@/lib/interview-catalogue';
-import { roleFromToken, signProofPack, verifyInterview } from '@/lib/interview-token';
+import { roleFromToken, signProofPack, verifyInterview, verifyStoredInterview } from '@/lib/interview-token';
 import { curatedRecruiterQuestions } from '@/lib/recruiter-suite';
 import { configuredOrigin, hasTrustedOrigin } from '@/lib/server/security';
 import { limitInterviewGeneration } from '@/lib/rate-limit';
@@ -28,6 +28,7 @@ async function enhanceScreeningPack(input: {
   recruiterName: string;
   jobTitle: string;
   jobText: string;
+  expiresAt: string;
 }) {
   try {
     // Run the shared server generator directly. A self-fetch is rejected by
@@ -85,6 +86,7 @@ async function enhanceScreeningPack(input: {
       questions,
       workplace: input.workplace,
       recruiterName: input.recruiterName,
+      expiresAt: input.expiresAt,
     });
     if (!signedToken) {
       reportOperationalFailure('screening_pack_enhancement_rejected', {
@@ -172,7 +174,7 @@ export async function POST(request: Request) {
       return Response.json({
         id: existing.id,
         url: `${configuredOrigin()}/s/${existing.public_code}`,
-        title: verifyInterview(existing.signed_token)?.title ?? parsed.data.jobTitle ?? 'Role',
+        title: verifyStoredInterview(existing.signed_token)?.title ?? parsed.data.jobTitle ?? 'Role',
         workplace: existing.workplace,
         location: existing.location,
         timezone: existing.timezone,
@@ -193,7 +195,7 @@ export async function POST(request: Request) {
   let questions;
   try {
     questions = parsed.data.questions
-      ? curatedRecruiterQuestions(baseRole, parsed.data.questions)
+      ? curatedRecruiterQuestions(baseRole, parsed.data.questions, { language: parsed.data.questionnaireLanguage })
       : baseRole.questions.slice(0, 8);
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : 'The questions could not be validated.' }, { status: 400 });
@@ -203,6 +205,7 @@ export async function POST(request: Request) {
 
   const workplace = (parsed.data.companyName || parsed.data.workplace || '').trim();
   const recruiterName = (parsed.data.recruiterName || '').trim();
+  const expiresAt = new Date(Date.now() + parsed.data.expiryDays * 24 * 60 * 60 * 1000).toISOString();
   const signedToken = signProofPack({
     title: role.title,
     industry: role.industry,
@@ -211,10 +214,10 @@ export async function POST(request: Request) {
     questions,
     workplace,
     recruiterName,
+    expiresAt,
   });
   if (!signedToken) return Response.json({ error: 'The work sample could not be signed.' }, { status: 503 });
 
-  const expiresAt = new Date(Date.now() + parsed.data.expiryDays * 24 * 60 * 60 * 1000).toISOString();
   let code = publicCode();
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const publishedFacts = Object.fromEntries(Object.entries(parsed.data.publishedFacts ?? {})
@@ -233,6 +236,7 @@ export async function POST(request: Request) {
       publish_key: parsed.data.publishKey ?? null,
       question_source: parsed.data.questions ? 'employer_reviewed' : parsed.data.interviewToken ? 'legacy' : 'catalogue',
       question_version: parsed.data.questions ? 'recruiter-suite-v1' : parsed.data.interviewToken ? 'legacy' : CATALOGUE_INTERVIEW_VERSION,
+      questionnaire_language: parsed.data.questionnaireLanguage,
     }).select('id').single();
     if (!error) {
       if (created?.id && !parsed.data.questions && !parsed.data.interviewToken && parsed.data.jobText) {
@@ -244,6 +248,7 @@ export async function POST(request: Request) {
           recruiterName,
           jobTitle: role.title,
           jobText: parsed.data.jobText || '',
+          expiresAt,
         }));
       }
       reportOperationalEvent('screening_pack_created', {
@@ -275,6 +280,7 @@ export async function POST(request: Request) {
         location: parsed.data.location?.trim() || null,
         timezone: parsed.data.timezone,
         questionCount: questions.length,
+        questionnaireLanguage: parsed.data.questionnaireLanguage,
       }, { status: 201 });
     }
     if (error.code === '23505' && parsed.data.publishKey) {

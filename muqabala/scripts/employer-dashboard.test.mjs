@@ -147,7 +147,7 @@ test('dashboard source keeps employer ownership and consent boundaries', async (
   assert.match(source, /\.not\('submitted_at', 'is', null\)/);
   assert.doesNotMatch(source, /overall_score/);
   assert.doesNotMatch(source, /EmployerLinkActions[^\n]+signed_token/);
-  assert.match(source, /verifyInterview\(pack\.signed_token\)/);
+  assert.match(source, /verifyStoredInterview\(pack\.signed_token\)/);
   assert.match(source, /RoleNextActionControl/);
   assert.match(nextActions, /Copy invitation/);
   assert.match(source, /Create interview link/);
