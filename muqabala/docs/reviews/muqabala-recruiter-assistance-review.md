@@ -2,7 +2,7 @@
 
 Prepared: 15 September 2026  
 Review branch: `codex/recruiter-suite-20260915`  
-Implementation commits: `9a667eb` (`Implement recruiter assistance suite`), `fae2aed` (`fix: close recruiter suite review findings`), `e1eafb5` (`fix: enforce recruiter suite server contracts`)
+Implementation commits: `9a667eb` (`Implement recruiter assistance suite`), `fae2aed` (`fix: close recruiter suite review findings`), `e1eafb5` (`fix: enforce recruiter suite server contracts`), `6e1da29` (`fix: block unsafe reminder history`)
 Base commit: `e09936a`  
 Production deployed: **No**
 
@@ -23,7 +23,7 @@ No production data was seeded, no candidate message was sent, no external servic
 
 ## 1A. Independent review correction record
 
-The first implementation was independently reviewed in `docs/reviews/muqabala-recruiter-assistance-independent-review.md`. Commit `fae2aed` addressed the original findings. A second independent pass found four remaining integration-contract defects; commit `e1eafb5` corrects those as recorded below. Public-link expiry and employer ownership checks remain enforced.
+The first implementation was independently reviewed in `docs/reviews/muqabala-recruiter-assistance-independent-review.md`. Commit `fae2aed` addressed the original findings. A second independent pass found four remaining integration-contract defects; commit `e1eafb5` corrected the route, FAQ, pagination, and linked-retry contracts. Its follow-up reproduction found one remaining legacy/unlinked reminder-history path, closed at both SQL and worker boundaries by `6e1da29`. Public-link expiry and employer ownership checks remain enforced.
 
 | Finding | Correction and executable evidence |
 |---|---|
@@ -32,12 +32,16 @@ The first implementation was independently reviewed in `docs/reviews/muqabala-re
 | R3: incorrect factual answers | Suggested questions send explicit intents. Free text uses conservative Unicode-aware matching; ambiguous and mixed-topic questions fall back to recruiter handoff. Adversarial English and Arabic examples are regression tested. |
 | R4: unrelated inherited rubrics | Only unchanged reviewed question text retains validated competencies. Edited, new, and meaning-changed questions are unscored and explicitly routed to human employer review. New IDs, edited IDs, reordered questions, and English-only questions are tested. |
 | R5: query failure shown as zero | Role and question pages handle pack, submission, invite, and question failures separately. Dependent counts and next actions are suppressed when their source is unavailable. Submissions, per-role questions, the combined queue, and reminder recipients now use authorized pagination rather than unreachable hard caps; exact counts remain available. The real reminder GET retrieves invitation 501 on page 6. |
-| R6: failed reminders | Pending/uncertain and accepted/delivered messages remain protected. A retry row must reference the exact prior failed manual message; the worker revalidates that source before dispatch. Complaints, bounces, suppressions, cancellations, and unverified retry sources remain blocked. Repeated batch keys return the original result, including after role closure. Isolated SQL and provider-stub tests cover the accepted → provider-failed → linked retry lifecycle. |
+| R6: failed reminders | Pending/uncertain and accepted/delivered messages remain protected. A retry row must reference the exact prior failed manual message; the worker revalidates that source before dispatch. Ordinary rows also inspect the latest prior manual-delivery state and fail closed on cancelled, pending, processing, or unverified failed history. Complaints, bounces, suppressions, cancellations before or after acceptance, and failures without an error code remain blocked even after the invite timestamp ages past 24 hours. A delayed delivered update restarts the cooldown. Repeated batch keys return the original result, including after role closure. Isolated SQL and provider-stub tests cover the accepted → provider-failed → linked retry lifecycle and every reproduced legacy/unlinked path. |
 | R7: Arabic FAQ and sources | FAQ matching is Unicode-aware. Live structured facts remain authoritative; when an optional structured fact is absent, an exact approved English or Arabic FAQ can answer it. Candidate-visible deadline, format, location, salary, accommodation, interview, and FAQ facts have stable, exact source anchors. |
 | R8: inaccessible attention items | The briefing retains the complete ordered collection and “View all attention items” expands every omitted item with its original action. The browser test verifies three initially visible items and all four after expansion. |
 | Product-fit follow-ups | Added explicit English-only/bilingual setup, dirty-edit protection for suggestion requests, forced suggestion refresh, exact timezone preview, all optional published facts, question-action `try/finally`, concise product copy, and a discoverable closing-date editor. Browser checks cover English-only setup and the deadline editor. |
 
 The remaining release gate is an authenticated, migrated preview environment for a full create → candidate record/upload → submit → recruiter review run with two separate employer accounts. No such credentials or preview database were available, so this report does not claim that integration proof or release approval.
+
+### Final independent verdict
+
+The originating review task independently re-ran the remaining reminder-history scenarios against `6e1da29` and returned **APPROVED for local handoff**, with no remaining P1/P2 findings in its focused review. It reproduced ordinary and linked-job protection for accepted then cancelled history, cancellation before acceptance with no timestamp, failed history with a missing error code after 25 hours, and delayed delivered updates. It also ran an additional 31-case worker matrix and confirmed that a verified retryable failure can still dispatch. This verdict is not production-release approval and does not replace the external integration gates listed below.
 
 ## 2. Discovery map and capability gaps
 
@@ -70,7 +74,7 @@ The remaining release gate is an authenticated, migrated preview environment for
 | B. Guided role setup | **Implemented locally; authenticated preview pending** | Four steps at `/for-employers#create`; title/location first; optional approved facts; three to eight English-only or bilingual questions; add/remove/reorder; deterministic reviewed fallback; dirty-edit protection; optional existing JD generation; exact timezone/facts preview; explicit publish; server idempotency and unique employer/publish key; draft retained on back and failure. Employer-reviewed questions are fixed on both UI and POST boundaries, and custom questions require human review. | Real creation route → stored row → public loader → start-plan test for every count 3–8, plus direct adaptive-bypass POST regression. Browser covers language selection, custom edit, back, preview, and simulated publish failure. A live authenticated database journey remains pending. |
 | C. Contextual role action | **Complete locally** | One resolver used by role cards and `/employer/roles/[roleId]`; covers all brief rows including closed roles with pending review; submission units and timezone-aware closing data. Failed source queries suppress dependent counts/actions. `resolveAvailableRoleNextAction`, `RoleNextActionControl`. | Full state-table and unavailable-count tests; browser role-action assertion. |
 | D. Review and answer summary | **Complete locally** | Existing accessible side panel retained; focus containment, Escape, focus/scroll restoration, unsaved-note warning, original answers, notes, and human shortlist controls preserved. New versioned extractive summaries cache by answer hash, label candidate claims, link to answer anchors, fail independently, and accept inaccuracy reports. `/api/employer/interviews/[id]/summary*`. | Browser confirms panel, two summaries, two original answers, source labels, and focus restoration; security and resilience tests cover ownership and failed decisions. |
-| E. Reminder preview | **Partial: implementation complete, provider integration unverified** | `/employer/roles/[roleId]` loads paginated recipient eligibility, exclusions, delivery state, editable copy, deselection, explicit recipient count, verified failed-recipient retry, and manual fallback. POST rechecks owner, role expiry, contact permission, submit/withdraw/delete/opt-out state, delivery uncertainty, and duplicate protection in one database function. Retry rows reference the failed attempt and are rechecked by the worker. Webhook records delivered/failed status. | Isolated PostgreSQL and provider-stub worker tests cover late submission/withdrawal, repeat batches, accepted → failed → retry, successful-recipient protection, complaint/bounce/suppression blocks, page 6 of 501 recipients, provider absence, and delivery updates. Browser confirms preview and honest provider state. No real message sent. |
+| E. Reminder preview | **Partial: implementation complete, provider integration unverified** | `/employer/roles/[roleId]` loads paginated recipient eligibility, exclusions, delivery state, editable copy, deselection, explicit recipient count, verified failed-recipient retry, and manual fallback. POST rechecks owner, role expiry, contact permission, submit/withdraw/delete/opt-out state, delivery uncertainty, terminal history, and duplicate protection in one database function. Retry rows reference the failed attempt and are rechecked by the worker; unlinked ordinary jobs independently fail closed on unsafe prior history. Webhook records delivered/failed status. | Isolated PostgreSQL and provider-stub worker tests cover late submission/withdrawal, repeat batches, accepted → failed → retry, cancelled-before-acceptance, aged cancellation, missing failure codes, successful-recipient protection, complaint/bounce/suppression blocks, delayed delivery updates, page 6 of 501 recipients, provider absence, and delivery updates. Browser confirms preview and honest provider state. No real message sent. |
 | F. Candidate questions and handoff | **Partial: persisted queue and contact handoff complete; automatic reply delivery unavailable** | Collapsed disclosure below the candidate's primary journey on `/s/[code]`; explicit intents and conservative Unicode matching over candidate-visible facts; exact unknown/ambiguous fallback; fact-specific source links; explicit handoff; authenticated own-question history; rate limit and dedupe hash. `/employer/questions` and role detail support reply and resolve separately with recoverable failures. Public FAQ reuse requires separate wording and rejects contact details. | Focused English/Arabic adversarial tests cover ambiguity, exact Arabic FAQs, source anchors, scope, dedupe boundaries, and FAQ PII rejection. Browser confirms all candidate-visible fact anchors plus reply/resolve separation and blank public fields. |
 | G. Optional role help | **Partial by design** | Secondary role-scoped panel on `/employer/roles/[roleId]` supports the three requested deterministic questions with source/navigation actions. No free-text input, hidden mutation, or cross-role query. Open-ended conversation is explicitly unavailable. `RoleHelpPanel`. | Focused tests confirm deterministic scope and no text box; browser confirms the answer and no general chat input. |
 
@@ -84,7 +88,7 @@ The remaining release gate is an authenticated, migrated preview environment for
 - Adds contact permission, opt-out, withdrawal, deletion, and manual-reminder timestamps to `role_invites`.
 - Extends outbox records with message body, batch key, delivered timestamp, manual reminder kind/status, and a constrained self-reference to the failed message being retried.
 - Adds `candidate_role_questions`, `employer_answer_summaries`, `employer_summary_feedback`, and `recruiter_audit_events`, with RLS and parent-delete cascades.
-- Adds the server-only `queue_manual_employer_reminders` function. Browser JWT roles cannot call it directly. It rechecks eligibility, prevents recent or concurrent duplicate reminders, permits a linked attempt only for a retryable failed delivery, permanently blocks complaint/bounce/suppression outcomes, and recovers the original outcome for repeated batch keys.
+- Adds the server-only `queue_manual_employer_reminders` function. Browser JWT roles cannot call it directly. It rechecks eligibility, prevents recent or concurrent duplicate reminders, permits a linked attempt only for a retryable failed delivery, blocks every cancelled or unverified failed terminal state, permanently blocks complaint/bounce/suppression outcomes, bases the 24-hour protection on the latest accepted/delivered state update, and recovers the original outcome for repeated batch keys.
 
 The migration executed successfully in the repository's isolated PGlite/PostgreSQL test harness. It was **not** applied to staging or production.
 
@@ -146,8 +150,8 @@ No interaction recording was captured.
 | `npm run test:recruiter-browser -- http://127.0.0.1:3102` | **Pass**. All assertions true; zero browser console errors. Includes expanded attention, fact/FAQ anchors, closing-date editor, English-only setup, desktop, 390 px Arabic RTL, reduced motion, empty/error states, and retained draft after a failed publish. |
 | `npm run test:recruiter-suite` | **20/20 pass**. Includes execution of the actual creation route, stored pack loader, and trusted start-plan contract for each count 3–8; the actual interview POST adaptive-bypass check; exact EN/AR FAQ precedence; pagination boundaries; and the actual reminder GET returning invitation 501 on page 6. |
 | `npm run test:security` | **64/64 pass**. |
-| `npm run test:resilience` | **579/579 pass**. |
-| Isolated delivery SQL and worker coverage within resilience suite | **16/16 SQL subtests** and **9/9 sender/worker subtests pass**. Migration executes; owner scope, stable batch idempotency, late contact withdrawal, accepted → failed → linked retry, successful-recipient protection, complaint/bounce/suppression blocks, provider rejection, and delivery state are covered. |
+| `npm run test:resilience` | **583/583 pass**. |
+| Isolated delivery SQL and worker coverage within resilience suite | **18/18 SQL subtests** and **11/11 sender/worker subtests pass**. Migration executes; owner scope, stable batch idempotency, late contact withdrawal, accepted → failed → linked retry, successful-recipient protection, complaint/bounce/suppression blocks, cancelled-before-acceptance, aged cancellation, missing failure codes, delayed delivered updates, provider rejection, and delivery state are covered. |
 | `npm run typecheck` | **Pass**. |
 | `npm run lint` | **Pass with zero errors**. The repository reports 87 existing warnings; this work did not attempt an unrelated repository-wide warning cleanup. |
 | `npm run build` | **Pass**. Next.js 16.3.5 production build compiled, typechecked, and generated all 117 static pages. |
@@ -163,6 +167,8 @@ No interaction recording was captured.
 - Newly drafted Arabic copy needs human language review. Employer workspace localization remains partial. Automated tests prove parity/RTL mechanics, not linguistic approval.
 - Real analytics baselines, task completion rates, and usability findings require actual consented usage; none were invented.
 
+The final independent pass was focused on the previously open reminder-history P2. It did not independently repeat the broader security, resilience, build, lint, or browser suites; those results are the local command evidence reported above.
+
 ## 8. Changed files and reviewable diff
 
 Review the implementation with:
@@ -171,7 +177,8 @@ Review the implementation with:
 git show --stat 9a667eb
 git show --stat fae2aed
 git show --stat e1eafb5
-git diff e09936a..e1eafb5 -- muqabala
+git show --stat 6e1da29
+git diff e09936a..6e1da29 -- muqabala
 ```
 
 Changed files, grouped by responsibility:
@@ -186,13 +193,13 @@ Changed files, grouped by responsibility:
 - Verification fixture and tests: `app/dev/recruiter-suite/page.tsx`, `components/RecruiterSuiteFixture*`, `scripts/recruiter-suite.test.mjs`, `scripts/recruiter-route-contract.test.mjs`, `scripts/verify-recruiter-suite-browser.mjs`, extended employer/security tests, `package.json`, and the screenshots under `docs/reviews/assets/recruiter-suite/`.
 - Review records: this report and `docs/reviews/muqabala-recruiter-assistance-independent-review.md`.
 
-Initial implementation commit: **53 files changed, 3,129 insertions, 162 deletions**. First review-correction commit `fae2aed`: **51 files changed, 1,153 insertions, 219 deletions**. Second contract-correction commit `e1eafb5`: **18 files changed, 394 insertions, 63 deletions**.
+Initial implementation commit: **53 files changed, 3,129 insertions, 162 deletions**. First review-correction commit `fae2aed`: **51 files changed, 1,153 insertions, 219 deletions**. Second contract-correction commit `e1eafb5`: **18 files changed, 394 insertions, 63 deletions**. Final reminder-history correction `6e1da29`: **5 files changed, 96 insertions, 16 deletions**, including one refreshed browser screenshot.
 
 ## 9. Safe rollout, rollback and remaining decisions
 
 ### Recommended rollout
 
-1. Review commits `9a667eb`, `fae2aed`, and `e1eafb5`, the independent review record, and this report.
+1. Review commits `9a667eb`, `fae2aed`, `e1eafb5`, and `6e1da29`, the independent review record, and this report.
 2. Have an Arabic reviewer approve the new candidate/reminder/setup copy.
 3. Apply the additive migration to an isolated preview Supabase project.
 4. Configure preview-only Supabase credentials. Configure Resend only after first validating the manual fallback; use a suppressed test domain and verify the webhook secret.
