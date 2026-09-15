@@ -36,7 +36,7 @@ export type SchoolsCohortSummary = {
   id: string;
   name: string;
   activeStudents: number;
-  activeAssignment: null | {
+  focusAssignment: null | {
     id: string;
     roleId: string;
     dueAt: string;
@@ -61,10 +61,30 @@ function activeAssignmentFor(
       || new Date(right.created_at).getTime() - new Date(left.created_at).getTime())[0] ?? null;
 }
 
-function latestSubmissionsFor(assignmentId: string, attempts: SchoolsAttemptRow[]) {
+function openedAssignmentsFor(
+  cohortId: string,
+  assignments: SchoolsAssignmentRow[],
+  now: Date,
+) {
+  const at = now.getTime();
+  return assignments
+    .filter((assignment) => assignment.cohort_id === cohortId
+      && assignment.published_at
+      && new Date(assignment.opens_at).getTime() <= at)
+    .sort((left, right) => new Date(left.due_at).getTime() - new Date(right.due_at).getTime()
+      || new Date(right.created_at).getTime() - new Date(left.created_at).getTime());
+}
+
+function latestSubmissionsFor(
+  assignmentId: string,
+  attempts: SchoolsAttemptRow[],
+  eligibleStudentIds?: Set<string>,
+) {
   const latest = new Map<string, SchoolsAttemptRow>();
   for (const attempt of attempts) {
-    if (attempt.assignment_id !== assignmentId || !attempt.submitted_at) continue;
+    if (attempt.assignment_id !== assignmentId
+      || !attempt.submitted_at
+      || (eligibleStudentIds && !eligibleStudentIds.has(attempt.student_user_id))) continue;
     const current = latest.get(attempt.student_user_id);
     if (!current || attempt.attempt_number > current.attempt_number
       || (attempt.attempt_number === current.attempt_number
@@ -92,9 +112,19 @@ export function buildSchoolsCohortSummaries({
 }): SchoolsCohortSummary[] {
   const reviewed = new Set(reviews.map((review) => review.assignment_attempt_id));
   return cohorts.map((cohort) => {
-    const activeStudents = members.filter((member) => member.cohort_id === cohort.id && member.status === 'active').length;
-    const assignment = activeAssignmentFor(cohort.id, assignments, now);
-    const latest = assignment ? latestSubmissionsFor(assignment.id, attempts) : [];
+    const activeStudentIds = new Set(members
+      .filter((member) => member.cohort_id === cohort.id && member.status === 'active')
+      .map((member) => member.student_user_id));
+    const activeStudents = activeStudentIds.size;
+    const pendingReview = openedAssignmentsFor(cohort.id, assignments, now)
+      .map((assignment) => ({
+        assignment,
+        latest: latestSubmissionsFor(assignment.id, attempts, activeStudentIds),
+      }))
+      .find(({ latest }) => latest.some((attempt) => !reviewed.has(attempt.id)));
+    const assignment = pendingReview?.assignment ?? activeAssignmentFor(cohort.id, assignments, now);
+    const latest = pendingReview?.latest
+      ?? (assignment ? latestSubmissionsFor(assignment.id, attempts, activeStudentIds) : []);
     const notReviewed = latest.filter((attempt) => !reviewed.has(attempt.id)).length;
     const nextAction = !assignment ? 'assign'
       : notReviewed > 0 ? 'review'
@@ -104,7 +134,7 @@ export function buildSchoolsCohortSummaries({
       id: cohort.id,
       name: cohort.name,
       activeStudents,
-      activeAssignment: assignment ? { id: assignment.id, roleId: assignment.role_id, dueAt: assignment.due_at } : null,
+      focusAssignment: assignment ? { id: assignment.id, roleId: assignment.role_id, dueAt: assignment.due_at } : null,
       submitted: latest.length,
       notReviewed,
       nextAction,
@@ -153,11 +183,22 @@ export function buildSchoolsInstitutionSummary({
   let notSubmitted = 0;
   let awaitingReview = 0;
   for (const assignment of activeAssignments) {
-    const latest = latestSubmissionsFor(assignment.id, attempts);
-    const eligible = activeMembers.filter((member) => member.cohort_id === assignment.cohort_id).length;
+    const eligibleStudentIds = new Set(activeMembers
+      .filter((member) => member.cohort_id === assignment.cohort_id)
+      .map((member) => member.student_user_id));
+    const latest = latestSubmissionsFor(assignment.id, attempts, eligibleStudentIds);
+    const eligible = eligibleStudentIds.size;
     submitted += latest.length;
     notSubmitted += Math.max(eligible - latest.length, 0);
-    awaitingReview += latest.filter((attempt) => !reviewed.has(attempt.id)).length;
+  }
+  for (const cohort of institutionCohorts) {
+    const eligibleStudentIds = new Set(activeMembers
+      .filter((member) => member.cohort_id === cohort.id)
+      .map((member) => member.student_user_id));
+    for (const assignment of openedAssignmentsFor(cohort.id, assignments, now)) {
+      awaitingReview += latestSubmissionsFor(assignment.id, attempts, eligibleStudentIds)
+        .filter((attempt) => !reviewed.has(attempt.id)).length;
+    }
   }
   return {
     institutionId,

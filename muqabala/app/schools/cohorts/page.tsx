@@ -62,7 +62,7 @@ export default async function CohortsPage() {
         const actionHref = row.nextAction === 'assign'
           ? `/schools/cohorts/${row.id}/assign`
           : row.nextAction === 'review'
-            ? `/schools/cohorts/${row.id}/review?assignment=${row.activeAssignment!.id}`
+            ? `/schools/cohorts/${row.id}/review?assignment=${row.focusAssignment!.id}`
             : `/schools/cohorts/${row.id}`;
         const actionLabel = row.nextAction === 'assign'
           ? 'Create assignment'
@@ -81,8 +81,8 @@ export default async function CohortsPage() {
           </div>
           <dl className="schools-metric-grid">
             <div><dt>Active students</dt><dd>{row.activeStudents}</dd></div>
-            <div><dt>Current assignment</dt><dd className="schools-metric-text">{row.activeAssignment?.roleId ?? 'None'}</dd></div>
-            <div><dt>Due</dt><dd className="schools-metric-text">{row.activeAssignment ? date(row.activeAssignment.dueAt) : 'Not set'}</dd></div>
+            <div><dt>Assignment in focus</dt><dd className="schools-metric-text">{row.focusAssignment?.roleId ?? 'None'}</dd></div>
+            <div><dt>Due</dt><dd className="schools-metric-text">{row.focusAssignment ? date(row.focusAssignment.dueAt) : 'Not set'}</dd></div>
             <div><dt>Submitted</dt><dd>{row.submitted}</dd></div>
             <div><dt>Awaiting review</dt><dd>{row.notReviewed}</dd></div>
           </dl>

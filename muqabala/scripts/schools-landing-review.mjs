@@ -35,6 +35,7 @@ try {
       await form.getByRole('button',{name:'Send pilot enquiry'}).click();
       const saved=await response;assert.equal(saved.status(),200);enquiryReference=(await saved.json()).reference;
       await page.getByRole('status').filter({hasText:'Your pilot enquiry is saved.'}).waitFor();assert.equal(await form.count(),0);
+      assert.match(await page.getByRole('status').innerText(),/does not send an automatic confirmation email/i);
       await page.screenshot({path:'output/playwright/schools-pilot-form-success-375.png',fullPage:true});
       checks.push({formFailurePreservesInput:true,realFormSubmission:200,successState:true});
     }
