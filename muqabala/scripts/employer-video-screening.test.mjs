@@ -198,10 +198,10 @@ test('employer creation wizard validates role and question details before creati
   const styles = read('components/EmployerProofCreate.module.css');
   const copy = read('lib/i18n.ts');
   const generatePosition = form.indexOf("t('proofGenerateAdvert')");
-  const createPosition = form.indexOf("t('proofCreateAction')");
+  const createPosition = form.indexOf("t('proofPublishConfirm')");
 
   assert.match(form, /fetch\('\/api\/screening\/job-description'/);
-  assert.match(form, /const canCreate = companyReady && titleReady && jobReady && settingsReady/);
+  assert.match(form, /const canCreate = companyReady && titleReady && locationReady && questionsReady && settingsReady/);
   assert.match(form, /type="submit" className=\{styles\.submit\} disabled=\{!canCreate\}/);
   assert.ok(generatePosition >= 0 && createPosition > generatePosition);
   assert.match(form, /proofWizardRole[\s\S]*proofWizardQuestions[\s\S]*proofWizardPreview[\s\S]*proofWizardShare/);
@@ -214,6 +214,8 @@ test('employer creation wizard validates role and question details before creati
   assert.match(form, /recruiterName: recruiterName\.trim\(\) \|\| undefined/);
   assert.match(form, /t\('proofRecruiterLabel'\)/);
   assert.match(form, /proofCandidateInvite/);
+  assert.match(form, /jobText: jobText\.trim\(\) \|\| undefined/);
+  assert.match(form, /publishKey: publishKeyRef\.current/);
   assert.match(form, /proofRecommendMessage/);
   assert.match(form, /proofEmailSubject/);
   assert.match(form, /mailto:\?subject=/);
@@ -368,7 +370,9 @@ test('screening retries keep one capacity place and return a durable receipt', (
 
 test('employer sees aggregate interrupted uploads without pre-consent identity', () => {
   const dashboard = read('app/employer/page.tsx');
-  assert.match(dashboard, /Upload interrupted/);
+  const recruiterSuite = read('lib/recruiter-suite.ts');
+  assert.match(recruiterSuite, /Upload interrupted/);
+  assert.match(dashboard, /interruptedUploads: interruptedInterviewIds\.size/);
   assert.match(dashboard, /Date\.parse\(answer\.updated_at\) <= staleBefore/);
   assert.match(dashboard, /select\('id,screening_pack_id,started_at,submitted_at'\)/);
   assert.doesNotMatch(dashboard, /technicalInterviewRows[\s\S]{0,400}candidate_name/);

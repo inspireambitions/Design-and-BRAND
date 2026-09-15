@@ -130,9 +130,10 @@ test('candidate list pages at twenty and clamps bad page values', () => {
 
 test('dashboard paginates submissions and shows no video elements in the list', async () => {
   const source = await readFile(new URL('../app/employer/page.tsx', import.meta.url), 'utf8');
-  assert.match(source, /searchParams: Promise<\{ page\?: string \| string\[\]; roles\?: string \| string\[\]; rolePage\?: string \| string\[\] \}>/);
-  assert.match(source, /candidatePage\(page, submissions\.length\)/);
-  assert.match(source, /\.order\('submitted_at', \{ ascending: false \}\)\s*\.range\(paging\.from, paging\.to\)/);
+  assert.match(source, /searchParams: Promise<\{ page\?: string \| string\[\]; roles\?: string \| string\[\]; rolePage\?: string \| string\[\]; candidateStatus\?: string \| string\[\] \}>/);
+  assert.match(source, /candidatePage\(page, candidateSubmissions\.length\)/);
+  assert.match(source, /candidateSubmissions\.slice\(paging\.from, paging\.to \+ 1\)/);
+  assert.match(source, /\.in\('id', pageIds\)/);
   assert.match(source, /\.in\('interview_id', detailIds\)/);
   assert.match(source, /dashboardUrl\(paging\.page \+ 1, roleList\.filter, roleList\.paging\.page, 'candidates'\)/);
   assert.doesNotMatch(source, /<video/);
@@ -141,12 +142,14 @@ test('dashboard paginates submissions and shows no video elements in the list', 
 
 test('dashboard source keeps employer ownership and consent boundaries', async () => {
   const source = await readFile(new URL('../app/employer/page.tsx', import.meta.url), 'utf8');
+  const nextActions = await readFile(new URL('../lib/recruiter-suite.ts', import.meta.url), 'utf8');
   assert.match(source, /\.eq\('employer_id', user\.id\)/);
   assert.match(source, /\.not\('submitted_at', 'is', null\)/);
   assert.doesNotMatch(source, /overall_score/);
   assert.doesNotMatch(source, /EmployerLinkActions[^\n]+signed_token/);
   assert.match(source, /verifyInterview\(pack\.signed_token\)/);
-  assert.match(source, /Invite candidates/);
+  assert.match(source, /RoleNextActionControl/);
+  assert.match(nextActions, /Copy invitation/);
   assert.match(source, /Create interview link/);
   assert.match(source, /Recordings first\. AI notes are a second view\. You make the decision\./);
 });

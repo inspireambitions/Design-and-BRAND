@@ -25,6 +25,8 @@
     "validate:question-bank": "node --experimental-strip-types scripts/validate-question-bank",
     "test:universal-media-browser": "node scripts/verify-browser-media.mjs",
     "test:interaction-browser": "node scripts/verify-interactions-browser.mjs",
+    "test:recruiter-browser": "node scripts/verify-recruiter-suite-browser.mjs",
+    "test:recruiter-suite": "node --experimental-strip-types --import ./scripts/test-hooks/register.mjs --test --test-isolation=none scripts/recruiter-suite.test.mjs",
     "gate:universal-gold": "node --experimental-strip-types scripts/universal-gold-gate.mjs",
     "eval:universal": "node --experimental-strip-types scripts/universal-eval.mjs",
     "load:test": "k6 run scripts/load/interview-journey.js",

@@ -24,9 +24,10 @@ type OutboxRow = {
   id: string;
   role_id: string;
   invite_id: string | null;
-  kind: 'invite' | 'reminder_1' | 'reminder_2' | 'completion' | 'shortlist';
+  kind: 'invite' | 'reminder_1' | 'reminder_2' | 'completion' | 'manual_reminder' | 'shortlist';
   channel: 'email' | 'whatsapp';
   attempt_count: number;
+  message_body: string | null;
 };
 
 type InviteRow = {
@@ -37,12 +38,27 @@ type InviteRow = {
   name: string | null;
   status: string;
   token_cipher: string;
+  contact_allowed: boolean;
+  opted_out_at: string | null;
+  withdrawn_at: string | null;
+  deleted_at: string | null;
+  last_manual_reminder_at: string | null;
 };
 
 /** Resend documents 2 requests per second on standard plans. */
 const RESEND_MIN_GAP_MS = 500;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character] || character);
+}
+
+function manualReminder(messageBody: string, link: string, roleTitle: string) {
+  const text = messageBody.replaceAll('{{invitation_link}}', link).trim();
+  const html = text.split(/\n{2,}/).map((paragraph) => `<p style="margin:0 0 16px;line-height:1.6">${escapeHtml(paragraph).replaceAll('\n', '<br>')}</p>`).join('');
+  return { subject: `Reminder: ${roleTitle} work sample`, text, html };
+}
 
 export function inviteLink(publicCode: string, token: string): string {
   return `${configuredOrigin()}/s/${publicCode}?i=${token}`;
@@ -154,7 +170,7 @@ export async function processEmployerMessages(options: { roleId?: string; limit?
 
     const [{ data: pack, error: packError }, { data: invite, error: inviteError }] = await Promise.all([
       admin.from('screening_packs').select('id,public_code,workplace,signed_token,expires_at').eq('id', job.role_id).maybeSingle(),
-      job.invite_id ? admin.from('role_invites').select('id,candidate_ref,email,phone,name,status,token_cipher').eq('id', job.invite_id).eq('role_id', job.role_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
+      job.invite_id ? admin.from('role_invites').select('id,candidate_ref,email,phone,name,status,token_cipher,contact_allowed,opted_out_at,withdrawn_at,deleted_at,last_manual_reminder_at').eq('id', job.invite_id).eq('role_id', job.role_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
     ]);
     if (packError || inviteError) {
       await retry(job, null, 'scope_lookup_failed');
@@ -177,6 +193,19 @@ export async function processEmployerMessages(options: { roleId?: string; limit?
     }
     if (job.kind !== 'invite' && job.kind !== 'shortlist' && inviteRow && inviteRow.status === 'submitted') {
       await mark(job, { status: 'cancelled', locked_until: null, lease_token: null, last_error_code: 'already_submitted' });
+      failed += 1;
+      continue;
+    }
+    if (job.kind === 'manual_reminder' && inviteRow && (
+      inviteRow.contact_allowed === false || inviteRow.opted_out_at || inviteRow.withdrawn_at || inviteRow.deleted_at
+    )) {
+      await mark(job, { status: 'cancelled', locked_until: null, lease_token: null, last_error_code: 'contact_disallowed' });
+      failed += 1;
+      continue;
+    }
+    if (job.kind === 'manual_reminder' && inviteRow?.last_manual_reminder_at
+      && Date.now() - Date.parse(inviteRow.last_manual_reminder_at) < 24 * 60 * 60 * 1_000) {
+      await mark(job, { status: 'cancelled', locked_until: null, lease_token: null, last_error_code: 'recently_reminded' });
       failed += 1;
       continue;
     }
@@ -207,6 +236,11 @@ export async function processEmployerMessages(options: { roleId?: string; limit?
       text = built.text;
       html = built.html;
       recipientEmail = built.to;
+    } else if (job.kind === 'manual_reminder') {
+      const built = manualReminder(job.message_body || 'Please complete your role work sample:\n\n{{invitation_link}}', link?.link ?? '', roleTitle);
+      subject = built.subject;
+      text = built.text;
+      html = built.html;
     } else {
       const kind = job.kind as ReminderKind;
       subject = reminderSubject(kind, message);

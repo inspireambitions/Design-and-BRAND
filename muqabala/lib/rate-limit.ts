@@ -66,6 +66,16 @@ const transcriptionLimiter = redis
     })
   : null;
 
+const roleQuestionLimiter = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(8, '10 m'),
+      prefix: 'muqabala:limit:role-question',
+      analytics: false,
+      timeout: 1_000,
+    })
+  : null;
+
 const practicePlanIpLimiter = redis
   ? new Ratelimit({
       redis,
@@ -206,6 +216,17 @@ export function limitTranscription(request: Request): Promise<LimitDecision> {
     identifier: `ip:${requestAddress(request)}`,
     limiter: transcriptionLimiter,
     localLimit: 20,
+    localWindowMs: 10 * 60 * 1_000,
+  });
+}
+
+/** Candidate role questions are authenticated, but still bounded to limit abuse and queue flooding. */
+export function limitRoleQuestion(request: Request, userId: string): Promise<LimitDecision> {
+  return sharedLimit({
+    bucketName: 'role-question',
+    identifier: `candidate:${userId}:${requestAddress(request)}`,
+    limiter: roleQuestionLimiter,
+    localLimit: 8,
     localWindowMs: 10 * 60 * 1_000,
   });
 }

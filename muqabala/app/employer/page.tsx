@@ -4,17 +4,14 @@ import { redirect } from 'next/navigation';
 import {
   ArrowRight,
   Check,
-  Clock,
-  EnvelopeSimple,
   LinkSimple,
   Play,
   Plus,
   VideoCamera,
-  Warning,
 } from '@phosphor-icons/react/dist/ssr';
 import { DashboardDecisionActions } from '@/components/DashboardDecisionActions';
+import { AttentionBriefing } from '@/components/AttentionBriefing';
 import { EmployerReviewPanelProvider, EmployerReviewTrigger } from '@/components/EmployerCandidatePanel';
-import { EmployerLinkActions } from '@/components/EmployerLinkActions';
 import { SignOutButton } from '@/components/SignOutButton';
 import {
   candidatePage,
@@ -31,8 +28,10 @@ import { reminderOutcome, reminderOutcomeLine } from '@/lib/employer-volume/remi
 import { DEFAULT_MINUTES_PER_CV, actionLabel, responseRateLine, timeSavedLine } from '@/lib/employer-volume/strip';
 import { loadRoleStrip } from '@/lib/server/employer-role-strip';
 import { RoleCardTools } from '@/components/RoleCardTools';
+import { RoleNextActionControl } from '@/components/RoleNextActionControl';
 import { verifyInterview } from '@/lib/interview-token';
 import { configuredOrigin } from '@/lib/server/security';
+import { buildAttentionItems, filterCandidateSubmissions, resolveRoleNextAction } from '@/lib/recruiter-suite';
 import { processScreeningNotifications } from '@/lib/server/screening-notifications';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient, currentUser } from '@/lib/supabase/server';
@@ -51,6 +50,7 @@ type Pack = {
   expires_at: string;
   max_candidates: number;
   starts_used: number;
+  timezone?: string | null;
   reminders_enabled?: boolean | null;
   minutes_per_cv?: number | null;
 };
@@ -151,26 +151,28 @@ function decisionCopy(submission: SubmissionIndex) {
     ?? (submission.employer_reviewed_at ? 'Reviewed' : 'Waiting for review');
 }
 
-export default async function EmployerDashboardPage({ searchParams }: { searchParams: Promise<{ page?: string | string[]; roles?: string | string[]; rolePage?: string | string[] }> }) {
+export default async function EmployerDashboardPage({ searchParams }: { searchParams: Promise<{ page?: string | string[]; roles?: string | string[]; rolePage?: string | string[]; candidateStatus?: string | string[] }> }) {
   const user = await currentUser();
   if (!user) redirect('/sign-in?next=/employer');
   after(async () => { await processScreeningNotifications({ limit: 5 }); });
 
   const client = await createClient();
   const volume = employerVolumeEnabled();
-  const { data: packRows } = await client!.from('screening_packs')
-    .select(`id,public_code,workplace,signed_token,created_at,expires_at,max_candidates,starts_used${volume ? ',reminders_enabled,minutes_per_cv' : ''}`)
+  const { data: packRows, error: packError } = await client!.from('screening_packs')
+    .select(`id,public_code,workplace,signed_token,created_at,expires_at,max_candidates,starts_used,timezone${volume ? ',reminders_enabled,minutes_per_cv' : ''}`)
     .eq('employer_id', user.id)
     .order('created_at', { ascending: false });
   const packs = (packRows ?? []) as unknown as Pack[];
-  const { page, roles, rolePage } = await searchParams;
+  const { page, roles, rolePage, candidateStatus } = await searchParams;
+  const requestedCandidateStatus = Array.isArray(candidateStatus) ? candidateStatus[0] : candidateStatus;
+  const candidateFilter = requestedCandidateStatus === 'unreviewed' || requestedCandidateStatus === 'shortlisted' ? requestedCandidateStatus : 'all';
   const roleList = dashboardRolePage(packs, roles, rolePage);
   const packIds = packs.map((pack) => pack.id);
-  const { data: inviteRows } = volume && packIds.length
+  const { data: inviteRows, error: inviteError } = volume && packIds.length
     ? await client!.from('role_invites')
         .select('id,role_id,status,channel,first_reminder_at,second_reminder_at,completion_reminder_at,submitted_at')
         .in('role_id', packIds)
-    : { data: [] };
+    : { data: [], error: null };
   const invites = (inviteRows ?? []) as InviteRow[];
   const strips = new Map<string, Awaited<ReturnType<typeof loadRoleStrip>>>();
   if (volume) {
@@ -184,38 +186,39 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
     : { data: [] };
   const technicalAttempts = (technicalInterviewRows ?? []) as TechnicalAttempt[];
   const incompleteIds = technicalAttempts.filter((attempt) => !attempt.submitted_at).map((attempt) => attempt.id);
-  const { data: technicalAnswerRows } = admin && incompleteIds.length
+  const { data: technicalAnswerRows, error: technicalAnswerError } = admin && incompleteIds.length
     ? await admin.from('interview_answers')
         .select('interview_id,video_upload_status,updated_at')
         .in('interview_id', incompleteIds)
         .eq('video_upload_status', 'pending')
-    : { data: [] };
+    : { data: [], error: null };
   const technicalAnswers = (technicalAnswerRows ?? []) as TechnicalAnswer[];
   const staleBefore = Date.now() - 10 * 60 * 1_000;
   const interruptedInterviewIds = new Set(technicalAnswers
     .filter((answer) => Date.parse(answer.updated_at) <= staleBefore)
     .map((answer) => answer.interview_id));
-
-  const { data: interviewRows } = packIds.length
+  const { data: interviewRows, error: interviewError } = packIds.length
     ? await client!.from('interviews')
         .select(SUBMISSION_INDEX_COLUMNS)
         .in('screening_pack_id', packIds)
         .not('submitted_at', 'is', null)
         .order('submitted_at', { ascending: false })
-    : { data: [] };
+    : { data: [], error: null };
   const submissions = (interviewRows ?? []) as SubmissionIndex[];
-  const paging = candidatePage(page, submissions.length);
+  const candidateSubmissions = filterCandidateSubmissions(submissions, candidateFilter);
+  const paging = candidatePage(page, candidateSubmissions.length);
   const dashboardUrl = (candidatePageNumber: number, roleFilter = roleList.filter, rolePageNumber = roleList.paging.page, anchor = 'roles') =>
-    `/employer?page=${candidatePageNumber}&roles=${roleFilter}&rolePage=${rolePageNumber}#${anchor}`;
-  const { data: pageRows } = packIds.length && submissions.length
+    `/employer?page=${candidatePageNumber}&roles=${roleFilter}&rolePage=${rolePageNumber}${candidateFilter !== 'all' ? `&candidateStatus=${candidateFilter}` : ''}#${anchor}`;
+  const pageIds = candidateSubmissions.slice(paging.from, paging.to + 1).map((submission) => submission.id);
+  const { data: pageRows } = packIds.length && pageIds.length
     ? await client!.from('interviews')
         .select(SUBMISSION_ROW_COLUMNS)
-        .in('screening_pack_id', packIds)
+        .in('id', pageIds)
         .not('submitted_at', 'is', null)
         .order('submitted_at', { ascending: false })
-        .range(paging.from, paging.to)
     : { data: [] };
-  const pageSubmissions = (pageRows ?? []) as Submission[];
+  const loadedPageRows = (pageRows ?? []) as Submission[];
+  const pageSubmissions = pageIds.flatMap((id) => loadedPageRows.filter((submission) => submission.id === id));
 
   const readyToReview = submissions.filter((submission) => !submission.employer_reviewed_at);
   const queueIds = readyToReview.slice(0, 3).map((submission) => submission.id);
@@ -238,12 +241,24 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
 
   const summary = dashboardSummary(packs, submissions);
   const origin = configuredOrigin();
+  const { data: candidateQuestionRows, error: candidateQuestionError } = packIds.length
+    ? await client!.from('candidate_role_questions').select('id,role_id').in('role_id', packIds).is('resolved_at', null)
+    : { data: [], error: null };
+  const attention = buildAttentionItems({
+    pendingSubmissions: readyToReview.length,
+    unresolvedQuestions: candidateQuestionRows?.length ?? 0,
+    interruptedUploads: interruptedInterviewIds.size,
+    closingRoles: packs.map((pack) => ({
+      id: pack.id,
+      title: verifyInterview(pack.signed_token)?.title || 'Role work sample',
+      expiresAt: pack.expires_at,
+      timezone: pack.timezone || 'Asia/Dubai',
+    })),
+  });
+  const attentionFailed = Boolean(packError || interviewError || technicalAnswerError || candidateQuestionError || inviteError);
+  const dashboardCoreFailed = Boolean(packError || interviewError);
   const startedLastDay = technicalAttempts.filter((attempt) => Date.parse(attempt.started_at) >= Date.now() - 86_400_000).length;
   const unfinished = Math.max(0, technicalAttempts.length - submissions.length);
-  const interrupted = interruptedInterviewIds.size;
-  const closingWithoutCandidates = packs.find((pack) => packHealth(pack) === 'closing'
-    && !submissions.some((submission) => submission.screening_pack_id === pack.id));
-  const needsTodayCount = Number(Boolean(closingWithoutCandidates)) + Number(readyToReview.length > 0) + Number(interrupted > 0);
   const displayName = String(user.user_metadata?.full_name || user.email?.split('@')[0] || 'HR');
 
   return (
@@ -267,7 +282,7 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
           <time>{currentDate()}</time>
         </section>
 
-        <section className={styles.journeyCard} aria-labelledby="journey-heading">
+        {!dashboardCoreFailed && <section className={styles.journeyCard} aria-labelledby="journey-heading">
           <div className={styles.cardHeading}><p id="journey-heading">The journey</p><span>All time · all roles</span></div>
           <div className={styles.journey}>
             <article><strong>{technicalAttempts.length}</strong><h2>Started answering</h2><p>{startedLastDay} in the last 24 hours</p></article>
@@ -278,37 +293,12 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
             <ArrowRight aria-hidden="true" />
             <article><strong>{summary.shortlistedTotal}</strong><h2>Shortlisted</h2><p>{summary.notProceedingTotal} not proceeding</p></article>
           </div>
-        </section>
+        </section>}
 
+        <AttentionBriefing items={attention.items} total={attention.total} failed={attentionFailed} />
+
+        {!dashboardCoreFailed && <>
         <div className={styles.dashboardGrid}>
-          <section className={styles.panel} aria-labelledby="needs-heading">
-            <div className={styles.panelHeading}><h2 id="needs-heading">What needs you today</h2><span>{needsTodayCount} {needsTodayCount === 1 ? 'item' : 'items'}</span></div>
-            <div className={styles.taskList}>
-              {closingWithoutCandidates && (() => {
-                const role = verifyInterview(closingWithoutCandidates.signed_token)?.title || 'Work sample';
-                const url = `${origin}/s/${closingWithoutCandidates.public_code}`;
-                return (
-                  <article className={styles.taskWarning}>
-                    <Clock aria-hidden="true" /><div><strong>{role} closes {daysUntil(closingWithoutCandidates.expires_at) <= 1 ? 'tomorrow' : 'soon'}</strong><p>No candidates yet. Invite candidates before the link expires.</p></div>
-                    <a href={`mailto:?subject=${encodeURIComponent(`${role} interview invitation`)}&body=${encodeURIComponent(url)}`}><EnvelopeSimple aria-hidden="true" /> Invite candidates</a>
-                  </article>
-                );
-              })()}
-              {readyToReview.length > 0 && (
-                <article className={styles.taskPrimary}>
-                  <VideoCamera aria-hidden="true" /><div><strong>{readyToReview.length} new {readyToReview.length === 1 ? 'interview is' : 'interviews are'} ready to review</strong><p>Oldest has been waiting {relativeTime(readyToReview[readyToReview.length - 1].submitted_at)}.</p></div>
-                  <EmployerReviewTrigger interviewId={readyToReview[0].id} candidateLabel={detailRows.find((item) => item.id === readyToReview[0].id)?.candidate_name || 'candidate'}>Start reviewing</EmployerReviewTrigger>
-                </article>
-              )}
-              {interrupted > 0 && (
-                <article className={styles.taskNeutral}>
-                  <Warning aria-hidden="true" /><div><strong>Upload interrupted</strong><p>{interrupted} {interrupted === 1 ? 'candidate lost' : 'candidates lost'} connection during an answer.</p></div><Link href="/for-employers">Invite to retry</Link>
-                </article>
-              )}
-              {needsTodayCount === 0 && <div className={styles.calmState}><Check aria-hidden="true" weight="bold" /><span><strong>You are up to date</strong><small>There is nothing waiting for action.</small></span></div>}
-            </div>
-          </section>
-
           <section className={styles.panel} aria-labelledby="ready-heading">
             <div className={styles.panelHeading}><h2 id="ready-heading">Ready to review</h2><a href="#candidates">View all {readyToReview.length}</a></div>
             <div className={styles.candidateList}>
@@ -358,10 +348,11 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
               const roleInvites = invites.filter((invite) => invite.role_id === pack.id);
               const reminders = reminderOutcome(roleInvites);
               const remindersOn = pack.reminders_enabled !== false;
+              const nextAction = resolveRoleNextAction({ roleId: pack.id, state: status, submissionCount: packSubmissions.length, unreviewedCount: unreviewed, shortlistCount: shortlisted });
               return (
                 <article className={styles.roleRow} role="row" key={pack.id}>
                   <div role="cell">
-                    <strong>{role}</strong><small>{pack.workplace || 'Employer'}</small>
+                    <strong><Link href={`/employer/roles/${pack.id}`}>{role}</Link></strong><small>{pack.workplace || 'Employer'}</small>
                     {volume && (
                       <div className={styles.reminderRow}>
                         <form action={setRemindersEnabled}>
@@ -407,13 +398,8 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
                   <div role="cell"><span className={`${styles.packStatus} ${statusClass(status)}`}>{packStatusCopy[status]}</span></div>
                   <div role="cell" className={status === 'closing' ? styles.closingDate : undefined}>{status === 'closing' && daysUntil(pack.expires_at) <= 1 ? 'Tomorrow' : formatCloseDate(pack.expires_at)}</div>
                   <div role="cell" className={styles.roleActions}>
-                    {unreviewed > 0 && nextInterview ? (
-                      <EmployerReviewTrigger interviewId={nextInterview.id} candidateLabel={detailRows.find((item) => item.id === nextInterview.id)?.candidate_name || 'candidate'} className={styles.roleReviewButton}>Review {unreviewed} new</EmployerReviewTrigger>
-                    ) : ['active', 'closing'].includes(status) && packSubmissions.length === 0 ? (
-                      volume
-                        ? <Link href={`/employer/roles/${pack.id}/candidates/add`}><EnvelopeSimple aria-hidden="true" /> Add candidates</Link>
-                        : <><a href={`mailto:?subject=${encodeURIComponent(`${role} interview invitation`)}&body=${encodeURIComponent(url)}`}><EnvelopeSimple aria-hidden="true" /> Invite candidates</a><EmployerLinkActions url={url} /></>
-                    ) : packSubmissions.length > 0 ? <span className={styles.allReviewed}>All reviewed</span> : <span className={styles.allReviewed}>Link closed</span>}
+                    <RoleNextActionControl action={nextAction} invitationUrl={url} className={styles.roleReviewButton} />
+                    <small>{nextAction.supportingText}</small>
                     {volume && ['active', 'closing'].includes(status) && packSubmissions.length > 0 && (
                       <Link href={`/employer/roles/${pack.id}/candidates/add`}>Add candidates</Link>
                     )}
@@ -433,12 +419,13 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
 
         <section className={styles.rolesPanel} id="candidates" aria-labelledby="candidates-heading">
           <div className={styles.rolesHeading}>
-            <h2 id="candidates-heading">All candidates</h2>
-            <div className={styles.roleFilters} aria-label="Candidate counts">
-              <span className={styles.filterActive}>Submitted · {submissions.length}</span>
-              <span>Waiting · {readyToReview.length}</span>
+            <h2 id="candidates-heading">Candidate submissions</h2>
+            <nav className={styles.roleFilters} aria-label="Filter candidate submissions">
+              <Link href="/employer#candidates" aria-current={candidateFilter === 'all' ? 'page' : undefined} className={candidateFilter === 'all' ? styles.filterActive : undefined}>All · {submissions.length}</Link>
+              <Link href="/employer?candidateStatus=unreviewed#candidates" aria-current={candidateFilter === 'unreviewed' ? 'page' : undefined} className={candidateFilter === 'unreviewed' ? styles.filterActive : undefined}>Awaiting review · {readyToReview.length}</Link>
+              <Link href="/employer?candidateStatus=shortlisted#candidates" aria-current={candidateFilter === 'shortlisted' ? 'page' : undefined} className={candidateFilter === 'shortlisted' ? styles.filterActive : undefined}>Shortlisted · {summary.shortlistedTotal}</Link>
               {paging.lastPage && paging.lastPage > 1 && <span>Page {paging.page} of {paging.lastPage}</span>}
-            </div>
+            </nav>
           </div>
           <div className={styles.candidateList}>
             {pageSubmissions.map((submission) => {
@@ -463,7 +450,7 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
                 </article>
               );
             })}
-            {pageSubmissions.length === 0 && <div className={styles.calmState}><Check aria-hidden="true" weight="bold" /><span><strong>No submitted interviews yet</strong><small>Candidates appear here once they submit and consent.</small></span></div>}
+            {pageSubmissions.length === 0 && <div className={styles.calmState}><Check aria-hidden="true" weight="bold" /><span><strong>No submissions match this filter</strong><small>Candidates appear here only after they submit and consent.</small></span></div>}
           </div>
           {(paging.hasPrevious || paging.hasNext) && (
             <nav className={styles.pagination} aria-label="Candidate pages">
@@ -473,6 +460,7 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
             </nav>
           )}
         </section>
+        </>}
       </main>
     </div>
     </EmployerReviewPanelProvider>

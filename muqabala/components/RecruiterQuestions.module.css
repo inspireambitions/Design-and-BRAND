@@ -1,0 +1,26 @@
+.list { display: grid; gap: 1rem; }
+.card { display: grid; gap: 0.85rem; padding: 1rem; border: 1px solid #d5ded8; border-radius: 0.9rem; background: white; }
+.card header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.card header p, .card p { margin: 0; }
+.card header p { margin-top: 0.25rem; color: #536860; font-size: 0.82rem; }
+.card header > span { padding: 0.25rem 0.5rem; border-radius: 999px; background: #fff2c8; color: #795a00; font-size: 0.75rem; font-weight: 800; }
+.card header > span[data-resolved='true'] { background: #e8ede9; color: #536860; }
+.context { padding: 0.75rem; border-inline-start: 3px solid #8aa79d; background: #f5f8f7; }
+.context small { color: #536860; font-weight: 800; }
+.context p { margin-top: 0.25rem; }
+.card label { display: grid; gap: 0.4rem; font-weight: 800; }
+.card textarea, .card input { width: 100%; padding: 0.75rem; border: 1px solid #b9c6be; border-radius: 0.65rem; color: #16241f; font: inherit; resize: vertical; }
+.delivery { color: #536860; font-size: 0.82rem; line-height: 1.5; }
+.delivery a { color: #075e54; font-weight: 750; }
+.actions { display: flex; flex-wrap: wrap; gap: 0.55rem; }
+.actions button { min-height: 44px; padding: 0.6rem 0.8rem; border: 1px solid #b9c6be; border-radius: 0.6rem; background: #fff; color: #075e54; font: inherit; font-weight: 750; cursor: pointer; }
+.actions button:first-child { border-color: #0b7a6b; background: #0b7a6b; color: white; }
+.publicFact { padding: 0.75rem; border: 1px solid #d5ded8; border-radius: 0.65rem; background: #f7faf8; }
+.publicFact summary { min-height: 44px; font-weight: 800; cursor: pointer; }
+.publicFact p { margin-bottom: 0.75rem; color: #536860; font-size: 0.82rem; }
+.publicFact label + label { margin-top: 0.65rem; }
+.publicFact button { min-height: 44px; margin-top: 0.75rem; padding: 0.6rem 0.8rem; border: 1px solid #0b7a6b; border-radius: 0.6rem; background: #0b7a6b; color: white; font: inherit; font-weight: 750; cursor: pointer; }
+.publicFact button:disabled { opacity: 0.5; cursor: default; }
+.actions button:disabled { opacity: 0.5; cursor: default; }
+.message, .empty { color: #536860; }
+@media (max-width: 38rem) { .card header { flex-direction: column; } .actions { display: grid; } }

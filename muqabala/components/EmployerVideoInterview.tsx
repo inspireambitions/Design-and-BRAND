@@ -16,6 +16,7 @@ import { useLang } from './LanguageProvider';
 import { FocusedInterviewFooterGuard } from './FooterVisibility';
 import { hideEmployerInterviewFooter } from '@/lib/footer-visibility';
 import styles from './EmployerVideoInterview.module.css';
+import { CandidateRoleQuestions } from './CandidateRoleQuestions';
 import type { TranscriptSegment } from '@/lib/interviews';
 import { resolveScreeningTranscript } from '@/lib/screening-transcription';
 import { MicrophoneCheck } from './MicrophoneCheck';
@@ -193,6 +194,9 @@ type Props = {
   publicCode: string;
   availability?: 'active' | 'full';
   candidateEmail: string;
+  location?: string | null;
+  expiresAt: string;
+  timezone: string;
   /** Per-candidate invite token from the link query string. Binds the interview to its invite. */
   inviteToken?: string;
   /** Enables the adaptive Brain for new English interviews. */
@@ -247,6 +251,9 @@ export function EmployerVideoInterview({
   publicCode,
   availability = 'active',
   candidateEmail,
+  location = null,
+  expiresAt,
+  timezone,
   inviteToken,
   brainEnabled = false,
 }: Props) {
@@ -911,6 +918,14 @@ export function EmployerVideoInterview({
             <button type="button" className={styles.primary} disabled={candidateName.trim().length < 2} onClick={() => void testDevices()}>
               {c.test}
             </button>
+            <CandidateRoleQuestions
+              publicCode={publicCode}
+              roleTitle={lang === 'ar' ? role.titleAr : role.title}
+              location={location}
+              expiresAt={expiresAt}
+              timezone={timezone}
+              questionCount={questions.length}
+            />
             <p className={styles.footnote}>{c.employerReview}</p>
           </section>
         )}

@@ -15,6 +15,7 @@ import { Check, Play, X } from '@phosphor-icons/react';
 import { useRouter } from 'next/navigation';
 import { markInterviewReviewed, recordDecision } from '@/app/employer/actions';
 import { normaliseEmployerDecision, type DashboardDecision } from '@/lib/employer-dashboard';
+import { track } from '@/lib/analytics';
 import type { EmployerCandidateReviewPayload } from '@/lib/employer-review';
 import { EmployerReportVideo } from './EmployerReportVideo';
 import { useLang } from './LanguageProvider';
@@ -25,6 +26,8 @@ const ReviewPanelContext = createContext<OpenReview | null>(null);
 
 type SelectedReview = { interviewId: string; candidateLabel: string };
 type LoadState = 'loading' | 'ready' | 'error';
+type SummaryState = 'idle' | 'loading' | 'ready' | 'unavailable' | 'error';
+export type EmployerSummaryPoint = { text: string; questionIndex: number; sourceLabel: string };
 
 function formatDate(value: string, lang: 'en' | 'ar') {
   return new Intl.DateTimeFormat(lang === 'ar' ? 'ar-AE' : 'en-GB', {
@@ -34,7 +37,15 @@ function formatDate(value: string, lang: 'en' | 'ar') {
   }).format(new Date(value));
 }
 
-export function EmployerReviewPanelProvider({ children }: { children: ReactNode }) {
+export function EmployerReviewPanelProvider({
+  children,
+  fixtureData,
+  fixtureSummaryPoints,
+}: {
+  children: ReactNode;
+  fixtureData?: EmployerCandidateReviewPayload;
+  fixtureSummaryPoints?: EmployerSummaryPoint[];
+}) {
   const { lang, t } = useLang();
   const router = useRouter();
   const [selected, setSelected] = useState<SelectedReview | null>(null);
@@ -46,10 +57,15 @@ export function EmployerReviewPanelProvider({ children }: { children: ReactNode 
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
+  const [summaryReloadKey, setSummaryReloadKey] = useState(0);
+  const [summaryState, setSummaryState] = useState<SummaryState>('idle');
+  const [summaryPoints, setSummaryPoints] = useState<EmployerSummaryPoint[]>([]);
+  const [summaryReported, setSummaryReported] = useState(false);
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
   const openerRef = useRef<HTMLElement | null>(null);
   const scrollPositionRef = useRef({ x: 0, y: 0 });
+  const trackedReviewsRef = useRef(new Set<string>());
 
   const openReview = useCallback<OpenReview>((interviewId, candidateLabel, opener) => {
     openerRef.current = opener;
@@ -62,6 +78,9 @@ export function EmployerReviewPanelProvider({ children }: { children: ReactNode 
     setSaving(null);
     setStatus('');
     setError('');
+    setSummaryState('idle');
+    setSummaryPoints([]);
+    setSummaryReported(false);
   }, []);
 
   const close = useCallback(() => {
@@ -92,6 +111,12 @@ export function EmployerReviewPanelProvider({ children }: { children: ReactNode 
 
   useEffect(() => {
     if (!selected) return;
+    if (fixtureData) {
+      setData(fixtureData);
+      setDecision(normaliseEmployerDecision(fixtureData.currentDecision));
+      setLoadState('ready');
+      return;
+    }
     const controller = new AbortController();
     setLoadState('loading');
     setError('');
@@ -105,6 +130,13 @@ export function EmployerReviewPanelProvider({ children }: { children: ReactNode 
         setData(body);
         setDecision(normaliseEmployerDecision(body.currentDecision));
         setLoadState('ready');
+        if (!trackedReviewsRef.current.has(body.interviewId)) {
+          trackedReviewsRef.current.add(body.interviewId);
+          track('review_started', {
+            role_id: body.roleId,
+            duration_ms: Math.max(0, Date.now() - Date.parse(body.submittedAt)),
+          });
+        }
         if (!body.reviewedAt) {
           const marked = await markInterviewReviewed(body.interviewId);
           if ('error' in marked) setError(marked.error);
@@ -119,7 +151,45 @@ export function EmployerReviewPanelProvider({ children }: { children: ReactNode 
           : t('employerReviewLoadFailed'));
       });
     return () => controller.abort();
-  }, [reloadKey, router, selected, t]);
+  }, [fixtureData, reloadKey, router, selected, t]);
+
+  useEffect(() => {
+    if (!data || loadState !== 'ready') return;
+    if (fixtureSummaryPoints) {
+      setSummaryPoints(fixtureSummaryPoints);
+      setSummaryState(fixtureSummaryPoints.length > 0 ? 'ready' : 'unavailable');
+      return;
+    }
+    const controller = new AbortController();
+    setSummaryState('loading');
+    void fetch(`/api/employer/interviews/${encodeURIComponent(data.interviewId)}/summary`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lang }),
+      signal: controller.signal,
+    }).then(async (response) => {
+      const body = await response.json().catch(() => ({})) as { points?: EmployerSummaryPoint[]; unavailable?: boolean; error?: string };
+      if (!response.ok) throw new Error(body.error || 'summary_failed');
+      const points = Array.isArray(body.points) ? body.points : [];
+      setSummaryPoints(points);
+      setSummaryState(body.unavailable || points.length === 0 ? 'unavailable' : 'ready');
+    }).catch(() => {
+      if (!controller.signal.aborted) setSummaryState('error');
+    });
+    return () => controller.abort();
+  }, [data, fixtureSummaryPoints, lang, loadState, summaryReloadKey]);
+
+  async function reportSummary() {
+    if (!data || summaryReported) return;
+    try {
+      const response = await fetch(`/api/employer/interviews/${encodeURIComponent(data.interviewId)}/summary/feedback`, { method: 'POST' });
+      if (!response.ok) throw new Error('report_failed');
+      setSummaryReported(true);
+      track('summary_inaccuracy_reported', { role_id: data.roleId });
+    } catch {
+      setError(t('employerActionInterrupted'));
+    }
+  }
 
   function onDialogKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
     if (event.key === 'Escape') {
@@ -242,9 +312,20 @@ export function EmployerReviewPanelProvider({ children }: { children: ReactNode 
                     </Link>
                   </section>
 
+                  <section className={styles.answerSummary} aria-labelledby="answer-summary-title">
+                    <div className={styles.answerSummaryHeading}>
+                      <div><h3 id="answer-summary-title">{t('employerAnswerSummary')}</h3><small>{t('employerAnswerSummaryGenerated')}</small></div>
+                      {summaryState === 'ready' && <button type="button" onClick={() => void reportSummary()} disabled={summaryReported}>{summaryReported ? t('employerAnswerSummaryReported') : t('employerAnswerSummaryReport')}</button>}
+                    </div>
+                    {summaryState === 'loading' && <p role="status" aria-busy="true">{t('employerAnswerSummaryLoading')}</p>}
+                    {summaryState === 'unavailable' && <p>{t('employerAnswerSummaryUnavailable')}</p>}
+                    {summaryState === 'error' && <div className={styles.summaryError} role="status"><p>{t('employerAnswerSummaryFailed')}</p><button type="button" onClick={() => setSummaryReloadKey((value) => value + 1)}>{t('employerAnswerSummaryRetry')}</button></div>}
+                    {summaryState === 'ready' && <ul>{summaryPoints.map((point) => <li key={`${point.questionIndex}-${point.text}`}><p dir="auto">{point.text}</p><a href={`#candidate-answer-${point.questionIndex}`}>{point.sourceLabel}</a></li>)}</ul>}
+                  </section>
+
                   <section className={styles.answers} aria-label={t('employerReviewPanelTitle')}>
                     {data.answers.map((answer, index) => (
-                      <details className={styles.answer} key={answer.questionIndex} open={index === 0}>
+                      <details id={`candidate-answer-${answer.questionIndex}`} className={styles.answer} key={answer.questionIndex} open={index === 0 || summaryPoints.some((point) => point.questionIndex === answer.questionIndex)}>
                         <summary>
                           <span>{index + 1}</span>
                           <bdi dir="auto">{answer.questionText}</bdi>

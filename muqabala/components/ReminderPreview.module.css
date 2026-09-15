@@ -1,0 +1,28 @@
+.open, .send { min-height: 44px; padding: 0.65rem 1rem; border: 0; border-radius: 0.65rem; background: #0b7a6b; color: white; font: inherit; font-weight: 800; cursor: pointer; }
+.preview { display: grid; gap: 1rem; padding: 1rem; border: 1px solid #c9ddd5; border-radius: 0.9rem; background: #f7faf8; animation: reminder-in var(--motion-standard) ease-out both; }
+.preview header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.preview h3, .preview header p { margin: 0; }
+.preview header p { margin-top: 0.25rem; color: #536860; }
+.preview header > button { min-width: 44px; min-height: 44px; border: 0; background: transparent; color: #536860; font-size: 1.5rem; cursor: pointer; }
+.notice { margin: 0; padding: 0.75rem; border-inline-start: 3px solid #c58a1b; background: #fff8e7; }
+.recipients { display: grid; gap: 0.45rem; margin: 0; padding: 0; border: 0; }
+.recipients legend { font-weight: 800; }
+.recipients > p { margin: 0; color: #536860; font-size: 0.85rem; }
+.recipients label { display: flex; min-height: 48px; align-items: center; gap: 0.65rem; padding: 0.6rem; border: 1px solid #dbe5e1; border-radius: 0.6rem; background: white; }
+.recipients input { width: 1.15rem; height: 1.15rem; }
+.recipients span { display: grid; gap: 0.15rem; }
+.recipients small { color: #536860; }
+.excluded summary { min-height: 44px; color: #536860; font-weight: 750; cursor: pointer; }
+.excluded p { margin: 0.4rem 0; font-size: 0.85rem; }
+.meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem; margin: 0; }
+.meta div { padding: 0.65rem; border: 1px solid #dbe5e1; border-radius: 0.6rem; background: white; }
+.meta dt { color: #536860; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; }
+.meta dd { margin: 0.2rem 0 0; overflow-wrap: anywhere; font-size: 0.84rem; }
+.message { display: grid; gap: 0.4rem; font-weight: 800; }
+.message textarea { width: 100%; padding: 0.75rem; border: 1px solid #b9ccc4; border-radius: 0.65rem; background: white; color: #172620; font: inherit; line-height: 1.5; resize: vertical; }
+.linkNote, .result { margin: 0; color: #536860; font-size: 0.82rem; }
+.actions { display: flex; flex-wrap: wrap; gap: 0.65rem; }
+.send:disabled { opacity: 0.5; cursor: default; }
+@keyframes reminder-in { from { opacity: 0; transform: translateY(var(--motion-distance)); } }
+@media (max-width: 38rem) { .meta { grid-template-columns: 1fr; } .actions { display: grid; } }
+@media (prefers-reduced-motion: reduce) { .preview { animation: none; } }

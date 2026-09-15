@@ -11,7 +11,7 @@ export const getScreeningPack = cache(async (code: string) => {
 
   const admin = createAdminClient();
   if (!admin) return { status: 'unavailable' as const };
-  const columns = 'id, signed_token, workplace, expires_at, max_candidates, starts_used';
+  const columns = 'id, signed_token, workplace, expires_at, max_candidates, starts_used, location, timezone, published_facts';
   const openedAt = new Date().toISOString();
 
   // Freeze the signed questions before returning them. This conditional update
@@ -52,6 +52,10 @@ export const getScreeningPack = cache(async (code: string) => {
     signedToken: data.signed_token,
     workplace: payload.workplace || data.workplace || '',
     recruiterName: payload.recruiterName,
+    location: typeof data.location === 'string' ? data.location : null,
+    timezone: typeof data.timezone === 'string' ? data.timezone : 'Asia/Dubai',
+    publishedFacts: data.published_facts && typeof data.published_facts === 'object' ? data.published_facts : {},
+    expiresAt: data.expires_at as string,
     payload,
     role: roleFromToken(payload),
   };
