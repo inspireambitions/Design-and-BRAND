@@ -167,6 +167,13 @@ test('adaptive screening resumes safely after an answer was uploaded but the nex
   assert.match(brainRoute, /snapshot\.length === current\.current_question/);
 });
 
+test('the interview home link preserves the active-session leave warning', () => {
+  const flow = read('components/EmployerVideoInterview.tsx');
+  assert.match(flow, /addEventListener\('beforeunload', warn\)/);
+  assert.match(flow, /<a className=\{styles\.brand\} href="\/"/);
+  assert.doesNotMatch(flow, /<Link className=\{styles\.brand\} href="\/"/);
+});
+
 test('adaptive screening never presents a saved response as a failed upload', () => {
   const flow = read('components/EmployerVideoInterview.tsx');
   const brainRoute = read('app/api/screening/interviews/[id]/brain/route.ts');
