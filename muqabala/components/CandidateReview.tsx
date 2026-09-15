@@ -47,7 +47,7 @@ type Props = {
 const UNDO_MS = 10_000;
 
 const DECISION_LABEL: Record<ReviewDecision['decision'], string> = {
-  shortlist: 'Shortlisted',
+  shortlist: 'Added to shortlist',
   pass: 'Not proceeding',
   later: 'Hold',
 };
@@ -81,7 +81,7 @@ export function CandidateReview(props: Props) {
       if ('error' in result) { setError(result.error); return; }
       track('decision_made', employerVolumeProps(true, { role_id: props.roleId, type: decision }));
       if (undoTimer.current) clearTimeout(undoTimer.current);
-      setUndo({ decisionId: result.id, label: DECISION_LABEL[decision], until: Date.now() + UNDO_MS });
+      setUndo({ decisionId: result.id, label: decision === 'shortlist' ? t('employerAddedShortlist') : DECISION_LABEL[decision], until: Date.now() + UNDO_MS });
       undoTimer.current = setTimeout(() => { setUndo(null); goNext(); }, UNDO_MS);
     } catch {
       setError(t('employerActionInterrupted'));

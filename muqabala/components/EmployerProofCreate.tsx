@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { employerVolumeProps, track } from '@/lib/analytics';
 import { Brand } from './Brand';
 import { SkipLink } from './SkipLink';
@@ -16,6 +15,7 @@ import {
   marketingNav,
 } from '@/lib/marketing-content';
 import type { CatalogueStats } from '@/lib/catalogue-stats';
+import { CopyButton } from './CopyButton';
 import styles from './EmployerProofCreate.module.css';
 
 const MIN_ADVERT_CHARS = 120;
@@ -31,7 +31,6 @@ type LinkDetails = {
   maxCandidates: number;
 };
 
-type CopyTarget = 'link' | 'email' | 'invite' | 'recommend' | null;
 type Channel = 'email' | 'whatsapp';
 
 export type EmployerPageProps = {
@@ -239,7 +238,7 @@ export function EmployerProofCreate({
 
 function EmployerCreateForm({ volume }: { volume: boolean }) {
   const { lang, t } = useLang();
-  const router = useRouter();
+  const [step, setStep] = useState<0 | 1 | 2 | 3>(0);
   const [companyName, setCompanyName] = useState('');
   const [recruiterName, setRecruiterName] = useState('');
   const [jobTitle, setJobTitle] = useState('');
@@ -250,11 +249,24 @@ function EmployerCreateForm({ volume }: { volume: boolean }) {
   const [generated, setGenerated] = useState(false);
   const [creating, setCreating] = useState(false);
   const [linkDetails, setLinkDetails] = useState<LinkDetails | null>(null);
-  const [copied, setCopied] = useState<CopyTarget>(null);
   const [error, setError] = useState<'generate' | 'create' | null>(null);
+  const [validationError, setValidationError] = useState<'role' | 'questions' | null>(null);
   const [tooShort, setTooShort] = useState(false);
   const [channel, setChannel] = useState<Channel>('email');
   const [sendLang, setSendLang] = useState<Lang>(lang);
+  const headingRef = useRef<HTMLHeadingElement | null>(null);
+  const companyRef = useRef<HTMLInputElement | null>(null);
+  const titleRef = useRef<HTMLInputElement | null>(null);
+  const advertRef = useRef<HTMLTextAreaElement | null>(null);
+  const mounted = useRef(false);
+
+  useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    headingRef.current?.focus();
+  }, [step]);
 
   const companyReady = companyName.trim().length >= 2;
   const titleReady = jobTitle.trim().length >= 2;
@@ -287,6 +299,30 @@ function EmployerCreateForm({ volume }: { volume: boolean }) {
     setMaxCandidates(DEFAULT_MAX_CANDIDATES);
     setExpiryDays(DEFAULT_EXPIRY_DAYS);
     setLinkDetails(null);
+  }
+
+  function continueWizard() {
+    if (step === 0) {
+      if (!companyReady || !titleReady) {
+        setValidationError('role');
+        (companyReady ? titleRef.current : companyRef.current)?.focus();
+        return;
+      }
+      setValidationError(null);
+      setStep(1);
+      return;
+    }
+    if (step === 1) {
+      if (!jobReady) {
+        setValidationError('questions');
+        setTooShort(true);
+        advertRef.current?.focus();
+        return;
+      }
+      setValidationError(null);
+      setTooShort(false);
+      setStep(2);
+    }
   }
 
   async function generateJobDescription() {
@@ -326,7 +362,6 @@ function EmployerCreateForm({ volume }: { volume: boolean }) {
     setCreating(true);
     setError(null);
     setTooShort(false);
-    setCopied(null);
     try {
       const pack = await fetch('/api/screening/packs', {
         method: 'POST',
@@ -347,8 +382,7 @@ function EmployerCreateForm({ volume }: { volume: boolean }) {
       }
       setLinkDetails(packBody as LinkDetails);
       track('role_created', employerVolumeProps(volume, packBody.id ? { role_id: packBody.id } : {}));
-      // Volume flow: the role plan is confirmed, so go straight to Add candidates.
-      if (volume && packBody.id) router.push(`/employer/roles/${packBody.id}/candidates/add`);
+      setStep(3);
     } catch {
       setError('create');
     } finally {
@@ -356,99 +390,152 @@ function EmployerCreateForm({ volume }: { volume: boolean }) {
     }
   }
 
-  async function copyText(value: string, target: Exclude<CopyTarget, null>) {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(target);
-    } catch {
-      setCopied(null);
-    }
-  }
+  const stepLabels = [
+    t('proofWizardRole'),
+    t('proofWizardQuestions'),
+    t('proofWizardPreview'),
+    t('proofWizardShare'),
+  ];
 
   return (
-    <>
-      <form
+    <div className={styles.wizard}>
+      <nav className={styles.wizardProgress} aria-label={t('proofWizardLabel')}>
+        <ol>
+          {stepLabels.map((label, index) => (
+            <li key={label} data-state={index < step ? 'complete' : index === step ? 'current' : 'upcoming'} aria-current={index === step ? 'step' : undefined}>
+              <span aria-hidden="true">{index < step ? '✓' : index + 1}</span>
+              <bdi dir="auto">{label}</bdi>
+            </li>
+          ))}
+        </ol>
+        <p aria-live="polite">{withValues(t('proofWizardCurrent'), { current: step + 1, total: stepLabels.length, step: stepLabels[step] })}</p>
+      </nav>
+
+      {step < 3 && <form
         className={styles.form}
         onSubmit={(event) => {
           event.preventDefault();
-          void createLink();
+          if (step === 2) void createLink();
         }}
       >
-        <label className={styles.field}>
-          <span>{t('proofCompanyLabel')}</span>
-          <input
-            dir="auto"
-            value={companyName}
-            onChange={(event) => {
-              setCompanyName(event.target.value);
-              setGenerated(false);
-              setError(null);
-              setLinkDetails(null);
-            }}
-            minLength={2}
-            maxLength={80}
-            required
-            autoComplete="organization"
-            placeholder={t('proofCompanyPlaceholder')}
-          />
-        </label>
+        {step === 0 && <section className={styles.wizardPanel} aria-labelledby="wizard-role-heading">
+          <div className={styles.wizardHeading}>
+            <h3 ref={headingRef} id="wizard-role-heading" tabIndex={-1}>{t('proofWizardRoleTitle')}</h3>
+            <p>{t('proofWizardRoleBody')}</p>
+          </div>
+          <label className={styles.field}>
+            <span>{t('proofCompanyLabel')}</span>
+            <input
+              ref={companyRef}
+              dir="auto"
+              value={companyName}
+              onChange={(event) => {
+                setCompanyName(event.target.value);
+                setGenerated(false);
+                setError(null);
+                setValidationError(null);
+                setLinkDetails(null);
+              }}
+              minLength={2}
+              maxLength={80}
+              autoComplete="organization"
+              placeholder={t('proofCompanyPlaceholder')}
+              aria-invalid={validationError === 'role' && !companyReady}
+            />
+          </label>
+          <label className={styles.field}>
+            <span>{t('proofRecruiterLabel')}</span>
+            <input
+              dir="auto"
+              value={recruiterName}
+              onChange={(event) => {
+                setRecruiterName(event.target.value);
+                setError(null);
+                setLinkDetails(null);
+              }}
+              maxLength={80}
+              autoComplete="name"
+              placeholder={t('proofRecruiterPlaceholder')}
+            />
+          </label>
+          <label className={styles.field}>
+            <span>{t('proofJobTitleLabel')}</span>
+            <input
+              ref={titleRef}
+              dir="auto"
+              value={jobTitle}
+              onChange={(event) => {
+                setJobTitle(event.target.value);
+                setGenerated(false);
+                setError(null);
+                setValidationError(null);
+                setLinkDetails(null);
+              }}
+              minLength={2}
+              maxLength={120}
+              autoComplete="off"
+              placeholder={t('proofJobTitlePlaceholder')}
+              aria-invalid={validationError === 'role' && !titleReady}
+            />
+          </label>
+          {validationError === 'role' && <p className={styles.warning} role="alert">{t('proofWizardRoleError')}</p>}
+          <div className={styles.wizardActions}>
+            <button type="button" className={styles.submit} onClick={continueWizard}>{t('proofWizardContinue')}</button>
+          </div>
+        </section>}
 
-        <label className={styles.field}>
-          <span>{t('proofRecruiterLabel')}</span>
-          <input
-            dir="auto"
-            value={recruiterName}
-            onChange={(event) => {
-              setRecruiterName(event.target.value);
-              setError(null);
-              setLinkDetails(null);
-            }}
-            maxLength={80}
-            autoComplete="name"
-            placeholder={t('proofRecruiterPlaceholder')}
-          />
-        </label>
+        {step === 1 && <section className={styles.wizardPanel} aria-labelledby="wizard-questions-heading">
+          <div className={styles.wizardHeading}>
+            <h3 ref={headingRef} id="wizard-questions-heading" tabIndex={-1}>{t('proofWizardQuestionsTitle')}</h3>
+            <p>{t('proofWizardQuestionsBody')}</p>
+          </div>
+          <label className={styles.field}>
+            <span>{t('proofAdvertLabel')}</span>
+            <textarea
+              ref={advertRef}
+              dir="auto"
+              value={jobText}
+              onChange={(event) => {
+                setJobText(event.target.value);
+                setError(null);
+                setValidationError(null);
+                setLinkDetails(null);
+                if (tooShort && event.target.value.trim().length >= MIN_ADVERT_CHARS) setTooShort(false);
+              }}
+              minLength={MIN_ADVERT_CHARS}
+              maxLength={12_000}
+              rows={7}
+              placeholder={t('proofAdvertPlaceholder')}
+              aria-describedby="job-description-status"
+              aria-invalid={validationError === 'questions'}
+            />
+          </label>
+          <button type="button" className={styles.generate} disabled={!canGenerate} onClick={() => void generateJobDescription()}>
+            {generating ? t('proofGeneratingAdvert') : t('proofGenerateAdvert')}
+          </button>
+          <div id="job-description-status" className={styles.status} aria-live="polite">
+            <p>{jobReady ? (generated ? t('proofAdvertGenerated') : t('proofReadyToCreate')) : t('proofAddDescriptionNext')}</p>
+          </div>
+          {(tooShort || validationError === 'questions') && <p className={styles.warning} role="alert">{t('proofWizardQuestionsError')}</p>}
+          {error === 'generate' && <p className={styles.warning} role="alert">{t('proofGenerateFailed')}</p>}
+          <div className={styles.wizardActions}>
+            <button type="button" className={styles.secondaryButton} onClick={() => { setValidationError(null); setStep(0); }}>{t('proofWizardBack')}</button>
+            <button type="button" className={styles.submit} onClick={continueWizard}>{t('proofWizardContinue')}</button>
+          </div>
+        </section>}
 
-        <label className={styles.field}>
-          <span>{t('proofJobTitleLabel')}</span>
-          <input
-            dir="auto"
-            value={jobTitle}
-            onChange={(event) => {
-              setJobTitle(event.target.value);
-              setGenerated(false);
-              setError(null);
-              setLinkDetails(null);
-            }}
-            minLength={2}
-            maxLength={120}
-            required
-            autoComplete="off"
-            placeholder={t('proofJobTitlePlaceholder')}
-          />
-        </label>
-
-        <label className={styles.field}>
-          <span>{t('proofAdvertLabel')}</span>
-          <textarea
-            dir="auto"
-            value={jobText}
-            onChange={(event) => {
-              setJobText(event.target.value);
-              setError(null);
-              setLinkDetails(null);
-              if (tooShort && event.target.value.trim().length >= MIN_ADVERT_CHARS) setTooShort(false);
-            }}
-            minLength={MIN_ADVERT_CHARS}
-            maxLength={12_000}
-            rows={5}
-            required
-            placeholder={t('proofAdvertPlaceholder')}
-            aria-describedby="job-description-status"
-          />
-        </label>
-
-        <fieldset className={styles.linkSettings} aria-labelledby="link-settings-label">
+        {step === 2 && <section className={styles.wizardPanel} aria-labelledby="wizard-preview-heading">
+          <div className={styles.wizardHeading}>
+            <h3 ref={headingRef} id="wizard-preview-heading" tabIndex={-1}>{t('proofWizardPreviewTitle')}</h3>
+            <p>{t('proofWizardPreviewBody')}</p>
+          </div>
+          <dl className={styles.previewSummary}>
+            <div><dt>{t('proofWizardRoleSummary')}</dt><dd><bdi dir="auto">{jobTitle}</bdi> · <bdi dir="auto">{companyName}</bdi></dd></div>
+            <div><dt>{t('proofWizardSourceSummary')}</dt><dd dir="auto">{jobText}</dd></div>
+            <div><dt>{t('proofWizardLimitSummary')}</dt><dd>{maxCandidates}</dd></div>
+            <div><dt>{t('proofWizardExpirySummary')}</dt><dd suppressHydrationWarning>{plannedExpiryDate}</dd></div>
+          </dl>
+          <fieldset className={styles.linkSettings} aria-labelledby="link-settings-label">
           <div className={styles.linkSettingsHead}>
             <span id="link-settings-label">{t('proofLinkSettingsLabel')}</span>
             <button className={styles.linkSettingsReset} type="button" onClick={resetLinkSettings}>
@@ -489,52 +576,22 @@ function EmployerCreateForm({ volume }: { volume: boolean }) {
             </label>
           </div>
           <p>{t('proofLinkSettingsHelp')}</p>
-        </fieldset>
+          </fieldset>
+          <p className={styles.assurance}>{t('proofRecruiterValue')}</p>
+          {error === 'create' && <p className={styles.warning} role="alert">{t('proofCreateFailed')}</p>}
+          <div className={styles.wizardActions}>
+            <button type="button" className={styles.secondaryButton} disabled={creating} onClick={() => setStep(1)}>{t('proofWizardBack')}</button>
+            <button type="submit" className={styles.submit} disabled={!canCreate}>{creating ? t('proofCreating') : t('proofCreateAction')}</button>
+          </div>
+        </section>}
+      </form>}
 
-        <div className={styles.actions} aria-label={t('proofCreateStepsLabel')}>
-          <button
-            type="button"
-            className={styles.generate}
-            disabled={!canGenerate}
-            onClick={() => void generateJobDescription()}
-          >
-            <span className={styles.actionNumber} aria-hidden="true">1</span>
-            <span>{generating ? t('proofGeneratingAdvert') : t('proofGenerateAdvert')}</span>
-          </button>
-          <button type="submit" className={styles.submit} disabled={!canCreate}>
-            <span className={styles.actionNumber} aria-hidden="true">2</span>
-            <span>{creating ? t('proofCreating') : t('proofCreateAction')}</span>
-          </button>
-        </div>
-
-        <p className={styles.linkSummary} suppressHydrationWarning>
-          {t('proofLinkSettingsSummaryStart')} <strong>{maxCandidates}</strong>{' '}
-          {t('proofLinkSettingsSummaryMiddle')} <strong>{plannedExpiryDate}</strong>{t('proofLinkSettingsSummaryEnd')}
-        </p>
-
-        <div id="job-description-status" className={styles.status} aria-live="polite">
-          {!companyReady || !titleReady ? (
-            <p>{t('proofAddBasicsFirst')}</p>
-          ) : !jobReady ? (
-            <p>{t('proofAddDescriptionNext')}</p>
-          ) : (
-            <p>{generated ? t('proofAdvertGenerated') : t('proofReadyToCreate')}</p>
-          )}
-        </div>
-
-        <p className={styles.assurance}>{t('proofRecruiterValue')}</p>
-
-        <div className={styles.messages} aria-live="polite">
-          {tooShort && <p className={styles.warning}>{t('proofAdvertTooShort')}</p>}
-          {error === 'generate' && <p className={styles.warning}>{t('proofGenerateFailed')}</p>}
-          {error === 'create' && <p className={styles.warning}>{t('proofCreateFailed')}</p>}
-        </div>
-      </form>
-
-      {link && (
+      {link && step === 3 && (
         <section className={styles.linkPanel} aria-labelledby="candidate-link-heading">
           <p className={styles.eyebrow}>{t('proofSendKicker')}</p>
-          <h3 id="candidate-link-heading">{t('proofStepShare')}</h3>
+          <h3 ref={headingRef} id="candidate-link-heading" tabIndex={-1}>{t('proofWizardShareTitle')}</h3>
+          <p className={styles.linkNote}>{t('proofWizardShareBody')}</p>
+          <p className={styles.roleReady}><bdi dir="auto">{jobTitle}</bdi> · <bdi dir="auto">{companyName}</bdi></p>
           <p className={styles.linkText}>{link}</p>
           <p className={styles.linkNote}>
             {linkDetails && withValues(t('proofLinkReady'), {
@@ -584,12 +641,8 @@ function EmployerCreateForm({ volume }: { volume: boolean }) {
               <pre className={styles.invitePreview} dir={sendLang === 'ar' ? 'rtl' : 'ltr'}>{emailBody}</pre>
               <div className={styles.linkActions}>
                 <a href={mailto} className={styles.primaryButton}>{t('proofOpenEmail')}</a>
-                <button type="button" className={styles.secondaryButton} onClick={() => void copyText(`${emailSubject}\n\n${emailBody}`, 'email')}>
-                  {copied === 'email' ? t('proofCopiedEmail') : t('proofCopyEmail')}
-                </button>
-                <button type="button" className={styles.secondaryButton} onClick={() => void copyText(link, 'link')}>
-                  {copied === 'link' ? t('proofCopied') : t('proofCopyLink')}
-                </button>
+                <CopyButton className={styles.secondaryButton} value={`${emailSubject}\n\n${emailBody}`} label={t('proofCopyEmail')} successLabel={t('proofCopiedEmail')} />
+                <CopyButton className={styles.secondaryButton} value={link} label={t('proofCopyLink')} successLabel={t('proofCopied')} />
               </div>
               <p className={styles.linkNote}>{t('proofBccNote')}</p>
               <p className={styles.linkNote}>{t('proofFromNote')}</p>
@@ -607,29 +660,26 @@ function EmployerCreateForm({ volume }: { volume: boolean }) {
                 >
                   {t('proofWhatsAppInvite')}
                 </a>
-                <button type="button" className={styles.secondaryButton} onClick={() => void copyText(whatsAppBody, 'invite')}>
-                  {copied === 'invite' ? t('proofCopiedInvite') : t('proofCopyInvite')}
-                </button>
-                <button type="button" className={styles.secondaryButton} onClick={() => void copyText(link, 'link')}>
-                  {copied === 'link' ? t('proofCopied') : t('proofCopyLink')}
-                </button>
+                <CopyButton className={styles.secondaryButton} value={whatsAppBody} label={t('proofCopyInvite')} successLabel={t('proofCopiedInvite')} />
+                <CopyButton className={styles.secondaryButton} value={link} label={t('proofCopyLink')} successLabel={t('proofCopied')} />
               </div>
               <p className={styles.linkNote}>{t('proofWhatsAppNote')}</p>
             </>
           )}
 
-          <Link href="/employer" className={styles.textLink}>{t('proofOpenDashboard')}</Link>
+          <div className={styles.shareNextActions}>
+            {volume && linkDetails?.id && <Link href={`/employer/roles/${linkDetails.id}/candidates/add`} className={styles.primaryButton}>{t('proofStepShare')}</Link>}
+            <Link href="/employer" className={styles.textLink}>{t('proofOpenDashboard')}</Link>
+          </div>
 
           <div className={styles.recommend}>
             <h3>{t('proofRecommendTitle')}</h3>
             <p>{t('proofRecommendBody')}</p>
             <pre className={styles.invitePreview}>{recommendNote}</pre>
-            <button type="button" className={styles.secondaryButton} onClick={() => void copyText(recommendNote, 'recommend')}>
-              {copied === 'recommend' ? t('proofCopiedRecommend') : t('proofCopyRecommend')}
-            </button>
+            <CopyButton className={styles.secondaryButton} value={recommendNote} label={t('proofCopyRecommend')} successLabel={t('proofCopiedRecommend')} />
           </div>
         </section>
       )}
-    </>
+    </div>
   );
 }

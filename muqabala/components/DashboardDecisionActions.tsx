@@ -14,10 +14,10 @@ type Props = {
   currentDecision: string | null;
 };
 
-function statusCopy(decision: DashboardDecision) {
-  if (decision === 'shortlisted') return 'Shortlisted';
-  if (decision === 'not_proceeding') return 'Not proceeding';
-  if (decision === 'hold') return 'Hold';
+function statusCopy(decision: DashboardDecision, copy: { shortlist: string; pass: string; hold: string }) {
+  if (decision === 'shortlisted') return copy.shortlist;
+  if (decision === 'not_proceeding') return copy.pass;
+  if (decision === 'hold') return copy.hold;
   return '';
 }
 
@@ -26,13 +26,16 @@ export function DashboardDecisionActions({ interviewId, candidateLabel, currentD
   const { t } = useLang();
   const [selected, setSelected] = useState<DashboardDecision>(() => normaliseEmployerDecision(currentDecision));
   const [busy, setBusy] = useState<DashboardDecision>(null);
-  const [message, setMessage] = useState(() => statusCopy(normaliseEmployerDecision(currentDecision)));
+  const decisionCopy = { shortlist: t('employerShortlist'), pass: t('employerNotProceeding'), hold: t('employerHoldStatus') };
+  const [message, setMessage] = useState(() => statusCopy(normaliseEmployerDecision(currentDecision), decisionCopy));
   const [error, setError] = useState('');
   useEffect(() => {
     const decision = normaliseEmployerDecision(currentDecision);
     setSelected(decision);
-    setMessage(statusCopy(decision));
-  }, [currentDecision]);
+    setMessage(statusCopy(decision, decisionCopy));
+  // Translation values are stable for a selected site language.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentDecision, t]);
 
   async function decide(decision: 'shortlist' | 'pass') {
     const normalised = decision === 'shortlist' ? 'shortlisted' : 'not_proceeding';
@@ -40,19 +43,19 @@ export function DashboardDecisionActions({ interviewId, candidateLabel, currentD
 
     setBusy(normalised);
     setError('');
-    setMessage('Saving...');
+    setMessage(t('employerSaving'));
     try {
       const result = await recordDecision({ interviewId, decision });
       if ('error' in result) {
-        setMessage(statusCopy(selected));
+        setMessage(statusCopy(selected, decisionCopy));
         setError(result.error);
         return;
       }
       setSelected(normalised);
-      setMessage(`${statusCopy(normalised)} saved`);
+      setMessage(decision === 'shortlist' ? t('employerAddedShortlist') : t('employerDecisionSaved'));
       router.refresh();
     } catch {
-      setMessage(statusCopy(selected));
+      setMessage(statusCopy(selected, decisionCopy));
       setError(t('employerActionInterrupted'));
       router.refresh();
     } finally {
@@ -64,7 +67,7 @@ export function DashboardDecisionActions({ interviewId, candidateLabel, currentD
     <div className={styles.decisionActions}>
       <button
         type="button"
-        aria-label={`Shortlist ${candidateLabel}`}
+        aria-label={`${t('employerShortlist')}: ${candidateLabel}`}
         aria-pressed={selected === 'shortlisted'}
         disabled={Boolean(busy) || selected === 'shortlisted'}
         onClick={() => void decide('shortlist')}
@@ -73,7 +76,7 @@ export function DashboardDecisionActions({ interviewId, candidateLabel, currentD
       </button>
       <button
         type="button"
-        aria-label={`Mark ${candidateLabel} as not proceeding`}
+        aria-label={`${t('employerNotProceeding')}: ${candidateLabel}`}
         aria-pressed={selected === 'not_proceeding'}
         disabled={Boolean(busy) || selected === 'not_proceeding'}
         onClick={() => void decide('pass')}

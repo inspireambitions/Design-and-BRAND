@@ -251,8 +251,14 @@ export function MarketingHome({ roles, stats, schools=false }: { roles: Marketin
   );
 }
 
-export function MarketingInfoPage({ content }: { content: Record<'en' | 'ar', MarketingPageContent> }) {
-  const { lang } = useLang();
+function directAnswer(body: string) {
+  const match = body.match(/^.*?[.!؟](?:\s|$)/u);
+  if (!match || match[0].trim().length === body.trim().length) return { lead: body, details: '' };
+  return { lead: match[0].trim(), details: body.slice(match[0].length).trim() };
+}
+
+export function MarketingInfoPage({ content, disclosures = false }: { content: Record<'en' | 'ar', MarketingPageContent>; disclosures?: boolean }) {
+  const { lang, t } = useLang();
   const c = content[lang];
   return (
     <div className="marketing-site">
@@ -264,18 +270,29 @@ export function MarketingInfoPage({ content }: { content: Record<'en' | 'ar', Ma
           <p className="marketing-lede">{c.intro}</p>
         </section>
         <section className="info-sections marketing-wrap">
-          {c.sections.map((section) => (
-            <article className="info-section" key={section.title}>
-              <h2>{section.title}</h2>
-              <p>{section.body}</p>
-              {section.href && section.linkLabel && (
-                <a href={section.href} className="marketing-text-link" target="_blank" rel="noreferrer">
-                  {section.linkLabel}
-                </a>
-              )}
-              {section.points && <ul>{section.points.map((point) => <li key={point}>{point}</li>)}</ul>}
-            </article>
-          ))}
+          {c.sections.map((section) => {
+            const answer = directAnswer(section.body);
+            return (
+              <article className={`info-section${disclosures ? ' info-section-disclosure' : ''}`} key={section.title}>
+                <h2>{section.title}</h2>
+                <div className="info-answer">
+                  <p>{disclosures ? answer.lead : section.body}</p>
+                  {disclosures && answer.details && (
+                    <details>
+                      <summary>{t('faqMoreDetails')}</summary>
+                      <p>{answer.details}</p>
+                    </details>
+                  )}
+                  {section.href && section.linkLabel && (
+                    <a href={section.href} className="marketing-text-link" target="_blank" rel="noreferrer">
+                      {section.linkLabel}
+                    </a>
+                  )}
+                  {section.points && <ul>{section.points.map((point) => <li key={point}>{point}</li>)}</ul>}
+                </div>
+              </article>
+            );
+          })}
         </section>
         <section className="info-cta marketing-wrap">
           <h2>{lang === 'ar' ? 'تدرّب عندما تكون جاهزاً.' : 'Practice when you are ready.'}</h2>

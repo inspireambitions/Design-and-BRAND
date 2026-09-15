@@ -25,6 +25,7 @@ test('employer delivery SQL executes against an isolated PostgreSQL engine', asy
     await db.exec(read('supabase/migrations/20260902120000_employer_volume_invites.sql'));
     await db.exec(read('supabase/migrations/20260905061702_employer_invite_delivery_reliability.sql'));
     await db.exec(read('supabase/migrations/20260905130942_employer_message_acceptance_atomic.sql'));
+    await db.exec(read('supabase/migrations/20260914103000_harden_invite_submission_trigger.sql'));
     const reset = async () => {
       await db.exec('truncate public.employer_message_outbox, public.role_invites, public.interviews, public.screening_packs cascade');
       await db.query("insert into public.screening_packs(id,employer_id,expires_at) values ($1,$2,now()+interval '14 days')", [role, owner]);
@@ -32,6 +33,20 @@ test('employer delivery SQL executes against an isolated PostgreSQL engine', asy
     const queue = async rows => (await db.query('select public.queue_employer_invites($1,$2,$3::jsonb) as result', [role, owner, JSON.stringify(rows)])).rows[0].result;
     const count = async table => Number((await db.query(`select count(*) as count from public.${table}`)).rows[0].count);
     const claim = async (lease = randomUUID()) => (await db.query('select * from public.claim_employer_messages(50,$1,$2)', [lease, role])).rows;
+
+    await t.test('the trigger-only definer function is not executable by browser JWT roles', async () => {
+      for (const roleName of ['anon', 'authenticated']) {
+        const result = await db.query(
+          "select has_function_privilege($1, 'public.mark_invite_submitted()', 'execute') as allowed",
+          [roleName],
+        );
+        assert.equal(result.rows[0].allowed, false);
+      }
+      const service = await db.query(
+        "select has_function_privilege('service_role', 'public.mark_invite_submitted()', 'execute') as allowed",
+      );
+      assert.equal(service.rows[0].allowed, true);
+    });
 
     await t.test('repeated and mixed contacts keep one original token and one outbox job', async () => {
       await reset();

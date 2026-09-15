@@ -20,13 +20,13 @@ The branch is ready for an updated protected preview after the final commit and 
 |---|---|
 | Clean dependency install | Pass, 1,432 packages audited |
 | Dependency audit | Pass, 0 vulnerabilities |
-| ESLint | Pass, 0 errors; 83 existing warnings |
+| ESLint | Pass, 0 errors; 86 existing warnings after merging the latest base branch |
 | TypeScript | Pass |
-| Full resilience suite | Pass, 548/548 |
+| Full resilience suite | Pass, 558/558 |
 | Copy and Arabic parity | Pass, 9/9 |
 | Employer navigation regression | Pass, 24/24 targeted tests |
 | Next.js production build | Pass, 136 pages generated in the independently verified clean build |
-| Bundle budget | Pass, 69 catalogue pages; maximum 198.3 KB gzipped against a strict 200 KB limit |
+| Bundle budget | Pass, 69 catalogue pages; largest entry displayed as 200.0 KB after rounding and remained below the strict 200 KB byte limit |
 
 The sandboxed no-network build generated 116 static pages because it could not fetch live CMS guide entries. The independent clean build with CMS access generated 136 pages; both builds completed successfully.
 
@@ -40,7 +40,7 @@ The production build was started locally with the Educators feature enabled and 
 - Main content, pilot form and sample report were present.
 - Mobile document width was 390 for a 390 viewport; desktop document width was 1440 for a 1440 viewport.
 - No uncaught browser exceptions were recorded.
-- One canceled React Server Component fetch (`net::ERR_ABORTED`) occurred during navigation and one unused CSS-preload warning was logged; neither prevented rendering or interaction.
+- One navigation-related React Server Component fetch was canceled with `net::ERR_ABORTED`; no uncaught exception or browser log warning was recorded, and rendering was unaffected.
 - Screenshots: `schools-quality-20260915-mobile.png` and `schools-quality-20260915-desktop.png` in this evidence folder.
 
 These are browser viewport checks. They do not replace tests on physical iPhone Safari or Android Chrome.

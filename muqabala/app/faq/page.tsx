@@ -9,5 +9,5 @@ export const metadata: Metadata = {
 };
 
 export default function FaqPage() {
-  return <MarketingInfoPage content={infoPages.faq} />;
+  return <MarketingInfoPage content={infoPages.faq} disclosures />;
 }

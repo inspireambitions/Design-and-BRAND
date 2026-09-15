@@ -24,6 +24,7 @@
     "check:question-copy": "node scripts/check-candidate-question-copy.mjs",
     "validate:question-bank": "node --experimental-strip-types scripts/validate-question-bank",
     "test:universal-media-browser": "node scripts/verify-browser-media.mjs",
+    "test:interaction-browser": "node scripts/verify-interactions-browser.mjs",
     "gate:universal-gold": "node --experimental-strip-types scripts/universal-gold-gate.mjs",
     "eval:universal": "node --experimental-strip-types scripts/universal-eval.mjs",
     "load:test": "k6 run scripts/load/interview-journey.js",

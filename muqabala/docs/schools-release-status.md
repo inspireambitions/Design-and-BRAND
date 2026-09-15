@@ -17,7 +17,7 @@ Updated 15 September 2026. This is the current evidence boundary for the Educato
 - The institution page now shows privacy-safe participation totals and active assignment dates. It does not show drafts, answers, feedback, evidence or adviser comments.
 - Migration `20260914052511_schools_dashboard_performance.sql` adds the missing Schools foreign-key indexes and optimises three RLS policies without changing their access rules.
 - This migration must remain on staging until Astra has reviewed the pull request and the owner has approved any production release.
-- The full automated suite passes 548 of 548 tests. ESLint passes with zero errors and 83 visible warnings. TypeScript, the production build, release ancestry and the bundle limit pass.
+- The full automated suite passes 558 of 558 tests after merging the latest base branch. ESLint passes with zero errors and 86 visible warnings. TypeScript, the 136-page production build, release ancestry and the bundle limit pass.
 - A clean dependency install reports zero vulnerabilities after the patched `adm-zip` transitive version was pinned.
 - An isolated Supabase schema-and-operations drill applied all eleven Schools migrations and passed populated synthetic mail, retention, privacy, idempotency and role-isolation checks. This is not yet proof of an actual production-backup restore.
 - Lighthouse accessibility is 100 on the public Schools page, student home, cohort page, review queue and institution administration page.

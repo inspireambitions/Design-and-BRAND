@@ -88,11 +88,11 @@ test('video signing failure and media failure both allow a fresh playback reques
   view = h.render(props); assert.equal(view.props.src, 'https://example.test/video-3');
 });
 
-test('rejected dashboard decision exits saving state and Hold remains visible', async () => {
+test('rejected dashboard decision exits saving state and the translated Hold status remains visible', async () => {
   const h = await harness('DashboardDecisionActions', 'DashboardDecisionActions', { recordDecision: async () => { throw Error('network'); } });
   const props = { interviewId: 'test', candidateLabel: 'test', currentDecision: 'later' };
   let view = h.render(props);
-  assert.equal(nodes(view, n => n.props?.role === 'status')[0].props.children, 'Hold');
+  assert.equal(nodes(view, n => n.props?.role === 'status')[0].props.children, 'employerHoldStatus');
   nodes(view, n => n.type === 'button')[0].props.onClick(); await tick();
   view = h.render(props);
   assert.equal(nodes(view, n => n.type === 'button')[0].props.disabled, false);

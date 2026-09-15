@@ -213,7 +213,9 @@ test('decision vocabulary means the same thing in every employer surface', () =>
   assert.equal(reportDecisionLabel('PASS'), 'Not proceeding');
   assert.match(candidateReviewSource, /pass: 'Not proceeding'/);
   assert.match(candidateReviewSource, />Not proceeding<\/button>/);
-  assert.match(dashboardActionsSource, /'not_proceeding'\) return 'Not proceeding'/);
+  assert.match(dashboardActionsSource, /'not_proceeding'\) return copy\.pass/);
+  assert.match(dashboardActionsSource, /t\('employerNotProceeding'\)/);
+  assert.match(dashboardActionsSource, /t\('employerAddedShortlist'\)/);
   assert.doesNotMatch(reportViewSource, /['"]Pass(?:ed)?['"]/);
   const rendered = evaluationPdfLines(report({ decision: {
     outcome: 'PASS',
@@ -246,6 +248,14 @@ test('server failures have structured monitoring without candidate content', () 
   assert.match(cronAuthSource, /cron_secret_missing/);
   assert.match(cronAuthSource, /status: 503/);
   assert.doesNotMatch(cronAuthSource, /interviewId|candidate|transcript/i);
+});
+
+test('safe report fallbacks and rejected cron probes are operational events, not error issues', async () => {
+  const languageSource = await readFile(new URL('../lib/server/evaluation-report-language.ts', import.meta.url), 'utf8');
+  assert.match(languageSource, /evidence_line_fallback_used/);
+  assert.doesNotMatch(languageSource, /reportOperationalFailure\('evidence_line_rejected'/);
+  assert.match(cronAuthSource, /reportOperationalEvent\('cron_request_rejected'/);
+  assert.doesNotMatch(cronAuthSource, /reportOperationalFailure\([^\n]*invalid_authorisation/);
 });
 
 test('online and print report text remains readable', () => {

@@ -33,8 +33,8 @@
   ],
   "observations": [
     "One navigation-related React Server Component fetch was canceled with net::ERR_ABORTED.",
-    "One unused CSS preload warning was logged.",
-    "Neither observation prevented the page from rendering or caused an uncaught exception."
+    "No uncaught exception or browser log warning was recorded.",
+    "The canceled navigation fetch did not prevent the page from rendering."
   ],
   "screenshots": [
     "schools-quality-20260915-mobile.png",
