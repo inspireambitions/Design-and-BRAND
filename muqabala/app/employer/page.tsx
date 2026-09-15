@@ -13,6 +13,7 @@ import {
   Warning,
 } from '@phosphor-icons/react/dist/ssr';
 import { DashboardDecisionActions } from '@/components/DashboardDecisionActions';
+import { EmployerReviewPanelProvider, EmployerReviewTrigger } from '@/components/EmployerCandidatePanel';
 import { EmployerLinkActions } from '@/components/EmployerLinkActions';
 import { SignOutButton } from '@/components/SignOutButton';
 import {
@@ -35,7 +36,7 @@ import { configuredOrigin } from '@/lib/server/security';
 import { processScreeningNotifications } from '@/lib/server/screening-notifications';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient, currentUser } from '@/lib/supabase/server';
-import { reviewInterview, setMinutesPerCv, setRemindersEnabled } from './actions';
+import { setMinutesPerCv, setRemindersEnabled } from './actions';
 import styles from './EmployerDashboard.module.css';
 
 export const dynamic = 'force-dynamic';
@@ -246,6 +247,7 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
   const displayName = String(user.user_metadata?.full_name || user.email?.split('@')[0] || 'HR');
 
   return (
+    <EmployerReviewPanelProvider>
     <div className={styles.page}>
       <header className={styles.header}>
         <Link href="/" className={styles.brand} aria-label="Muqabala home">
@@ -295,7 +297,7 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
               {readyToReview.length > 0 && (
                 <article className={styles.taskPrimary}>
                   <VideoCamera aria-hidden="true" /><div><strong>{readyToReview.length} new {readyToReview.length === 1 ? 'interview is' : 'interviews are'} ready to review</strong><p>Oldest has been waiting {relativeTime(readyToReview[readyToReview.length - 1].submitted_at)}.</p></div>
-                  <form action={reviewInterview}><input type="hidden" name="interviewId" value={readyToReview[0].id} /><button type="submit">Start reviewing</button></form>
+                  <EmployerReviewTrigger interviewId={readyToReview[0].id} candidateLabel={detailRows.find((item) => item.id === readyToReview[0].id)?.candidate_name || 'candidate'}>Start reviewing</EmployerReviewTrigger>
                 </article>
               )}
               {interrupted > 0 && (
@@ -318,7 +320,7 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
                   <article className={styles.candidateRow} key={submission.id}>
                     <span className={styles.avatar} aria-hidden="true">{initials(submission.candidate_name)}</span>
                     <div><h3>{submission.candidate_name || 'Candidate'} · {submission.role_title}</h3><p>{pack?.workplace || 'Employer'} · submitted {relativeTime(submission.submitted_at)} · {candidateAnswers.length} answers, {duration} min</p></div>
-                    <form action={reviewInterview}><input type="hidden" name="interviewId" value={submission.id} /><button className={styles.watchButton} type="submit"><Play aria-hidden="true" weight="fill" /> Watch recording</button></form>
+                    <EmployerReviewTrigger interviewId={submission.id} candidateLabel={submission.candidate_name || 'candidate'} className={styles.watchButton}><Play aria-hidden="true" weight="fill" /> Watch recording</EmployerReviewTrigger>
                     <DashboardDecisionActions
                       interviewId={submission.id}
                       candidateLabel={submission.candidate_name || 'candidate'}
@@ -383,7 +385,7 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
                             ))}
                           </dl>
                           {strip.unreviewed > 0 && nextInterview
-                            ? <form action={reviewInterview}><input type="hidden" name="interviewId" value={nextInterview.id} /><button type="submit" className={styles.stripAction}>{actionLabel(strip)}</button></form>
+                            ? <EmployerReviewTrigger interviewId={nextInterview.id} candidateLabel={detailRows.find((item) => item.id === nextInterview.id)?.candidate_name || 'candidate'} className={styles.stripAction}>{actionLabel(strip)}</EmployerReviewTrigger>
                             : <Link href={`/employer/roles/${pack.id}/candidates/add`} className={styles.stripAction}>{actionLabel(strip)}</Link>}
                           <form action={setMinutesPerCv} className={styles.timeSaved}>
                             <span>{timeSavedLine(strip, minutes)}</span>
@@ -406,7 +408,7 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
                   <div role="cell" className={status === 'closing' ? styles.closingDate : undefined}>{status === 'closing' && daysUntil(pack.expires_at) <= 1 ? 'Tomorrow' : formatCloseDate(pack.expires_at)}</div>
                   <div role="cell" className={styles.roleActions}>
                     {unreviewed > 0 && nextInterview ? (
-                      <form action={reviewInterview}><input type="hidden" name="interviewId" value={nextInterview.id} /><button type="submit">Review {unreviewed} new</button></form>
+                      <EmployerReviewTrigger interviewId={nextInterview.id} candidateLabel={detailRows.find((item) => item.id === nextInterview.id)?.candidate_name || 'candidate'} className={styles.roleReviewButton}>Review {unreviewed} new</EmployerReviewTrigger>
                     ) : ['active', 'closing'].includes(status) && packSubmissions.length === 0 ? (
                       volume
                         ? <Link href={`/employer/roles/${pack.id}/candidates/add`}><EnvelopeSimple aria-hidden="true" /> Add candidates</Link>
@@ -450,9 +452,9 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
                     <h3>{submission.candidate_name || 'Candidate'} · {submission.role_title}</h3>
                     <p>{pack?.workplace || 'Employer'} · submitted {relativeTime(submission.submitted_at)} · {candidateAnswers.length} answers, {duration} min · {decisionCopy(submission)}</p>
                   </div>
-                  {submission.employer_reviewed_at
-                    ? <Link className={styles.watchButton} href={`/employer/candidates/${submission.id}/evaluation`}>View evaluation</Link>
-                    : <form action={reviewInterview}><input type="hidden" name="interviewId" value={submission.id} /><button className={styles.watchButton} type="submit"><Play aria-hidden="true" weight="fill" /> Watch recording</button></form>}
+                  <EmployerReviewTrigger interviewId={submission.id} candidateLabel={submission.candidate_name || 'candidate'} className={styles.watchButton}>
+                    {!submission.employer_reviewed_at ? <><Play aria-hidden="true" weight="fill" /> Watch recording</> : undefined}
+                  </EmployerReviewTrigger>
                   <DashboardDecisionActions
                     interviewId={submission.id}
                     candidateLabel={submission.candidate_name || 'candidate'}
@@ -473,5 +475,6 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
         </section>
       </main>
     </div>
+    </EmployerReviewPanelProvider>
   );
 }

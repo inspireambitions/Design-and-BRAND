@@ -312,6 +312,7 @@ export function InterviewFlow({
   const [feedback, setFeedback] = useState<AnswerFeedback | null>(null);
   const [streamingFeedback, setStreamingFeedback] = useState<PartialFeedback | null>(null);
   const [isScoring, setIsScoring] = useState(false);
+  const [feedbackWaitLong, setFeedbackWaitLong] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [scoringError, setScoringError] = useState<ScoringError | null>(null);
   const [retrySeconds, setRetrySeconds] = useState<number | null>(null);
@@ -340,6 +341,7 @@ export function InterviewFlow({
   const dictationRef = useRef<SpeechSession | null>(null);
   const audioCaptureRef = useRef<AudioCapture | null>(null);
   const transcriptionAbortRef = useRef<AbortController | null>(null);
+  const scoringAbortRef = useRef<AbortController | null>(null);
   const recorderRef = useRef<AnswerRecorder | null>(null);
   const meterRef = useRef<LevelMeter | null>(null);
   const captureLibsRef = useRef<CaptureLibs | null>(null);
@@ -513,6 +515,15 @@ export function InterviewFlow({
       import('./ReportShareActions'),
     ]).catch(() => {});
   }, [stage]);
+
+  useEffect(() => {
+    if (!isScoring) {
+      setFeedbackWaitLong(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setFeedbackWaitLong(true), 8_000);
+    return () => window.clearTimeout(timer);
+  }, [isScoring]);
 
   const restoreDraft = useCallback((draft: InterviewSessionDraft) => {
     const restoredQuestions = draft.questionSnapshot.length ? draft.questionSnapshot : activeQuestions;
@@ -1232,6 +1243,7 @@ export function InterviewFlow({
     // Live sittings bank the score and move on; streaming would reveal nothing.
     const streaming = FEEDBACK_STREAMING_ENABLED && mode === 'guided';
     const controller = new AbortController();
+    scoringAbortRef.current = controller;
     const timeoutId = window.setTimeout(() => controller.abort(), streaming ? CLIENT_SCORING_TIMEOUT_MS : 45_000);
     const tappedAt = performance.now();
     let firstBlockAt: number | null = null;
@@ -1326,6 +1338,7 @@ export function InterviewFlow({
       }
     } finally {
       window.clearTimeout(timeoutId);
+      if (scoringAbortRef.current === controller) scoringAbortRef.current = null;
       scoringInFlightRef.current = false;
       setIsScoring(false);
     }
@@ -1757,6 +1770,18 @@ export function InterviewFlow({
         {' · '}
         <span aria-label={`${t('question')} ${progressLabel}`}>{progressLabel}</span>
       </p>
+      {stage !== 'check' && stage !== 'done' && (
+        <ol className="flow-stage-list" aria-label={t('progressTitle')}>
+          {[t('question'), t('yourAnswer'), t('reviewTypedAnswer'), t('feedbackArriving')].map((label, stepIndex) => {
+            const currentStep = stage === 'prep' ? 0 : stage === 'record' ? 1 : stage === 'review' ? 2 : 3;
+            return (
+              <li key={label} data-state={stepIndex < currentStep ? 'complete' : stepIndex === currentStep ? 'current' : 'upcoming'} aria-current={stepIndex === currentStep ? 'step' : undefined}>
+                <span aria-hidden="true">{stepIndex < currentStep ? '✓' : stepIndex + 1}</span>{label}
+              </li>
+            );
+          })}
+        </ol>
+      )}
       {serverAttemptId && stage !== 'check' && stage !== 'done' && syncState !== 'idle' && (
         <p className={`tiny ${syncState === 'error' ? 'notice notice-warn' : ''}`} role="status">
           {syncState === 'syncing' ? t('progressSyncing') : syncState === 'saved' ? t('progressSaved') : t('progressSaveFailed')}
@@ -2019,7 +2044,7 @@ export function InterviewFlow({
 
       {/* ---------- preparation ---------- */}
       {stage === 'prep' && (
-        <div className="stack">
+        <div className="stack flow-stage-view">
           {quietFallbackNotice}
           {/* The selector never reappears on its own. "Change mode" opens it
               inline; choosing a card closes it and asks for permission then. */}
@@ -2082,7 +2107,7 @@ export function InterviewFlow({
 
       {/* ---------- recording ---------- */}
       {stage === 'record' && (
-        <div className="stack">
+        <div className="stack flow-stage-view">
           {quietFallbackNotice}
           <div className="card stack">
             <p className="eyebrow">{questionEyebrow}</p>
@@ -2282,7 +2307,7 @@ export function InterviewFlow({
 
       {/* ---------- review before scoring ---------- */}
       {stage === 'review' && (
-        <div className="stack">
+        <div className="stack flow-stage-view">
           {previousAnswerRecap}
           <div className="card stack">
             <p className="eyebrow">
@@ -2365,6 +2390,25 @@ export function InterviewFlow({
                 )}
               </div>
             )}
+            {isScoring && (
+              <div className="feedback-loading stack-sm" role="status" aria-live="polite" aria-busy="true">
+                <strong>{t('scoring')}</strong>
+                <p className="tiny">{t('feedbackProcessingBody')}</p>
+                <div className="skeleton-block" aria-hidden="true">
+                  <span className="skeleton-line" />
+                  <span className="skeleton-line" />
+                  <span className="skeleton-line skeleton-line-short" />
+                </div>
+                {feedbackWaitLong && (
+                  <div className="stack-sm feedback-long-wait">
+                    <p className="tiny">{t('scoreTimeoutBody')}</p>
+                    <button type="button" className="btn btn-ghost btn-small" onClick={() => scoringAbortRef.current?.abort()}>
+                      {t('feedbackStopWaiting')}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
             {!transcribing && transcript.trim().length === 0 && (
               <p className="tiny" role="status">{t('answerRequired')}</p>
             )}
@@ -2393,14 +2437,14 @@ export function InterviewFlow({
 
       {/* ---------- feedback, arriving ---------- */}
       {stage === 'feedback' && !feedback && streamingFeedback && (
-        <div className="stack">
+        <div className="stack flow-stage-view">
           <StreamingFeedbackCard partial={streamingFeedback} attempt={attemptCount} />
         </div>
       )}
 
       {/* ---------- feedback ---------- */}
       {stage === 'feedback' && feedback && (
-        <div className="stack">
+        <div className="stack flow-stage-view">
           <FeedbackCard feedback={feedback} attempt={attemptCount} />
           {answers.length === 0 && practiceSitting && hasScoredImprovement(previousTry?.feedback, feedback) && (
             <KeepFeedbackSlot

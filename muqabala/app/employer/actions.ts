@@ -41,6 +41,22 @@ export async function reviewInterview(formData: FormData) {
   redirect(`/employer/interviews/${owned.interviewId}`);
 }
 
+/** Marks an employer-owned submission as reviewed after its panel loads. */
+export async function markInterviewReviewed(interviewId: string): Promise<{ ok: true } | { error: string }> {
+  const owned = await ownedSubmittedInterview(interviewId);
+  if (!owned) return { error: 'This candidate is not available.' };
+  const admin = createAdminClient();
+  if (!admin) return { error: 'Employer review storage is not configured.' };
+  const { error } = await admin
+    .from('interviews')
+    .update({ employer_reviewed_at: new Date().toISOString() })
+    .eq('id', owned.interviewId)
+    .is('employer_reviewed_at', null);
+  if (error) return { error: 'The review status could not be saved.' };
+  revalidatePath('/employer');
+  return { ok: true };
+}
+
 /**
  * Signs one recording only when the employer taps play. The report page
  * renders transcript and AI notes without any media request; this keeps the

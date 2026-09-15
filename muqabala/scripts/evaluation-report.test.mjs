@@ -213,7 +213,9 @@ test('decision vocabulary means the same thing in every employer surface', () =>
   assert.equal(reportDecisionLabel('PASS'), 'Not proceeding');
   assert.match(candidateReviewSource, /pass: 'Not proceeding'/);
   assert.match(candidateReviewSource, />Not proceeding<\/button>/);
-  assert.match(dashboardActionsSource, /'not_proceeding'\) return 'Not proceeding'/);
+  assert.match(dashboardActionsSource, /'not_proceeding'\) return copy\.pass/);
+  assert.match(dashboardActionsSource, /t\('employerNotProceeding'\)/);
+  assert.match(dashboardActionsSource, /t\('employerAddedShortlist'\)/);
   assert.doesNotMatch(reportViewSource, /['"]Pass(?:ed)?['"]/);
   const rendered = evaluationPdfLines(report({ decision: {
     outcome: 'PASS',

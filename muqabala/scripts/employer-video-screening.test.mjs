@@ -186,7 +186,7 @@ test('adaptive screening never presents a saved response as a failed upload', ()
   assert.match(employerBridge, /status: 'unscored'/);
 });
 
-test('employer creation form generates the description before unlocking the link action', () => {
+test('employer creation wizard validates role and question details before creating the link', () => {
   const form = read('components/EmployerProofCreate.tsx');
   const styles = read('components/EmployerProofCreate.module.css');
   const copy = read('lib/i18n.ts');
@@ -197,8 +197,11 @@ test('employer creation form generates the description before unlocking the link
   assert.match(form, /const canCreate = companyReady && titleReady && jobReady && settingsReady/);
   assert.match(form, /type="submit" className=\{styles\.submit\} disabled=\{!canCreate\}/);
   assert.ok(generatePosition >= 0 && createPosition > generatePosition);
-  assert.match(styles, /\.actions\s*\{[\s\S]*grid-template-columns:/);
-  assert.match(styles, /@media \(max-width: 40rem\)[\s\S]*\.heroActions,\s*\.actions,\s*\.linkActions\s*\{[\s\S]*grid-template-columns: 1fr;/);
+  assert.match(form, /proofWizardRole[\s\S]*proofWizardQuestions[\s\S]*proofWizardPreview[\s\S]*proofWizardShare/);
+  assert.match(form, /if \(step === 0\)[\s\S]*setStep\(1\)[\s\S]*if \(step === 1\)[\s\S]*setStep\(2\)/);
+  assert.match(form, /headingRef\.current\?\.focus\(\)/);
+  assert.match(styles, /\.wizardActions\s*\{[\s\S]*justify-content: flex-end/);
+  assert.match(styles, /@media \(max-width: 40rem\)[\s\S]*\.wizardActions\s*\{[\s\S]*grid-template-columns: 1fr;/);
   assert.match(form, /t\('proofRecruiterValue'\)/);
   assert.match(form, /const \[recruiterName, setRecruiterName\] = useState\(''\)/);
   assert.match(form, /recruiterName: recruiterName\.trim\(\) \|\| undefined/);
@@ -207,6 +210,7 @@ test('employer creation form generates the description before unlocking the link
   assert.match(form, /proofRecommendMessage/);
   assert.match(form, /proofEmailSubject/);
   assert.match(form, /mailto:\?subject=/);
+  assert.match(form, /<CopyButton[\s\S]*successLabel=\{t\('proofCopied'\)\}/);
   assert.match(copy, /Learn how each candidate would approach the role before you shortlist\./);
   assert.match(copy, /Your job description is saved\. Please try again\./);
   assert.doesNotMatch(copy, /Check the job description and try again\./);

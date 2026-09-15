@@ -129,7 +129,7 @@ export function FeedbackCard({
   const sayNext = limitSentences(feedback.coachTip);
 
   return (
-    <div className="card stack">
+    <div className="card stack feedback-ready">
       {scored ? (
         <div className="score-head">
           <ScoreRing value={feedback.score} />
