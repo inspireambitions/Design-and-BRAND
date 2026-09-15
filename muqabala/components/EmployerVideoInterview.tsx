@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import type { Role } from '@/lib/roles';
 import { startLevelMeter, startVideoAnswerRecording, type RecordedVideo, type VideoAnswerRecorder } from '@/lib/media';
 import { startDictation, type SpeechSession } from '@/lib/speech';
@@ -842,10 +843,10 @@ export function EmployerVideoInterview({
     <main className={styles.page} dir={dir}>
       <FocusedInterviewFooterGuard active={hideEmployerInterviewFooter(stage)} />
       <header className={styles.header}>
-        <a className={styles.brand} href="/" aria-label="Muqabala home">
+        <Link className={styles.brand} href="/" aria-label="Muqabala home">
           <span className={styles.mark} aria-hidden="true">م</span>
           <span>Muqabala</span>
-        </a>
+        </Link>
         <button
           type="button"
           className={styles.language}

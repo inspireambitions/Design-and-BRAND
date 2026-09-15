@@ -38,6 +38,6 @@ export function SchoolsQuestionEditor({cohortId,roles}:{cohortId:string;roles:{i
     {[0,1,2,3].map(i=><fieldset key={i}><legend>Rubric element {i+1}</legend><label>Element name<input name={'label'+i} required maxLength={200}/></label>
       <label>Evidence to look for<textarea name={'description'+i} required maxLength={600}/></label></fieldset>)}
     <label>Follow-up if the student cannot think of an example<textarea name="followUp" required maxLength={800}/></label>
-    <p>Describe evidence in an answer. Never assess the student's personal traits or supply a finished answer.</p>
+    <p>Describe evidence in an answer. Never assess the student’s personal traits or supply a finished answer.</p>
     <button>Approve question version</button><p role="status">{message}</p></form></details>;
 }

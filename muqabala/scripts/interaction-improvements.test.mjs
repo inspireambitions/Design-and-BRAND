@@ -17,7 +17,9 @@ test('dashboard candidate review is an accessible, state-preserving side panel',
   assert.match(panel, /aria-modal="true"/);
   assert.match(panel, /event\.key === 'Escape'/);
   assert.match(panel, /event\.key !== 'Tab'/);
-  assert.match(panel, /openerRef\.current\?\.focus\(\)/);
+  assert.match(panel, /scrollPositionRef\.current = \{ x: window\.scrollX, y: window\.scrollY \}/);
+  assert.match(panel, /openerRef\.current\?\.focus\(\{ preventScroll: true \}\)/);
+  assert.match(panel, /window\.scrollTo\(scrollPositionRef\.current\.x, scrollPositionRef\.current\.y\)/);
   assert.match(panel, /window\.confirm\(t\('employerReviewUnsaved'\)\)/);
   assert.match(panel, /addEventListener\('beforeunload'/);
   assert.match(panel, /document\.body\.style\.overflow = 'hidden'/);
