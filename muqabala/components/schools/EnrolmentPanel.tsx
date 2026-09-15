@@ -25,7 +25,7 @@ export function SchoolsEnrolmentPanel({cohortId,students,initialOpen,initialCode
         <label>Account method<select value={mode} onChange={event=>setMode(event.target.value)}><option value="email">Institution email</option><option value="pseudonymous">Email-free account</option></select></label>
         {mode==='email'&&<label>Student email<input type="email" value={email} onChange={event=>setEmail(event.target.value)} required/></label>}</>:
         <><label>Student<select value={studentId} onChange={event=>setStudentId(event.target.value)} required><option value="">Choose a student</option>{students.map(student=><option value={student.student_user_id} key={student.student_user_id}>{student.display_name}</option>)}</select></label>
-          <label><input type="checkbox" required checked={checked} onChange={event=>setChecked(event.target.checked)}/> I verified this student's identity using our institution's recovery procedure</label></>}
+          <label><input type="checkbox" required checked={checked} onChange={event=>setChecked(event.target.checked)}/> I verified this student’s identity using our institution’s recovery procedure</label></>}
       <button disabled={busy}>Create private student link</button>
     </form><p role="status">{message}</p>{link&&<label>Copy this private link<input readOnly value={link} onFocus={event=>event.target.select()}/></label>}
     <details><summary>Add students by email</summary><form method="post" onSubmit={async event=>{event.preventDefault();const form=new FormData(event.currentTarget);setBusy(true);setMessage('');setBatchLinks([]);try{

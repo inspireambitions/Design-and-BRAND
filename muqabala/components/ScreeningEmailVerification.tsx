@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { probeScreeningRecordingStore } from '@/lib/screening-draft-store';
 import { useLang } from './LanguageProvider';
 import styles from './EmployerVideoInterview.module.css';
@@ -89,7 +90,7 @@ export function ScreeningEmailVerification({ publicCode, companyName, roleTitle,
   return (
     <main className={styles.page} dir={dir}>
       <header className={styles.header}>
-        <a className={styles.brand} href="/" aria-label="Muqabala home"><span className={styles.mark} aria-hidden="true">م</span><span>Muqabala</span></a>
+        <Link className={styles.brand} href="/" aria-label="Muqabala home"><span className={styles.mark} aria-hidden="true">م</span><span>Muqabala</span></Link>
         <button type="button" className={styles.language} onClick={() => setLang(lang === 'en' ? 'ar' : 'en')}>{lang === 'en' ? 'العربية' : 'English'}</button>
       </header>
       <div className={styles.shell}>

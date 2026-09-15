@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "check:bundle": "node scripts/check-bundle-size.mjs",
     "test:security": "node --experimental-strip-types --test --test-isolation=none scripts/account-security.test.mjs scripts/employer-dashboard.test.mjs scripts/employer-video-screening.test.mjs scripts/google-analytics.test.mjs scripts/interview-plan.test.mjs scripts/rate-limit.test.mjs scripts/rating-feedback.test.mjs scripts/screening-notifications.test.mjs scripts/screening-pack-request.test.mjs",
@@ -58,6 +58,8 @@
     "@types/pdfkit": "^0.17.6",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "eslint": "^9.39.2",
+    "eslint-config-next": "^16.3.3",
     "sanity": "^6.11.0",
     "supabase": "^2.116.0",
     "typescript": "^5.7.0"

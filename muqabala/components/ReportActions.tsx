@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { t } from '@/lib/i18n';
 
 type ExistingShare = { id: string; expires_at: string };
@@ -104,10 +105,10 @@ export function ReportActions({ interviewId, roleId, roleTitle, language, initia
     <div className="report-actions stack no-print">
       <section className="report-next-actions" aria-labelledby="report-next-title">
         <h2 id="report-next-title">{tr('reportNextActionsTitle')}</h2>
-        <a className="btn btn-primary report-practise-again" href={practiceHref}>
+        <Link className="btn btn-primary report-practise-again" href={practiceHref}>
           {tr(roleId === 'custom' ? 'practiceAgain' : 'practiceRoleAgain')}
-        </a>
-        <a className="report-home-link" href="/">{tr('returnHome')}</a>
+        </Link>
+        <Link className="report-home-link" href="/">{tr('returnHome')}</Link>
       </section>
 
       <section className="report-coaching" aria-labelledby="report-coaching-title">
