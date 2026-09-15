@@ -266,10 +266,10 @@ Score only the distinct evidence that answers the question. Do not reward length
  */
 async function scoreViaOpenRouter(userPrompt: string): Promise<ParsedFeedback> {
   const model = process.env.SCORING_MODEL || 'openai/gpt-5.6-sol';
-  // Reasoning effort is benchmarked, not guessed: default medium, switchable
-  // via env so medium vs high can be compared with the consistency gate.
-  const rawEffort = process.env.SCORING_REASONING || 'medium';
-  const effort = ['low', 'medium', 'high'].includes(rawEffort) ? rawEffort : 'medium';
+  // Keep provider failover on the same measured setting as direct OpenAI. A
+  // fallback must not silently restore the slower incident-causing default.
+  const rawEffort = process.env.SCORING_REASONING || 'low';
+  const effort = ['low', 'medium', 'high'].includes(rawEffort) ? rawEffort : 'low';
   const response = await fetchProviderWithRetry('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
