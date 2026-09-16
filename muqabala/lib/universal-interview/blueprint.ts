@@ -142,23 +142,49 @@ export function fallbackPlan(blueprint: DiscoveredCompetency[], profile: Candida
   const situational = blueprint.find((competency) => competency.family === 'cognitive') ?? fourth;
   const bank = pack.question_bank;
 
+  const isEarlyCareer = profile.experience_level === 'ENTRY' || !!profile.academic_field;
+
+  const introText = profile.career_change
+    ? 'Why is this role the right next step in your career change?'
+    : isEarlyCareer
+      ? 'What projects, academic work or practical experiences best prepare you for this role?'
+      : 'What experience from your background is most relevant to this role?';
+
+  const q2Text = isEarlyCareer
+    ? 'What project, academic or practical challenge best shows how you tackled a difficult task?'
+    : 'What work example best shows how you handled a difficult task?';
+
+  const q3Text = isEarlyCareer
+    ? 'Which project or practical example best shows how you solved an analytical problem?'
+    : 'Which work example best shows how you solved a problem?';
+
+  const q4Text = isEarlyCareer
+    ? 'Describe one challenging situation you navigated during your studies, project work or employment?'
+    : 'Describe one difficult situation you handled at work?';
+
+  const q5Text = isEarlyCareer
+    ? 'What challenging disagreement or difference in perspective have you handled in a team or project?'
+    : (bank[0]?.candidate_text ?? 'What challenging disagreement have you handled at work?');
+
+  const q7Text = isEarlyCareer
+    ? 'What outcome or result from your projects or practical work are you most proud of?'
+    : 'What result best shows the value of your work?';
+
   return [
     question(
       1,
-      profile.career_change
-        ? 'Why is this role the right next step in your career change?'
-        : 'What experience from your background is most relevant to this role?',
+      introText,
       'INTRODUCTION',
       motivation,
       profile.career_change ? 'CAREER_COHERENCE' : 'ROLE_RELEVANCE',
       profile.experience_level,
     ),
-    question(2, 'What work example best shows how you handled a difficult task?', questionTypeFor(first), first, first.id, profile.experience_level),
-    question(3, 'Which work example best shows how you solved a problem?', questionTypeFor(second), second, second.id, profile.experience_level),
-    question(4, 'Describe one difficult situation you handled at work?', questionTypeFor(third), third, third.id, profile.experience_level),
-    question(5, bank[0]?.candidate_text ?? 'What challenging disagreement have you handled at work?', 'BEHAVIOURAL', behavioural, 'CHALLENGE_OR_CONFLICT', profile.experience_level),
+    question(2, q2Text, questionTypeFor(first), first, first.id, profile.experience_level),
+    question(3, q3Text, questionTypeFor(second), second, second.id, profile.experience_level),
+    question(4, q4Text, questionTypeFor(third), third, third.id, profile.experience_level),
+    question(5, q5Text, 'BEHAVIOURAL', behavioural, 'CHALLENGE_OR_CONFLICT', profile.experience_level),
     question(6, bank[1]?.candidate_text ?? 'What would you do first if your priorities changed suddenly?', 'SITUATIONAL', situational, 'SITUATIONAL_JUDGEMENT', profile.experience_level),
-    question(7, 'What result best shows the value of your work?', questionTypeFor(fourth), fourth, fourth.id, profile.experience_level),
+    question(7, q7Text, questionTypeFor(fourth), fourth, fourth.id, profile.experience_level),
     question(8, 'What example best shows your fit for this role?', questionTypeFor(fifth), fifth, 'HIGHEST_VALUE_UNCOVERED', profile.experience_level),
   ];
 }

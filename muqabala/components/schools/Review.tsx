@@ -18,10 +18,37 @@ export function SchoolsReview({attemptId,initial}:{attemptId:string;initial:{sta
       setUndo(operation==='review');setMessage(operation==='review'?'Review saved. Undo is available for 10 seconds.':'Previous review restored.');
     }catch(error){setMessage(error instanceof Error?error.message:'Could not save. Please retry.');}finally{setBusy(false);}
   }
-  return <section className="schools-card"><h2>Adviser view of this assignment</h2>
-    <label htmlFor="adviser-view">Your view</label><select id="adviser-view" value={state} onChange={e=>setState(e.target.value)}>
-      <option value="on_track">On track</option><option value="needs_more">Needs more</option><option value="discuss">Discuss</option></select>
-    <label htmlFor="adviser-comment">Comment, up to 280 characters</label><textarea id="adviser-comment" maxLength={280} value={comment} onChange={e=>setComment(e.target.value)}/>
-    <div className="schools-actions"><button disabled={busy} onClick={()=>void send('review')}>Save review</button>
-      {undo&&<button disabled={busy} onClick={()=>void send('undo_review')}>Undo</button>}</div><p role="status">{message}</p></section>;
+  return (
+    <section className="schools-card">
+      <h2>Adviser Review &amp; Student Feedback</h2>
+      <label htmlFor="adviser-view">Internal Review Status (Adviser view only)</label>
+      <select id="adviser-view" value={state} onChange={(e) => setState(e.target.value)}>
+        <option value="on_track">On track</option>
+        <option value="needs_more">Needs more evidence</option>
+        <option value="discuss">Schedule discussion</option>
+      </select>
+      <label htmlFor="adviser-comment">
+        Student-Facing Formative Feedback <span style={{ fontWeight: 'normal', color: '#64748b' }}>(Visible directly to student on their private report)</span>
+      </label>
+      <textarea
+        id="adviser-comment"
+        maxLength={280}
+        value={comment}
+        placeholder="Provide constructive, encouraging guidance on how to strengthen evidence or clarify STAR structure..."
+        onChange={(e) => setComment(e.target.value)}
+        rows={3}
+      />
+      <div className="schools-actions">
+        <button disabled={busy} onClick={() => void send('review')}>
+          Save Student Feedback
+        </button>
+        {undo && (
+          <button disabled={busy} onClick={() => void send('undo_review')}>
+            Undo
+          </button>
+        )}
+      </div>
+      <p role="status">{message}</p>
+    </section>
+  );
 }

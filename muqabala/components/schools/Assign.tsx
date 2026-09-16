@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { INSTITUTIONAL_INDUSTRIES, STANDARD_INSTITUTIONAL_COMPETENCIES, extractCompetenciesFromJobText } from '@/lib/schools/types';
+import { INSTITUTIONAL_INDUSTRIES, STANDARD_INSTITUTIONAL_COMPETENCIES, extractCompetenciesWithMetadata } from '@/lib/schools/types';
 
 type Question = {
   id: string;
@@ -74,7 +74,15 @@ export function SchoolsAssign({
       setMessage('Please paste a job description or key responsibilities first.');
       return;
     }
-    const extracted = extractCompetenciesFromJobText(jobDescription);
+    const { competencies: extracted, arabicDetected } = extractCompetenciesWithMetadata(jobDescription);
+    if (arabicDetected && extracted.length === 0) {
+      setMessage('Automated keyword suggestions are not available for Arabic job descriptions. Please select or enter competencies manually, or let Muqabala propose them using the interview context.');
+      return;
+    }
+    if (extracted.length === 0) {
+      setMessage('No strong competency suggestions found. Add competencies manually or let Muqabala propose them using the interview context.');
+      return;
+    }
     const existing = competencies
       .split(',')
       .map((c) => c.trim())

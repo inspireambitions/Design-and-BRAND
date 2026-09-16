@@ -22,7 +22,7 @@ export default async function StudentReport({params}:{params:Promise<{attemptId:
     <SchoolsReadMarker attemptId={attempt.id} feedback={attempt.feedback_status==='ready'} reviewRevision={review?.revision??null}/>
     <SchoolsFeedback attemptId={attempt.id} status={attempt.feedback_status} detail={attempt.evidence_detail} covered={attempt.evidence_covered} assignmentId={attempt.assignment_id} rubrics={rubrics} previousAttempt={prevAttempt}/>
     {!!corrections?.length&&<section><h2>Adviser evidence corrections</h2><ul>{corrections.map((correction,index)=><li key={index}>Question {correction.question_index+1}, {correction.rubric_element}: {correction.corrected_present?'present':'absent'}. {correction.reason}</li>)}</ul></section>}
-    <section id="adviser-comment"><h2>Adviser view of this assignment</h2><p>{review?({on_track:'On track',needs_more:'Needs more',discuss:'Discuss'}[review.state as 'on_track'|'needs_more'|'discuss']):'Not reviewed'}</p>{review?.comment&&<p>{review.comment}</p>}</section>
-    <section><h2>Adviser support</h2><p>{support?'Status: '+support.status:'No support request.'}</p>{support?.note&&<p>{support.note}</p>}</section>
+    <section id="adviser-comment"><h2>Adviser Feedback</h2><p>Status: {review?({on_track:'On track',needs_more:'Needs more evidence',discuss:'Discussion recommended'}[review.state as 'on_track'|'needs_more'|'discuss']):'Not reviewed yet'}</p>{review?.comment&&<p style={{background:'#f8fafc',padding:'12px',borderRadius:'6px',borderLeft:'3px solid #075c50'}}>{review.comment}</p>}</section>
+    <section><h2>Adviser Support &amp; 1:1 Guidance</h2><p>{support?'Status: '+support.status:'No support request logged.'}</p>{support?.note&&<p style={{background:'#f8fafc',padding:'12px',borderRadius:'6px',borderLeft:'3px solid #075c50'}}>{support.note}</p>}</section>
     <Link href={'/schools/me/'+attempt.assignment_id}>Return to your assignment</Link></>;
 }

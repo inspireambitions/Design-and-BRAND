@@ -114,19 +114,32 @@ export const STANDARD_INSTITUTIONAL_COMPETENCIES = [
   { id: 'technical_proficiency', label: 'Technical Proficiency', keywords: ['technical', 'software', 'tools', 'system', 'methodology', 'framework', 'code'] }
 ];
 
+export type CompetencyExtractionResult = {
+  competencies: string[];
+  arabicDetected: boolean;
+};
+
 export function extractCompetenciesFromJobText(jobText: string): string[] {
+  return extractCompetenciesWithMetadata(jobText).competencies;
+}
+
+export function extractCompetenciesWithMetadata(jobText: string): CompetencyExtractionResult {
   if (!jobText || jobText.trim().length < 20) {
-    return ['Communication', 'Problem Solving', 'Teamwork'];
+    return { competencies: [], arabicDetected: false };
   }
+
+  const arabicRegex = /[\u0600-\u06FF]/;
+  const hasArabic = arabicRegex.test(jobText);
+
   const lower = jobText.toLowerCase();
   const matched = STANDARD_INSTITUTIONAL_COMPETENCIES.filter((comp) =>
     comp.keywords.some((kw) => lower.includes(kw))
   ).map((c) => c.label);
 
-  if (matched.length === 0) {
-    return ['Communication', 'Problem Solving', 'Professionalism'];
-  }
-  return matched.slice(0, 5);
+  return {
+    competencies: matched.slice(0, 5),
+    arabicDetected: hasArabic,
+  };
 }
 
 

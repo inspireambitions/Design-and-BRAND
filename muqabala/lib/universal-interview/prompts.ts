@@ -18,12 +18,20 @@ export function discoveryInput(input: {
   pack: RolePack;
 }): string {
   const jd = input.jd.outcome === 'FAIL' ? '(quality gate failed, do not use)' : input.jd.cleaned_text;
+  const studentContext = [
+    input.profile.academic_field ? `Academic field: ${input.profile.academic_field}` : null,
+    input.profile.qualification ? `Qualification: ${input.profile.qualification}` : null,
+    input.profile.academic_stage ? `Academic stage: ${input.profile.academic_stage}` : null,
+    input.profile.evidence_sources?.length ? `Available evidence sources: ${input.profile.evidence_sources.join(', ')}` : null,
+    input.profile.project_highlight ? `Project highlight: ${input.profile.project_highlight}` : null,
+  ].filter(Boolean).join('\n');
+
   return `<candidate_data>
 Target role: ${input.profile.target_role}
 Candidate-set seniority: ${input.profile.experience_level}
 Industry background: ${input.profile.industry_background || '(not stated)'}
 Career change: ${input.profile.career_change}
-Job description quality: ${input.jd.outcome}
+${studentContext ? `${studentContext}\n` : ''}Job description quality: ${input.jd.outcome}
 Job description:
 ${jd}
 Role pack implicit competencies: ${input.pack.implicit_competencies.join(', ')}
@@ -37,14 +45,24 @@ export const PLAN_INSTRUCTIONS = `You write an eight-question competency intervi
 ${DATA_RULE}
 Return the supplied schema only. Write one short question at a time in British English. Do not use em dashes. Do not praise. Do not coach.
 The frameworks and question types are fixed by the requested slot structure. Never add competencies.
+For ENTRY seniority or student profiles, frame questions around academic projects, practical coursework, teamwork, societies, internships, or part-time experience rather than assuming executive or full-time corporate authority.
 ${CANDIDATE_TEXT_CONTRACT}`;
 
 export function planInput(state: InterviewState): string {
+  const profile = state.profile;
+  const studentContext = [
+    profile.academic_field ? `Academic field: ${profile.academic_field}` : null,
+    profile.qualification ? `Qualification: ${profile.qualification}` : null,
+    profile.academic_stage ? `Academic stage: ${profile.academic_stage}` : null,
+    profile.evidence_sources?.length ? `Available evidence sources: ${profile.evidence_sources.join(', ')}` : null,
+    profile.project_highlight ? `Project highlight: ${profile.project_highlight}` : null,
+  ].filter(Boolean).join('\n');
+
   return `<candidate_data>
 Role: ${state.role}
 Seniority: ${state.seniority}
 Career change: ${state.profile.career_change}
-Confirmed blueprint: ${JSON.stringify(state.blueprint)}
+${studentContext ? `${studentContext}\n` : ''}Confirmed blueprint: ${JSON.stringify(state.blueprint)}
 Role-pack questions: ${JSON.stringify(state.role_pack.question_bank)}
 </candidate_data>
 
@@ -102,6 +120,15 @@ export function questionInput(input: {
   replacementCompetencyId?: string | null;
 }): string {
   const ledger = input.state.evidence_ledger.map(({ id, summary, competencies }) => ({ id, summary, competencies }));
+  const profile = input.state.profile;
+  const studentContext = [
+    profile.academic_field ? `Academic field: ${profile.academic_field}` : null,
+    profile.qualification ? `Qualification: ${profile.qualification}` : null,
+    profile.academic_stage ? `Academic stage: ${profile.academic_stage}` : null,
+    profile.evidence_sources?.length ? `Available evidence sources: ${profile.evidence_sources.join(', ')}` : null,
+    profile.project_highlight ? `Project highlight: ${profile.project_highlight}` : null,
+  ].filter(Boolean).join('\n');
+
   return `<candidate_data>
 Action: ${input.action}
 Probe target: ${input.probeTarget}
@@ -111,7 +138,7 @@ Latest evidence: ${JSON.stringify(ledger.at(-1) ?? null)}
 Blueprint: ${JSON.stringify(input.state.blueprint)}
 Earlier evidence summaries: ${JSON.stringify(ledger)}
 Seniority: ${input.state.seniority}
-</candidate_data>
+${studentContext ? `${studentContext}\n` : ''}</candidate_data>
 
 Write only the required ${input.action === 'MOVE_ON' ? 'replacement main question' : 'follow-up question'}.`;
 }

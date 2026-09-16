@@ -103,3 +103,26 @@ test('supports multi-industry definitions without hardcoded teaching/hospitality
   assert.ok(industryIds.includes('retail'));
   assert.ok(industryIds.includes('government'));
 });
+
+test('extractCompetenciesFromJobText returns empty array when no keywords match or text too short (no arbitrary fallback)', async () => {
+  const { extractCompetenciesFromJobText, extractCompetenciesWithMetadata } = await import('../lib/schools/types.ts');
+
+  // Short text returns empty
+  assert.deepEqual(extractCompetenciesFromJobText('Short text'), []);
+
+  // Text with no matching keywords returns empty (NOT Communication/Problem Solving)
+  const nonMatching = 'Looking for an energetic person to assist with daily tasks and operations xyz123 foo bar baz.';
+  assert.deepEqual(extractCompetenciesFromJobText(nonMatching), []);
+
+  // Matches genuine keywords
+  const techText = 'Looking for software developers with strong technical proficiency in writing code and solving complex problems with data analysis.';
+  const extracted = extractCompetenciesFromJobText(techText);
+  assert.ok(extracted.length > 0);
+  assert.ok(extracted.includes('Technical Proficiency') || extracted.includes('Analytical Thinking'));
+
+  // Arabic JD detection
+  const arabicJd = 'مطلوب مهندس برمجيات حديث التخرج للعمل في قسم تقنية المعلومات وتطوير الأنظمة.';
+  const arabicResult = extractCompetenciesWithMetadata(arabicJd);
+  assert.equal(arabicResult.arabicDetected, true);
+  assert.deepEqual(arabicResult.competencies, []);
+});

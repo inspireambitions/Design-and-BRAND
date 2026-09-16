@@ -70,6 +70,12 @@ export type CandidateProfile = {
   career_change: boolean;
   management_experience: boolean;
   language: 'en';
+  // Student & early-career progressive profile context (optional)
+  academic_field?: string;
+  qualification?: string;
+  academic_stage?: string;
+  evidence_sources?: EvidenceType[];
+  project_highlight?: string;
 };
 
 export type DiscoveredCompetency = {
