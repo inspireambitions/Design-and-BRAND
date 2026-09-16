@@ -354,4 +354,16 @@ begin
 end;
 $$;
 
+-- 6. Harmonize check_publication trigger function to support 3 to 8 questions
+create or replace function schools_private.check_publication() returns trigger language plpgsql set search_path='' as $$
+begin
+  if tg_op='UPDATE' and old.published_at is not null and (new.cohort_id<>old.cohort_id or new.role_id<>old.role_id
+    or new.rubric_version_id<>old.rubric_version_id or new.published_at is distinct from old.published_at)
+  then raise exception 'Published assignment versions are immutable' using errcode='23514'; end if;
+  if new.published_at is not null and (select count(*) from public.schools_assignment_questions where assignment_id=new.id) not between 3 and 8
+  then raise exception 'Approve between three and eight questions before publishing' using errcode='23514'; end if;
+  return new;
+end;
+$$;
+
 commit;
