@@ -1,7 +1,9 @@
-# Educator Suite Status & Institutional Gap Analysis
+# Educator Suite Status & Institutional Architecture
 
-Last Updated: 2026-09-16 20:30 UTC  
-Baseline: PR #23 / Commit `8d5c8a2` (Production) + Branch `integration/muqabala-unified-20260916` (P0-A & P0-B Code Complete + Real DB Integration Gate 7/7 Verified)
+Last Updated: 2026-09-16 23:20 UTC  
+Baseline: Commit `51bb117226e1986bce7036b8682a4a013cf7aad3` (Production Live)  
+Vercel Deployment: `dpl_2tYsFruP1aRLcMR5LUeSczgcjEWG`  
+Database State: Migration `20260916160000` Applied to Production Supabase `hmaxzpgsefzpflrwzopa`
 
 ---
 
@@ -17,17 +19,16 @@ The Muqabala Educator Suite is an **institutional career-readiness and employabi
 Its primary mission is preparing students and learners for video and structured interviews across **diverse industries and occupations** (Finance, Engineering, Tech, Healthcare, Hospitality, Public Sector, Education, etc.). It is NOT architected as a teacher recruitment system; schools hiring teachers is simply one supported vocational use case running on the same flexible institutional architecture.
 
 ### Operational Categories:
-1. **PRODUCTION VERIFIED**: Live on `trymuqabala.com`, validated against production database and live users.
-2. **CODE COMPLETE / TESTED**: Implemented, contract-verified, and passing full domain unit/integration test suites on `integration/muqabala-unified-20260916` (Pending staging migration / production sign-off).
-3. **P0-B (Next Up)**: Adviser workflow polish, evidence review, support requests queue.
-4. **P1 (Future Roadmap)**: Cohort CSV/PDF exports, institutional branding, multi-campus admin roles.
-5. **BLOCKED**: Gated by production safety policies or unapplied database migrations.
+1. **PRODUCTION VERIFIED**: Live on `trymuqabala.com`, validated against production database and live users (P0-A and P0-B Complete).
+2. **P0-C (Next Up — Awaiting Approval)**: Institutional Reporting, Cohort Comparison, and CSV Exports.
+3. **P1 (Future Roadmap)**: Institutional branding, multi-campus admin roles, SSO/SAML integration.
+4. **BLOCKED / LOCKED**: P0-C is unstarted and locked until explicit human approval.
 
 ---
 
-## 2. Detailed Gap Analysis by Category
+## 2. Detailed Status by Category
 
-### A. PRODUCTION VERIFIED (Live at `trymuqabala.com` on Commit `8d5c8a2`)
+### A. PRODUCTION VERIFIED (Live at `trymuqabala.com` on Commit `51bb117`)
 
 | Feature | Surface / Route | Technical Assets | Verification Evidence |
 | :--- | :--- | :--- | :--- |
@@ -37,18 +38,8 @@ Its primary mission is preparing students and learners for video and structured 
 | **Student Practice & Retry** | `/schools/me/[id]` | `components/schools/Practice.tsx`<br>`app/schools/me/[id]/page.tsx` | Validated in `schools-practice-retry.test.mjs` |
 | **Receipt Confirmation View** | `/schools/receipt` | `app/schools/receipt/page.tsx` | Validated in `schools-pilot-receipt.test.mjs` |
 | **Access Routing & Enrolment** | `/schools/access`, `/schools/enrol` | `app/schools/access/page.tsx`<br>`scripts/schools-access-routing.test.mjs` | 8/8 automated routing tests passing |
-
----
-
-### B. CODE COMPLETE / TESTED (Educator Suite P0-A & P0-B in `integration/muqabala-unified-20260916`)
-
-> [!IMPORTANT]
-> These features are verified with automated unit tests and compiled cleanly in the Next.js production build. They are **NOT** deployed to production and their database migrations (`20260916140000`, `20260916160000`) have **NOT** been applied to production Supabase.
-
-| Feature | Surface / Route | Technical Assets | Verification Status |
-| :--- | :--- | :--- | :--- |
 | **Optional Institutional Hierarchy** | Data model & API | `supabase/migrations/20260916140000_educator_p0a_foundations.sql`<br>`lib/schools/types.ts` (`campus`, `faculty`, `programme`) | Supports 4-tier universities down to flat training centres; zero forced hierarchy fields |
-| **Multi-Industry Assignment Engine** | `/schools/cohorts/[id]/assign` | `components/schools/Assign.tsx`<br>`app/api/schools/manage/route.ts` | 10 industry tracks, role titles, competencies, attempt limits; 4/4 contract tests pass |
+| **Multi-Industry Assignment Engine** | `/schools/cohorts/[id]/assign` | `components/schools/Assign.tsx`<br>`app/api/schools/manage/route.ts` | 10 industry tracks, role titles, competencies, attempt limits; verified end-to-end |
 | **Dynamic 3–8 Question Slots** | Assignment & Practice UI | `components/schools/Assign.tsx`<br>`components/schools/Practice.tsx`<br>`app/schools/me/[id]/page.tsx` | Supports 3 to 8 customizable questions with dynamic reordering; verified end-to-end |
 | **Student Roster CSV Import** | `/api/schools/roster` | `lib/schools/roster-import.ts`<br>`app/api/schools/roster/route.ts` | 7/7 unit tests pass (UTF-8 BOM, Arabic student names/headers, delimiters, duplicate detection, dry-run preview) |
 | **Batch Enrolment Provisioning** | `/api/schools/roster` (`operation: commit`) | `app/api/schools/roster/route.ts`<br>RPC: `schools_issue_access` | Reuses existing private enrolment link architecture without outbox spam; zero unrequested emails |
@@ -58,6 +49,8 @@ Its primary mission is preparing students and learners for video and structured 
 | **Assignment Lifecycle & Immutability** | `/api/schools/manage` | `schools_manage` RPC<br>`lib/schools/types.ts`<br>`components/schools/Assign.tsx` | 4/4 unit tests pass; protects assessment params when attempts exist; safe version duplication |
 | **Explainable Intervention Queue** | `/schools/cohorts/[id]` | `lib/schools/intervention.ts`<br>`components/schools/InterventionQueue.tsx` | 5/5 unit tests pass; 5 factual signals; **strictly zero peer ranking or psychological diagnosis** |
 | **Student Inbox Upgrade** | `/schools/me` | `lib/schools/student-inbox.ts`<br>`app/schools/me/page.tsx` | 4/4 unit tests pass; categorizes Due vs Completed; tracks attempts, adviser instructions, relative deadlines |
+| **Learner Progression Profile Drilldown** | `/schools/cohorts/[id]/students/[studentId]` | `app/schools/cohorts/[id]/students/[studentId]/page.tsx` | Attempt-over-attempt evidence delta tracking, privacy preserved |
+| **Institutional RBAC & Isolation** | Database & API | Row Level Security policies on all `schools_*` tables | 6/6 test suites pass; verified on real production Supabase |
 | **Learner Progression Profile** | `/schools/cohorts/[id]/students/[studentId]` | `app/schools/cohorts/[id]/students/[studentId]/page.tsx` | Full attempt history, rubric evidence deltas, support requests, and attempt progression |
 | **Institutional Tenant & Role RBAC** | Institutional Data Layer | RLS policies & RPC checks | 6/6 tests pass; cross-institution denial, student analytics exclusion, draft privacy |
 

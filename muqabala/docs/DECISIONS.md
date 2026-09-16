@@ -134,3 +134,23 @@
 - **Consequences:**
   Eliminated all cross-tenant reference leakage and parameter spoofing vulnerabilities; verified RLS policies and procedures on genuine PostgreSQL 16; and proved the 47-migration sequence without touching production Supabase.
 
+---
+
+## ADR-009: Phased Production Release & Sequential Migration Verification
+- **Date:** 2026-09-16
+- **Status:** Accepted
+- **Context:**
+  Following the successful pass of both the PGlite integration gate and the real Supabase preview branch gate (`rbumgaluykobrfmhlftg`), explicit user authorization was granted to release the unified codebase to production (`trymuqabala.com`).
+  Production release required zero downtime, preservation of existing candidate and schools pilot flows, and rigorous sequential verification of all database migrations.
+- **Decision:**
+  1. *Independent Pre-Flight Verification:* Confirmed remote default branch (`claude/gulf-hospitality-video-interview-m9skfu`), baseline commit (`8d5c8a2`), Vercel deployment (`dpl_HPJZP8J54AEB3GeCnshPAa15np8L`), and WAL-G physical database backups.
+  2. *Sequential Database Migrations:* Applied three migrations in strict sequence to production Supabase (`hmaxzpgsefzpflrwzopa`):
+     - `20260916120000_recruiter_assistance.sql` -> verified columns, tables, RLS, RPCs.
+     - `20260916140000_educator_p0a_foundations.sql` -> verified taxonomy columns, student_identifier, 0..7 question index check.
+     - `20260916160000_educator_p0b_programmes_and_interventions.sql` -> verified `schools_programmes`, assignment lifecycle, publication trigger (3-8 questions).
+     - Recorded all migrations in `supabase_migrations.schema_migrations`.
+  3. *Application Release:* Merged `integration/muqabala-unified-20260916` into `claude/gulf-hospitality-video-interview-m9skfu` (commit `51bb117`), pushed to remote origin, observed Vercel production deployment `dpl_2tYsFruP1aRLcMR5LUeSczgcjEWG` (Ready), and verified `https://trymuqabala.com`.
+  4. *Live Smoke Testing:* Executed 21 non-destructive browser tests across Candidate, Employer, Educator, Platform. Confirmed zero console errors, zero 5xx responses, and healthy database state (0 long locks).
+- **Consequences:**
+  Production is fully upgraded to the unified release without data loss or downtime. Existing flows remain untouched and backward compatible. The system is ready for live operational use.
+
