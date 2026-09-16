@@ -3,7 +3,8 @@ import { after } from 'next/server';
 import { POST as generateInterviewResponse } from '@/app/api/interview/route';
 import { ADVERT_CACHE_VERSION } from '@/lib/advert-cache';
 import { CATALOGUE_INTERVIEW_VERSION, catalogueInterviewRole } from '@/lib/interview-catalogue';
-import { roleFromToken, signProofPack, verifyInterview } from '@/lib/interview-token';
+import { roleFromToken, signProofPack, verifyInterview, verifyStoredInterview } from '@/lib/interview-token';
+import { curatedRecruiterQuestions } from '@/lib/recruiter-suite';
 import { configuredOrigin, hasTrustedOrigin } from '@/lib/server/security';
 import { limitInterviewGeneration } from '@/lib/rate-limit';
 import { ScreeningPackRequestSchema } from '@/lib/screening-pack-request';
@@ -27,6 +28,7 @@ async function enhanceScreeningPack(input: {
   recruiterName: string;
   jobTitle: string;
   jobText: string;
+  expiresAt: string;
 }) {
   try {
     // Run the shared server generator directly. A self-fetch is rejected by
@@ -84,6 +86,7 @@ async function enhanceScreeningPack(input: {
       questions,
       workplace: input.workplace,
       recruiterName: input.recruiterName,
+      expiresAt: input.expiresAt,
     });
     if (!signedToken) {
       reportOperationalFailure('screening_pack_enhancement_rejected', {
@@ -161,18 +164,48 @@ export async function POST(request: Request) {
   const parsed = ScreeningPackRequestSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: 'Invalid work sample.' }, { status: 400 });
 
+  if (parsed.data.publishKey) {
+    const { data: existing } = await admin.from('screening_packs')
+      .select('id,public_code,signed_token,workplace,expires_at,max_candidates,location,timezone')
+      .eq('employer_id', employer.id)
+      .eq('publish_key', parsed.data.publishKey)
+      .maybeSingle();
+    if (existing) {
+      return Response.json({
+        id: existing.id,
+        url: `${configuredOrigin()}/s/${existing.public_code}`,
+        title: verifyStoredInterview(existing.signed_token)?.title ?? parsed.data.jobTitle ?? 'Role',
+        workplace: existing.workplace,
+        location: existing.location,
+        timezone: existing.timezone,
+        expiresAt: existing.expires_at,
+        maxCandidates: existing.max_candidates,
+        reused: true,
+      });
+    }
+  }
+
   const verified = parsed.data.interviewToken ? verifyInterview(parsed.data.interviewToken) : null;
   if (parsed.data.interviewToken && (!verified || verified.kind !== 'practice')) {
     return Response.json({ error: 'The tailored interview could not be verified.' }, { status: 400 });
   }
-  const role = verified && verified.kind === 'practice'
+  const baseRole = verified && verified.kind === 'practice'
     ? roleFromToken(verified)
     : catalogueInterviewRole(parsed.data.jobTitle || 'Your role');
-  const questions = role.questions.slice(0, 8);
-  if (questions.length !== 8) return Response.json({ error: 'That job does not have enough questions for an adaptive interview.' }, { status: 400 });
+  let questions;
+  try {
+    questions = parsed.data.questions
+      ? curatedRecruiterQuestions(baseRole, parsed.data.questions, { language: parsed.data.questionnaireLanguage })
+      : baseRole.questions.slice(0, 8);
+  } catch (error) {
+    return Response.json({ error: error instanceof Error ? error.message : 'The questions could not be validated.' }, { status: 400 });
+  }
+  if (questions.length < 3 || questions.length > 8) return Response.json({ error: 'Choose between three and eight questions.' }, { status: 400 });
+  const role = { ...baseRole, questions };
 
   const workplace = (parsed.data.companyName || parsed.data.workplace || '').trim();
   const recruiterName = (parsed.data.recruiterName || '').trim();
+  const expiresAt = new Date(Date.now() + parsed.data.expiryDays * 24 * 60 * 60 * 1000).toISOString();
   const signedToken = signProofPack({
     title: role.title,
     industry: role.industry,
@@ -181,12 +214,15 @@ export async function POST(request: Request) {
     questions,
     workplace,
     recruiterName,
+    expiresAt,
   });
   if (!signedToken) return Response.json({ error: 'The work sample could not be signed.' }, { status: 503 });
 
-  const expiresAt = new Date(Date.now() + parsed.data.expiryDays * 24 * 60 * 60 * 1000).toISOString();
   let code = publicCode();
   for (let attempt = 0; attempt < 5; attempt += 1) {
+    const publishedFacts = Object.fromEntries(Object.entries(parsed.data.publishedFacts ?? {})
+      .map(([key, value]) => [key, value?.trim()])
+      .filter(([, value]) => Boolean(value)));
     const { data: created, error } = await admin.from('screening_packs').insert({
       public_code: code,
       signed_token: signedToken,
@@ -194,11 +230,16 @@ export async function POST(request: Request) {
       employer_id: employer.id,
       expires_at: expiresAt,
       max_candidates: parsed.data.maxCandidates,
-      question_source: parsed.data.interviewToken ? 'legacy' : 'catalogue',
-      question_version: parsed.data.interviewToken ? 'legacy' : CATALOGUE_INTERVIEW_VERSION,
+      location: parsed.data.location?.trim() || null,
+      timezone: parsed.data.timezone,
+      published_facts: publishedFacts,
+      publish_key: parsed.data.publishKey ?? null,
+      question_source: parsed.data.questions ? 'employer_reviewed' : parsed.data.interviewToken ? 'legacy' : 'catalogue',
+      question_version: parsed.data.questions ? 'recruiter-suite-v1' : parsed.data.interviewToken ? 'legacy' : CATALOGUE_INTERVIEW_VERSION,
+      questionnaire_language: parsed.data.questionnaireLanguage,
     }).select('id').single();
     if (!error) {
-      if (created?.id && !parsed.data.interviewToken && parsed.data.jobText) {
+      if (created?.id && !parsed.data.questions && !parsed.data.interviewToken && parsed.data.jobText) {
         after(() => enhanceScreeningPack({
           admin,
           packId: created.id,
@@ -207,6 +248,7 @@ export async function POST(request: Request) {
           recruiterName,
           jobTitle: role.title,
           jobText: parsed.data.jobText || '',
+          expiresAt,
         }));
       }
       reportOperationalEvent('screening_pack_created', {
@@ -215,16 +257,52 @@ export async function POST(request: Request) {
         code: 'ok',
         status: 201,
       });
+      if (created?.id) {
+        await admin.from('recruiter_audit_events').insert({
+          actor_id: employer.id,
+          employer_id: employer.id,
+          role_id: created.id,
+          record_type: 'role',
+          record_id: created.id,
+          action: 'role_published',
+          result: 'succeeded',
+          metadata: { question_count: questions.length, timezone: parsed.data.timezone },
+        });
+      }
       return Response.json({
         id: created?.id,
         url: `${configuredOrigin()}/s/${code}`,
         title: role.title,
         workplace,
         recruiterName,
-        questionCount: questions.length,
         expiresAt,
         maxCandidates: parsed.data.maxCandidates,
+        location: parsed.data.location?.trim() || null,
+        timezone: parsed.data.timezone,
+        questionCount: questions.length,
+        questionnaireLanguage: parsed.data.questionnaireLanguage,
       }, { status: 201 });
+    }
+    if (error.code === '23505' && parsed.data.publishKey) {
+      const { data: existing } = await admin.from('screening_packs')
+        .select('id,public_code,workplace,expires_at,max_candidates,location,timezone')
+        .eq('employer_id', employer.id)
+        .eq('publish_key', parsed.data.publishKey)
+        .maybeSingle();
+      if (existing) {
+        return Response.json({
+          id: existing.id,
+          url: `${configuredOrigin()}/s/${existing.public_code}`,
+          title: role.title,
+          workplace: existing.workplace,
+          location: existing.location,
+          timezone: existing.timezone,
+          expiresAt: existing.expires_at,
+          maxCandidates: existing.max_candidates,
+          questionCount: questions.length,
+          reused: true,
+        });
+      }
     }
     if (error.code !== '23505') {
       reportOperationalFailure('screening_pack_creation_failed', {

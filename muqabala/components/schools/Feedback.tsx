@@ -43,7 +43,7 @@ export function SchoolsFeedback({attemptId,status,detail,covered,assignmentId,ru
   const parsed=schoolsFeedbackSchema.safeParse({questions:raw});
   if(!parsed.success)return <p>Feedback is temporarily unavailable. Your answers are saved.</p>;
   const first=parsed.data.questions.slice().sort((a,b)=>a.elements.filter(e=>e.present).length-b.elements.filter(e=>e.present).length||a.questionIndex-b.questionIndex)[0];
-  return <section className="schools-card"><h2>Your private feedback</h2><p>Evidence covered: {resolvedCovered} of 12 elements</p>
+  return <section className="schools-card"><h2>Your private feedback</h2><p>Evidence covered: {resolvedCovered} of {parsed.data.questions.length * 4} elements</p>
     <h3>Add this first</h3><p>{first.improvement}</p>
     {onRetry?<button disabled={retryBusy} onClick={()=>onRetry(first.questionIndex+1)}>{retryBusy?'Opening your new draft...':'Retry question '+(first.questionIndex+1)}</button>:assignmentId&&<Link href={'/schools/me/'+assignmentId+'?retry='+(first.questionIndex+1)}>Retry question {first.questionIndex+1}</Link>}
     {parsed.data.questions.map(q=><section key={q.questionIndex}><h3>Question {q.questionIndex+1}</h3><ul>{q.elements.map(e=><li key={e.id}>

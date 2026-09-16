@@ -1,0 +1,27 @@
+.questions { margin-top: 1rem; border-top: 1px solid #dbe5e1; padding-top: 0.75rem; }
+.questions > summary { display: flex; min-height: 44px; align-items: center; color: #075e54; font-weight: 800; cursor: pointer; }
+.body { display: grid; gap: 0.9rem; padding-top: 0.75rem; }
+.body > p { margin: 0; color: #536860; }
+.facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.55rem; margin: 0; }
+.facts div { min-width: 0; padding: 0.65rem; border: 1px solid #dbe5e1; border-radius: 0.65rem; background: #f7faf8; }
+.facts dt { color: #536860; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; }
+.facts dd { margin: 0.2rem 0 0; overflow-wrap: anywhere; font-size: 0.86rem; }
+.suggestions { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+.suggestions button, .secondary { min-height: 40px; padding: 0.5rem 0.75rem; border: 1px solid #b9ccc4; border-radius: 999px; background: white; color: #075e54; font: inherit; font-size: 0.82rem; font-weight: 750; cursor: pointer; }
+.field { display: grid; gap: 0.4rem; font-weight: 750; }
+.field textarea { width: 100%; padding: 0.75rem; border: 1px solid #b9ccc4; border-radius: 0.65rem; background: white; color: #172620; font: inherit; resize: vertical; }
+.field textarea:focus { outline: 3px solid rgba(11, 122, 107, 0.2); border-color: #0b7a6b; }
+.primary { min-height: 44px; padding: 0.65rem 1rem; border: 0; border-radius: 0.65rem; background: #0b7a6b; color: white; font: inherit; font-weight: 800; cursor: pointer; }
+.primary:disabled, .secondary:disabled { opacity: 0.55; cursor: default; }
+.answer { display: grid; gap: 0.6rem; padding: 0.85rem; border-inline-start: 3px solid #0b7a6b; background: #f3f8f6; }
+.answer p, .answer a { margin: 0; }
+.answer a { color: #075e54; font-size: 0.82rem; font-weight: 750; }
+.review, .message { color: #536860; font-size: 0.82rem; }
+.history { display: grid; gap: 0.65rem; padding-top: 0.75rem; border-top: 1px solid #dbe5e1; }
+.history h3 { margin: 0; font-size: 0.95rem; }
+.history article { padding: 0.75rem; border: 1px solid #dbe5e1; border-radius: 0.65rem; }
+.history p, .history blockquote { margin: 0; }
+.history small { display: block; margin-top: 0.35rem; color: #536860; }
+.history blockquote { margin-top: 0.5rem; padding-inline-start: 0.65rem; border-inline-start: 2px solid #0b7a6b; }
+@media (max-width: 32rem) { .facts { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .questions *, .questions *::before, .questions *::after { scroll-behavior: auto !important; } }

@@ -18,15 +18,18 @@ import { rankedCandidates } from '@/lib/server/employer-candidates';
 import { trackServer } from '@/lib/server/analytics';
 import { configuredOrigin } from '@/lib/server/security';
 import { openToken } from '@/lib/server/invite-token';
-import { verifyInterview } from '@/lib/interview-token';
+import { verifyStoredInterview } from '@/lib/interview-token';
+import { manualReminderFailureCanRetry } from '@/lib/recruiter-suite';
 
 type OutboxRow = {
   id: string;
   role_id: string;
   invite_id: string | null;
-  kind: 'invite' | 'reminder_1' | 'reminder_2' | 'completion' | 'shortlist';
+  kind: 'invite' | 'reminder_1' | 'reminder_2' | 'completion' | 'manual_reminder' | 'shortlist';
   channel: 'email' | 'whatsapp';
   attempt_count: number;
+  message_body: string | null;
+  retry_of: string | null;
 };
 
 type InviteRow = {
@@ -37,12 +40,27 @@ type InviteRow = {
   name: string | null;
   status: string;
   token_cipher: string;
+  contact_allowed: boolean;
+  opted_out_at: string | null;
+  withdrawn_at: string | null;
+  deleted_at: string | null;
+  last_manual_reminder_at: string | null;
 };
 
 /** Resend documents 2 requests per second on standard plans. */
 const RESEND_MIN_GAP_MS = 500;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character] || character);
+}
+
+function manualReminder(messageBody: string, link: string, roleTitle: string) {
+  const text = messageBody.replaceAll('{{invitation_link}}', link).trim();
+  const html = text.split(/\n{2,}/).map((paragraph) => `<p style="margin:0 0 16px;line-height:1.6">${escapeHtml(paragraph).replaceAll('\n', '<br>')}</p>`).join('');
+  return { subject: `Reminder: ${roleTitle} work sample`, text, html };
+}
 
 export function inviteLink(publicCode: string, token: string): string {
   return `${configuredOrigin()}/s/${publicCode}?i=${token}`;
@@ -154,7 +172,7 @@ export async function processEmployerMessages(options: { roleId?: string; limit?
 
     const [{ data: pack, error: packError }, { data: invite, error: inviteError }] = await Promise.all([
       admin.from('screening_packs').select('id,public_code,workplace,signed_token,expires_at').eq('id', job.role_id).maybeSingle(),
-      job.invite_id ? admin.from('role_invites').select('id,candidate_ref,email,phone,name,status,token_cipher').eq('id', job.invite_id).eq('role_id', job.role_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
+      job.invite_id ? admin.from('role_invites').select('id,candidate_ref,email,phone,name,status,token_cipher,contact_allowed,opted_out_at,withdrawn_at,deleted_at,last_manual_reminder_at').eq('id', job.invite_id).eq('role_id', job.role_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
     ]);
     if (packError || inviteError) {
       await retry(job, null, 'scope_lookup_failed');
@@ -162,6 +180,38 @@ export async function processEmployerMessages(options: { roleId?: string; limit?
       continue;
     }
     const inviteRow = invite as InviteRow | null;
+    let validManualRetry = false;
+    let previousManualDeliveryAt: string | null = null;
+    if (job.kind === 'manual_reminder') {
+      const historyQuery = admin.from('employer_message_outbox')
+        .select('id,role_id,invite_id,kind,status,last_error_code,created_at,updated_at')
+        .eq('role_id', job.role_id)
+        .eq('invite_id', job.invite_id)
+        .eq('kind', 'manual_reminder');
+      const { data: previousManual, error: historyError } = job.retry_of
+        ? await historyQuery.eq('id', job.retry_of).maybeSingle()
+        : await historyQuery.neq('id', job.id).order('created_at', { ascending: false }).limit(1).maybeSingle();
+      if (historyError) {
+        await retry(job, null, 'retry_source_lookup_failed');
+        failed += 1;
+        continue;
+      }
+      if (job.retry_of) {
+        validManualRetry = Boolean(previousManual
+          && manualReminderFailureCanRetry(previousManual.status, previousManual.last_error_code));
+      } else if (previousManual && !['accepted', 'delivered'].includes(previousManual.status)) {
+        await mark(job, { status: 'cancelled', locked_until: null, lease_token: null, last_error_code: 'invalid_previous_delivery' });
+        failed += 1;
+        continue;
+      } else if (previousManual) {
+        previousManualDeliveryAt = previousManual.updated_at ?? previousManual.created_at ?? null;
+      }
+      if (job.retry_of && !validManualRetry) {
+        await mark(job, { status: 'cancelled', locked_until: null, lease_token: null, last_error_code: 'invalid_retry_source' });
+        failed += 1;
+        continue;
+      }
+    }
     const rawToken = inviteRow ? openToken(inviteRow.token_cipher) : null;
     const link = pack && rawToken ? { link: inviteLink(pack.public_code, rawToken) } : null;
     if (!pack || (job.kind !== 'shortlist' && (!inviteRow || !link?.link))) {
@@ -180,13 +230,30 @@ export async function processEmployerMessages(options: { roleId?: string; limit?
       failed += 1;
       continue;
     }
+    if (job.kind === 'manual_reminder' && inviteRow && (
+      inviteRow.contact_allowed === false || inviteRow.opted_out_at || inviteRow.withdrawn_at || inviteRow.deleted_at
+    )) {
+      await mark(job, { status: 'cancelled', locked_until: null, lease_token: null, last_error_code: 'contact_disallowed' });
+      failed += 1;
+      continue;
+    }
+    if (job.kind === 'manual_reminder' && !validManualRetry && (
+      (inviteRow?.last_manual_reminder_at
+        && Date.now() - Date.parse(inviteRow.last_manual_reminder_at) < 24 * 60 * 60 * 1_000)
+      || (previousManualDeliveryAt
+        && Date.now() - Date.parse(previousManualDeliveryAt) < 24 * 60 * 60 * 1_000)
+    )) {
+      await mark(job, { status: 'cancelled', locked_until: null, lease_token: null, last_error_code: 'recently_reminded' });
+      failed += 1;
+      continue;
+    }
     if (job.kind !== 'shortlist' && !inviteRow?.email) {
       await mark(job, { status: 'cancelled', locked_until: null, lease_token: null, last_error_code: 'no_email' });
       failed += 1;
       continue;
     }
 
-    const roleTitle = verifyInterview(pack.signed_token)?.title ?? 'this role';
+    const roleTitle = verifyStoredInterview(pack.signed_token)?.title ?? 'this role';
     const message = { employerName: pack.workplace || 'The hiring team', roleTitle, link: link?.link ?? '' };
     let subject: string;
     let text: string;
@@ -207,6 +274,11 @@ export async function processEmployerMessages(options: { roleId?: string; limit?
       text = built.text;
       html = built.html;
       recipientEmail = built.to;
+    } else if (job.kind === 'manual_reminder') {
+      const built = manualReminder(job.message_body || 'Please complete your role work sample:\n\n{{invitation_link}}', link?.link ?? '', roleTitle);
+      subject = built.subject;
+      text = built.text;
+      html = built.html;
     } else {
       const kind = job.kind as ReminderKind;
       subject = reminderSubject(kind, message);

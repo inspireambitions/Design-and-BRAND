@@ -2,7 +2,7 @@ import { ImageResponse } from 'next/og';
 import { employerVolumeEnabled } from '@/lib/employer-volume';
 import { timeSavedHours } from '@/lib/employer-volume/strip';
 import { loadRoleStrip } from '@/lib/server/employer-role-strip';
-import { verifyInterview } from '@/lib/interview-token';
+import { verifyStoredInterview } from '@/lib/interview-token';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient, currentUser } from '@/lib/supabase/server';
 
@@ -24,7 +24,7 @@ export async function GET(_request: Request, context: { params: Promise<{ roleId
   const { roleId } = await context.params;
   const { data: pack } = await client.from('screening_packs').select('id,workplace,signed_token,minutes_per_cv,employer_id').eq('id', roleId).maybeSingle();
   if (!pack || pack.employer_id !== user.id) return Response.json({ error: 'Role not found.' }, { status: 404 });
-  const roleTitle = verifyInterview(pack.signed_token)?.title ?? 'Role';
+  const roleTitle = verifyStoredInterview(pack.signed_token)?.title ?? 'Role';
   const { strip } = await loadRoleStrip(client, pack.id);
   const hours = timeSavedHours(strip, typeof pack.minutes_per_cv === 'number' ? pack.minutes_per_cv : 4);
   await admin.from('export_log').insert({ employer_id: user.id, role_id: pack.id, format: 'summary_png' });

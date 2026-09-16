@@ -19,7 +19,7 @@ export async function prepareSchoolsFeedback(attemptId:string):Promise<boolean> 
   let stage='questions';
   try {
     const {data:links,error}=await admin.from('schools_assignment_questions').select('question_index,question_version_id').eq('assignment_id',attempt.assignment_id).order('question_index');
-    if(error||links?.length!==3)throw new Error('Questions unavailable');
+    if(error||!links||links.length<3||links.length>8)throw new Error('Questions unavailable');
     const {data:versions}=await admin.from('schools_question_versions').select('id,question_text,rubric,language').in('id',links.map(l=>l.question_version_id));
     const questions=links.map(link=>versions?.find(v=>v.id===link.question_version_id));
     if(questions.some(q=>!q))throw new Error('Question versions unavailable');

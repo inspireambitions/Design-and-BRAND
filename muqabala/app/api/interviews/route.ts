@@ -37,7 +37,7 @@ export async function POST(request: Request) {
   const screeningPack = parsed.data.mode === 'screening'
     ? await admin
         .from('screening_packs')
-        .select('id')
+        .select('id,question_source')
         .eq('signed_token', parsed.data.interviewToken ?? '')
         .not('employer_id', 'is', null)
         .gt('expires_at', new Date().toISOString())
@@ -58,7 +58,13 @@ export async function POST(request: Request) {
   let brainState: InterviewState | null = null;
   if (parsed.data.mode === 'screening') {
     interviewId = randomUUID();
-    const adaptive = parsed.data.adaptive && parsed.data.language === 'en' && universalInterviewEnabled();
+    // The browser is not the authority for interview mode. Employer-reviewed
+    // question sets must keep the exact approved sequence even if a caller
+    // posts adaptive:true directly.
+    const adaptive = parsed.data.adaptive
+      && screeningPack!.data!.question_source !== 'employer_reviewed'
+      && parsed.data.language === 'en'
+      && universalInterviewEnabled();
     if (adaptive) {
       brainState = createEmployerBrainState({
         interviewId,

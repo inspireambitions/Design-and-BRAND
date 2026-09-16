@@ -4,7 +4,7 @@ import OpenAI from 'openai';
 import { zodTextFormat } from 'openai/helpers/zod';
 import { getRole, type Question, type Role } from '@/lib/roles';
 import { verifyInterview, roleFromToken } from '@/lib/interview-token';
-import { arabicUnavailable, structureCheck, containsArabicScript, overallFromAnswers, type AnswerFeedback } from '@/lib/scoring';
+import { arabicUnavailable, structureCheck, containsArabicScript, employerManualReviewFeedback, overallFromAnswers, type AnswerFeedback } from '@/lib/scoring';
 import { isRetryableFeedback } from '@/lib/report-feedback';
 import { reportScoringFailure } from '@/lib/sentry-server';
 import { limitScoring } from '@/lib/rate-limit';
@@ -565,6 +565,10 @@ export async function POST(request: Request) {
 
   const run = async (emit?: PartialEmitter): Promise<ScoreOutcome> => {
   if (replayedFeedback) return deliver(replayedFeedback);
+
+  if (stored?.interview?.mode === 'screening' && (question.validated !== true || question.competencies.length === 0)) {
+    return deliver(employerManualReviewFeedback(question.id));
+  }
 
   // The structure checker is English-only. Rather than hand an Arabic answer a
   // near-floor score it does not deserve, decline to score it and say why.

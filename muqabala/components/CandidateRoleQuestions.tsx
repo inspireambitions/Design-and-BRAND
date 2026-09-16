@@ -1,0 +1,181 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useLang } from './LanguageProvider';
+import { track } from '@/lib/analytics';
+import type { CandidateFactIntent } from '@/lib/recruiter-suite';
+import styles from './CandidateRoleQuestions.module.css';
+
+type Answer = {
+  supported: boolean;
+  answer: string;
+  sourceHref: string | null;
+  sourceLabel: string | null;
+  canEscalate: boolean;
+};
+
+type HistoryItem = {
+  id: string;
+  question_text: string;
+  reply_text: string | null;
+  replied_at: string | null;
+  resolved_at: string | null;
+  created_at: string;
+};
+
+export function CandidateRoleQuestions({
+  publicCode,
+  roleTitle,
+  location,
+  expiresAt,
+  timezone,
+  questionCount,
+  publishedFacts = {},
+  fixtureMode = false,
+}: {
+  publicCode: string;
+  roleTitle: string;
+  location: string | null;
+  expiresAt: string;
+  timezone: string;
+  questionCount: number;
+  publishedFacts?: Record<string, unknown>;
+  fixtureMode?: boolean;
+}) {
+  const { lang, t } = useLang();
+  const [question, setQuestion] = useState('');
+  const [answer, setAnswer] = useState<Answer | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [message, setMessage] = useState('');
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+
+  useEffect(() => {
+    if (fixtureMode) return;
+    const controller = new AbortController();
+    void fetch(`/api/screening/roles/${encodeURIComponent(publicCode)}/questions`, { cache: 'no-store', signal: controller.signal })
+      .then(async (response) => response.ok ? response.json() : null)
+      .then((body) => { if (body?.questions) setHistory(body.questions); })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [fixtureMode, publicCode]);
+
+  async function ask(value = question, intent?: CandidateFactIntent) {
+    const clean = value.trim();
+    if (clean.length < 4 || busy) return;
+    setQuestion(clean);
+    setBusy(true);
+    setMessage('');
+    try {
+      const response = await fetch(`/api/screening/roles/${encodeURIComponent(publicCode)}/questions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: clean, lang, intent, escalate: false }),
+      });
+      const body = await response.json().catch(() => ({})) as Answer & { error?: string };
+      if (!response.ok || !body.answer) throw new Error(body.error || 'unavailable');
+      setAnswer(body);
+      track('candidate_question_answered', { outcome: body.supported ? 'supported' : 'unsupported' });
+    } catch {
+      setAnswer({ supported: false, answer: t('candidateRoleQuestionFailed'), sourceHref: null, sourceLabel: null, canEscalate: true });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function escalate() {
+    if (question.trim().length < 4 || sending) return;
+    setSending(true);
+    setMessage('');
+    try {
+      const response = await fetch(`/api/screening/roles/${encodeURIComponent(publicCode)}/questions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: question.trim(), lang, escalate: true }),
+      });
+      const body = await response.json().catch(() => ({})) as { queued?: boolean; duplicate?: boolean; id?: string; createdAt?: string; error?: string };
+      if (!response.ok || !body.queued) throw new Error(body.error || 'send_failed');
+      setMessage(body.duplicate ? t('candidateRoleQuestionDuplicate') : t('candidateRoleQuestionQueued'));
+      track('candidate_question_escalated', { outcome: body.duplicate ? 'duplicate' : 'queued' });
+      if (!body.duplicate && body.id) {
+        setHistory((current) => [{ id: body.id!, question_text: question.trim(), reply_text: null, replied_at: null, resolved_at: null, created_at: body.createdAt || new Date().toISOString() }, ...current]);
+      }
+    } catch {
+      setMessage(t('candidateRoleQuestionFailed'));
+    } finally {
+      setSending(false);
+    }
+  }
+
+  const closes = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-AE' : 'en-GB', {
+    dateStyle: 'medium', timeStyle: 'short', timeZone: timezone,
+  }).format(new Date(expiresAt));
+  const salary = typeof publishedFacts.salary === 'string' ? publishedFacts.salary : null;
+  const accommodation = typeof publishedFacts.accommodation === 'string' ? publishedFacts.accommodation : null;
+  const interviewDetails = typeof publishedFacts.interviewDetails === 'string' ? publishedFacts.interviewDetails : null;
+  const faqs = Array.isArray(publishedFacts.faqs)
+    ? publishedFacts.faqs.filter((item): item is { question: string; answer: string } => Boolean(
+      item && typeof item === 'object' && 'question' in item && typeof item.question === 'string'
+      && 'answer' in item && typeof item.answer === 'string',
+    )).slice(0, 20)
+    : [];
+  const suggestions: Array<{ label: string; intent: CandidateFactIntent }> = [
+    { label: t('candidateRoleQuestionDeadline'), intent: 'deadline' },
+    { label: t('candidateRoleQuestionFormat'), intent: 'format' },
+    { label: t('candidateRoleQuestionLocation'), intent: 'location' },
+  ];
+  if (salary) suggestions.push({ label: lang === 'ar' ? 'ما الراتب المنشور؟' : 'What salary is published?', intent: 'salary' });
+  if (accommodation) suggestions.push({ label: lang === 'ar' ? 'هل يتوفر سكن؟' : 'Is accommodation provided?', intent: 'accommodation' });
+  if (interviewDetails) suggestions.push({ label: lang === 'ar' ? 'ما الخطوة التالية في المقابلة؟' : 'What is the next interview step?', intent: 'interview' });
+
+  return (
+    <details className={styles.questions}>
+      <summary>{t('candidateRoleQuestionsTitle')}</summary>
+      <div className={styles.body}>
+        <p>{t('candidateRoleQuestionsBody')}</p>
+        <dl className={styles.facts} id="role-facts">
+          <div><dt>{lang === 'ar' ? 'الوظيفة' : 'Role'}</dt><dd dir="auto">{roleTitle}</dd></div>
+          {location && <div id="candidate-role-fact-location"><dt>{lang === 'ar' ? 'الموقع' : 'Location'}</dt><dd dir="auto">{location}</dd></div>}
+          <div id="candidate-role-fact-deadline"><dt>{lang === 'ar' ? 'الإغلاق' : 'Closes'}</dt><dd>{closes} · {timezone}</dd></div>
+          <div id="candidate-role-fact-format"><dt>{lang === 'ar' ? 'الصيغة' : 'Format'}</dt><dd>{questionCount} {lang === 'ar' ? 'أسئلة فيديو' : 'video questions'}</dd></div>
+          {salary && <div id="candidate-role-fact-salary"><dt>{lang === 'ar' ? 'الراتب' : 'Salary'}</dt><dd dir="auto">{salary}</dd></div>}
+          {accommodation && <div id="candidate-role-fact-accommodation"><dt>{lang === 'ar' ? 'السكن' : 'Accommodation'}</dt><dd dir="auto">{accommodation}</dd></div>}
+          {interviewDetails && <div id="candidate-role-fact-interview"><dt>{lang === 'ar' ? 'تفاصيل المقابلة' : 'Interview details'}</dt><dd dir="auto">{interviewDetails}</dd></div>}
+        </dl>
+        {faqs.length > 0 && <section className={styles.history} aria-labelledby="candidate-role-faq-title">
+          <h3 id="candidate-role-faq-title">{lang === 'ar' ? 'معلومات منشورة من جهة العمل' : 'Published employer information'}</h3>
+          {faqs.map((faq, index) => <article key={`${faq.question}-${index}`} id={`candidate-role-faq-${index}`}><strong dir="auto">{faq.question}</strong><p dir="auto">{faq.answer}</p></article>)}
+        </section>}
+        <div className={styles.suggestions} aria-label={t('candidateRoleQuestionLabel')}>
+          {suggestions.map((suggestion) => (
+            <button type="button" key={suggestion.intent} onClick={() => void ask(suggestion.label, suggestion.intent)}>{suggestion.label}</button>
+          ))}
+        </div>
+        <label className={styles.field}>
+          <span>{t('candidateRoleQuestionLabel')}</span>
+          <textarea maxLength={500} rows={3} dir="auto" value={question} placeholder={t('candidateRoleQuestionPlaceholder')} onChange={(event) => { setQuestion(event.target.value); setAnswer(null); setMessage(''); }} />
+        </label>
+        <button className={styles.primary} type="button" disabled={busy || question.trim().length < 4} onClick={() => void ask()}>{busy ? t('candidateRoleQuestionChecking') : t('candidateRoleQuestionAsk')}</button>
+        {answer && (
+          <div className={styles.answer} role="status">
+            <p dir="auto">{answer.answer}</p>
+            {answer.sourceHref && answer.sourceLabel && <a href={answer.sourceHref}>{t('candidateRoleQuestionSource')}: {answer.sourceLabel}</a>}
+            {answer.canEscalate && <>
+              <p className={styles.review}>{t('candidateRoleQuestionReview')}</p>
+              <button type="button" className={styles.secondary} disabled={sending} onClick={() => void escalate()}>{t('candidateRoleQuestionSend')}</button>
+            </>}
+          </div>
+        )}
+        {message && <p role="status" className={styles.message}>{message}</p>}
+        {history.length > 0 && <section className={styles.history} aria-labelledby="candidate-question-history">
+          <h3 id="candidate-question-history">{t('candidateRoleQuestionHistory')}</h3>
+          {history.map((item) => <article key={item.id}>
+            <p dir="auto">{item.question_text}</p>
+            <small>{item.reply_text ? t('candidateRoleQuestionReplied') : t('candidateRoleQuestionWaiting')}</small>
+            {item.reply_text && <blockquote dir="auto">{item.reply_text}</blockquote>}
+          </article>)}
+        </section>}
+      </div>
+    </details>
+  );
+}

@@ -19,7 +19,7 @@ export default async function StudentReport({params}:{params:Promise<{attemptId:
   const first=attempts?.find(item=>item.attempt_number===1);
   return <><h1>Your private report</h1><p>Attempt {attempt.attempt_number}. Submitted attempts: {attempts?.length??1}.</p>
     <SchoolsReadMarker attemptId={attempt.id} feedback={attempt.feedback_status==='ready'} reviewRevision={review?.revision??null}/>
-    {attempt.attempt_number>1&&first?.evidence_covered!=null&&attempt.evidence_covered!=null&&<p>Evidence covered in attempt 1: {first.evidence_covered} of 12. In this attempt: {attempt.evidence_covered} of 12. Both use the same questions and rubric.</p>}
+    {attempt.attempt_number>1&&first?.evidence_covered!=null&&attempt.evidence_covered!=null&&<p>Evidence covered in attempt 1: {first.evidence_covered} of {links?.length?links.length*4:12}. In this attempt: {attempt.evidence_covered} of {links?.length?links.length*4:12}. Both use the same questions and rubric.</p>}
     <SchoolsFeedback attemptId={attempt.id} status={attempt.feedback_status} detail={attempt.evidence_detail} covered={attempt.evidence_covered} assignmentId={attempt.assignment_id} rubrics={rubrics}/>
     {!!corrections?.length&&<section><h2>Adviser evidence corrections</h2><ul>{corrections.map((correction,index)=><li key={index}>Question {correction.question_index+1}, {correction.rubric_element}: {correction.corrected_present?'present':'absent'}. {correction.reason}</li>)}</ul></section>}
     <section id="adviser-comment"><h2>Adviser view of this assignment</h2><p>{review?({on_track:'On track',needs_more:'Needs more',discuss:'Discuss'}[review.state as 'on_track'|'needs_more'|'discuss']):'Not reviewed'}</p>{review?.comment&&<p>{review.comment}</p>}</section>

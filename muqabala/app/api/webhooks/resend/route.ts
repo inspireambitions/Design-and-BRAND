@@ -34,5 +34,18 @@ export async function POST(request: Request) {
   if (error?.code === '23505') return Response.json({ received: true, duplicate: true });
   if (error) return Response.json({ error: 'Unavailable.' }, { status: 503 });
   await applyStoredResendEvents(admin, providerMessageId);
+  if (event.type === 'email.delivered') {
+    await admin.from('employer_message_outbox').update({
+      status: 'delivered',
+      delivered_at: event.created_at ?? new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }).eq('provider_message_id', providerMessageId).in('status', ['accepted', 'delivered']);
+  } else if (['email.failed', 'email.bounced', 'email.complained', 'email.suppressed'].includes(event.type)) {
+    await admin.from('employer_message_outbox').update({
+      status: 'failed',
+      last_error_code: event.type.slice(0, 80),
+      updated_at: new Date().toISOString(),
+    }).eq('provider_message_id', providerMessageId).in('status', ['accepted', 'delivered']);
+  }
   return Response.json({ received: true });
 }

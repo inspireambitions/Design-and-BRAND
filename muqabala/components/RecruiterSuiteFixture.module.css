@@ -1,0 +1,11 @@
+.page { --e-paper: #f7f6f2; --e-surface: #fff; --e-ink: #16241f; --e-ink-soft: #536860; --e-ink-faint: #56665f; --e-line: #d5ded8; --e-line-strong: #b9c6be; --e-jade: #0b7a6b; --e-jade-deep: #07564b; --e-jade-soft: #e5f1ee; display: grid; gap: 1.25rem; width: min(72rem, calc(100% - 2rem)); margin: 0 auto; padding: 2rem 0 5rem; color: #172620; }
+.header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1.15rem; border-radius: 1rem; background: #0e3b36; color: white; }
+.header h1, .header p { margin: 0; }
+.header p { color: #b8d7cf; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.header button { min-width: 5.5rem; min-height: 44px; border: 1px solid #86aaa1; border-radius: 999px; background: transparent; color: white; font: inherit; font-weight: 800; cursor: pointer; }
+.block { display: grid; gap: 0.85rem; padding: 1.15rem; border: 1px solid #d5ded8; border-radius: 1rem; background: white; }
+.block > h2, .block h3 { margin: 0; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; align-items: start; }
+.grid > div { display: grid; gap: 0.65rem; }
+.fixtureNote { margin: 0; padding: 0.8rem; border-inline-start: 3px solid #5373b8; background: #f4f7ff; }
+@media (max-width: 46rem) { .page { width: min(100% - 1rem, 72rem); padding-top: 0.5rem; } .header { align-items: flex-start; } .header h1 { font-size: 1.35rem; } .grid { grid-template-columns: 1fr; } .block { padding: 0.8rem; } }

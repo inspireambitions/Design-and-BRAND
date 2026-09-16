@@ -6,7 +6,7 @@ import { hasTrustedOrigin } from '@/lib/server/security';
 import { touchSchoolsSession } from '@/lib/schools/session';
 import {schoolsDevice} from '@/lib/schools/device';
 
-const answers = z.array(z.string().max(12000)).length(3);
+const answers = z.array(z.string().max(12000)).min(3).max(8);
 const attempt = z.object({
   assignmentId: z.string().uuid(), attemptId: z.string().uuid().optional(),
   revision: z.number().int().nonnegative(), answers,
@@ -18,7 +18,7 @@ const schema = z.discriminatedUnion('operation', [
   z.object({operation:z.literal('read'),payload:z.object({attemptId:z.string().uuid(),feedback:z.boolean(),reviewRevision:z.number().int().positive().nullable()}).strict()}),
   z.object({operation:z.literal('adviser_support'),payload:z.object({cohortId:z.string().uuid(),studentId:z.string().uuid(),status:z.enum(['open','scheduled','closed']),note:z.string().max(1000)}).strict()}),
   z.object({operation:z.literal('retry'),payload:z.object({attemptId:z.string().uuid()}).strict()}),
-  z.object({operation:z.literal('correct'),payload:z.object({attemptId:z.string().uuid(),question:z.number().int().min(0).max(2),
+  z.object({operation:z.literal('correct'),payload:z.object({attemptId:z.string().uuid(),question:z.number().int().min(0).max(7),
     element:z.string().min(1).max(80),present:z.boolean(),reason:z.string().trim().min(1).max(500),revision:z.number().int().nonnegative()}).strict()}),
   z.object({ operation: z.literal('draft'), payload: attempt }),
   z.object({ operation: z.literal('submit'), payload: attempt }),

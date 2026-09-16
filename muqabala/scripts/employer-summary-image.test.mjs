@@ -12,7 +12,7 @@ async function loadRoute(owner = 'owner') {
     '@/lib/employer-volume': { employerVolumeEnabled: () => true },
     '@/lib/employer-volume/strip': { timeSavedHours: () => 1.2 },
     '@/lib/server/employer-role-strip': { loadRoleStrip: async () => ({ strip: { invited: 20, answered: 12, fullCoverage: 8, shortlisted: 3, decided: 5 } }) },
-    '@/lib/interview-token': { verifyInterview: () => ({ title: 'Housekeeping Attendant' }) },
+    '@/lib/interview-token': { verifyStoredInterview: () => ({ title: 'Housekeeping Attendant' }) },
     '@/lib/supabase/admin': { createAdminClient: () => ({ from: () => ({ insert: async () => ({ error: null }) }) }) },
     '@/lib/supabase/server': { currentUser: async () => ({ id: 'owner' }), createClient: async () => ({ from: () => builder }) },
   };

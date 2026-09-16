@@ -89,7 +89,15 @@ export type EmployerVolumeEventName =
   | 'candidate_shared'
   | 'summary_shared'
   | 'export_downloaded'
-  | 'payment_completed';
+  | 'payment_completed'
+  | 'attention_item_clicked'
+  | 'reminder_preview_opened'
+  | 'reminder_batch_queued'
+  | 'candidate_question_answered'
+  | 'candidate_question_escalated'
+  | 'candidate_question_resolved'
+  | 'summary_inaccuracy_reported'
+  | 'role_help_used';
 
 /** Practice flow milestones. Properties are role_id, mode and lang only. */
 export type PracticeFlowEventName =

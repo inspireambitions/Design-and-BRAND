@@ -148,7 +148,8 @@ test('screening questions are signed once per link and the adaptive engine owns 
   assert.match(packRoute, /signProofPack\(\{[\s\S]*questions,/);
   assert.match(packRoute, /insert\(\{[\s\S]*signed_token: signedToken/);
   assert.match(packLookup, /const columns = 'id, signed_token/);
-  assert.match(packLookup, /verifyInterview\(data\.signed_token\)/);
+  assert.match(packLookup, /expires_at[\s\S]*verifyStoredInterview\(data\.signed_token\)/);
+  assert.match(candidatePage, /pack\.questionSource !== 'employer_reviewed'/);
   assert.doesNotMatch(packLookup, /proofQuestions|signProofPack/);
   assert.doesNotMatch(candidatePage, /proofQuestions|signProofPack/);
   assert.match(brainRoute, /processUniversalTurn\(state, answer\.transcript/);
@@ -198,10 +199,10 @@ test('employer creation wizard validates role and question details before creati
   const styles = read('components/EmployerProofCreate.module.css');
   const copy = read('lib/i18n.ts');
   const generatePosition = form.indexOf("t('proofGenerateAdvert')");
-  const createPosition = form.indexOf("t('proofCreateAction')");
+  const createPosition = form.indexOf("t('proofPublishConfirm')");
 
   assert.match(form, /fetch\('\/api\/screening\/job-description'/);
-  assert.match(form, /const canCreate = companyReady && titleReady && jobReady && settingsReady/);
+  assert.match(form, /const canCreate = companyReady && titleReady && locationReady && questionsReady && settingsReady/);
   assert.match(form, /type="submit" className=\{styles\.submit\} disabled=\{!canCreate\}/);
   assert.ok(generatePosition >= 0 && createPosition > generatePosition);
   assert.match(form, /proofWizardRole[\s\S]*proofWizardQuestions[\s\S]*proofWizardPreview[\s\S]*proofWizardShare/);
@@ -214,11 +215,13 @@ test('employer creation wizard validates role and question details before creati
   assert.match(form, /recruiterName: recruiterName\.trim\(\) \|\| undefined/);
   assert.match(form, /t\('proofRecruiterLabel'\)/);
   assert.match(form, /proofCandidateInvite/);
+  assert.match(form, /jobText: jobText\.trim\(\) \|\| undefined/);
+  assert.match(form, /publishKey: publishKeyRef\.current/);
   assert.match(form, /proofRecommendMessage/);
   assert.match(form, /proofEmailSubject/);
   assert.match(form, /mailto:\?subject=/);
   assert.match(form, /<CopyButton[\s\S]*successLabel=\{t\('proofCopied'\)\}/);
-  assert.match(copy, /Learn how each candidate would approach the role before you shortlist\./);
+  assert.match(copy, /Candidates receive these approved questions in this order\./);
   assert.match(copy, /Your job description is saved\. Please try again\./);
   assert.doesNotMatch(copy, /Check the job description and try again\./);
   assert.match(copy, /I used Muqabala for \{title\} at \{company\}\./);
@@ -324,6 +327,8 @@ test('a model timeout still leaves an immediate signed catalogue interview for t
   assert.match(packRoute, /\.eq\('starts_used', 0\)[\s\S]*\.is\('first_opened_at', null\)/);
   assert.match(packLookup, /update\(\{ first_opened_at: openedAt \}\)[\s\S]*\.is\('first_opened_at', null\)/);
   assert.match(migration, /question_source in \('legacy', 'catalogue', 'ai'\)/);
+  const recruiterMigration = read('supabase/migrations/20260916120000_recruiter_assistance.sql');
+  assert.match(recruiterMigration, /question_source in \('legacy', 'catalogue', 'ai', 'employer_reviewed'\)/);
   assert.match(migration, /signed question pack is immutable/);
 });
 
@@ -368,7 +373,9 @@ test('screening retries keep one capacity place and return a durable receipt', (
 
 test('employer sees aggregate interrupted uploads without pre-consent identity', () => {
   const dashboard = read('app/employer/page.tsx');
-  assert.match(dashboard, /Upload interrupted/);
+  const recruiterSuite = read('lib/recruiter-suite.ts');
+  assert.match(recruiterSuite, /Upload interrupted/);
+  assert.match(dashboard, /interruptedUploads: interruptedInterviewIds\.size/);
   assert.match(dashboard, /Date\.parse\(answer\.updated_at\) <= staleBefore/);
   assert.match(dashboard, /select\('id,screening_pack_id,started_at,submitted_at'\)/);
   assert.doesNotMatch(dashboard, /technicalInterviewRows[\s\S]{0,400}candidate_name/);

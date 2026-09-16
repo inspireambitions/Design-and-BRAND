@@ -3,8 +3,10 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { configuredOrigin, newOpaqueToken, tokenHash } from '@/lib/server/security';
+import { preparePublishedFaq } from '@/lib/recruiter-suite';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient, currentUser } from '@/lib/supabase/server';
+import { zonedLocalDateTimeToIso } from '@/lib/timezone';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -92,6 +94,46 @@ export async function setRemindersEnabled(formData: FormData) {
   if (!client) return;
   await client.from('screening_packs').update({ reminders_enabled: enabled }).eq('id', roleId);
   revalidatePath('/employer');
+}
+
+export async function updateRoleClosingDate(input: { roleId: string; localClosing: string; timezone: string }): Promise<{ ok: true } | { error: string }> {
+  const user = await currentUser();
+  if (!user || !UUID_PATTERN.test(input.roleId)) return { error: 'This role is not available.' };
+  const expiresAt = zonedLocalDateTimeToIso(input.localClosing, input.timezone);
+  if (!expiresAt) return { error: 'Enter a valid date and time for this role timezone.' };
+  const expires = Date.parse(expiresAt);
+  if (expires <= Date.now() + 5 * 60 * 1000 || expires > Date.now() + 30 * 24 * 60 * 60 * 1000) {
+    return { error: 'Choose a closing time between five minutes and 30 days from now.' };
+  }
+  const client = await createClient();
+  if (!client) return { error: 'Role storage is unavailable.' };
+  const { data: ownedRole } = await client.from('screening_packs')
+    .select('id,timezone')
+    .eq('id', input.roleId)
+    .eq('employer_id', user.id)
+    .maybeSingle();
+  if (!ownedRole || (ownedRole.timezone || 'Asia/Dubai') !== input.timezone) return { error: 'This role is not available.' };
+  const { data, error } = await client.from('screening_packs')
+    .update({ expires_at: expiresAt })
+    .eq('id', input.roleId)
+    .eq('employer_id', user.id)
+    .select('id')
+    .maybeSingle();
+  if (error || !data) return { error: 'The closing date could not be saved.' };
+  const admin = createAdminClient();
+  await admin?.from('recruiter_audit_events').insert({
+    actor_id: user.id,
+    employer_id: user.id,
+    role_id: input.roleId,
+    record_type: 'role',
+    record_id: input.roleId,
+    action: 'closing_date_updated',
+    result: 'succeeded',
+    metadata: { expires_at: expiresAt, timezone: input.timezone },
+  });
+  revalidatePath('/employer');
+  revalidatePath(`/employer/roles/${input.roleId}`);
+  return { ok: true };
 }
 
 type VolumeDecision = 'shortlist' | 'pass' | 'later';
@@ -203,4 +245,81 @@ export async function setMinutesPerCv(formData: FormData) {
   if (!client) return;
   await client.from('screening_packs').update({ minutes_per_cv: minutes }).eq('id', roleId);
   revalidatePath('/employer');
+}
+
+async function ownedCandidateQuestion(questionId: string) {
+  const user = await currentUser();
+  if (!user || !UUID_PATTERN.test(questionId)) return null;
+  const client = await createClient();
+  if (!client) return null;
+  const { data } = await client.from('candidate_role_questions')
+    .select('id,role_id,candidate_email,question_text,reply_text,resolved_at')
+    .eq('id', questionId)
+    .maybeSingle();
+  return data ? { user, question: data } : null;
+}
+
+export async function replyCandidateQuestion(input: { questionId: string; reply: string }): Promise<{ ok: true } | { error: string }> {
+  const owned = await ownedCandidateQuestion(input.questionId);
+  const reply = input.reply.replace(/\s+/g, ' ').trim();
+  if (!owned || reply.length < 1 || reply.length > 2000) return { error: 'Check the reply and try again.' };
+  const admin = createAdminClient();
+  if (!admin) return { error: 'Question storage is unavailable.' };
+  const now = new Date().toISOString();
+  const { error } = await admin.from('candidate_role_questions').update({
+    reply_text: reply,
+    replied_at: now,
+    replied_by: owned.user.id,
+    updated_at: now,
+  }).eq('id', owned.question.id).eq('role_id', owned.question.role_id);
+  if (error) return { error: 'The reply could not be saved.' };
+  await admin.from('recruiter_audit_events').insert({
+    actor_id: owned.user.id, employer_id: owned.user.id, role_id: owned.question.role_id,
+    record_type: 'candidate_question', record_id: owned.question.id, action: 'question_replied', result: 'succeeded', metadata: {},
+  });
+  revalidatePath('/employer/questions');
+  revalidatePath(`/employer/roles/${owned.question.role_id}`);
+  return { ok: true };
+}
+
+export async function resolveCandidateQuestion(questionId: string): Promise<{ ok: true } | { error: string }> {
+  const owned = await ownedCandidateQuestion(questionId);
+  if (!owned) return { error: 'Question not found.' };
+  const admin = createAdminClient();
+  if (!admin) return { error: 'Question storage is unavailable.' };
+  const now = new Date().toISOString();
+  const { error } = await admin.from('candidate_role_questions').update({ resolved_at: now, resolved_by: owned.user.id, updated_at: now })
+    .eq('id', owned.question.id).eq('role_id', owned.question.role_id).is('resolved_at', null);
+  if (error) return { error: 'The question could not be resolved.' };
+  await admin.from('recruiter_audit_events').insert({
+    actor_id: owned.user.id, employer_id: owned.user.id, role_id: owned.question.role_id,
+    record_type: 'candidate_question', record_id: owned.question.id, action: 'question_resolved', result: 'succeeded', metadata: {},
+  });
+  revalidatePath('/employer');
+  revalidatePath('/employer/questions');
+  revalidatePath(`/employer/roles/${owned.question.role_id}`);
+  return { ok: true };
+}
+
+export async function publishCandidateQuestionAsFaq(input: { questionId: string; publicQuestion: string; publicAnswer: string }): Promise<{ ok: true } | { error: string }> {
+  const owned = await ownedCandidateQuestion(input.questionId);
+  if (!owned || !owned.question.reply_text) return { error: 'Save a reply before publishing separate role information.' };
+  const faq = preparePublishedFaq(input.publicQuestion, input.publicAnswer, owned.question.candidate_email);
+  if (!faq) return { error: 'Use concise public wording without an email address, phone number, or private contact detail.' };
+  const client = await createClient();
+  const admin = createAdminClient();
+  if (!client || !admin) return { error: 'Role information is unavailable.' };
+  const { data: pack } = await client.from('screening_packs').select('id,published_facts').eq('id', owned.question.role_id).maybeSingle();
+  if (!pack) return { error: 'Role not found.' };
+  const facts = pack.published_facts && typeof pack.published_facts === 'object' ? pack.published_facts as Record<string, unknown> : {};
+  const existing = Array.isArray(facts.faqs) ? facts.faqs.filter((item) => item && typeof item === 'object').slice(0, 19) : [];
+  const faqs = [...existing, faq];
+  const { error } = await admin.from('screening_packs').update({ published_facts: { ...facts, faqs } }).eq('id', pack.id).eq('employer_id', owned.user.id);
+  if (error) return { error: 'The role information could not be updated.' };
+  await admin.from('recruiter_audit_events').insert({
+    actor_id: owned.user.id, employer_id: owned.user.id, role_id: owned.question.role_id,
+    record_type: 'role_fact', record_id: owned.question.id, action: 'candidate_question_published_as_faq', result: 'succeeded', metadata: {},
+  });
+  revalidatePath(`/employer/roles/${owned.question.role_id}`);
+  return { ok: true };
 }

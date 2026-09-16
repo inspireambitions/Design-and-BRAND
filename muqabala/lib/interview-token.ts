@@ -67,23 +67,40 @@ export function signInterview(
   return signPayload({ ...payload, v: TOKEN_VERSION, kind: 'practice', exp: Date.now() + TOKEN_TTL_MS });
 }
 
-/** 14-day work-sample pack. Same signature family as practice so scoring can trust it. */
+/** Work-sample pack, normally aligned to its stored 1–30 day closing time. */
 export function signProofPack(
-  payload: Omit<InterviewTokenPayload, 'v' | 'exp' | 'kind'> & { workplace: string; recruiterName?: string },
+  payload: Omit<InterviewTokenPayload, 'v' | 'exp' | 'kind'> & {
+    workplace: string;
+    recruiterName?: string;
+    /** Keep the signed participation lifetime aligned with the stored role closing time. */
+    expiresAt?: string | number;
+  },
 ): string | null {
   const workplace = payload.workplace.trim().slice(0, 80);
   const recruiterName = payload.recruiterName?.trim().slice(0, 80) || undefined;
+  const requestedExpiry = typeof payload.expiresAt === 'number'
+    ? payload.expiresAt
+    : payload.expiresAt
+      ? Date.parse(payload.expiresAt)
+      : Number.NaN;
+  const exp = Number.isFinite(requestedExpiry) && requestedExpiry > Date.now()
+    ? requestedExpiry
+    : Date.now() + PROOF_TTL_MS;
   return signPayload({
-    ...payload,
+    title: payload.title,
+    industry: payload.industry,
+    level: payload.level,
+    competencies: payload.competencies,
+    questions: payload.questions,
     workplace,
     recruiterName,
     v: TOKEN_VERSION,
     kind: 'proof',
-    exp: Date.now() + PROOF_TTL_MS,
+    exp,
   });
 }
 
-export function verifyInterview(token: unknown): InterviewTokenPayload | null {
+function verifySignedInterview(token: unknown, enforceExpiry: boolean): InterviewTokenPayload | null {
   if (typeof token !== 'string' || token.length > 64_000) return null;
   const key = signingKey();
   if (!key) return null;
@@ -103,12 +120,26 @@ export function verifyInterview(token: unknown): InterviewTokenPayload | null {
   try {
     const payload = JSON.parse(fromB64url(encoded).toString('utf8')) as InterviewTokenPayload;
     if (payload.v !== TOKEN_VERSION) return null;
-    if (typeof payload.exp !== 'number' || Date.now() > payload.exp) return null;
+    if (typeof payload.exp !== 'number' || (enforceExpiry && Date.now() > payload.exp)) return null;
     if (!Array.isArray(payload.questions) || !Array.isArray(payload.competencies)) return null;
     return payload;
   } catch {
     return null;
   }
+}
+
+/** Verifies a candidate/practice token and enforces its participation expiry. */
+export function verifyInterview(token: unknown): InterviewTokenPayload | null {
+  return verifySignedInterview(token, true);
+}
+
+/**
+ * Signature-validating read for an already authorised database record.
+ * Callers must first prove ownership or load an active pack; this deliberately
+ * does not make an expired public participation token usable.
+ */
+export function verifyStoredInterview(token: unknown): InterviewTokenPayload | null {
+  return verifySignedInterview(token, false);
 }
 
 /** Rebuild the Role the scorer needs from a verified token. */

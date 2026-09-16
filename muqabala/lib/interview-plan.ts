@@ -1,4 +1,4 @@
-import { roleFromToken, verifyInterview } from './interview-token';
+import { roleFromToken, verifyInterview, verifyStoredInterview } from './interview-token';
 import { matchesFocusedQuestionSequence, matchesTrustedQuestionSequence, type InterviewMode } from './interview-plan-policy';
 import { buildCustomRole, CUSTOM_ROLE_ID, getRole, type Question, type Role } from './roles';
 
@@ -10,11 +10,18 @@ export function trustedInterviewPlan(input: {
   interviewToken?: string;
   focusQuestionId?: string;
 }): { role: Role; questions: Question[] } | null {
-  const verified = input.interviewToken ? verifyInterview(input.interviewToken) : null;
+  // Screening participation is also checked against the active database pack
+  // in the route. The historical verifier lets a legitimate 21/30-day pack
+  // created before token-lifetime alignment continue until its stored close.
+  const verified = input.interviewToken
+    ? input.mode === 'screening'
+      ? verifyStoredInterview(input.interviewToken)
+      : verifyInterview(input.interviewToken)
+    : null;
   // Practice and proof never mix: a Coach token cannot start a work sample,
   // and a work-sample pack cannot be scored as practice.
   if (input.mode === 'screening') {
-    if (!verified || verified.kind !== 'proof' || (verified.questions.length !== 3 && verified.questions.length !== 8)) return null;
+    if (!verified || verified.kind !== 'proof' || verified.questions.length < 3 || verified.questions.length > 8) return null;
   } else if (verified?.kind === 'proof') {
     return null;
   }
@@ -32,7 +39,7 @@ export function trustedInterviewPlan(input: {
   if (!opener || !closer) return null;
   const ids = input.questions.map((question) => question.id);
   const allowed = new Map([...role.questions, ...(role.bank ?? [])].map((question) => [question.id, question]));
-  if (input.mode === 'screening' && verified?.questions.length === 8) {
+  if (input.mode === 'screening' && verified) {
     const expected = verified.questions.map((question) => question.id);
     if (ids.length !== expected.length || ids.some((id, index) => id !== expected[index])) return null;
   } else if (input.focusQuestionId) {

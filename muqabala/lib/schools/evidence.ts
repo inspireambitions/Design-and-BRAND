@@ -9,7 +9,7 @@ export const questionRubricSchema = z.array(rubricElementSchema).length(4)
   .refine(items => new Set(items.map(item => item.id)).size === 4, 'Rubric elements must be distinct');
 export const schoolsFeedbackSchema = z.object({
   questions: z.array(z.object({
-    questionIndex: z.number().int().min(0).max(2),
+    questionIndex: z.number().int().min(0).max(7),
     elements: z.array(z.object({
       id: z.string().min(1).max(80),
       present: z.boolean(),
@@ -17,18 +17,18 @@ export const schoolsFeedbackSchema = z.object({
       confidence: z.enum(['high', 'medium', 'low']),
     }).strict()).length(4),
     improvement: z.string().min(1).max(600),
-  }).strict()).length(3),
+  }).strict()).min(3).max(8),
 }).strict();
 export type SchoolsFeedback = z.infer<typeof schoolsFeedbackSchema>;
 export type SchoolRubric = z.infer<typeof questionRubricSchema>;
 
 export const schoolsProviderFeedbackSchema=z.object({questions:z.array(z.object({
-  questionIndex:z.number().int().min(0).max(2),
+  questionIndex:z.number().int().min(0).max(7),
   elements:z.array(z.object({id:z.string().min(1).max(80),present:z.boolean(),
     firstExcerpt:z.number().int().nonnegative().nullable(),lastExcerpt:z.number().int().nonnegative().nullable(),
     confidence:z.enum(['high','medium','low'])}).strict()).length(4),
   improvement:z.string().min(1).max(600),
-}).strict()).length(3)}).strict();
+}).strict()).min(3).max(8)}).strict();
 
 /** Offsets always refer to the original stored answer, including its spelling. */
 export function answerExcerpts(answer:string){
@@ -62,10 +62,10 @@ export function resolveSchoolsFeedback(raw:unknown,answers:string[]):SchoolsFeed
 
 /** Only validated answer excerpts can contribute to the count. Client totals are never read. */
 export function calculateEvidence(raw: unknown, answers: string[], rubrics: SchoolRubric[]) {
-  if (answers.length !== 3 || rubrics.length !== 3) throw new Error('Three answers and rubrics are required');
+  if (answers.length < 3 || answers.length > 8 || rubrics.length !== answers.length) throw new Error('Between 3 and 8 answers and matching rubrics are required');
   const feedback = schoolsFeedbackSchema.parse(raw);
   const indices = new Set(feedback.questions.map(question => question.questionIndex));
-  if (indices.size !== 3) throw new Error('Each question must occur once');
+  if (indices.size !== answers.length) throw new Error('Each question must occur once');
   let covered = 0;
   const detail = feedback.questions.slice().sort((a, b) => a.questionIndex - b.questionIndex).map(question => {
     const rubric = questionRubricSchema.parse(rubrics[question.questionIndex]);

@@ -29,9 +29,21 @@ type LinkDetails = {
   url: string;
   expiresAt: string;
   maxCandidates: number;
+  questionCount?: number;
+  location?: string | null;
+  timezone?: string;
 };
 
 type Channel = 'email' | 'whatsapp';
+type QuestionDraft = { id: string; text: string; textAr: string };
+type QuestionnaireLanguage = 'en' | 'both';
+
+const ROLE_TIMEZONES = ['Asia/Dubai', 'Asia/Riyadh', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Kuwait', 'Asia/Muscat', 'Asia/Manila'] as const;
+const FALLBACK_QUESTIONS: QuestionDraft[] = [
+  { id: 'intro', text: 'What makes your background relevant to this role?', textAr: 'ما الذي يجعل خبرتك مناسبة لهذه الوظيفة؟' },
+  { id: 'problem', text: 'Tell us about a real work problem you solved and what changed as a result.', textAr: 'حدثنا عن مشكلة حقيقية في العمل حللتها وما الذي تغيّر نتيجة لذلك.' },
+  { id: 'priority', text: 'Describe a time you had competing priorities. How did you decide what to do first?', textAr: 'صف موقفاً كانت لديك فيه أولويات متنافسة. كيف قررت ما الذي ستفعله أولاً؟' },
+];
 
 export type EmployerPageProps = {
   signedIn: boolean;
@@ -236,13 +248,24 @@ export function EmployerProofCreate({
   );
 }
 
-function EmployerCreateForm({ volume }: { volume: boolean }) {
+export function EmployerCreateForm({ volume, fixtureMode = false }: { volume: boolean; fixtureMode?: boolean }) {
   const { lang, t } = useLang();
+  const ar = lang === 'ar';
   const [step, setStep] = useState<0 | 1 | 2 | 3>(0);
   const [companyName, setCompanyName] = useState('');
   const [recruiterName, setRecruiterName] = useState('');
   const [jobTitle, setJobTitle] = useState('');
+  const [location, setLocation] = useState('');
+  const [timezone, setTimezone] = useState<(typeof ROLE_TIMEZONES)[number]>('Asia/Dubai');
+  const [salary, setSalary] = useState('');
+  const [accommodation, setAccommodation] = useState('');
+  const [interviewDetails, setInterviewDetails] = useState('');
   const [jobText, setJobText] = useState('');
+  const [questions, setQuestions] = useState<QuestionDraft[]>(FALLBACK_QUESTIONS);
+  const [questionnaireLanguage, setQuestionnaireLanguage] = useState<QuestionnaireLanguage>('both');
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestionFallback, setSuggestionFallback] = useState(false);
+  const [suggestedFor, setSuggestedFor] = useState('');
   const [maxCandidates, setMaxCandidates] = useState(DEFAULT_MAX_CANDIDATES);
   const [expiryDays, setExpiryDays] = useState(DEFAULT_EXPIRY_DAYS);
   const [generating, setGenerating] = useState(false);
@@ -251,14 +274,17 @@ function EmployerCreateForm({ volume }: { volume: boolean }) {
   const [linkDetails, setLinkDetails] = useState<LinkDetails | null>(null);
   const [error, setError] = useState<'generate' | 'create' | null>(null);
   const [validationError, setValidationError] = useState<'role' | 'questions' | null>(null);
-  const [tooShort, setTooShort] = useState(false);
   const [channel, setChannel] = useState<Channel>('email');
   const [sendLang, setSendLang] = useState<Lang>(lang);
   const headingRef = useRef<HTMLHeadingElement | null>(null);
   const companyRef = useRef<HTMLInputElement | null>(null);
   const titleRef = useRef<HTMLInputElement | null>(null);
+  const locationRef = useRef<HTMLInputElement | null>(null);
   const advertRef = useRef<HTMLTextAreaElement | null>(null);
+  const publishKeyRef = useRef<string | null>(null);
+  const setupStartedAtRef = useRef<number | null>(null);
   const mounted = useRef(false);
+  const questionsDirtyRef = useRef(false);
 
   useEffect(() => {
     if (!mounted.current) {
@@ -270,16 +296,19 @@ function EmployerCreateForm({ volume }: { volume: boolean }) {
 
   const companyReady = companyName.trim().length >= 2;
   const titleReady = jobTitle.trim().length >= 2;
+  const locationReady = location.trim().length >= 2;
   const jobReady = jobText.trim().length >= MIN_ADVERT_CHARS;
+  const questionsReady = questions.length >= 3 && questions.length <= 8
+    && questions.every((question) => question.text.trim().length >= 15
+      && (questionnaireLanguage === 'en' || question.textAr.trim().length >= 10));
   const settingsReady = Number.isInteger(maxCandidates) && maxCandidates >= 1 && maxCandidates <= 1000;
   const canGenerate = companyReady && titleReady && !generating && !creating;
-  const canCreate = companyReady && titleReady && jobReady && settingsReady && !generating && !creating;
+  const canCreate = companyReady && titleReady && locationReady && questionsReady && settingsReady && !generating && !creating;
   const link = linkDetails?.url ?? '';
+  const plannedExpiryIso = new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000).toISOString();
   const plannedExpiryDate = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-AE' : 'en-GB', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }).format(new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000));
+    dateStyle: 'long', timeStyle: 'short', timeZone: timezone,
+  }).format(new Date(plannedExpiryIso));
 
   const send = (key: StringKey) => translate(sendLang, key);
   const sendCompany = companyName.trim() || send('proofCompanyPlaceholder');
@@ -295,34 +324,85 @@ function EmployerCreateForm({ volume }: { volume: boolean }) {
     home: EMPLOYER_HOME,
   });
 
+  function markSetupStarted() {
+    setupStartedAtRef.current ??= performance.now();
+  }
+
   function resetLinkSettings() {
     setMaxCandidates(DEFAULT_MAX_CANDIDATES);
     setExpiryDays(DEFAULT_EXPIRY_DAYS);
     setLinkDetails(null);
   }
 
-  function continueWizard() {
+  async function loadQuestionSuggestions(force = false) {
+    if (suggesting || (!force && suggestedFor === jobTitle.trim())) return;
+    const requestedTitle = jobTitle.trim();
+    if (fixtureMode) {
+      if (force || !questionsDirtyRef.current) setQuestions(FALLBACK_QUESTIONS);
+      setSuggestedFor(requestedTitle);
+      return;
+    }
+    setSuggesting(true);
+    setSuggestionFallback(false);
+    try {
+      const response = await fetch('/api/screening/question-suggestions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobTitle: jobTitle.trim() }),
+      });
+      const body = await response.json().catch(() => ({})) as { questions?: QuestionDraft[] };
+      if (!response.ok || !body.questions || body.questions.length < 3) throw new Error('suggestions_unavailable');
+      if (force || !questionsDirtyRef.current) setQuestions(body.questions.slice(0, 8));
+      setSuggestedFor(requestedTitle);
+    } catch {
+      setQuestions((current) => current.length >= 3 ? current : FALLBACK_QUESTIONS);
+      setSuggestionFallback(true);
+    } finally {
+      setSuggesting(false);
+    }
+  }
+
+  async function continueWizard() {
     if (step === 0) {
-      if (!companyReady || !titleReady) {
+      if (!companyReady || !titleReady || !locationReady) {
         setValidationError('role');
-        (companyReady ? titleRef.current : companyRef.current)?.focus();
+        const firstExistingRoleField = companyReady ? titleRef.current : companyRef.current;
+        const firstMissingRoleField = companyReady && titleReady ? locationRef.current : firstExistingRoleField;
+        firstMissingRoleField?.focus();
         return;
       }
       setValidationError(null);
       setStep(1);
+      await loadQuestionSuggestions();
       return;
     }
     if (step === 1) {
-      if (!jobReady) {
+      if (!questionsReady) {
         setValidationError('questions');
-        setTooShort(true);
-        advertRef.current?.focus();
         return;
       }
       setValidationError(null);
-      setTooShort(false);
       setStep(2);
     }
+  }
+
+  function updateQuestion(index: number, patch: Partial<QuestionDraft>) {
+    questionsDirtyRef.current = true;
+    setQuestions((current) => current.map((question, questionIndex) => questionIndex === index ? { ...question, ...patch } : question));
+    setValidationError(null);
+    setLinkDetails(null);
+  }
+
+  function moveQuestion(index: number, direction: -1 | 1) {
+    questionsDirtyRef.current = true;
+    setQuestions((current) => {
+      const target = index + direction;
+      if (target < 0 || target >= current.length) return current;
+      const next = [...current];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+    setLinkDetails(null);
   }
 
   async function generateJobDescription() {
@@ -330,7 +410,6 @@ function EmployerCreateForm({ volume }: { volume: boolean }) {
     setGenerating(true);
     setGenerated(false);
     setError(null);
-    setTooShort(false);
     setLinkDetails(null);
     try {
       const response = await fetch('/api/screening/job-description', {
@@ -345,6 +424,7 @@ function EmployerCreateForm({ volume }: { volume: boolean }) {
       }
       setJobText(body.jobDescription);
       setGenerated(true);
+      requestAnimationFrame(() => advertRef.current?.focus());
     } catch {
       setError('generate');
     } finally {
@@ -354,15 +434,14 @@ function EmployerCreateForm({ volume }: { volume: boolean }) {
 
   async function createLink() {
     if (!canCreate) return;
-    if (jobText.trim().length < MIN_ADVERT_CHARS) {
-      setTooShort(true);
-      setError(null);
+    if (fixtureMode) {
+      setError('create');
       return;
     }
     setCreating(true);
     setError(null);
-    setTooShort(false);
     try {
+      publishKeyRef.current ??= crypto.randomUUID();
       const pack = await fetch('/api/screening/packs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -370,7 +449,17 @@ function EmployerCreateForm({ volume }: { volume: boolean }) {
           companyName: companyName.trim(),
           recruiterName: recruiterName.trim() || undefined,
           jobTitle: jobTitle.trim(),
-          jobText: jobText.trim(),
+          jobText: jobText.trim() || undefined,
+          location: location.trim(),
+          timezone,
+          publishedFacts: {
+            salary: salary.trim() || undefined,
+            accommodation: accommodation.trim() || undefined,
+            interviewDetails: interviewDetails.trim() || undefined,
+          },
+          questionnaireLanguage,
+          questions,
+          publishKey: publishKeyRef.current,
           maxCandidates,
           expiryDays,
         }),
@@ -381,7 +470,10 @@ function EmployerCreateForm({ volume }: { volume: boolean }) {
         return;
       }
       setLinkDetails(packBody as LinkDetails);
-      track('role_created', employerVolumeProps(volume, packBody.id ? { role_id: packBody.id } : {}));
+      track('role_created', employerVolumeProps(volume, {
+        ...(packBody.id ? { role_id: packBody.id } : {}),
+        ...(setupStartedAtRef.current === null ? {} : { duration_ms: performance.now() - setupStartedAtRef.current }),
+      }));
       setStep(3);
     } catch {
       setError('create');
@@ -430,6 +522,7 @@ function EmployerCreateForm({ volume }: { volume: boolean }) {
               dir="auto"
               value={companyName}
               onChange={(event) => {
+                markSetupStarted();
                 setCompanyName(event.target.value);
                 setGenerated(false);
                 setError(null);
@@ -465,8 +558,10 @@ function EmployerCreateForm({ volume }: { volume: boolean }) {
               dir="auto"
               value={jobTitle}
               onChange={(event) => {
+                markSetupStarted();
                 setJobTitle(event.target.value);
                 setGenerated(false);
+                setSuggestedFor('');
                 setError(null);
                 setValidationError(null);
                 setLinkDetails(null);
@@ -478,9 +573,35 @@ function EmployerCreateForm({ volume }: { volume: boolean }) {
               aria-invalid={validationError === 'role' && !titleReady}
             />
           </label>
+          <label className={styles.field}>
+            <span>{t('proofLocationLabel')}</span>
+            <input
+              ref={locationRef}
+              dir="auto"
+              value={location}
+              onChange={(event) => { markSetupStarted(); setLocation(event.target.value); setValidationError(null); setLinkDetails(null); }}
+              minLength={2}
+              maxLength={160}
+              autoComplete="address-level2"
+              placeholder={t('proofLocationPlaceholder')}
+              aria-invalid={validationError === 'role' && !locationReady}
+            />
+          </label>
+          <label className={styles.field}>
+            <span>{t('proofTimezoneLabel')}</span>
+            <select value={timezone} onChange={(event) => { setTimezone(event.target.value as (typeof ROLE_TIMEZONES)[number]); setLinkDetails(null); }}>
+              {ROLE_TIMEZONES.map((zone) => <option key={zone} value={zone}>{zone}</option>)}
+            </select>
+          </label>
+          <details className={styles.optionalFacts}>
+            <summary>{t('proofOptionalFacts')}</summary>
+            <label className={styles.field}><span>{t('proofSalaryLabel')}</span><textarea dir="auto" maxLength={500} rows={2} value={salary} onChange={(event) => { setSalary(event.target.value); setLinkDetails(null); }} /></label>
+            <label className={styles.field}><span>{t('proofAccommodationLabel')}</span><textarea dir="auto" maxLength={500} rows={2} value={accommodation} onChange={(event) => { setAccommodation(event.target.value); setLinkDetails(null); }} /></label>
+            <label className={styles.field}><span>{t('proofInterviewDetailsLabel')}</span><textarea dir="auto" maxLength={1000} rows={3} value={interviewDetails} onChange={(event) => { setInterviewDetails(event.target.value); setLinkDetails(null); }} /></label>
+          </details>
           {validationError === 'role' && <p className={styles.warning} role="alert">{t('proofWizardRoleError')}</p>}
           <div className={styles.wizardActions}>
-            <button type="button" className={styles.submit} onClick={continueWizard}>{t('proofWizardContinue')}</button>
+            <button type="button" className={styles.submit} onClick={() => void continueWizard()}>{t('proofWizardContinue')}</button>
           </div>
         </section>}
 
@@ -489,38 +610,48 @@ function EmployerCreateForm({ volume }: { volume: boolean }) {
             <h3 ref={headingRef} id="wizard-questions-heading" tabIndex={-1}>{t('proofWizardQuestionsTitle')}</h3>
             <p>{t('proofWizardQuestionsBody')}</p>
           </div>
-          <label className={styles.field}>
-            <span>{t('proofAdvertLabel')}</span>
-            <textarea
-              ref={advertRef}
-              dir="auto"
-              value={jobText}
-              onChange={(event) => {
-                setJobText(event.target.value);
-                setError(null);
-                setValidationError(null);
-                setLinkDetails(null);
-                if (tooShort && event.target.value.trim().length >= MIN_ADVERT_CHARS) setTooShort(false);
-              }}
-              minLength={MIN_ADVERT_CHARS}
-              maxLength={12_000}
-              rows={7}
-              placeholder={t('proofAdvertPlaceholder')}
-              aria-describedby="job-description-status"
-              aria-invalid={validationError === 'questions'}
-            />
-          </label>
-          <button type="button" className={styles.generate} disabled={!canGenerate} onClick={() => void generateJobDescription()}>
-            {generating ? t('proofGeneratingAdvert') : t('proofGenerateAdvert')}
-          </button>
-          <div id="job-description-status" className={styles.status} aria-live="polite">
-            <p>{jobReady ? (generated ? t('proofAdvertGenerated') : t('proofReadyToCreate')) : t('proofAddDescriptionNext')}</p>
+          <div className={styles.questionHeading}>
+            <div><strong>{t('proofQuestionSuggestions')}</strong><p>{t('proofQuestionTemplateNote')}</p></div>
+            <button type="button" className={styles.generate} disabled={suggesting} onClick={() => { questionsDirtyRef.current = false; void loadQuestionSuggestions(true); }}>
+              {suggesting ? t('proofQuestionsLoading') : t('proofQuestionSuggestions')}
+            </button>
           </div>
-          {(tooShort || validationError === 'questions') && <p className={styles.warning} role="alert">{t('proofWizardQuestionsError')}</p>}
+          <fieldset className={styles.linkSettings}>
+            <legend>{ar ? 'لغة أسئلة المرشح' : 'Candidate question language'}</legend>
+            <label><input type="radio" name="questionnaire-language" checked={questionnaireLanguage === 'both'} onChange={() => { setQuestionnaireLanguage('both'); setLinkDetails(null); }} /> {ar ? 'الإنجليزية والعربية' : 'English and Arabic'}</label>
+            <label><input type="radio" name="questionnaire-language" checked={questionnaireLanguage === 'en'} onChange={() => { setQuestionnaireLanguage('en'); setLinkDetails(null); }} /> {ar ? 'الإنجليزية فقط' : 'English only'}</label>
+          </fieldset>
+          {suggestionFallback && <p className={styles.status} role="status">{t('proofQuestionsFallback')}</p>}
+          <ol className={styles.questionEditor} aria-label={t('proofQuestionSuggestions')}>
+            {questions.map((question, index) => (
+              <li key={`${question.id}-${index}`}>
+                <div className={styles.questionToolbar}>
+                  <strong>{index + 1}</strong>
+                  <button type="button" disabled={index === 0} onClick={() => moveQuestion(index, -1)}>{t('proofQuestionMoveUp')}</button>
+                  <button type="button" disabled={index === questions.length - 1} onClick={() => moveQuestion(index, 1)}>{t('proofQuestionMoveDown')}</button>
+                  <button type="button" disabled={questions.length <= 3} onClick={() => { questionsDirtyRef.current = true; setQuestions((current) => current.filter((_, questionIndex) => questionIndex !== index)); }}>{t('proofQuestionRemove')}</button>
+                </div>
+                <label className={styles.field}><span>{t('proofQuestionEnglish')}</span><textarea dir="ltr" rows={2} maxLength={500} value={question.text} onChange={(event) => updateQuestion(index, { text: event.target.value })} /></label>
+                {questionnaireLanguage === 'both' && <label className={styles.field}><span>{t('proofQuestionArabic')}</span><textarea dir="rtl" rows={2} maxLength={500} value={question.textAr} onChange={(event) => updateQuestion(index, { textAr: event.target.value })} /></label>}
+              </li>
+            ))}
+          </ol>
+          {questions.length < 8 && <button type="button" className={styles.generate} onClick={() => { questionsDirtyRef.current = true; setQuestions((current) => [...current, { id: `custom-${crypto.randomUUID()}`, text: '', textAr: '' }]); }}>{t('proofQuestionAdd')}</button>}
+          <p className={styles.status} aria-live="polite">{withValues(t('proofQuestionsCount'), { count: questions.length })}</p>
+          <details className={styles.optionalFacts}>
+            <summary>{t('proofAdvertLabel')} · {t('proofOptionalLabel')}</summary>
+            <label className={styles.field}>
+              <span>{t('proofAdvertLabel')}</span>
+              <textarea ref={advertRef} dir="auto" value={jobText} onChange={(event) => { setJobText(event.target.value); setError(null); setLinkDetails(null); }} maxLength={12_000} rows={6} placeholder={t('proofAdvertPlaceholder')} />
+            </label>
+            <button type="button" className={styles.generate} disabled={!canGenerate} onClick={() => void generateJobDescription()}>{generating ? t('proofGeneratingAdvert') : t('proofGenerateAdvert')}</button>
+            <div className={styles.status} aria-live="polite"><p>{jobReady ? (generated ? t('proofAdvertGenerated') : t('proofReadyToCreate')) : t('proofAddDescriptionNext')}</p></div>
+          </details>
+          {validationError === 'questions' && <p className={styles.warning} role="alert">{t('proofWizardQuestionsError')}</p>}
           {error === 'generate' && <p className={styles.warning} role="alert">{t('proofGenerateFailed')}</p>}
           <div className={styles.wizardActions}>
             <button type="button" className={styles.secondaryButton} onClick={() => { setValidationError(null); setStep(0); }}>{t('proofWizardBack')}</button>
-            <button type="button" className={styles.submit} onClick={continueWizard}>{t('proofWizardContinue')}</button>
+            <button type="button" className={styles.submit} onClick={() => void continueWizard()}>{t('proofWizardContinue')}</button>
           </div>
         </section>}
 
@@ -531,10 +662,24 @@ function EmployerCreateForm({ volume }: { volume: boolean }) {
           </div>
           <dl className={styles.previewSummary}>
             <div><dt>{t('proofWizardRoleSummary')}</dt><dd><bdi dir="auto">{jobTitle}</bdi> · <bdi dir="auto">{companyName}</bdi></dd></div>
-            <div><dt>{t('proofWizardSourceSummary')}</dt><dd dir="auto">{jobText}</dd></div>
+            <div><dt>{t('proofLocationSummary')}</dt><dd dir="auto">{location}</dd></div>
+            <div><dt>{t('proofTimezoneSummary')}</dt><dd>{timezone}</dd></div>
+            <div><dt>{t('proofWizardSourceSummary')}</dt><dd>{withValues(t('proofQuestionsCount'), { count: questions.length })}</dd></div>
             <div><dt>{t('proofWizardLimitSummary')}</dt><dd>{maxCandidates}</dd></div>
             <div><dt>{t('proofWizardExpirySummary')}</dt><dd suppressHydrationWarning>{plannedExpiryDate}</dd></div>
+            <div><dt>{ar ? 'لغة الأسئلة' : 'Question language'}</dt><dd>{questionnaireLanguage === 'en' ? 'English' : (ar ? 'الإنجليزية والعربية' : 'English and Arabic')}</dd></div>
           </dl>
+          <div className={styles.candidatePreview} id="role-facts">
+            <p className={styles.eyebrow}>{companyName}</p>
+            <h4 dir="auto">{jobTitle}</h4>
+            <p dir="auto">{location}</p>
+            <p>{withValues(t('proofQuestionsCount'), { count: questions.length })}</p>
+            <ol>{questions.map((question) => <li key={question.id} dir={lang === 'ar' && questionnaireLanguage === 'both' ? 'rtl' : 'ltr'}>{lang === 'ar' && questionnaireLanguage === 'both' ? question.textAr : question.text}</li>)}</ol>
+            {salary.trim() && <p dir="auto"><strong>{t('proofSalaryLabel')}:</strong> {salary.trim()}</p>}
+            {accommodation.trim() && <p dir="auto"><strong>{t('proofAccommodationLabel')}:</strong> {accommodation.trim()}</p>}
+            {interviewDetails.trim() && <p dir="auto"><strong>{t('proofInterviewDetailsLabel')}:</strong> {interviewDetails.trim()}</p>}
+            <small>{t('proofWizardExpirySummary')}: {plannedExpiryDate} · {timezone}</small>
+          </div>
           <fieldset className={styles.linkSettings} aria-labelledby="link-settings-label">
           <div className={styles.linkSettingsHead}>
             <span id="link-settings-label">{t('proofLinkSettingsLabel')}</span>
@@ -581,7 +726,7 @@ function EmployerCreateForm({ volume }: { volume: boolean }) {
           {error === 'create' && <p className={styles.warning} role="alert">{t('proofCreateFailed')}</p>}
           <div className={styles.wizardActions}>
             <button type="button" className={styles.secondaryButton} disabled={creating} onClick={() => setStep(1)}>{t('proofWizardBack')}</button>
-            <button type="submit" className={styles.submit} disabled={!canCreate}>{creating ? t('proofCreating') : t('proofCreateAction')}</button>
+            <button type="submit" className={styles.submit} disabled={!canCreate}>{creating ? t('proofCreating') : t('proofPublishConfirm')}</button>
           </div>
         </section>}
       </form>}
@@ -597,9 +742,9 @@ function EmployerCreateForm({ volume }: { volume: boolean }) {
             {linkDetails && withValues(t('proofLinkReady'), {
               count: linkDetails.maxCandidates,
               date: new Intl.DateTimeFormat(lang === 'ar' ? 'ar-AE' : 'en-GB', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
+                dateStyle: 'long',
+                timeStyle: 'short',
+                timeZone: linkDetails.timezone || timezone,
               }).format(new Date(linkDetails.expiresAt)),
             })}
           </p>

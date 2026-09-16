@@ -2,7 +2,7 @@ import { employerVolumeEnabled } from '@/lib/employer-volume';
 import { buildPdf, type PdfLine } from '@/lib/employer-volume/pdf';
 import { exportCandidateSummaryLine, exportCsv, timeSavedLine } from '@/lib/employer-volume/strip';
 import { loadExportRows, loadRoleStrip } from '@/lib/server/employer-role-strip';
-import { verifyInterview } from '@/lib/interview-token';
+import { verifyStoredInterview } from '@/lib/interview-token';
 import { privateNoStoreHeaders } from '@/lib/server/security';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient, currentUser } from '@/lib/supabase/server';
@@ -23,7 +23,7 @@ export async function GET(request: Request, context: { params: Promise<{ roleId:
   const format = new URL(request.url).searchParams.get('format') === 'pdf' ? 'pdf' : 'csv';
   const { data: pack } = await client.from('screening_packs').select('id,workplace,signed_token,minutes_per_cv,employer_id').eq('id', roleId).maybeSingle();
   if (!pack || pack.employer_id !== user.id) return Response.json({ error: 'Role not found.' }, { status: 404 });
-  const roleTitle = verifyInterview(pack.signed_token)?.title ?? 'Role';
+  const roleTitle = verifyStoredInterview(pack.signed_token)?.title ?? 'Role';
   const fileStem = `muqabala-${roleTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'role'}`;
 
   await admin.from('export_log').insert({ employer_id: user.id, role_id: pack.id, format });

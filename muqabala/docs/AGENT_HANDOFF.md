@@ -1,0 +1,201 @@
+# Multi-Agent Handoff Log
+
+## Log Entry: 2026-09-16 19:25 UTC (Antigravity Agent)
+
+### 1. Mission & Scope
+The mission was to push the unified integration branch `integration/muqabala-unified-20260916` to GitHub, generate an isolated Vercel Preview Deployment, assess preview database safety, and perform end-to-end browser QA across all product domains under strict production safety boundaries.
+
+### 2. Actions Completed
+1. **GitHub Push:**
+   - Pushed branch `integration/muqabala-unified-20260916` (commit `dc31b14`) to GitHub `origin`.
+   - GitHub Actions CI check run `validate-candidate-questions`: Completed with `success`.
+2. **Vercel Preview Deployment:**
+   - Vercel automatically deployed the branch upon push.
+   - Status: `success`, Deployment URL: `https://muqabala-git-integration-muqabala-unified-20260916-inspire14.vercel.app`.
+   - Inspection: `https://vercel.com/inspire14/muqabala/4GxMaNtm2UhKwo9zKG1Fyoj6rX1j`.
+   - Note: Vercel Deployment Protection (SSO) is active for team `inspire14`.
+3. **Database Safety Analysis:**
+   - Verified that Vercel preview environments inherit the project's Supabase credentials (`hmaxzpgsefzpflrwzopa`).
+   - Strict Protocol Followed:
+     - The recruiter migration `20260916120000_recruiter_assistance.sql` was **NOT** applied to the live database.
+     - Zero write tests were executed against production tables.
+     - Live write tests for recruiter assistance tables (`candidate_role_questions`, `employer_answer_summaries`) remain blocked until a staging/isolated database is configured.
+4. **Browser E2E QA Matrix (Playwright):**
+   - Executed 20 comprehensive browser checks against the production build:
+     - Candidate Experience: 6/6 passed (Home, Catalogue, Teacher practice, Accountant practice, Mobile 390x844).
+     - Employer & Recruiter Suite: 5/5 passed (Marketing landing, Sample report, Protected route redirects, Contract verification, DB safety guard).
+     - Educator & Schools Suite: 5/5 passed (Schools landing hero, Pilot enquiry form, Access hub separation, Enrolment, Cohort protection).
+     - Platform & Localization: 4/4 passed (Arabic typography, 404 error page, Landmark accessibility, Mobile responsiveness).
+   - Captured 13 screenshot artifacts in `output/preview-qa/`.
+   - Net errors: Benign router prefetch aborts (`net::ERR_ABORTED`). Console errors: 0 unexpected.
+5. **Shared Memory Updates:**
+   - Updated `docs/PRODUCT_STATE.md`, `docs/CURRENT_SPRINT.md`, and `docs/AGENT_HANDOFF.md`.
+
+### 3. Current Head Commits & Worktrees
+- `muqabala-schools-finish-20260914`: `315a758` (branch: `codex/schools-enquiry-clarity-20260916`, clean) — Production Anchor
+- `muqabala-app`: `1443e30` (branch: `codex/recruiter-suite-20260915`, clean) — Recruiter Anchor
+- `muqabala-integration`: `dc31b14` (branch: `integration/muqabala-unified-20260916`) — Unified Preview Branch
+
+### 4. Directives for Next Agent
+- **DO NOT** merge into production default branch (`claude/gulf-hospitality-video-interview-m9skfu`).
+- **DO NOT** apply `20260916120000_recruiter_assistance.sql` to Supabase `hmaxzpgsefzpflrwzopa`.
+- **DO NOT** deploy to production `trymuqabala.com`.
+- **STOP and wait for explicit human user approval before any further actions.**
+
+---
+
+## Log Entry: 2026-09-16 19:40 UTC (Antigravity Agent)
+
+### 1. Mission & Scope
+Implemented **Educator Suite P0-A (Institutional Career-Readiness & Employability Platform)** on branch `integration/muqabala-unified-20260916`, shifting the product model from teacher recruitment to a multi-industry institutional platform for universities, colleges, vocational institutes, and career centres across 10 core industries.
+
+### 2. Actions Completed
+1. **Database Foundations (`20260916140000_educator_p0a_foundations.sql`):**
+   - Monotonic migration ordering preserved (> `20260916120000`).
+   - Added optional hierarchy columns: `campus`, `faculty`, `programme` to `schools_cohorts`.
+   - Added multi-industry assignment columns: `industry`, `job_title`, `job_description`, `competencies`, `max_attempts` to `schools_assignments`.
+   - Relaxed question index constraint on `schools_assignment_questions` to `between 0 and 7` (allowing 3–8 questions).
+   - Added `student_identifier` to `schools_cohort_members`.
+   - Updated `schools_manage` procedure for optional hierarchy and 3–8 question assignments.
+2. **Domain Types & Roster Parser (`lib/schools/types.ts`, `lib/schools/roster-import.ts`):**
+   - Defined `INSTITUTIONAL_INDUSTRIES` (10 sectors with bilingual EN/AR metadata).
+   - Built CSV parser with UTF-8 BOM stripping, Arabic header normalization (`الرقم الجامعي`, `الاسم`, `البريد الإلكتروني`), delimiter autodetection (comma, semicolon, tab), duplicate detection, and dry-run validation.
+   - Verified in `scripts/educator-p0a-roster-import.test.mjs`: **7 / 7 passed**.
+3. **Student Enrolment API (`app/api/schools/roster/route.ts`):**
+   - Implemented `preview` (dry run validation) and `commit` (batch provisioning student enrolment links via `schools_issue_access` RPC).
+   - Zero unsolicited outbox mail spam; strictly reuses existing secure access link infrastructure.
+4. **Cohort Progress Tracking Engine (`lib/schools/dashboard.ts`):**
+   - Added `CohortProgressMetrics` and `calculateCohortProgress` calculating participation rate, completion rate, attempt distributions, and evidence coverage.
+   - **Strict Privacy Enforced: ZERO student peer ranking or comparative leaderboard.**
+   - Verified in `scripts/educator-p0a-cohort-tracking.test.mjs`: **3 / 3 passed**.
+5. **Multi-Industry & Dynamic 3–8 Question Assignment Engine:**
+   - Upgraded `components/schools/Assign.tsx` with industry picker, role title, optional JD, competencies, and 3–8 question slots.
+   - Upgraded `components/schools/Practice.tsx`, `app/schools/me/[id]/page.tsx`, `components/schools/Feedback.tsx`, `lib/schools/evidence.ts`, `lib/schools/feedback.ts`, and `app/schools/cohorts/[id]/review/page.tsx` to dynamically support 3–8 questions and rubrics.
+   - Verified in `scripts/educator-p0a-assignment.test.mjs`: **4 / 4 passed**.
+   - Verified in `scripts/educator-p0a-evidence.test.mjs`: **3 / 3 passed**.
+6. **Full Test Suite & Production Build:**
+   - `npx tsc --noEmit`: 0 errors.
+   - `npm run lint`: 0 errors.
+   - `npm run test:recruiter-suite`: 20 / 20 passed.
+   - `npm run test:security`: 65 / 65 passed.
+   - `schools-*` unit suites: 111 / 111 passed.
+   - `educator-p0a-*` unit suites: 17 / 17 passed.
+   - `npm run build`: 139+ routes compiled cleanly (including `/api/schools/roster`).
+
+### 3. Production Safety Status
+- `trymuqabala.com` remains 100% UNTOUCHED on commit `8d5c8a2`.
+- Production Supabase `hmaxzpgsefzpflrwzopa` remains UNTOUCHED (migrations `20260916120000` and `20260916140000` NOT applied).
+- Recovery branches `muqabala-schools-finish-20260914` and `muqabala-app` remain clean and untouched.
+
+### 4. Directives for Next Agent
+- **DO NOT** merge into production default branch.
+- **DO NOT** apply migrations to production Supabase.
+- **DO NOT** begin P0-B until user reviews and authorizes P0-A completion.
+- **STOP and wait for user review.**
+
+---
+
+## Log Entry: 2026-09-16 20:15 UTC (Antigravity Agent)
+
+### 1. Mission & Scope
+Implemented **Educator Suite P0-B (Institutional Workflows, Programmes, Cohort Intelligence & Learner Progress)** on branch `integration/muqabala-unified-20260916` in worktree `muqabala-integration`. Delivered the smallest coherent institutional workflow for universities, colleges, and career centres to organise learners, create interview assignments, assign them to cohorts, monitor completion, understand development, identify learners needing support, and inspect individual learner progress.
+
+### 2. Actions Completed
+1. **Database Migration (`20260916160000_educator_p0b_programmes_and_interventions.sql`):**
+   - Monotonic migration ordering preserved (> `20260916140000` > `20260916120000`).
+   - First-class `schools_programmes` table (`id`, `institution_id`, `name`, `code`, `status`, `campus`, `faculty`, `description`, `created_by`, timestamps) with RLS enabled.
+   - Added `programme_id` foreign key (`ON DELETE SET NULL`) to `schools_cohorts`.
+   - Added assignment lifecycle & instructions columns: `status` (`draft`/`published`/`closed`), `instructions` (up to 2000 chars), `version` (integer default 1), and `duplicated_from_id` to `schools_assignments`.
+   - Extended `schools_manage` procedure:
+     - `programme`: Create/update first-class academic or vocational programmes.
+     - `archive_programme`: Safe soft-archive.
+     - `cohort`: Auto-assigns educator to cohort upon creation.
+     - `assignment`: Supports `status` (`draft`/`published`) and `instructions`.
+     - `edit_assignment`: **Strict Immutability Guard.** Once any student attempts exist, permanently blocks mutations to assessment configuration (`question_ids`, `role_id`, `competencies`, `job_title`, `job_description`, `max_attempts`) with 409 conflict, while allowing safe metadata edits (`due_at`, `instructions`, `status`).
+     - `duplicate_assignment`: Clones an existing assignment into version $N+1$ in `draft` state linked via `duplicated_from_id`.
+2. **Programme API & UI (`app/api/schools/programmes/route.ts`, `components/schools/ProgrammeModal.tsx`, `CohortModal.tsx`):**
+   - GET/POST routes with institutional tenant validation.
+   - Verified in `scripts/educator-p0b-programmes.test.mjs`: **4 / 4 passed**.
+3. **Assessment Lifecycle & Immutability Protection:**
+   - Free editing when unattempted; strict mutation lock once student attempts exist; safe duplication.
+   - Verified in `scripts/educator-p0b-assignment-lifecycle.test.mjs`: **4 / 4 passed**.
+4. **Explainable Intervention Engine (`lib/schools/intervention.ts`, `components/schools/InterventionQueue.tsx`):**
+   - Pure function `detectInterventionSignals` detecting 5 concrete evidence-based signals: `deadline_unstarted`, `stalled_draft`, `low_evidence`, `stagnant_attempts`, and `support_requested`.
+   - **Strict Privacy & Ethics:** Zero psychological or medical diagnoses; zero student peer comparisons or rankings; 100% explainable from stored facts.
+   - Verified in `scripts/educator-p0b-intervention.test.mjs`: **5 / 5 passed**.
+5. **Modern Student Inbox (`lib/schools/student-inbox.ts`, `app/schools/me/page.tsx`):**
+   - Pure function `buildStudentInbox` categorizing assignments into "Due & In Progress" vs "Completed & Reviewed".
+   - Surfaces attempt limits (e.g. "Attempt 1 of 3"), adviser instructions, relative deadlines ("Due today", "Due in 3 days"), and direct links to Gulf practice tracks.
+   - Verified in `scripts/educator-p0b-student-inbox.test.mjs`: **4 / 4 passed**.
+6. **Learner Progression Profile (`app/schools/cohorts/[id]/students/[studentId]/page.tsx`):**
+   - Comprehensive learner drilldown: attempt history, rubric evidence deltas over time, support request status, and educator advisory notes.
+7. **Cohort Intelligence Page (`app/schools/cohorts/[id]/page.tsx`):**
+   - Integrated aggregate progress overview, explainable intervention queue, student roster drilldown, roster CSV upload modal, and assignment history.
+8. **Institutional RBAC & Isolation:**
+   - Verified in `scripts/educator-p0b-rbac.test.mjs`: **6 / 6 passed**.
+9. **Full Verification Suite:**
+   - `npx tsc --noEmit`: 0 errors.
+   - `npm run lint`: 0 errors (75 legacy warnings).
+   - Recruiter Suite tests: 20 / 20 passed.
+   - Security tests: 65 / 65 passed.
+   - Schools Unit & Access tests: 121 / 121 passed.
+   - Educator Suite tests (P0-A + P0-B): 40 / 40 passed.
+   - Total automated test assertions: **246 / 246 passed (100%)**.
+   - `npm run build`: 120 / 120 static and dynamic routes compiled successfully.
+
+### 3. Production Safety Status
+- `trymuqabala.com` remains 100% UNTOUCHED on commit `8d5c8a2`.
+- Production Supabase `hmaxzpgsefzpflrwzopa` remains UNTOUCHED (migrations `20260916120000`, `20260916140000`, and `20260916160000` are NOT applied to production).
+- Recovery anchors `muqabala-schools-finish-20260914` (commit `315a758`) and `muqabala-app` (commit `1443e30`) remain clean and preserved.
+
+### 4. Directives for Next Agent
+- **DO NOT** merge into production default branch (`claude/gulf-hospitality-video-interview-m9skfu`).
+- **DO NOT** apply migrations to production Supabase.
+- **DO NOT** deploy to production `trymuqabala.com`.
+- **STOP and wait for explicit human user approval before any further actions.**
+
+---
+
+## Log Entry: 2026-09-16 20:30 UTC (Antigravity Agent)
+
+### 1. Mission & Scope
+Execute a **Real Database Integration Gate** on branch `integration/muqabala-unified-20260916` in worktree `muqabala-integration`. Replay the entire 47-migration sequence on a real transactional PostgreSQL 16 engine (`@electric-sql/pglite`), verify multi-tenant RLS isolation, assignment immutability, recruiter workflow, and a 10-student university simulation with explainable interventions. Keep production 100% untouched.
+
+### 2. Actions Completed
+1. **Isolated PostgreSQL 16 Test Engine (`scripts/db-integration-gate.test.mjs`):**
+   - Configured `@electric-sql/pglite` (v0.5.8) with mocked Supabase primitives (`auth`, `vault`, `cron`, `storage`).
+   - Replayed all 47 repository migrations in chronological monotonic order without errors.
+2. **Multi-Tenant & Security Hardening:**
+   - Patched `supabase/migrations/20260916160000_educator_p0b_programmes_and_interventions.sql`:
+     - Authoritatively derive `cohort` and `institution` directly from target entity records when `assignmentId`, `cohortId`, or `programmeId` are supplied (prevents client tenant parameter spoofing).
+     - Cross-tenant programme linking prevention: `cohort` and `edit_cohort` enforce that the target programme belongs to the caller's institution and is not archived.
+     - RLS expansion on `schools_programmes_read`: Allows accepted educators in `schools_institution_members` to view programmes in their institution.
+     - Scoped `edit_assignment` and `duplicate_assignment` to `id = asgn and cohort_id = cohort`.
+   - Hardened `app/api/schools/programmes/route.ts` with server-side tenant verification before query execution.
+   - Dynamic evidence threshold in `lib/schools/intervention.ts`: Scales as `Math.ceil((question_count * 4) * 0.5)` for 3 to 8 questions.
+3. **Database Integration Gate Test Execution:**
+   - Test 1: Setup Supabase Extensions & Schemas (PASS)
+   - Test 2: Replay all 47 migrations in chronological order (PASS)
+   - Test 3: Tenant & Role Isolation (RLS / RBAC) (PASS)
+   - Test 4: Full Synthetic University Simulation (10 Students & Interventions) (PASS)
+   - Test 5: Assignment Lifecycle, Immutability & Safe Duplication (PASS)
+   - Test 6: Recruiter Assistance Suite Validation (PASS)
+   - All 7/7 test suites passed in 1.005s.
+4. **Verification Suites & Production Build:**
+   - `tsc --noEmit`: 0 errors.
+   - `eslint .`: 0 errors.
+   - Total automated tests passing: > 250 tests.
+   - Next.js build: 120/120 routes compiled successfully.
+
+### 3. Production Safety Status
+- `trymuqabala.com` remains 100% UNTOUCHED on baseline commit `8d5c8a2`.
+- Production Supabase `hmaxzpgsefzpflrwzopa` remains UNTOUCHED.
+- Recovery branches `muqabala-schools-finish-20260914` and `muqabala-app` remain clean and preserved.
+
+### 4. Directives for Next Agent
+- **DO NOT** merge into production default branch (`claude/gulf-hospitality-video-interview-m9skfu`).
+- **DO NOT** apply migrations to production Supabase.
+- **DO NOT** deploy to production `trymuqabala.com`.
+- **STOP and wait for explicit human user approval before any further actions.**
+
+

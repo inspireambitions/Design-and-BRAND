@@ -17,8 +17,10 @@ test('employer delivery SQL executes against an isolated PostgreSQL engine', asy
     await db.exec(`
       create role anon; create role authenticated; create role service_role;
       create schema auth; create function auth.uid() returns uuid language sql as 'select null::uuid';
+      create table auth.users(id uuid primary key);
       create table public.screening_packs(id uuid primary key, employer_id uuid, expires_at timestamptz,
-        reminders_enabled boolean default true, shortlist_48h_sent_at timestamptz, shortlist_close_sent_at timestamptz);
+        reminders_enabled boolean default true, shortlist_48h_sent_at timestamptz, shortlist_close_sent_at timestamptz,
+        question_source text not null default 'legacy');
       create table public.interviews(id uuid primary key, screening_pack_id uuid, submitted_at timestamptz);
       grant all on public.screening_packs, public.interviews to service_role;
     `);
@@ -26,8 +28,10 @@ test('employer delivery SQL executes against an isolated PostgreSQL engine', asy
     await db.exec(read('supabase/migrations/20260905061702_employer_invite_delivery_reliability.sql'));
     await db.exec(read('supabase/migrations/20260905130942_employer_message_acceptance_atomic.sql'));
     await db.exec(read('supabase/migrations/20260914103000_harden_invite_submission_trigger.sql'));
+    await db.exec(read('supabase/migrations/20260916120000_recruiter_assistance.sql'));
     const reset = async () => {
       await db.exec('truncate public.employer_message_outbox, public.role_invites, public.interviews, public.screening_packs cascade');
+      await db.query('insert into auth.users(id) values ($1),($2),($3) on conflict do nothing', [owner, other, '44444444-4444-4444-8444-444444444444']);
       await db.query("insert into public.screening_packs(id,employer_id,expires_at) values ($1,$2,now()+interval '14 days')", [role, owner]);
     };
     const queue = async rows => (await db.query('select public.queue_employer_invites($1,$2,$3::jsonb) as result', [role, owner, JSON.stringify(rows)])).rows[0].result;
@@ -85,6 +89,7 @@ test('employer delivery SQL executes against an isolated PostgreSQL engine', asy
           await assert.rejects(db.query('select public.employer_invite_delivery_status($1,$2)', [role, owner]), /permission denied/);
           await assert.rejects(db.query('select * from public.claim_employer_messages(5,$1,$2)', [randomUUID(), role]), /permission denied/);
           await assert.rejects(db.query("select public.queue_employer_reminders('[]'::jsonb)"), /permission denied/);
+          await assert.rejects(db.query("select public.queue_manual_employer_reminders($1,$2,array[]::uuid[],'Reminder',$3)", [role, owner, randomUUID()]), /permission denied/);
           await assert.rejects(db.query("select public.queue_employer_shortlist($1,'close')", [role]), /permission denied/);
         } finally { await db.exec('reset role'); }
       }
@@ -144,6 +149,136 @@ test('employer delivery SQL executes against an isolated PostgreSQL engine', asy
         await db.query("update public.employer_message_outbox set status='accepted', accepted_at=now()+interval '1 day' where kind=$1", [kind]);
         assert.deepEqual((await db.query(`select ${column} as stamp from public.role_invites`)).rows[0].stamp, stamp);
       }
+    });
+    await t.test('manual reminder transaction rechecks eligibility, owner scope and batch idempotency', async () => {
+      await reset(); await queue([contact(), contact(1), contact(2)]);
+      const invites = (await db.query('select id,email from public.role_invites order by email')).rows;
+      await db.query("update public.role_invites set status='submitted' where id=$1", [invites[0].id]);
+      await db.query("update public.role_invites set last_manual_reminder_at=now()-interval '2 hours' where id=$1", [invites[1].id]);
+      const batch = randomUUID();
+      const ids = invites.map(row => row.id);
+      const remind = async employerId => (await db.query(
+        'select public.queue_manual_employer_reminders($1,$2,$3::uuid[],$4,$5) as result',
+        [role, employerId, ids, 'Please complete your work sample. {{invitation_link}}', batch],
+      )).rows[0].result;
+      assert.deepEqual(await remind(owner), { queued: 1, skipped: 2, batchKey: batch });
+      assert.deepEqual(await remind(owner), { queued: 1, skipped: 2, batchKey: batch, reused: true });
+      await db.exec("update public.screening_packs set expires_at=now()-interval '1 minute'");
+      assert.deepEqual(await remind(owner), { queued: 1, skipped: 2, batchKey: batch, reused: true });
+      await db.exec("update public.screening_packs set expires_at=now()+interval '14 days'");
+      const secondBatch = (await db.query(
+        'select public.queue_manual_employer_reminders($1,$2,$3::uuid[],$4,$5) as result',
+        [role, owner, ids, 'Please complete your work sample. {{invitation_link}}', randomUUID()],
+      )).rows[0].result;
+      assert.equal(secondBatch.queued, 0);
+      await assert.rejects(remind(other), /Role not found/);
+      const job = (await db.query("select kind,message_body,batch_key from public.employer_message_outbox where kind='manual_reminder'")).rows[0];
+      assert.equal(job.kind, 'manual_reminder');
+      assert.match(job.message_body, /invitation_link/);
+      assert.equal(job.batch_key, batch);
+      assert.equal(Number((await db.query("select count(*) as count from public.recruiter_audit_events where action='reminders_queued'")).rows[0].count), 2);
+    });
+    await t.test('terminal reminder failures can retry while successful recipients remain protected', async () => {
+      await reset(); await queue([contact(), contact(1)]);
+      const invites = (await db.query('select id,email from public.role_invites order by email')).rows;
+      const firstBatch = randomUUID();
+      const first = (await db.query(
+        'select public.queue_manual_employer_reminders($1,$2,$3::uuid[],$4,$5) as result',
+        [role, owner, invites.map(row => row.id), 'Reminder {{invitation_link}}', firstBatch],
+      )).rows[0].result;
+      assert.equal(first.queued, 2);
+      await db.query("update public.employer_message_outbox set status='failed',last_error_code='email.failed' where kind='manual_reminder' and invite_id=$1", [invites[0].id]);
+      await db.query("update public.employer_message_outbox set status='accepted',accepted_at=now() where kind='manual_reminder' and invite_id=$1", [invites[1].id]);
+      const retryBatch = randomUUID();
+      const retry = (await db.query(
+        'select public.queue_manual_employer_reminders($1,$2,$3::uuid[],$4,$5) as result',
+        [role, owner, invites.map(row => row.id), 'Corrected reminder {{invitation_link}}', retryBatch],
+      )).rows[0].result;
+      assert.deepEqual(retry, { queued: 1, skipped: 1, batchKey: retryBatch });
+      const retried = await db.query("select retry.invite_id,retry.retry_of=original.id as linked from public.employer_message_outbox retry join public.employer_message_outbox original on original.invite_id=retry.invite_id and original.batch_key=$2 where retry.kind='manual_reminder' and retry.batch_key=$1", [retryBatch, firstBatch]);
+      assert.deepEqual(retried.rows.map(row => row.invite_id), [invites[0].id]);
+      assert.equal(retried.rows[0].linked, true);
+      assert.deepEqual((await db.query(
+        'select public.queue_manual_employer_reminders($1,$2,$3::uuid[],$4,$5) as result',
+        [role, owner, invites.map(row => row.id), 'Corrected reminder {{invitation_link}}', retryBatch],
+      )).rows[0].result, { queued: 1, skipped: 1, batchKey: retryBatch, reused: true });
+    });
+    await t.test('bounce, complaint, suppression, cancellation and unverified failures cannot be manually retried', async () => {
+      for (const [status, errorCode] of [
+        ['failed', 'email.bounced'],
+        ['failed', 'email.complained'],
+        ['failed', 'email.suppressed'],
+        ['cancelled', 'contact_disallowed'],
+        ['failed', null],
+      ]) {
+        await reset(); await queue([contact()]);
+        const inviteId = (await db.query('select id from public.role_invites')).rows[0].id;
+        await db.query(
+          'select public.queue_manual_employer_reminders($1,$2,$3::uuid[],$4,$5)',
+          [role, owner, [inviteId], 'Reminder {{invitation_link}}', randomUUID()],
+        );
+        await db.exec("update public.employer_message_outbox set status='accepted',accepted_at=now() where kind='manual_reminder'");
+        await db.query("update public.employer_message_outbox set status=$1,last_error_code=$2 where kind='manual_reminder'", [status, errorCode]);
+        await db.exec("update public.role_invites set last_manual_reminder_at=now()-interval '25 hours'");
+        const retry = (await db.query(
+          'select public.queue_manual_employer_reminders($1,$2,$3::uuid[],$4,$5) as result',
+          [role, owner, [inviteId], 'Retry {{invitation_link}}', randomUUID()],
+        )).rows[0].result;
+        assert.equal(retry.queued, 0, `${errorCode ?? 'missing failure code'} must stay suppressed`);
+      }
+    });
+    await t.test('a cancelled reminder that never reached acceptance cannot be re-queued', async () => {
+      await reset(); await queue([contact()]);
+      const inviteId = (await db.query('select id from public.role_invites')).rows[0].id;
+      await db.query(
+        'select public.queue_manual_employer_reminders($1,$2,$3::uuid[],$4,$5)',
+        [role, owner, [inviteId], 'Reminder {{invitation_link}}', randomUUID()],
+      );
+      await db.exec("update public.employer_message_outbox set status='cancelled',last_error_code='contact_disallowed' where kind='manual_reminder'");
+      assert.equal((await db.query('select last_manual_reminder_at from public.role_invites')).rows[0].last_manual_reminder_at, null);
+      const retry = (await db.query(
+        'select public.queue_manual_employer_reminders($1,$2,$3::uuid[],$4,$5) as result',
+        [role, owner, [inviteId], 'Retry {{invitation_link}}', randomUUID()],
+      )).rows[0].result;
+      assert.equal(retry.queued, 0);
+    });
+    await t.test('a delayed delivered update restarts the SQL reminder cooldown', async () => {
+      await reset(); await queue([contact()]);
+      const inviteId = (await db.query('select id from public.role_invites')).rows[0].id;
+      await db.query(
+        'select public.queue_manual_employer_reminders($1,$2,$3::uuid[],$4,$5)',
+        [role, owner, [inviteId], 'Reminder {{invitation_link}}', randomUUID()],
+      );
+      await db.exec("update public.employer_message_outbox set status='accepted',accepted_at=now()-interval '25 hours',updated_at=now()-interval '25 hours' where kind='manual_reminder'");
+      await db.exec("update public.role_invites set last_manual_reminder_at=now()-interval '25 hours'");
+      await db.exec("update public.employer_message_outbox set status='delivered',delivered_at=now(),updated_at=now() where kind='manual_reminder'");
+      const retry = (await db.query(
+        'select public.queue_manual_employer_reminders($1,$2,$3::uuid[],$4,$5) as result',
+        [role, owner, [inviteId], 'Retry {{invitation_link}}', randomUUID()],
+      )).rows[0].result;
+      assert.equal(retry.queued, 0);
+    });
+    await t.test('manual reminder acceptance stamps only the selected invite and delivered is a valid provider state', async () => {
+      await reset(); await queue([contact()]);
+      const inviteId = (await db.query('select id from public.role_invites')).rows[0].id;
+      await db.query(
+        'select public.queue_manual_employer_reminders($1,$2,$3::uuid[],$4,$5)',
+        [role, owner, [inviteId], 'Reminder {{invitation_link}}', randomUUID()],
+      );
+      await db.exec("update public.employer_message_outbox set status='accepted',accepted_at=now() where kind='manual_reminder'");
+      assert.ok((await db.query('select last_manual_reminder_at as stamp from public.role_invites')).rows[0].stamp);
+      await db.exec("update public.employer_message_outbox set status='delivered',delivered_at=now() where kind='manual_reminder'");
+      assert.equal((await db.query("select status from public.employer_message_outbox where kind='manual_reminder'")).rows[0].status, 'delivered');
+    });
+    await t.test('role publication idempotency key permits one intended record per employer', async () => {
+      await reset();
+      const publishKey = randomUUID();
+      await db.query('update public.screening_packs set publish_key=$1 where id=$2', [publishKey, role]);
+      await assert.rejects(
+        db.query("insert into public.screening_packs(id,employer_id,expires_at,publish_key) values ($1,$2,now()+interval '1 day',$3)", [randomUUID(), owner, publishKey]),
+        /duplicate key/,
+      );
+      await db.query("insert into public.screening_packs(id,employer_id,expires_at,publish_key) values ($1,$2,now()+interval '1 day',$3)", [randomUUID(), other, publishKey]);
     });
     await t.test('shortlist marker rolls back on outage; each schedule queues once', async () => {
       await reset(); await queue([contact()]);

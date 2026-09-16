@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { AddCandidates } from '@/components/AddCandidates';
 import { employerVolumeFlags } from '@/lib/employer-volume';
-import { verifyInterview } from '@/lib/interview-token';
+import { verifyStoredInterview } from '@/lib/interview-token';
 import { createClient, currentUser } from '@/lib/supabase/server';
 
 export const metadata: Metadata = {
@@ -29,7 +29,7 @@ export default async function AddCandidatesPage({ params }: { params: Promise<{ 
     .maybeSingle();
   if (!pack) notFound();
 
-  const roleTitle = verifyInterview(pack.signed_token)?.title ?? 'Role work sample';
+  const roleTitle = verifyStoredInterview(pack.signed_token)?.title ?? 'Role work sample';
 
   return (
     <AddCandidates

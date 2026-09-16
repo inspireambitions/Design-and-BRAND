@@ -23,7 +23,7 @@ export default async function ReviewPage({params,searchParams}:{params:Promise<{
   const {data:links}=await client.from('schools_assignment_questions').select('question_index,question_version_id').eq('assignment_id',current.assignment_id).order('question_index');
   const {data:versions}=links?.length?await client.from('schools_question_versions').select('id,question_text,rubric').in('id',links.map(link=>link.question_version_id)):{data:[]};
   const questions=links?.map(link=>versions?.find(version=>version.id===link.question_version_id));
-  if(questions?.length!==3||questions.some(question=>!question))throw new Error('Assignment questions are unavailable');
+  if(!questions||questions.length<3||questions.length>8||questions.some(question=>!question))throw new Error('Assignment questions are unavailable');
   const {data:corrections}=await client.from('schools_evidence_corrections').select('question_index,rubric_element,corrected_present,reason,created_at').eq('assignment_attempt_id',current.id).order('created_at');
   // A published assignment freezes its question and rubric versions.
   const first=attempts?.find(attempt=>attempt.assignment_id===current.assignment_id&&attempt.student_user_id===current.student_user_id&&attempt.attempt_number===1);

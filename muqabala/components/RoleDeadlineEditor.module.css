@@ -1,0 +1,10 @@
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.65rem; }
+.row button, .editor button { min-height: 44px; border: 1px solid #a9b9b3; border-radius: 0.55rem; background: white; color: #075e54; font: inherit; font-weight: 800; cursor: pointer; }
+.row button { padding: 0.55rem 0.8rem; }
+.row span, .editor p { color: #536860; font-size: 0.85rem; }
+.editor { display: grid; gap: 0.6rem; padding: 0.8rem; border: 1px solid #d5ded8; border-radius: 0.7rem; background: #f7faf8; }
+.editor label { display: grid; gap: 0.35rem; font-weight: 750; }
+.editor input { min-height: 44px; max-width: 22rem; padding: 0.5rem; border: 1px solid #a9b9b3; border-radius: 0.5rem; font: inherit; }
+.editor div { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.editor button { padding: 0.5rem 0.75rem; }
+.editor p { margin: 0; }

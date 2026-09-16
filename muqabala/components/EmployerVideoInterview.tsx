@@ -16,6 +16,7 @@ import { useLang } from './LanguageProvider';
 import { FocusedInterviewFooterGuard } from './FooterVisibility';
 import { hideEmployerInterviewFooter } from '@/lib/footer-visibility';
 import styles from './EmployerVideoInterview.module.css';
+import { CandidateRoleQuestions } from './CandidateRoleQuestions';
 import type { TranscriptSegment } from '@/lib/interviews';
 import { resolveScreeningTranscript } from '@/lib/screening-transcription';
 import { MicrophoneCheck } from './MicrophoneCheck';
@@ -193,6 +194,11 @@ type Props = {
   publicCode: string;
   availability?: 'active' | 'full';
   candidateEmail: string;
+  location?: string | null;
+  expiresAt: string;
+  timezone: string;
+  publishedFacts?: Record<string, unknown>;
+  questionnaireLanguage?: 'en' | 'both';
   /** Per-candidate invite token from the link query string. Binds the interview to its invite. */
   inviteToken?: string;
   /** Enables the adaptive Brain for new English interviews. */
@@ -247,6 +253,11 @@ export function EmployerVideoInterview({
   publicCode,
   availability = 'active',
   candidateEmail,
+  location = null,
+  expiresAt,
+  timezone,
+  publishedFacts = {},
+  questionnaireLanguage = 'both',
   inviteToken,
   brainEnabled = false,
 }: Props) {
@@ -296,7 +307,7 @@ export function EmployerVideoInterview({
     : questions[index];
   const questionText = brainMode && brainState?.current_question
     ? brainState.current_question.candidate_text
-    : lang === 'ar'
+    : lang === 'ar' && questionnaireLanguage === 'both'
       ? questions[index]?.textAr
       : questions[index]?.text;
   const questionTotal = brainMode ? (brainState?.current_question?.total_questions ?? (role.level === 'Entry' ? 6 : 8)) : questions.length;
@@ -886,7 +897,11 @@ export function EmployerVideoInterview({
           <section className={styles.card} aria-labelledby="video-interview-title">
             <p className={styles.eyebrow}>{recruiterName ? `${recruiterName} · ${companyName}` : companyName}</p>
             <h1 id="video-interview-title">{c.title}</h1>
-            <p className={styles.lede}>{adaptiveAvailable ? c.brainIntro : questions.length === 3 ? c.intro : c.eightQuestionIntro}</p>
+            <p className={styles.lede}>{adaptiveAvailable
+              ? c.brainIntro
+              : lang === 'ar'
+                ? `هذه مقابلة فيديو من ${new Intl.NumberFormat('ar-AE').format(questions.length)} أسئلة. لديك دقيقتان كحد أقصى لكل إجابة.`
+                : `This is a video interview with ${questions.length} questions. Each answer can be up to two minutes.`}</p>
             <div className={styles.assurance}>{c.privacy}</div>
             <p className={styles.footnote}>{c.uploadDisclosure}</p>
             <p className={styles.footnote}>{c.transcriptDisclosure}</p>
@@ -911,6 +926,15 @@ export function EmployerVideoInterview({
             <button type="button" className={styles.primary} disabled={candidateName.trim().length < 2} onClick={() => void testDevices()}>
               {c.test}
             </button>
+            <CandidateRoleQuestions
+              publicCode={publicCode}
+              roleTitle={lang === 'ar' ? role.titleAr : role.title}
+              location={location}
+              expiresAt={expiresAt}
+              timezone={timezone}
+              questionCount={questions.length}
+              publishedFacts={publishedFacts}
+            />
             <p className={styles.footnote}>{c.employerReview}</p>
           </section>
         )}
@@ -1020,7 +1044,11 @@ export function EmployerVideoInterview({
             <div className={styles.savedBanner}>✓ {savedCount} {c.responses} {c.saved}</div>
             <p className={styles.eyebrow}>{c.consentTitle}</p>
             <h1 id="consent-title">{c.consentTitle}</h1>
-            <p>{brainMode ? c.brainConsentBody : questions.length === 3 ? c.consentBody : c.eightQuestionConsentBody}</p>
+            <p>{brainMode
+              ? c.brainConsentBody
+              : lang === 'ar'
+                ? `تم حفظ إجابات الفيديو وعددها ${new Intl.NumberFormat('ar-AE').format(questions.length)}. وافق على الإقرار قبل إرسالها إلى جهة العمل.`
+                : `All ${questions.length} video responses are saved. Check the consent box before you send them to the employer.`}</p>
             <label className={styles.consent}>
               <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} />
               <span>{c.consent}</span>
