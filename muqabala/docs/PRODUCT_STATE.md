@@ -64,15 +64,19 @@ muqabala-integration                integration/muqabala-unified-20260916  dc31b
   - Production database safety strictly preserved (zero writes).
 
 ### C. Schools & Educator Suite
-- **Status:** **PRODUCTION BASELINE LIVE; EDUCATOR SUITE P0-A CODE COMPLETE & TESTED**
-- **QA Results:** 5/5 preview tests passed; 17/17 P0-A domain tests passed (Roster, Tracking, Multi-Industry Assignments, Dynamic Evidence).
+- **Status:** **PRODUCTION BASELINE LIVE; EDUCATOR SUITE P0-A & P0-B CODE COMPLETE & TESTED**
+- **QA Results:** 5/5 preview tests passed; 40/40 Educator Suite domain tests passed (17 P0-A + 23 P0-B).
   - `/schools` landing renders institutional hero and pilot enquiry CTAs.
   - Pilot enquiry form `#start-pilot` presents 4 interactive fields.
   - `/schools/access` cleanly separates Educator and Student entry paths.
   - `/schools/enrol` renders student account onboarding.
-  - `/schools/cohorts` guarded behind session/membership validation.
-  - Optional institutional hierarchy (`campus`, `faculty`, `programme`) active in schema and API.
+  - `/schools/cohorts` guarded behind session/membership validation, with multi-industry programme and faculty metadata badges.
+  - First-class `schools_programmes` entity model supporting collegiate (University -> Faculty -> Programme) and flat vocational tracks.
   - Dynamic 3–8 question multi-industry assignments verified end-to-end.
+  - Strict assessment immutability guards protecting questions, role, competencies, and max attempts once attempts exist, with safe duplication for version $N+1$.
+  - Explainable, evidence-based Intervention Engine detecting deadline risks, stalled drafts, low evidence, stagnant retries, and support requests (strictly zero peer ranking or medical/psychological diagnoses).
+  - Learner progression profile at `/schools/cohorts/[id]/students/[studentId]` with attempt history and evidence deltas.
+  - Modern Student Inbox at `/schools/me` separating "Due & In Progress" from "Completed & Reviewed" with attempt counts, adviser instructions, relative deadlines, and links to Gulf practice tracks.
   - Student roster CSV import with UTF-8 BOM, Arabic headers, and duplicate detection verified.
   - Aggregate cohort progress tracking verified (strictly no student peer rankings).
 
@@ -93,3 +97,4 @@ muqabala-integration                integration/muqabala-unified-20260916  dc31b
 | `20260916023211_schools_pilot_enquiry_outbox.sql` | 2026-09-16 02:32:11 | **YES** | Outbox table and RLS for schools pilot leads |
 | `20260916120000_recruiter_assistance.sql` | 2026-09-16 12:00:00 | **NO (Pending)** | Recruiter role questions, answer summaries, outbox extensions |
 | `20260916140000_educator_p0a_foundations.sql` | 2026-09-16 14:00:00 | **NO (Pending)** | Optional hierarchy (`campus`, `faculty`, `programme`), multi-industry assignment fields, 3-8 question index constraint relaxation, student identifier |
+| `20260916160000_educator_p0b_programmes_and_interventions.sql` | 2026-09-16 16:00:00 | **NO (Pending)** | First-class `schools_programmes` table, cohort linkage, assignment lifecycle (`draft`/`published`/`closed`), instructions, versioning, duplication, immutability guard |

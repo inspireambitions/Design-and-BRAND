@@ -32,6 +32,13 @@ Unify the live production Schools/Educator release (`8d5c8a2` / PR #23) with the
 | **Cohort Progress Tracking Engine** | DONE | `muqabala-integration` | `lib/schools/dashboard.ts` (3/3 tests pass; no peer ranking) |
 | **Dynamic 3-8 Question Assignment** | DONE | `muqabala-integration` | 4/4 contract tests pass; learner Practice & Feedback updated |
 | **Dynamic Evidence Evaluation** | DONE | `muqabala-integration` | `lib/schools/evidence.ts`, 3/3 tests pass |
+| **P0-B Migration: Programmes & LifeCycle** | DONE | `muqabala-integration` | `20260916160000_educator_p0b_programmes_and_interventions.sql` |
+| **First-Class Programme Entity & API** | DONE | `muqabala-integration` | `schools_programmes` table, API route, `ProgrammeModal`, 4/4 tests pass |
+| **Assignment Lifecycle & Immutability** | DONE | `muqabala-integration` | `draft`/`published`/`closed`, mutation lock, `duplicate_assignment`, 4/4 tests pass |
+| **Explainable Intervention Engine** | DONE | `muqabala-integration` | `lib/schools/intervention.ts`, `InterventionQueue.tsx`, 5/5 tests pass |
+| **Student Inbox Upgrade** | DONE | `muqabala-integration` | `lib/schools/student-inbox.ts`, `app/schools/me/page.tsx`, 4/4 tests pass |
+| **Learner Progression Profile Drilldown** | DONE | `muqabala-integration` | `/schools/cohorts/[id]/students/[studentId]`, attempt history & deltas |
+| **Institutional RBAC & Isolation** | DONE | `muqabala-integration` | Tenant isolation & student draft privacy, 6/6 tests pass |
 | **Production Merge & Release** | LOCKED | `claude/gulf-hospitality-...` | Requires explicit user authorization |
 
 ---

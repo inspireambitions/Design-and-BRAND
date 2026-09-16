@@ -17,12 +17,32 @@ const schema=z.discriminatedUnion('operation',[
   z.object({operation:z.literal('institution'),payload:z.object({name:z.string().trim().min(1).max(160),country:z.string().trim().min(2).max(80),language:z.enum(['en','ar'])}).strict()}),
   z.object({operation:z.literal('approve'),payload:z.object({institutionId:uuid,dpaReference:z.string().trim().min(1).max(500)}).strict()}),
   z.object({operation:z.literal('staff'),payload:z.object({institutionId:uuid,userId:uuid,role:z.enum(['institution_admin','educator'])}).strict()}),
+  z.object({operation:z.literal('programme'),payload:z.object({
+    institutionId:uuid.optional(),
+    programmeId:uuid.optional(),
+    name:z.string().trim().min(1).max(160).optional(),
+    code:z.string().trim().max(32).optional(),
+    status:z.enum(['active','inactive','archived']).optional(),
+    campus:z.string().trim().max(160).optional(),
+    faculty:z.string().trim().max(160).optional(),
+    description:z.string().trim().max(1000).optional(),
+  }).strict()}),
+  z.object({operation:z.literal('archive_programme'),payload:z.object({programmeId:uuid,institutionId:uuid.optional()}).strict()}),
   z.object({operation:z.literal('cohort'),payload:z.object({
     institutionId:uuid,
     name:z.string().trim().min(1).max(160),
     campus:z.string().trim().max(160).optional(),
     faculty:z.string().trim().max(160).optional(),
     programme:z.string().trim().max(160).optional(),
+    programmeId:uuid.optional(),
+  }).strict()}),
+  z.object({operation:z.literal('edit_cohort'),payload:z.object({
+    cohortId:uuid,
+    name:z.string().trim().min(1).max(160).optional(),
+    campus:z.string().trim().max(160).optional(),
+    faculty:z.string().trim().max(160).optional(),
+    programme:z.string().trim().max(160).optional(),
+    programmeId:uuid.nullable().optional(),
   }).strict()}),
   z.object({operation:z.literal('assign_educator'),payload:z.object({cohortId:uuid,userId:uuid}).strict()}),
   z.object({operation:z.literal('enrolment'),payload:z.object({cohortId:uuid,open:z.boolean(),rotate:z.boolean()}).strict()}),
@@ -37,6 +57,25 @@ const schema=z.discriminatedUnion('operation',[
     jobDescription:z.string().trim().max(50000).optional(),
     competencies:z.array(z.string().trim().max(100)).max(20).optional(),
     maxAttempts:z.number().int().min(1).max(20).optional(),
+    instructions:z.string().trim().max(2000).optional(),
+    status:z.enum(['draft','published','closed']).optional(),
+  }).strict()}),
+  z.object({operation:z.literal('edit_assignment'),payload:z.object({
+    assignmentId:uuid,
+    roleId:z.string().min(1).max(100).optional(),
+    questionIds:z.array(uuid).min(3).max(8).refine(ids=>new Set(ids).size===ids.length).optional(),
+    dueAt:z.string().datetime({offset:true}).optional(),
+    industry:z.string().trim().max(80).optional(),
+    jobTitle:z.string().trim().max(160).optional(),
+    jobDescription:z.string().trim().max(50000).optional(),
+    competencies:z.array(z.string().trim().max(100)).max(20).optional(),
+    maxAttempts:z.number().int().min(1).max(20).optional(),
+    instructions:z.string().trim().max(2000).optional(),
+    status:z.enum(['draft','published','closed']).optional(),
+  }).strict()}),
+  z.object({operation:z.literal('duplicate_assignment'),payload:z.object({
+    assignmentId:uuid,
+    dueAt:z.string().datetime({offset:true}).optional(),
   }).strict()}),
 ]);
 export async function POST(request:Request){
@@ -44,7 +83,7 @@ export async function POST(request:Request){
   if(!hasTrustedOrigin(request))return Response.json({error:'Request not allowed'},{status:403});
   const client=await createClient();if(!client)return Response.json({error:'Service unavailable'},{status:503});
   const identity=await touchSchoolsSession(client);if(!identity)return Response.json({error:'Sign in again'},{status:401});
-  const text=await request.text();if(text.length>18000)return Response.json({error:'Request too large'},{status:413});
+  const text=await request.text();if(text.length>65000)return Response.json({error:'Request too large'},{status:413});
   let body:unknown;try{body=JSON.parse(text);}catch{return Response.json({error:'Invalid request'},{status:400});}
   const parsed=schema.safeParse(body);if(!parsed.success)return Response.json({error:'Check all fields and try again.'},{status:400});
   const admin=createAdminClient();if(!admin)return Response.json({error:'Service unavailable'},{status:503});

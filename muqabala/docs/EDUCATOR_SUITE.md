@@ -40,10 +40,10 @@ Its primary mission is preparing students and learners for video and structured 
 
 ---
 
-### B. CODE COMPLETE / TESTED (Educator Suite P0-A in `integration/muqabala-unified-20260916`)
+### B. CODE COMPLETE / TESTED (Educator Suite P0-A & P0-B in `integration/muqabala-unified-20260916`)
 
 > [!IMPORTANT]
-> These features are verified with automated unit tests and compiled cleanly in the Next.js production build. They are **NOT** deployed to production and their database migration has **NOT** been applied to production Supabase.
+> These features are verified with automated unit tests and compiled cleanly in the Next.js production build. They are **NOT** deployed to production and their database migrations (`20260916140000`, `20260916160000`) have **NOT** been applied to production Supabase.
 
 | Feature | Surface / Route | Technical Assets | Verification Status |
 | :--- | :--- | :--- | :--- |
@@ -54,16 +54,22 @@ Its primary mission is preparing students and learners for video and structured 
 | **Batch Enrolment Provisioning** | `/api/schools/roster` (`operation: commit`) | `app/api/schools/roster/route.ts`<br>RPC: `schools_issue_access` | Reuses existing private enrolment link architecture without outbox spam; zero unrequested emails |
 | **Core Cohort Tracking Engine** | `/schools/cohorts/[id]` | `lib/schools/dashboard.ts` (`calculateCohortProgress`) | 3/3 tests pass (enrolled, participating, submitted, attempts, rates, coverage). **STRICT PRIVACY: Zero peer ranking.** |
 | **Dynamic Evidence & Rubrics** | `/api/schools/feedback` | `lib/schools/evidence.ts`<br>`components/schools/Feedback.tsx` | 3/3 tests pass (evaluates 3–8 questions, dynamic element counts, validates rubric coverage) |
+| **First-Class Programme Entity** | `/api/schools/programmes` | `schools_programmes` table<br>`components/schools/ProgrammeModal.tsx`<br>`components/schools/CohortModal.tsx` | 4/4 unit tests pass; validates university and vocational tracks, cohort linkage, non-destructive archiving |
+| **Assignment Lifecycle & Immutability** | `/api/schools/manage` | `schools_manage` RPC<br>`lib/schools/types.ts`<br>`components/schools/Assign.tsx` | 4/4 unit tests pass; protects assessment params when attempts exist; safe version duplication |
+| **Explainable Intervention Queue** | `/schools/cohorts/[id]` | `lib/schools/intervention.ts`<br>`components/schools/InterventionQueue.tsx` | 5/5 unit tests pass; 5 factual signals; **strictly zero peer ranking or psychological diagnosis** |
+| **Student Inbox Upgrade** | `/schools/me` | `lib/schools/student-inbox.ts`<br>`app/schools/me/page.tsx` | 4/4 unit tests pass; categorizes Due vs Completed; tracks attempts, adviser instructions, relative deadlines |
+| **Learner Progression Profile** | `/schools/cohorts/[id]/students/[studentId]` | `app/schools/cohorts/[id]/students/[studentId]/page.tsx` | Full attempt history, rubric evidence deltas, support requests, and attempt progression |
+| **Institutional Tenant & Role RBAC** | Institutional Data Layer | RLS policies & RPC checks | 6/6 tests pass; cross-institution denial, student analytics exclusion, draft privacy |
 
 ---
 
-### C. P0-B (Next Up — Adviser Workflow & Support Queue)
+### C. P0-C (Next Up — Adviser Workflow & Support Queue)
 
 | Feature | Description | Technical Assets | Status |
 | :--- | :--- | :--- | :--- |
-| **Adviser Review Interface** | Ability for career advisers to review student answers, add private feedback, and track attempt revisions. | `app/schools/cohorts/[id]/review/page.tsx`<br>`components/schools/Review.tsx` | Updated for 3-8 questions; requires review workflow verification |
+| **Adviser Review Polish** | Ability for career advisers to review student answers, add private feedback, and track attempt revisions. | `app/schools/cohorts/[id]/review/page.tsx`<br>`components/schools/Review.tsx` | Updated for 3-8 questions; requires review workflow verification |
 | **Adviser Evidence Corrections** | Interface for educators to mark missing or present rubric elements with reasons. | `components/schools/EvidenceReview.tsx`<br>`app/api/schools/route.ts` (`correct`) | Updated for 3-8 questions; requires full UX test |
-| **Student Support Queue** | Educator dashboard queue for students requesting adviser support or alternative prompts. | `app/schools/cohorts/[id]/support/[studentId]`<br>`components/schools/Support.tsx` | Existing baseline; needs cohort-level support view |
+| **Live Support Resolution** | In-app resolution and reply for students requesting adviser support. | `app/schools/cohorts/[id]/support/[studentId]`<br>`components/schools/Support.tsx` | Existing baseline; needs cohort-level support view |
 
 ---
 

@@ -88,3 +88,23 @@
   6. Implemented aggregate cohort progress metrics with zero comparative student rankings.
 - **Consequences:**
   The platform seamlessly accommodates both deep collegiate structures and flat training programmes, eliminates the teacher recruitment bias, and provides a scalable foundation for multi-industry career-readiness assignments while strictly protecting student privacy.
+
+---
+
+## ADR-007: First-Class Programme Model, Assessment Immutability, and Factual Intervention Engine (Educator Suite P0-B)
+- **Date:** 2026-09-16
+- **Status:** Accepted
+- **Context:**
+  Institutional educators need to organize learners into curricula (`BSc Computer Science`, `Diploma in Accounting`), assign practice tasks, track completion, identify learners needing support, and inspect individual progress over time.
+  Three critical architectural requirements emerged:
+  1. *Curriculum Structure:* Programmes must be proper first-class institutional entities supporting both deep collegiate hierarchies (`University -> Faculty -> Programme -> Cohort`) and flat vocational structures (`Training Institution -> Programme -> Cohort` or direct cohorts).
+  2. *Evaluation Fairness & Immutability:* If an educator edits assessment questions, competencies, or attempt limits while students are actively completing an assignment, historical attempts become invalidated and evaluation fairness is broken.
+  3. *Intervention Ethics & Explainability:* Career centres need to identify students falling behind or struggling, but must NEVER label, rank, or diagnose students psychologically or medically. Every intervention signal must be 100% explainable from stored facts.
+- **Decision:**
+  1. Created `schools_programmes` table (`id`, `institution_id`, `name`, `code`, `campus`, `faculty`, `description`, `status`) with index on `(institution_id, status)`. Linked `schools_cohorts.programme_id` as an optional foreign key (`ON DELETE SET NULL`), maintaining strict multi-tenant RLS isolation.
+  2. Implemented explicit assignment lifecycle states (`draft`, `published`, `closed`). Implemented strict assessment immutability in `schools_manage` (`edit_assignment`): once any student attempt exists, mutations to `question_ids`, `role_id`, `competencies`, `job_title`, `job_description`, and `max_attempts` are permanently rejected with a 409 conflict. Educators can still adjust `due_at`, `instructions`, and `status`. To modify assessment parameters, educators must use `duplicate_assignment`, which creates version $N+1$ in `draft` state linked to the parent via `duplicated_from_id`.
+  3. Built a pure, deterministic Intervention Engine (`lib/schools/intervention.ts`) that detects 5 factual signals: `deadline_unstarted`, `stalled_draft`, `low_evidence`, `stagnant_attempts`, and `support_requested`. Every signal cites concrete stored evidence (hours since draft, attempt count, rubric elements present) with zero psychometric diagnoses and zero peer comparisons.
+  4. Built `buildStudentInbox` and upgraded `/schools/me` to separate assignments into "Due & In Progress" vs "Completed & Reviewed", surfacing relative deadlines, attempt limits, and educator instructions.
+  5. Built learner progression profile at `/schools/cohorts/[id]/students/[studentId]`, tracking attempt-over-attempt evidence deltas.
+- **Consequences:**
+  Institutional curriculum organization is first-class; assessment fairness and auditability are guaranteed; educators receive explainable intervention queues; students get clarity on remaining attempts and adviser instructions; and privacy is strictly preserved.

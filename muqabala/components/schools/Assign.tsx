@@ -24,9 +24,11 @@ export function SchoolsAssign({
   const [jobTitle, setJobTitle] = useState('');
   const [jobDescription, setJobDescription] = useState('');
   const [competencies, setCompetencies] = useState('Communication, Problem Solving, Professionalism');
+  const [instructions, setInstructions] = useState('');
+  const [status, setStatus] = useState<'published' | 'draft'>('published');
   const [search, setSearch] = useState('');
   const pool = questions.filter((q) => !role || q.role_id === role || role === 'General');
-  
+
   // Default to 3 questions, allow 3 to 8
   const [chosen, setChosen] = useState<string[]>(
     pool.slice(0, 3).map((q) => q.id)
@@ -71,6 +73,8 @@ export function SchoolsAssign({
             industry,
             jobTitle: jobTitle.trim() || undefined,
             jobDescription: jobDescription.trim() || undefined,
+            instructions: instructions.trim() || undefined,
+            status,
             competencies: competencies
               .split(',')
               .map((c) => c.trim())
@@ -98,7 +102,7 @@ export function SchoolsAssign({
       <p>Configure interview practice questions and career competencies for this cohort.</p>
 
       <fieldset>
-        <legend>Career Field & Role</legend>
+        <legend>Career Field &amp; Role</legend>
         <label>
           Industry / Career Track
           <select value={industry} onChange={(e) => setIndustry(e.target.value)}>
@@ -145,7 +149,7 @@ export function SchoolsAssign({
         <label>
           Job Description / Role Guidance (optional)
           <textarea
-            placeholder="Paste employer job advert or student guidance..."
+            placeholder="Paste employer job advert or role description to tailor evaluation..."
             value={jobDescription}
             onChange={(e) => setJobDescription(e.target.value)}
             maxLength={5000}
@@ -160,6 +164,20 @@ export function SchoolsAssign({
             value={competencies}
             onChange={(e) => setCompetencies(e.target.value)}
             maxLength={200}
+          />
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Adviser Instructions for Students</legend>
+        <label>
+          Guidance / Context (displayed prominently to students on their practice card)
+          <textarea
+            placeholder="e.g. Please complete this practice ahead of next Tuesday's career advisory workshop. Focus your examples on your graduation project or work placement."
+            value={instructions}
+            onChange={(e) => setInstructions(e.target.value)}
+            maxLength={2000}
+            rows={3}
           />
         </label>
       </fieldset>
@@ -231,7 +249,15 @@ export function SchoolsAssign({
       </fieldset>
 
       <fieldset>
-        <legend>Assignment Settings</legend>
+        <legend>Assignment Lifecycle &amp; Attempts</legend>
+        <label>
+          Assignment Status
+          <select value={status} onChange={(e) => setStatus(e.target.value as 'published' | 'draft')}>
+            <option value="published">Published — Immediately available to enrolled students</option>
+            <option value="draft">Draft — Private to educators until explicitly published</option>
+          </select>
+        </label>
+
         <label>
           Due Date (End of day UTC)
           <input type="date" value={due} onChange={(e) => setDue(e.target.value)} required />
@@ -249,6 +275,20 @@ export function SchoolsAssign({
         </label>
       </fieldset>
 
+      <div
+        style={{
+          background: '#f8fafc',
+          border: '1px solid #e2e8f0',
+          borderRadius: '6px',
+          padding: '12px 16px',
+          fontSize: '0.85rem',
+          color: '#475569',
+          marginBottom: '1.25rem',
+        }}
+      >
+        <strong>Assessment Immutability Notice:</strong> Once any student submits an attempt, assessment questions, role, competencies, and maximum attempts are permanently locked to preserve evaluation integrity. Due dates, instructions, and publishing status can still be edited at any time.
+      </div>
+
       <button
         disabled={
           busy ||
@@ -257,7 +297,7 @@ export function SchoolsAssign({
           new Set(chosen).size !== chosen.length
         }
       >
-        {busy ? 'Publishing assignment...' : 'Publish Career Assignment'}
+        {busy ? 'Saving assignment...' : status === 'draft' ? 'Save Draft Assignment' : 'Publish Career Assignment'}
       </button>
       {message && <p role="status">{message}</p>}
     </form>

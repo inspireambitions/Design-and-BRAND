@@ -67,6 +67,11 @@ node --experimental-strip-types scripts/educator-p0a-roster-import.test.mjs
 node --experimental-strip-types scripts/educator-p0a-cohort-tracking.test.mjs
 node --experimental-strip-types scripts/educator-p0a-assignment.test.mjs
 node --experimental-strip-types scripts/educator-p0a-evidence.test.mjs
+node --experimental-strip-types scripts/educator-p0b-programmes.test.mjs
+node --experimental-strip-types scripts/educator-p0b-assignment-lifecycle.test.mjs
+node --experimental-strip-types scripts/educator-p0b-intervention.test.mjs
+node --experimental-strip-types scripts/educator-p0b-student-inbox.test.mjs
+node --experimental-strip-types scripts/educator-p0b-rbac.test.mjs
 npm run test:security
 ```
 

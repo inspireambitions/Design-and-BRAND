@@ -43,4 +43,61 @@ export type FlexibleAssignmentPayload = {
   jobDescription?: string | null;
   competencies?: string[];
   maxAttempts?: number | null;
+  instructions?: string | null;
+  status?: 'draft' | 'published' | 'closed';
 };
+
+export type ProgrammeEntity = {
+  id: string;
+  institution_id: string;
+  name: string;
+  code?: string | null;
+  status: 'active' | 'inactive' | 'archived';
+  campus?: string | null;
+  faculty?: string | null;
+  description?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AssignmentLifecycleState = 'draft' | 'published' | 'closed';
+
+export type InterventionCategory =
+  | 'deadline_unstarted'
+  | 'stalled_draft'
+  | 'low_evidence'
+  | 'stagnant_attempts'
+  | 'support_requested';
+
+export type InterventionSignal = {
+  id: string;
+  studentId: string;
+  studentName: string;
+  studentIdentifier?: string | null;
+  assignmentId: string;
+  assignmentRole: string;
+  category: InterventionCategory;
+  severity: 'urgent' | 'advisory';
+  humanReason: string;
+  evidenceBasis: string;
+  timestamp: string;
+  suggestedAction: string;
+};
+
+export type StudentAssignmentCard = {
+  id: string;
+  cohortId: string;
+  roleTitle: string;
+  industry?: string | null;
+  instructions?: string | null;
+  dueAt: string;
+  relativeTime: string;
+  isOverdue: boolean;
+  status: 'not_started' | 'draft_in_progress' | 'submitted_awaiting_review' | 'reviewed_feedback_ready';
+  attemptsAllowed: number | null;
+  attemptsUsed: number;
+  attemptsRemaining: number | null;
+  actionLabel: string;
+  actionHref: string;
+};
+
