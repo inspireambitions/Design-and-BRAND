@@ -1,12 +1,12 @@
 # Current Sprint Tracker
 
-**Sprint Name:** Reconciliation & Unified Integration (2026-09-16)  
-**Status:** Verification Complete — Awaiting Preview Gate Approval  
+**Sprint Name:** Reconciliation & Preview Deployment (2026-09-16)  
+**Status:** Preview Deployed & QA Verified — Awaiting Production Gate Sign-Off  
 
 ---
 
 ## 1. Sprint Objectives
-Unify the live production Schools/Educator release (`8d5c8a2` / PR #23) with the parallel Recruiter Assistance Suite (`codex/recruiter-suite-20260915`) into a single, clean, verified repository branch (`integration/muqabala-unified-20260916`).
+Unify the live production Schools/Educator release (`8d5c8a2` / PR #23) with the parallel Recruiter Assistance Suite (`codex/recruiter-suite-20260915`), generate an isolated Vercel Preview Deployment, and perform complete browser-based E2E QA without impacting production.
 
 ---
 
@@ -21,24 +21,27 @@ Unify the live production Schools/Educator release (`8d5c8a2` / PR #23) with the
 | **Monotonic Migration Re-timestamp** | DONE | `muqabala-integration` | `20260916120000_recruiter_assistance.sql` committed (`b073c45`) |
 | **Full Build & Typecheck** | DONE | `muqabala-integration` | 139/139 Next.js pages compiled, 0 TS errors |
 | **Test Suite Execution** | DONE | `muqabala-integration` | 100% tests passing across all domains |
-| **Shared Multi-Agent Memory Setup** | IN PROGRESS | `muqabala-integration` | 7 core docs created |
-| **Vercel Preview Deployment** | PENDING | `integration/muqabala-unified-20260916` | Requires user sign-off |
-| **Staging Migration Run** | PENDING | Supabase Staging | Requires user sign-off |
+| **Shared Multi-Agent Memory Setup** | DONE | `muqabala-integration` | 7 core docs created (commit `dc31b14`) |
+| **Push Integration Branch to GitHub**| DONE | `origin` | Pushed `integration/muqabala-unified-20260916` |
+| **Vercel Preview Deployment** | DONE | Vercel (`inspire14/muqabala`) | URL: `muqabala-git-integration-muqabala-unified-20260916-inspire14.vercel.app` |
+| **Preview Browser E2E QA** | DONE | Headless Chrome (Playwright) | 20/20 test assertions passed across all domains |
+| **Database Safety Guard** | ACTIVE | Production Supabase | Migration NOT applied; zero writes executed |
+| **Production Merge & Release** | LOCKED | `claude/gulf-hospitality-...` | Requires explicit user authorization |
 
 ---
 
 ## 3. Active Locks & Constraints
-- **NO DIRECT PUSH TO PRODUCTION:** Production is untouched and running `8d5c8a2`.
-- **NO MIGRATIONS TO PROD DB:** Migration `20260916120000` is pending preview verification.
+- **ABSOLUTE PRODUCTION RESTRICTION ACTIVE:** `trymuqabala.com` remains 100% untouched.
+- **NO PROD MIGRATIONS:** Migration `20260916120000` is preserved in repo but unapplied.
 - **WORKTREE LOCKS:**
-  - `muqabala-schools-finish-20260914`: LOCKED (Production reference baseline).
-  - `muqabala-app`: LOCKED (Original recruiter reference baseline).
-  - `muqabala-integration`: ACTIVE WORKTREE.
+  - `muqabala-schools-finish-20260914`: LOCKED (Production recovery anchor).
+  - `muqabala-app`: LOCKED (Recruiter suite recovery anchor).
+  - `muqabala-integration`: ACTIVE (Unified integration branch).
 
 ---
 
 ## 4. Next Milestones
-1. **Milestone 1:** Obtain user sign-off on the Unified Reconciliation Report.
-2. **Milestone 2:** Trigger a preview deployment on Vercel from branch `integration/muqabala-unified-20260916`.
-3. **Milestone 3:** Run `20260916120000_recruiter_assistance.sql` against staging Supabase database and execute end-to-end recruiter smoke test.
-4. **Milestone 4:** Split `lib/i18n.ts` into lazy chunks to bring `/practice/accountant` back below 200 KB gzipped.
+1. **Milestone 1:** Review Preview QA Report with the user.
+2. **Milestone 2:** Determine staging/isolated database strategy for testing the recruiter migration (`20260916120000_recruiter_assistance.sql`).
+3. **Milestone 3:** Split `lib/i18n.ts` into lazy chunks to optimize the candidate practice bundle budget.
+4. **Milestone 4:** Upon explicit human approval, execute production release gate.

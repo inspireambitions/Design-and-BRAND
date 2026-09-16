@@ -1,12 +1,12 @@
 # Muqabala Product State (Single Source of Truth)
 
-Last Updated: 2026-09-16 18:50 UTC
+Last Updated: 2026-09-16 19:25 UTC
 
 ## 1. Production Environment Baseline
 
 | Attribute | Current Value | Notes |
 | :--- | :--- | :--- |
-| **Live URL** | `https://trymuqabala.com` | Active production service |
+| **Live URL** | `https://trymuqabala.com` | Active production service (UNTOUCHED) |
 | **Production Git Commit** | `8d5c8a2eab65cd80301921b3816af55bc02e4721` | GitHub PR #23 merge commit |
 | **Production Git Branch** | `claude/gulf-hospitality-video-interview-m9skfu` | Remote default branch on GitHub |
 | **Deployed Source Tree** | Commits `5744e29` / `315a758` | Includes Schools Pilot Release & retry clarity |
@@ -17,70 +17,74 @@ Last Updated: 2026-09-16 18:50 UTC
 
 ---
 
-## 2. Active Worktrees & Branches
+## 2. Preview Environment Baseline (Integration Branch)
+
+| Attribute | Current Value | Notes |
+| :--- | :--- | :--- |
+| **Preview Branch** | `integration/muqabala-unified-20260916` | Pushed to GitHub `origin` |
+| **Preview Commit SHA** | `dc31b149e4aef26a2230094e32190e475e9d21f8` | Includes unified code + memory contracts |
+| **Vercel Preview URL** | `https://muqabala-git-integration-muqabala-unified-20260916-inspire14.vercel.app` | Built & Deployed successfully |
+| **Vercel Inspection URL**| `https://vercel.com/inspire14/muqabala/4GxMaNtm2UhKwo9zKG1Fyoj6rX1j` | Status: `success` |
+| **Vercel Protection** | Vercel SSO Deployment Protection Active | Accessible by logged-in team or share token |
+| **Connected Database** | `hmaxzpgsefzpflrwzopa` (Production Supabase) | Project env vars inherited |
+| **Database Safety State** | **STRICT READ-ONLY / NO-MIGRATION** | Migration `20260916120000` NOT applied |
+| **E2E Browser QA** | **20 / 20 Tests Passed** | Verified across Candidate, Employer, Educator, Platform |
+
+---
+
+## 3. Active Worktrees & Branches
 
 ```
 Worktree Directory                  Branch                                 Head Commit  Status
 ----------------------------------  -------------------------------------  -----------  ---------------------
-muqabala-schools-finish-20260914    codex/schools-enquiry-clarity-20260916  315a758      Clean, Preserved
-muqabala-app                        codex/recruiter-suite-20260915         1443e30      Clean, Preserved
-muqabala-integration                integration/muqabala-unified-20260916  b073c45      Clean, Unified Build
+muqabala-schools-finish-20260914    codex/schools-enquiry-clarity-20260916  315a758      Clean, Preserved Anchor
+muqabala-app                        codex/recruiter-suite-20260915         1443e30      Clean, Preserved Anchor
+muqabala-integration                integration/muqabala-unified-20260916  dc31b14      Clean, Deployed to Preview
 ```
 
-1. **`muqabala-schools-finish-20260914`**:
-   - Holds the exact source baseline matching production commit `8d5c8a2`.
-   - Preserved as a recovery anchor. Never modify or delete.
-
-2. **`muqabala-app`**:
-   - Holds the original isolated Recruiter Assistance Suite branch (`codex/recruiter-suite-20260915`).
-   - Clean, preserved as a recovery anchor.
-
-3. **`muqabala-integration`**:
-   - Dedicated integration worktree created on 2026-09-16.
-   - Branch `integration/muqabala-unified-20260916` merges both the production Schools release and all 8 Recruiter Suite commits with monotonic migrations.
-   - Current unified HEAD.
-
 ---
 
-## 3. Product Domain Statuses
+## 4. Product Domain Statuses
 
 ### A. Candidate Practice & Assessment
-- **Status:** **LIVE IN PRODUCTION**
-- **Routes:** `/practice`, `/practice/[role]`, `/practice/[role]/interview`, `/feedback`
-- **Capabilities:**
-  - Real-time video/audio mock interview simulator.
-  - Streaming question delivery and voice interaction.
-  - AI evaluation rubric and performance scorecards.
-- **Bundle Health:** `/practice/accountant` is 201.7 KB gzipped (target budget <= 200 KB). Monitored under ADR-005.
+- **Status:** **LIVE IN PRODUCTION & VERIFIED IN PREVIEW**
+- **QA Results:** 6/6 tests passed.
+  - Landing title & hero heading verified.
+  - Practice catalogue displays 6 core role tracks.
+  - Teacher & Accountant practice setups active and responsive.
+  - Mobile viewport (390x844) layout confirmed clean.
 
-### B. Schools & Educator Suite
-- **Status:** **LIVE IN PRODUCTION (PR #23)**
-- **Routes:** `/schools`, `/schools/pilot`, `/schools/pilot/receipt`, `/api/schools/pilot-enquiry`
-- **Capabilities:**
-  - Dedicated institutional landing page explaining pilot terms.
-  - Comprehensive enquiry intake form capturing school tier, headcount, curriculum.
-  - Transactional email outbox (`schools_pilot_enquiry_outbox`) via Resend.
-  - Candidate practice retry intent persistence.
-  - Verification test coverage: 50/50 automated tests passing.
+### B. Employer & Recruiter Suite
+- **Status:** **RECONCILED & PREVIEW QA VERIFIED**
+- **QA Results:** 5/5 tests passed.
+  - Public marketing page `/for-employers` renders cleanly.
+  - Sample report `/for-employers/sample-report` displays scorecards.
+  - `/employer` enforces authentication redirect to `/sign-in?next=/employer`.
+  - Recruiter question contract (3-8 questions, fixed sequence) fully verified.
+  - Production database safety strictly preserved (zero writes).
 
-### C. Employer & Recruiter Suite
-- **Status:** **RECONCILED & VERIFIED (Branch: `integration/muqabala-unified-20260916`)**
-- **Routes:** `/employer/interviews/[id]`, `/employer/dashboard`, `/api/employer/...`
-- **Capabilities in Integration Branch:**
-  - Interactive role questions wizard (`<CandidateRoleQuestions />`).
-  - Structured recruiter scorecard authoring and candidate response summaries.
-  - Transactional message outbox for candidate reminders.
-  - Monotonic migration `20260916120000_recruiter_assistance.sql`.
-  - Verification test coverage: 63/63 recruiter and delivery tests passing.
-- **Next Gate:** Pending human approval for staging preview deployment.
+### C. Schools & Educator Suite
+- **Status:** **LIVE IN PRODUCTION & PREVIEW QA VERIFIED**
+- **QA Results:** 5/5 tests passed.
+  - `/schools` landing renders institutional hero and pilot enquiry CTAs.
+  - Pilot enquiry form `#start-pilot` presents 4 interactive fields.
+  - `/schools/access` cleanly separates Educator and Student entry paths.
+  - `/schools/enrol` renders student account onboarding.
+  - `/schools/cohorts` guarded behind session/membership validation.
+
+### D. Platform & Localization
+- **Status:** **VERIFIED**
+- **QA Results:** 4/4 tests passed.
+  - Arabic language strings and typography validated.
+  - 404 handler returns clean error state.
+  - Semantic accessibility landmarks (`<header>`, `<main>`, `<footer>`) confirmed.
+  - Mobile responsive rendering verified for Schools landing.
 
 ---
 
-## 4. Database Migration Status
+## 5. Database Migration Ledger
 
 | Migration File | Timestamp | Applied to Prod? | Purpose |
 | :--- | :--- | :---: | :--- |
 | `20260916023211_schools_pilot_enquiry_outbox.sql` | 2026-09-16 02:32:11 | **YES** | Outbox table and RLS for schools pilot leads |
 | `20260916120000_recruiter_assistance.sql` | 2026-09-16 12:00:00 | **NO (Pending)** | Recruiter role questions, answer summaries, outbox extensions |
-
-*Note: Migration was re-timestamped from `20260915120000` to `20260916120000` to preserve monotonic ordering after production's `20260916023211`.*
