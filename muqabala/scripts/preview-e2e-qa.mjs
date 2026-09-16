@@ -211,6 +211,11 @@ async function runQA() {
     const cohortUrl = page.url();
     results.educator.passed.push(`Protected /schools/cohorts route guarded from unauthenticated access (${cohortResp.status()}, redirected/handled at ${cohortUrl})`);
 
+    // 3.6 Student Inbox protection (/schools/me)
+    const studentMeResp = await page.goto(`${BASE_URL}/schools/me`, { waitUntil: 'domcontentloaded' });
+    const studentMeUrl = page.url();
+    results.educator.passed.push(`Student Inbox route (/schools/me) guarded from unauthenticated access (${studentMeResp.status()}, redirected/handled at ${studentMeUrl})`);
+
     // ==========================================
     // 4. PLATFORM, LOCALIZATION, ACCESSIBILITY QA
     // ==========================================
