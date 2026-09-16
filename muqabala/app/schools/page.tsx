@@ -5,7 +5,8 @@ export default function SchoolsPage() {
   requireSchoolsEnabled();
   return <><section className="schools-landing-hero"><div className="schools-hero-copy"><p>Muqabala for Schools and Colleges</p><h1>Interview practice for every student. Evidence for every adviser.</h1>
     <p>Assign three role-relevant questions to a class. Students practise in private and improve on retry. You review and comment.</p>
-    <div className="schools-actions"><a className="schools-button" href="#start-pilot">Start a pilot</a><a href="#sample-report">See a sample report</a></div></div>
+    <div className="schools-actions"><a className="schools-button" href="#start-pilot">Enquire about a school pilot</a><a href="#sample-report">See a sample report</a></div>
+    <aside className="schools-card" aria-label="Existing or invited access"><h2>Already invited or enrolled?</h2><div className="schools-actions"><Link href="/schools/sign-in?role=educator">Educator or administrator sign-in</Link><Link href="/schools/access#student-access">Student access</Link></div><p>Use your invitation to accept access first. An enquiry does not grant access.</p></aside></div>
     <figure className="schools-cohort-example" aria-labelledby="cohort-example-title"><div className="schools-example-heading"><p className="schools-eyebrow">Your adviser workspace</p><h2 id="cohort-example-title">One class. Your next review.</h2><p>Project group · Working with others</p></div>
       <dl className="schools-cohort-counts"><div><dt>Enrolled</dt><dd>4</dd></div><div><dt>Submitted</dt><dd>3</dd></div><div><dt>Not reviewed</dt><dd>1</dd></div><div><dt>Support requests open</dt><dd>1</dd></div></dl>
       <p className="schools-example-next">Next: review C. D.’s submitted attempt</p>
@@ -33,5 +34,5 @@ export default function SchoolsPage() {
     <section className="schools-section"><h2>How feedback is explained</h2><p>Feedback checks the words in an answer against the agreed rubric. Supporting excerpts show why an element was marked present. Your adviser can correct an element and record a reason.</p><p>Confidence describes the engine’s uncertainty about that evidence decision. It does not describe the student.</p></section>
     <section className="schools-section"><h2>Safeguarding and privacy</h2><p>This pilot is for adults aged 18 or over. Answers use text only. Advisers see submitted work in their assigned cohorts. Drafts stay private from advisers.</p><p>Schools answers stay separate from employer recruitment. Enrolment opens after institution setup and its data processing arrangement are complete.</p></section>
     <section className="schools-section"><h2>Teaching language</h2><p>This sample is in English. We confirm one teaching language with your institution before its pilot opens.</p></section>
-    <SchoolsPilotContact/><section className="schools-section"><h2>Already enrolled?</h2><Link href="/schools/sign-in">Sign in with email</Link><p><Link href="/schools/enrol">Use a student link or recovery code</Link></p></section></>;
+    <SchoolsPilotContact/><section className="schools-section"><h2>Already invited or enrolled?</h2><Link href="/schools/access">Find your educator or student access route</Link><p><Link href="/schools/enrol">Use a student private link or recovery code</Link></p></section></>;
 }

@@ -3,11 +3,12 @@ import 'server-only';
 export type EmailMessage = {
   to: string;
   from: string;
+  replyTo?: string;
   subject: string;
   html: string;
   text: string;
   idempotencyKey: string;
-  messageType?: 'practice_plan_v2' | 'schools_staff' | 'schools_assignment' | 'schools_privacy';
+  messageType?: 'practice_plan_v2' | 'schools_staff' | 'schools_assignment' | 'schools_privacy' | 'schools_pilot_acknowledgement' | 'schools_pilot_internal';
 };
 
 export type EmailSendResult = { providerMessageId: string };
@@ -82,6 +83,7 @@ export class ResendEmailProvider implements EmailProvider {
         },
         body: JSON.stringify({
           from: message.from,
+          ...(message.replyTo ? { reply_to: message.replyTo } : {}),
           to: [message.to],
           subject: message.subject,
           html: message.html,
