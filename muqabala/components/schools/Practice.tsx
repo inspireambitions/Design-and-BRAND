@@ -5,14 +5,15 @@ type Attempt={id:string;status:string;answers:string[];revision:number;attempt_n
 export function SchoolsPractice({assignmentId,cohortId,questions,initial,dueAt,retryQuestion}:{
   assignmentId:string;cohortId:string;questions:{text:string;followUp:string;rubric:{id:string;label:string}[]}[];initial:Attempt|null;dueAt:string;retryQuestion?:number;
 }) {
-  const [answers,setAnswers]=useState<string[]>(initial?.answers??['','','']);
+  const defaultAnswers=initial?.answers&&initial.answers.length===questions.length?initial.answers:Array.from({length:questions.length},(_,i)=>initial?.answers?.[i]??'');
+  const [answers,setAnswers]=useState<string[]>(defaultAnswers);
   const [attempt,setAttempt]=useState(initial);
   const [message,setMessage]=useState('');
   const [error,setError]=useState('');
   const [busy,setBusy]=useState(false);
   const [prompts,setPrompts]=useState<number|null>(null);
   const latest=useRef(answers);
-  const stored=useRef(initial?.answers??['','','']);
+  const stored=useRef(defaultAnswers);
   const version=useRef(initial);
   const pendingId=useRef<string|null>(initial?.id??null);
   const locked=useRef(false);
@@ -86,7 +87,7 @@ export function SchoolsPractice({assignmentId,cohortId,questions,initial,dueAt,r
         <p>{question.followUp}</p><p>Write what you did in your own words.</p></div>}
     </fieldset>)}
     {!submitted&&<div className="schools-actions"><button disabled={busy||closed} onClick={()=>void save()}>Save draft</button>
-      <button disabled={busy||closed||answers.some(a=>!a.trim())} onClick={()=>void save(true)}>Submit answers</button></div>}
+      <button disabled={busy||closed||answers.length!==questions.length||answers.some(a=>!a.trim())} onClick={()=>void save(true)}>Submit answers</button></div>}
     {closed&&!submitted&&<p>The due date has passed. Ask your adviser for help.</p>}
     <p>Your adviser can read what you submit. Drafts are private.</p>
     <button onClick={async()=>{try{const r=await fetch('/api/schools',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({operation:'support',payload:{cohortId}})});if(!r.ok)throw new Error();setMessage('Your support request is open.');}catch{setError('Could not request support. Please try again.');}}}>Request adviser support</button>

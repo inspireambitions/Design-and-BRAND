@@ -26,6 +26,12 @@ Unify the live production Schools/Educator release (`8d5c8a2` / PR #23) with the
 | **Vercel Preview Deployment** | DONE | Vercel (`inspire14/muqabala`) | URL: `muqabala-git-integration-muqabala-unified-20260916-inspire14.vercel.app` |
 | **Preview Browser E2E QA** | DONE | Headless Chrome (Playwright) | 20/20 test assertions passed across all domains |
 | **Database Safety Guard** | ACTIVE | Production Supabase | Migration NOT applied; zero writes executed |
+| **Educator Suite Foundation Migration** | DONE | `muqabala-integration` | `20260916140000_educator_p0a_foundations.sql` (Monotonic > 120000) |
+| **Optional Hierarchy & Multi-Industry** | DONE | `muqabala-integration` | `lib/schools/types.ts`, `Assign.tsx`, `manage/route.ts` |
+| **Student Roster CSV Parser & API** | DONE | `muqabala-integration` | `roster-import.ts`, `api/schools/roster/route.ts` (7/7 tests pass) |
+| **Cohort Progress Tracking Engine** | DONE | `muqabala-integration` | `lib/schools/dashboard.ts` (3/3 tests pass; no peer ranking) |
+| **Dynamic 3-8 Question Assignment** | DONE | `muqabala-integration` | 4/4 contract tests pass; learner Practice & Feedback updated |
+| **Dynamic Evidence Evaluation** | DONE | `muqabala-integration` | `lib/schools/evidence.ts`, 3/3 tests pass |
 | **Production Merge & Release** | LOCKED | `claude/gulf-hospitality-...` | Requires explicit user authorization |
 
 ---

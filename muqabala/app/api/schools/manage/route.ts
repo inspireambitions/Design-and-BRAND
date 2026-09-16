@@ -17,11 +17,27 @@ const schema=z.discriminatedUnion('operation',[
   z.object({operation:z.literal('institution'),payload:z.object({name:z.string().trim().min(1).max(160),country:z.string().trim().min(2).max(80),language:z.enum(['en','ar'])}).strict()}),
   z.object({operation:z.literal('approve'),payload:z.object({institutionId:uuid,dpaReference:z.string().trim().min(1).max(500)}).strict()}),
   z.object({operation:z.literal('staff'),payload:z.object({institutionId:uuid,userId:uuid,role:z.enum(['institution_admin','educator'])}).strict()}),
-  z.object({operation:z.literal('cohort'),payload:z.object({institutionId:uuid,name:z.string().trim().min(1).max(160)}).strict()}),
+  z.object({operation:z.literal('cohort'),payload:z.object({
+    institutionId:uuid,
+    name:z.string().trim().min(1).max(160),
+    campus:z.string().trim().max(160).optional(),
+    faculty:z.string().trim().max(160).optional(),
+    programme:z.string().trim().max(160).optional(),
+  }).strict()}),
   z.object({operation:z.literal('assign_educator'),payload:z.object({cohortId:uuid,userId:uuid}).strict()}),
   z.object({operation:z.literal('enrolment'),payload:z.object({cohortId:uuid,open:z.boolean(),rotate:z.boolean()}).strict()}),
   z.object({operation:z.literal('question'),payload:z.object({cohortId:uuid,roleId:z.string().min(1).max(100),text:z.string().trim().min(1).max(1200),rubric:questionRubricSchema,followUp:z.string().trim().min(1).max(800)}).strict()}),
-  z.object({operation:z.literal('assignment'),payload:z.object({cohortId:uuid,roleId:z.string().min(1).max(100),questionIds:z.array(uuid).length(3).refine(ids=>new Set(ids).size===3),dueAt:z.string().datetime({offset:true})}).strict()}),
+  z.object({operation:z.literal('assignment'),payload:z.object({
+    cohortId:uuid,
+    roleId:z.string().min(1).max(100),
+    questionIds:z.array(uuid).min(3).max(8).refine(ids=>new Set(ids).size===ids.length),
+    dueAt:z.string().datetime({offset:true}),
+    industry:z.string().trim().max(80).optional(),
+    jobTitle:z.string().trim().max(160).optional(),
+    jobDescription:z.string().trim().max(50000).optional(),
+    competencies:z.array(z.string().trim().max(100)).max(20).optional(),
+    maxAttempts:z.number().int().min(1).max(20).optional(),
+  }).strict()}),
 ]);
 export async function POST(request:Request){
   const unavailable=schoolsUnavailable();if(unavailable)return unavailable;

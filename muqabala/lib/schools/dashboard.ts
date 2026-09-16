@@ -216,3 +216,106 @@ export function buildSchoolsInstitutionSummary({
     })),
   };
 }
+
+export type CohortProgressMetrics = {
+  cohortId: string;
+  enrolledStudents: number;
+  participatingStudents: number;
+  submittedStudents: number;
+  incompleteStudents: number;
+  totalAttempts: number;
+  participationRate: number;
+  completionRate: number;
+  averageAttemptsPerStudent: number;
+  competencyCoverage: Array<{
+    element: string;
+    presentCount: number;
+    totalEvaluated: number;
+    percentage: number;
+  }>;
+};
+
+export type AttemptWithEvidence = SchoolsAttemptRow & {
+  status?: string;
+  evidence_detail?: Record<string, boolean | { present?: boolean }> | null;
+};
+
+export function calculateCohortProgress({
+  cohortId,
+  members,
+  attempts,
+  targetAssignmentId,
+}: {
+  cohortId: string;
+  members: SchoolsMemberRow[];
+  attempts: AttemptWithEvidence[];
+  targetAssignmentId?: string;
+}): CohortProgressMetrics {
+  const activeMembers = members.filter((m) => m.cohort_id === cohortId && m.status === 'active');
+  const enrolledStudentIds = new Set(activeMembers.map((m) => m.student_user_id));
+  const enrolledStudents = enrolledStudentIds.size;
+
+  const relevantAttempts = attempts.filter((a) => {
+    if (!enrolledStudentIds.has(a.student_user_id)) return false;
+    if (targetAssignmentId && a.assignment_id !== targetAssignmentId) return false;
+    return true;
+  });
+
+  const participatingStudentIds = new Set(relevantAttempts.map((a) => a.student_user_id));
+  const submittedStudentIds = new Set(
+    relevantAttempts.filter((a) => a.submitted_at || a.status === 'submitted').map((a) => a.student_user_id)
+  );
+
+  const participatingStudents = participatingStudentIds.size;
+  const submittedStudents = submittedStudentIds.size;
+  const incompleteStudents = Math.max(0, enrolledStudents - submittedStudents);
+  const totalAttempts = relevantAttempts.length;
+
+  const participationRate = enrolledStudents > 0
+    ? Math.round((participatingStudents / enrolledStudents) * 1000) / 10
+    : 0;
+
+  const completionRate = enrolledStudents > 0
+    ? Math.round((submittedStudents / enrolledStudents) * 1000) / 10
+    : 0;
+
+  const averageAttemptsPerStudent = participatingStudents > 0
+    ? Math.round((totalAttempts / participatingStudents) * 10) / 10
+    : 0;
+
+  // Aggregate competency / evidence coverage across submitted attempts
+  const elementCounts = new Map<string, { present: number; total: number }>();
+
+  for (const att of relevantAttempts) {
+    if (!att.submitted_at && att.status !== 'submitted') continue;
+    if (att.evidence_detail && typeof att.evidence_detail === 'object') {
+      for (const [element, val] of Object.entries(att.evidence_detail)) {
+        const isPresent = val === true || (typeof val === 'object' && val !== null && Boolean(val.present));
+        const current = elementCounts.get(element) || { present: 0, total: 0 };
+        current.total += 1;
+        if (isPresent) current.present += 1;
+        elementCounts.set(element, current);
+      }
+    }
+  }
+
+  const competencyCoverage = [...elementCounts.entries()].map(([element, counts]) => ({
+    element,
+    presentCount: counts.present,
+    totalEvaluated: counts.total,
+    percentage: counts.total > 0 ? Math.round((counts.present / counts.total) * 1000) / 10 : 0,
+  }));
+
+  return {
+    cohortId,
+    enrolledStudents,
+    participatingStudents,
+    submittedStudents,
+    incompleteStudents,
+    totalAttempts,
+    participationRate,
+    completionRate,
+    averageAttemptsPerStudent,
+    competencyCoverage,
+  };
+}

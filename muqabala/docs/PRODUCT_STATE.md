@@ -64,13 +64,17 @@ muqabala-integration                integration/muqabala-unified-20260916  dc31b
   - Production database safety strictly preserved (zero writes).
 
 ### C. Schools & Educator Suite
-- **Status:** **LIVE IN PRODUCTION & PREVIEW QA VERIFIED**
-- **QA Results:** 5/5 tests passed.
+- **Status:** **PRODUCTION BASELINE LIVE; EDUCATOR SUITE P0-A CODE COMPLETE & TESTED**
+- **QA Results:** 5/5 preview tests passed; 17/17 P0-A domain tests passed (Roster, Tracking, Multi-Industry Assignments, Dynamic Evidence).
   - `/schools` landing renders institutional hero and pilot enquiry CTAs.
   - Pilot enquiry form `#start-pilot` presents 4 interactive fields.
   - `/schools/access` cleanly separates Educator and Student entry paths.
   - `/schools/enrol` renders student account onboarding.
   - `/schools/cohorts` guarded behind session/membership validation.
+  - Optional institutional hierarchy (`campus`, `faculty`, `programme`) active in schema and API.
+  - Dynamic 3–8 question multi-industry assignments verified end-to-end.
+  - Student roster CSV import with UTF-8 BOM, Arabic headers, and duplicate detection verified.
+  - Aggregate cohort progress tracking verified (strictly no student peer rankings).
 
 ### D. Platform & Localization
 - **Status:** **VERIFIED**
@@ -88,3 +92,4 @@ muqabala-integration                integration/muqabala-unified-20260916  dc31b
 | :--- | :--- | :---: | :--- |
 | `20260916023211_schools_pilot_enquiry_outbox.sql` | 2026-09-16 02:32:11 | **YES** | Outbox table and RLS for schools pilot leads |
 | `20260916120000_recruiter_assistance.sql` | 2026-09-16 12:00:00 | **NO (Pending)** | Recruiter role questions, answer summaries, outbox extensions |
+| `20260916140000_educator_p0a_foundations.sql` | 2026-09-16 14:00:00 | **NO (Pending)** | Optional hierarchy (`campus`, `faculty`, `programme`), multi-industry assignment fields, 3-8 question index constraint relaxation, student identifier |

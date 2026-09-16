@@ -69,3 +69,22 @@
   Accept 201.7 KB for the immediate reconciliation since it was already present in the validated recruiter branch. In the upcoming sprint, decouple recruiter-specific dictionary keys into domain-specific modules (`lib/i18n/recruiter.ts`) loaded dynamically only on recruiter routes.
 - **Consequences:**
   Candidate practice routes will drop back well under 190 KB gzipped once domain-level code-splitting is applied.
+
+---
+
+## ADR-006: Flexible Institutional Hierarchy & Multi-Industry Assignment Engine (Educator Suite P0-A)
+- **Date:** 2026-09-16
+- **Status:** Accepted
+- **Context:**
+  The Educator Suite was originally conceived narrowly around schools hiring teachers. However, its primary institutional purpose is a career-readiness and employability platform for universities, colleges, vocational institutes, and career centres across diverse industries (Finance, Engineering, Tech, Healthcare, Hospitality, etc.).
+  Institutions differ significantly in organisational structure: a large university has `Campus -> Faculty/School -> Programme -> Cohort`, whereas a vocational training centre may operate flat cohorts directly under the institution.
+  Additionally, educator assignments must support 3 to 8 interview questions with role descriptions and competencies, and cohort tracking must strictly protect student privacy by never exposing peer rankings or comparative leaderboards.
+- **Decision:**
+  1. Made `campus`, `faculty`, and `programme` fully optional nullable fields on `schools_cohorts`. Flat institutions leave them `null` without friction.
+  2. Preserved the SQL table names (`schools_*`) for database safety, avoiding risky table renames while generalizing the domain model in TypeScript (`InstitutionalHierarchy`, `FlexibleAssignmentPayload`, `INSTITUTIONAL_INDUSTRIES`).
+  3. Upgraded the assignment schema and engine from a rigid 3-question limit to 3–8 dynamic questions with customizable role titles, job descriptions, and competencies across 10 industry tracks.
+  4. Expanded student Practice, feedback evaluation (`calculateEvidence`, `schoolsFeedbackSchema`), and review interfaces to dynamically handle 3–8 questions and rubrics.
+  5. Built a robust CSV roster import parser supporting UTF-8 BOM, Arabic student names/headers (`الرقم الجامعي`, `الاسم`, `البريد الإلكتروني`), delimiter autodetection, and dry-run validation before access link provisioning.
+  6. Implemented aggregate cohort progress metrics with zero comparative student rankings.
+- **Consequences:**
+  The platform seamlessly accommodates both deep collegiate structures and flat training programmes, eliminates the teacher recruitment bias, and provides a scalable foundation for multi-industry career-readiness assignments while strictly protecting student privacy.

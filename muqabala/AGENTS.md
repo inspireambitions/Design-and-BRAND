@@ -63,6 +63,10 @@ node scripts/schools-access-routing.test.mjs
 node scripts/schools-pilot-operations.test.mjs
 node scripts/schools-practice-retry.test.mjs
 node scripts/schools-pilot-receipt.test.mjs
+node --experimental-strip-types scripts/educator-p0a-roster-import.test.mjs
+node --experimental-strip-types scripts/educator-p0a-cohort-tracking.test.mjs
+node --experimental-strip-types scripts/educator-p0a-assignment.test.mjs
+node --experimental-strip-types scripts/educator-p0a-evidence.test.mjs
 npm run test:security
 ```
 
