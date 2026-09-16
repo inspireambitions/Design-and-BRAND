@@ -101,3 +101,32 @@ export type StudentAssignmentCard = {
   actionHref: string;
 };
 
+export const STANDARD_INSTITUTIONAL_COMPETENCIES = [
+  { id: 'analytical_thinking', label: 'Analytical Thinking', keywords: ['analys', 'data', 'metrics', 'evaluate', 'investigate', 'research', 'critical'] },
+  { id: 'communication', label: 'Verbal & Written Communication', keywords: ['communicat', 'present', 'write', 'report', 'explain', 'articulate', 'client'] },
+  { id: 'collaboration', label: 'Teamwork & Collaboration', keywords: ['team', 'collaborat', 'cross-functional', 'partner', 'relationship', 'stakeholder'] },
+  { id: 'problem_solving', label: 'Structured Problem Solving', keywords: ['problem', 'solve', 'troubleshoot', 'diagnos', 'resolve', 'innovat', 'root cause'] },
+  { id: 'leadership', label: 'Initiative & Leadership', keywords: ['lead', 'initiat', 'owner', 'drive', 'coordinate', 'manage', 'mentoring'] },
+  { id: 'adaptability', label: 'Adaptability & Resilience', keywords: ['adapt', 'resilien', 'fast-paced', 'change', 'agile', 'pressure', 'flexible'] },
+  { id: 'commercial_awareness', label: 'Commercial & Industry Awareness', keywords: ['commercial', 'business', 'market', 'financial', 'revenue', 'cost', 'industry'] },
+  { id: 'attention_to_detail', label: 'Attention to Detail', keywords: ['detail', 'accuracy', 'precise', 'quality', 'compliance', 'standards', 'rigour'] },
+  { id: 'project_management', label: 'Planning & Organisation', keywords: ['plan', 'organis', 'priorit', 'deadline', 'deliver', 'milestone', 'timeline'] },
+  { id: 'technical_proficiency', label: 'Technical Proficiency', keywords: ['technical', 'software', 'tools', 'system', 'methodology', 'framework', 'code'] }
+];
+
+export function extractCompetenciesFromJobText(jobText: string): string[] {
+  if (!jobText || jobText.trim().length < 20) {
+    return ['Communication', 'Problem Solving', 'Teamwork'];
+  }
+  const lower = jobText.toLowerCase();
+  const matched = STANDARD_INSTITUTIONAL_COMPETENCIES.filter((comp) =>
+    comp.keywords.some((kw) => lower.includes(kw))
+  ).map((c) => c.label);
+
+  if (matched.length === 0) {
+    return ['Communication', 'Problem Solving', 'Professionalism'];
+  }
+  return matched.slice(0, 5);
+}
+
+

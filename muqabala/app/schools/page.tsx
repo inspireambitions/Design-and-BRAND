@@ -3,23 +3,23 @@ import { requireSchoolsEnabled } from '@/lib/schools/access';
 import {SchoolsPilotContact} from '@/components/schools/PilotContact';
 export default function SchoolsPage() {
   requireSchoolsEnabled();
-  return <><section className="schools-landing-hero"><div className="schools-hero-copy"><p>Muqabala for Schools and Colleges</p><h1>Interview practice for every student. Evidence for every adviser.</h1>
-    <p>Assign three role-relevant questions to a class. Students practise in private and improve on retry. You review and comment.</p>
-    <div className="schools-actions"><a className="schools-button" href="#start-pilot">Enquire about a school pilot</a><a href="#sample-report">See a sample report</a></div>
+  return <><section className="schools-landing-hero"><div className="schools-hero-copy"><p>Muqabala for Higher Education, Colleges &amp; Career Centres</p><h1>Institutional interview practice for every learner. Evidence for every career adviser.</h1>
+    <p>Structure industry-tailored interview assignments across Finance, Technology, Engineering, Healthcare, and Management. Students practise in private and improve on retry. Advisers review, comment, and guide.</p>
+    <div className="schools-actions"><a className="schools-button" href="#start-pilot">Enquire about an institutional pilot</a><a href="#sample-report">See a sample report</a></div>
     <aside className="schools-card" aria-label="Existing or invited access"><h2>Already invited or enrolled?</h2><div className="schools-actions"><Link href="/schools/sign-in?role=educator">Educator or administrator sign-in</Link><Link href="/schools/access#student-access">Student access</Link></div><p>Use your invitation to accept access first. An enquiry does not grant access.</p></aside></div>
-    <figure className="schools-cohort-example" aria-labelledby="cohort-example-title"><div className="schools-example-heading"><p className="schools-eyebrow">Your adviser workspace</p><h2 id="cohort-example-title">One class. Your next review.</h2><p>Project group · Working with others</p></div>
-      <dl className="schools-cohort-counts"><div><dt>Enrolled</dt><dd>4</dd></div><div><dt>Submitted</dt><dd>3</dd></div><div><dt>Not reviewed</dt><dd>1</dd></div><div><dt>Support requests open</dt><dd>1</dd></div></dl>
+    <figure className="schools-cohort-example" aria-labelledby="cohort-example-title"><div className="schools-example-heading"><p className="schools-eyebrow">Your adviser workspace</p><h2 id="cohort-example-title">BSc Financial Technology · Cohort 2027</h2><p>Graduate Financial Analyst · Analytical Thinking &amp; Communication</p></div>
+      <dl className="schools-cohort-counts"><div><dt>Enrolled</dt><dd>45</dd></div><div><dt>Submitted</dt><dd>38</dd></div><div><dt>Awaiting review</dt><dd>5</dd></div><div><dt>Support requests</dt><dd>2</dd></div></dl>
       <p className="schools-example-next">Next: review C. D.’s submitted attempt</p>
       <table><caption>Adviser view of this assignment</caption><thead><tr><th scope="col">Student</th><th scope="col">Attempts</th><th scope="col">Adviser view</th></tr></thead><tbody>
         <tr><th scope="row">C. D.</th><td>1</td><td><span className="schools-state schools-state-pending">Not reviewed</span></td></tr>
-        <tr><th scope="row">E. F.</th><td>1</td><td>Needs more</td></tr>
+        <tr><th scope="row">E. F.</th><td>1</td><td>Needs more evidence</td></tr>
         <tr><th scope="row">A. B.</th><td>2</td><td><span className="schools-state">On track</span></td></tr>
         <tr><th scope="row">G. H.</th><td>0</td><td>Not submitted</td></tr>
       </tbody></table><figcaption>Fictional cohort. Initials only. Advisers see submitted work.</figcaption></figure></section>
-    <section className="schools-section"><h2>Three steps, with your adviser involved</h2><div className="schools-steps">
-      <div><strong>1. Approve the questions</strong><p>Choose a role and three questions. Check what each question asks students to show.</p></div>
-      <div><strong>2. Practise and retry</strong><p>Students write their own answers, read feedback and improve on another attempt.</p></div>
-      <div><strong>3. Review submitted work</strong><p>Read the answers and their supporting text. Add your view, a comment or a support request.</p></div>
+    <section className="schools-section"><h2>Three steps, with your career adviser involved</h2><div className="schools-steps">
+      <div><strong>1. Configure the assignment</strong><p>Set target industry, role description, competencies, and 3 to 8 tailored questions.</p></div>
+      <div><strong>2. Practise and retry</strong><p>Students write structured answers, receive rubric feedback, and improve across repeat attempts.</p></div>
+      <div><strong>3. Review and intervene</strong><p>Inspect submitted evidence, correct rubric decisions, provide written guidance, and resolve support requests.</p></div>
     </div></section>
     <section id="sample-report" className="schools-section"><h2>From an answer to your adviser review</h2><p>A fictional private student report, using initials. This is one question from a three-question assignment, after adviser review.</p>
       <article className="schools-card schools-sample"><p className="schools-eyebrow">Attempt 2 · Reviewed</p><h3>A. B. · Working with others</h3><p>Question: Describe a time you helped a group meet a deadline.</p>
