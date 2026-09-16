@@ -254,7 +254,7 @@ test('server and database sources keep employer submissions, questions and actio
   const rolePage = await readFile(new URL('../app/employer/roles/[roleId]/page.tsx', import.meta.url), 'utf8');
   const candidateQuestions = await readFile(new URL('../app/api/screening/roles/[code]/questions/route.ts', import.meta.url), 'utf8');
   const summaryRoute = await readFile(new URL('../app/api/employer/interviews/[id]/summary/route.ts', import.meta.url), 'utf8');
-  const migration = await readFile(new URL('../supabase/migrations/20260915120000_recruiter_assistance.sql', import.meta.url), 'utf8');
+  const migration = await readFile(new URL('../supabase/migrations/20260916120000_recruiter_assistance.sql', import.meta.url), 'utf8');
   const actions = await readFile(new URL('../app/employer/actions.ts', import.meta.url), 'utf8');
   const questionPage = await readFile(new URL('../app/employer/questions/page.tsx', import.meta.url), 'utf8');
   const scoringRoute = await readFile(new URL('../app/api/score/route.ts', import.meta.url), 'utf8');

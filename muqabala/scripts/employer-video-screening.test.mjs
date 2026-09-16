@@ -327,7 +327,7 @@ test('a model timeout still leaves an immediate signed catalogue interview for t
   assert.match(packRoute, /\.eq\('starts_used', 0\)[\s\S]*\.is\('first_opened_at', null\)/);
   assert.match(packLookup, /update\(\{ first_opened_at: openedAt \}\)[\s\S]*\.is\('first_opened_at', null\)/);
   assert.match(migration, /question_source in \('legacy', 'catalogue', 'ai'\)/);
-  const recruiterMigration = read('supabase/migrations/20260915120000_recruiter_assistance.sql');
+  const recruiterMigration = read('supabase/migrations/20260916120000_recruiter_assistance.sql');
   assert.match(recruiterMigration, /question_source in \('legacy', 'catalogue', 'ai', 'employer_reviewed'\)/);
   assert.match(migration, /signed question pack is immutable/);
 });

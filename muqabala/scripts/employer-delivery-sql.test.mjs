@@ -28,7 +28,7 @@ test('employer delivery SQL executes against an isolated PostgreSQL engine', asy
     await db.exec(read('supabase/migrations/20260905061702_employer_invite_delivery_reliability.sql'));
     await db.exec(read('supabase/migrations/20260905130942_employer_message_acceptance_atomic.sql'));
     await db.exec(read('supabase/migrations/20260914103000_harden_invite_submission_trigger.sql'));
-    await db.exec(read('supabase/migrations/20260915120000_recruiter_assistance.sql'));
+    await db.exec(read('supabase/migrations/20260916120000_recruiter_assistance.sql'));
     const reset = async () => {
       await db.exec('truncate public.employer_message_outbox, public.role_invites, public.interviews, public.screening_packs cascade');
       await db.query('insert into auth.users(id) values ($1),($2),($3) on conflict do nothing', [owner, other, '44444444-4444-4444-8444-444444444444']);
