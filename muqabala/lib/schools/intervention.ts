@@ -13,6 +13,7 @@ export type InterventionInput = {
     job_title?: string | null;
     due_at: string;
     status?: string;
+    question_count?: number | null;
   }>;
   attempts: Array<{
     id: string;
@@ -125,10 +126,13 @@ export function detectInterventionSignals({
         }
       }
 
-      // 3. Low evidence coverage on latest submission (< 50% of rubric elements, e.g. < 6 of 12)
+      // 3. Low evidence coverage on latest submission (< 50% of rubric elements, dynamic based on question count)
       if (submittedAttempts.length > 0) {
         const latest = submittedAttempts[submittedAttempts.length - 1];
-        if (typeof latest.evidence_covered === 'number' && latest.evidence_covered < 6) {
+        const questionCount = assignment.question_count && assignment.question_count >= 3 ? assignment.question_count : 3;
+        const totalExpectedElements = questionCount * 4;
+        const lowEvidenceThreshold = Math.ceil(totalExpectedElements * 0.5);
+        if (typeof latest.evidence_covered === 'number' && latest.evidence_covered < lowEvidenceThreshold) {
           signals.push({
             id: `low_evidence_${studentId}_${assignmentId}_att${latest.attempt_number}`,
             studentId,
@@ -138,8 +142,8 @@ export function detectInterventionSignals({
             assignmentRole,
             category: 'low_evidence',
             severity: 'urgent',
-            humanReason: `Latest submitted attempt demonstrated low observed evidence (${latest.evidence_covered} elements).`,
-            evidenceBasis: `Attempt ${latest.attempt_number} covered ${latest.evidence_covered} rubric evidence element(s).`,
+            humanReason: `Latest submitted attempt demonstrated low observed evidence (${latest.evidence_covered} of ${totalExpectedElements} elements).`,
+            evidenceBasis: `Attempt ${latest.attempt_number} covered ${latest.evidence_covered} rubric evidence element(s) (threshold: < ${lowEvidenceThreshold} of ${totalExpectedElements}).`,
             timestamp: latest.submitted_at || new Date(now).toISOString(),
             suggestedAction: 'Review feedback with learner to identify missing behavioral examples',
           });

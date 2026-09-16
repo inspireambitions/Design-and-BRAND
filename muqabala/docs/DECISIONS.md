@@ -108,3 +108,29 @@
   5. Built learner progression profile at `/schools/cohorts/[id]/students/[studentId]`, tracking attempt-over-attempt evidence deltas.
 - **Consequences:**
   Institutional curriculum organization is first-class; assessment fairness and auditability are guaranteed; educators receive explainable intervention queues; students get clarity on remaining attempts and adviser instructions; and privacy is strictly preserved.
+
+---
+
+## ADR-008: Real Database Integration Gate & Multi-Tenant Security Hardening
+- **Date:** 2026-09-16
+- **Status:** Accepted
+- **Context:**
+  Prior to deploying the unified codebase and its three pending migrations (`20260916120000_recruiter_assistance.sql`, `20260916140000_educator_p0a_foundations.sql`, and `20260916160000_educator_p0b_programmes_and_interventions.sql`), the system required validation against a real SQL engine without touching the production Supabase database (`hmaxzpgsefzpflrwzopa`).
+  During real PostgreSQL replay and RLS policy verification, several critical security and integrity vulnerabilities were detected:
+  1. *Client Tenant Spoofing:* `schools_manage` originally trusted client-supplied `institution` or `cohort` parameters for assignment and programme operations instead of deriving them authoritatively from the database.
+  2. *Cross-Tenant Foreign Key Linking:* Creating a cohort or editing an assignment could associate a cohort in Institution A with a programme belonging to Institution B.
+  3. *Educator Programme RLS Scope:* `schools_programmes_read` only allowed educators to read programmes if they were already assigned to a cohort in that programme, blocking educators from browsing their institution's catalogue when creating new cohorts.
+  4. *Evidence Rubric Calculation:* Rubric thresholds were hardcoded for 3-question assignments (12 elements) rather than dynamically scaling for 3 to 8 questions (up to 32 elements).
+- **Decision:**
+  1. Executed a comprehensive database integration gate using `@electric-sql/pglite` (native embedded PostgreSQL 16 WASM) with mocked Supabase primitives (`auth`, `vault`, `cron`, `storage`).
+  2. Replayed all 47 chronological repository migrations cleanly.
+  3. Hardened `schools_manage` in migration `20260916160000`:
+     - Authoritatively derive `cohort` and `institution` directly from target entity records when `assignmentId`, `cohortId`, or `programmeId` are supplied.
+     - Enforce `exists(select 1 from public.schools_programmes where id = prog and institution_id = institution and archived_at is null)` on cohort creation and modification.
+     - Expanded `schools_programmes_read` RLS policy to permit verified educators in `schools_institution_members` to view programmes in their institution.
+     - Scoped `edit_assignment` and `duplicate_assignment` target selection to `id = asgn and cohort_id = cohort`.
+  4. Hardened API route `app/api/schools/programmes/route.ts` to verify client-supplied `institutionId` against authenticated educator memberships before executing queries.
+  5. Dynamically scaled the intervention evidence threshold in `lib/schools/intervention.ts` as `Math.ceil((question_count * 4) * 0.5)`.
+- **Consequences:**
+  Eliminated all cross-tenant reference leakage and parameter spoofing vulnerabilities; verified RLS policies and procedures on genuine PostgreSQL 16; and proved the 47-migration sequence without touching production Supabase.
+

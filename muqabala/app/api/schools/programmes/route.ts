@@ -19,7 +19,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const institutionIdParam = url.searchParams.get('institutionId');
 
-  // Verify membership in institution
+  // Verify membership in institution server-side (never trust untrusted client institutionId)
   let institutionId = institutionIdParam;
   if (!institutionId) {
     const { data: member } = await client
@@ -32,6 +32,29 @@ export async function GET(request: Request) {
 
     if (!member) return Response.json({ error: 'Not associated with an institution' }, { status: 403 });
     institutionId = member.institution_id;
+  } else {
+    // Validate UUID format
+    if (!/^[0-9a-f-]{36}$/i.test(institutionId)) {
+      return Response.json({ error: 'Invalid institution identifier' }, { status: 400 });
+    }
+    const { data: member } = await client
+      .from('schools_institution_members')
+      .select('institution_id')
+      .eq('institution_id', institutionId)
+      .eq('user_id', identity.user.id)
+      .not('accepted_at', 'is', null)
+      .maybeSingle();
+
+    if (!member) {
+      const { data: staff } = await client
+        .from('schools_staff')
+        .select('user_id')
+        .eq('user_id', identity.user.id)
+        .maybeSingle();
+      if (!staff) {
+        return Response.json({ error: 'Not authorized for this institution' }, { status: 403 });
+      }
+    }
   }
 
   const { data: programmes, error } = await client
@@ -74,13 +97,50 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Invalid programme parameters' }, { status: 400 });
   }
 
+  // Server-side tenant verification: never trust client-supplied institutionId
+  let targetInstitutionId = parsed.data.institutionId;
+  if (!targetInstitutionId) {
+    const { data: member } = await client
+      .from('schools_institution_members')
+      .select('institution_id')
+      .eq('user_id', identity.user.id)
+      .not('accepted_at', 'is', null)
+      .limit(1)
+      .maybeSingle();
+
+    if (!member) return Response.json({ error: 'Not associated with an institution' }, { status: 403 });
+    targetInstitutionId = member.institution_id;
+  } else {
+    const { data: member } = await client
+      .from('schools_institution_members')
+      .select('institution_id')
+      .eq('institution_id', targetInstitutionId)
+      .eq('user_id', identity.user.id)
+      .not('accepted_at', 'is', null)
+      .maybeSingle();
+
+    if (!member) {
+      const { data: staff } = await client
+        .from('schools_staff')
+        .select('user_id')
+        .eq('user_id', identity.user.id)
+        .maybeSingle();
+      if (!staff) {
+        return Response.json({ error: 'Not authorized for this institution' }, { status: 403 });
+      }
+    }
+  }
+
   const admin = createAdminClient();
   if (!admin) return Response.json({ error: 'Service unavailable' }, { status: 503 });
 
   const { data, error } = await admin.rpc('schools_manage_action', {
     actor: identity.user.id,
     operation: 'programme',
-    payload: parsed.data,
+    payload: {
+      ...parsed.data,
+      institutionId: targetInstitutionId,
+    },
     device: schoolsDevice(request),
   });
 

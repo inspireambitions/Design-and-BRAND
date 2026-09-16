@@ -72,6 +72,7 @@ node --experimental-strip-types scripts/educator-p0b-assignment-lifecycle.test.m
 node --experimental-strip-types scripts/educator-p0b-intervention.test.mjs
 node --experimental-strip-types scripts/educator-p0b-student-inbox.test.mjs
 node --experimental-strip-types scripts/educator-p0b-rbac.test.mjs
+node scripts/db-integration-gate.test.mjs
 npm run test:security
 ```
 

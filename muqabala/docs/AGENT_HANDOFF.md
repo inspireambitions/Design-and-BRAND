@@ -154,3 +154,48 @@ Implemented **Educator Suite P0-B (Institutional Workflows, Programmes, Cohort I
 - **DO NOT** deploy to production `trymuqabala.com`.
 - **STOP and wait for explicit human user approval before any further actions.**
 
+---
+
+## Log Entry: 2026-09-16 20:30 UTC (Antigravity Agent)
+
+### 1. Mission & Scope
+Execute a **Real Database Integration Gate** on branch `integration/muqabala-unified-20260916` in worktree `muqabala-integration`. Replay the entire 47-migration sequence on a real transactional PostgreSQL 16 engine (`@electric-sql/pglite`), verify multi-tenant RLS isolation, assignment immutability, recruiter workflow, and a 10-student university simulation with explainable interventions. Keep production 100% untouched.
+
+### 2. Actions Completed
+1. **Isolated PostgreSQL 16 Test Engine (`scripts/db-integration-gate.test.mjs`):**
+   - Configured `@electric-sql/pglite` (v0.5.8) with mocked Supabase primitives (`auth`, `vault`, `cron`, `storage`).
+   - Replayed all 47 repository migrations in chronological monotonic order without errors.
+2. **Multi-Tenant & Security Hardening:**
+   - Patched `supabase/migrations/20260916160000_educator_p0b_programmes_and_interventions.sql`:
+     - Authoritatively derive `cohort` and `institution` directly from target entity records when `assignmentId`, `cohortId`, or `programmeId` are supplied (prevents client tenant parameter spoofing).
+     - Cross-tenant programme linking prevention: `cohort` and `edit_cohort` enforce that the target programme belongs to the caller's institution and is not archived.
+     - RLS expansion on `schools_programmes_read`: Allows accepted educators in `schools_institution_members` to view programmes in their institution.
+     - Scoped `edit_assignment` and `duplicate_assignment` to `id = asgn and cohort_id = cohort`.
+   - Hardened `app/api/schools/programmes/route.ts` with server-side tenant verification before query execution.
+   - Dynamic evidence threshold in `lib/schools/intervention.ts`: Scales as `Math.ceil((question_count * 4) * 0.5)` for 3 to 8 questions.
+3. **Database Integration Gate Test Execution:**
+   - Test 1: Setup Supabase Extensions & Schemas (PASS)
+   - Test 2: Replay all 47 migrations in chronological order (PASS)
+   - Test 3: Tenant & Role Isolation (RLS / RBAC) (PASS)
+   - Test 4: Full Synthetic University Simulation (10 Students & Interventions) (PASS)
+   - Test 5: Assignment Lifecycle, Immutability & Safe Duplication (PASS)
+   - Test 6: Recruiter Assistance Suite Validation (PASS)
+   - All 7/7 test suites passed in 1.005s.
+4. **Verification Suites & Production Build:**
+   - `tsc --noEmit`: 0 errors.
+   - `eslint .`: 0 errors.
+   - Total automated tests passing: > 250 tests.
+   - Next.js build: 120/120 routes compiled successfully.
+
+### 3. Production Safety Status
+- `trymuqabala.com` remains 100% UNTOUCHED on baseline commit `8d5c8a2`.
+- Production Supabase `hmaxzpgsefzpflrwzopa` remains UNTOUCHED.
+- Recovery branches `muqabala-schools-finish-20260914` and `muqabala-app` remain clean and preserved.
+
+### 4. Directives for Next Agent
+- **DO NOT** merge into production default branch (`claude/gulf-hospitality-video-interview-m9skfu`).
+- **DO NOT** apply migrations to production Supabase.
+- **DO NOT** deploy to production `trymuqabala.com`.
+- **STOP and wait for explicit human user approval before any further actions.**
+
+

@@ -61,7 +61,7 @@ test('detects stalled_draft when draft is older than 48 hours', () => {
   assert(stalled.humanReason.includes('open for 50 hours'));
 });
 
-test('detects low_evidence on submitted attempt with fewer than 6 elements', () => {
+test('detects low_evidence on submitted attempt with fewer than 50% elements (3 questions)', () => {
   const attempts = [
     {
       id: 'att-2',
@@ -85,7 +85,39 @@ test('detects low_evidence on submitted attempt with fewer than 6 elements', () 
   const lowEv = signals.find((s) => s.category === 'low_evidence');
   assert(lowEv);
   assert.equal(lowEv.severity, 'urgent');
-  assert(lowEv.evidenceBasis.includes('covered 3 rubric evidence element(s)'));
+  assert(lowEv.evidenceBasis.includes('covered 3 rubric evidence element(s) (threshold: < 6 of 12)'));
+});
+
+test('detects low_evidence dynamically on 8-question assignment (threshold < 16)', () => {
+  const assignment8Q = {
+    ...assignment,
+    id: 'asgn-8q',
+    question_count: 8,
+  };
+  const attempts = [
+    {
+      id: 'att-8q-1',
+      assignment_id: 'asgn-8q',
+      student_user_id: 's2',
+      attempt_number: 1,
+      status: 'submitted',
+      submitted_at: new Date(now - 10 * 3600 * 1000).toISOString(),
+      evidence_covered: 14, // 14 < 16 (threshold is 16 of 32)
+    },
+  ];
+
+  const signals = detectInterventionSignals({
+    cohortId: 'c1',
+    members: [members[1]],
+    assignments: [assignment8Q],
+    attempts,
+    now,
+  });
+
+  const lowEv = signals.find((s) => s.category === 'low_evidence');
+  assert(lowEv);
+  assert.equal(lowEv.severity, 'urgent');
+  assert(lowEv.evidenceBasis.includes('covered 14 rubric evidence element(s) (threshold: < 16 of 32)'));
 });
 
 test('detects stagnant_attempts when second attempt shows no evidence improvement', () => {

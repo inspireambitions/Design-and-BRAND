@@ -56,6 +56,13 @@ create policy schools_programmes_read on public.schools_programmes
     schools_private.is_founder()
     or schools_private.is_admin(institution_id)
     or schools_private.teaches_institution(institution_id)
+    or exists(
+      select 1 from public.schools_institution_members m
+      where m.institution_id=schools_programmes.institution_id
+        and m.user_id=auth.uid()
+        and m.role='educator'
+        and m.accepted_at is not null
+    )
   );
 
 -- 5. Extend schools_manage procedure for Programmes, Cohorts, and Assignment Lifecycle
@@ -78,20 +85,21 @@ begin
     return result;
   end if;
 
-  institution=(payload->>'institutionId')::uuid;
+  asgn=(payload->>'assignmentId')::uuid;
   cohort=(payload->>'cohortId')::uuid;
   prog=(payload->>'programmeId')::uuid;
-  asgn=(payload->>'assignmentId')::uuid;
+  institution=(payload->>'institutionId')::uuid;
 
-  if cohort is not null and institution is null then
-    select institution_id into institution from public.schools_cohorts where id=cohort;
-  end if;
-  if prog is not null and institution is null then
-    select institution_id into institution from public.schools_programmes where id=prog;
-  end if;
-  if asgn is not null and cohort is null then
+  -- Derive authoritative hierarchy from existing entities when targeted
+  if asgn is not null then
     select cohort_id into cohort from public.schools_assignments where id=asgn;
+    if cohort is not null then
+      select institution_id into institution from public.schools_cohorts where id=cohort;
+    end if;
+  elsif cohort is not null then
     select institution_id into institution from public.schools_cohorts where id=cohort;
+  elsif prog is not null and (operation in ('archive_programme') or institution is null) then
+    select institution_id into institution from public.schools_programmes where id=prog;
   end if;
 
   select exists(select 1 from public.schools_institution_members where institution_id=institution and user_id=actor
@@ -155,6 +163,11 @@ begin
 
   elsif operation='cohort' then
     if not (administrator or adviser) then raise exception 'Institution educator or admin access required' using errcode='42501'; end if;
+    if payload ? 'programmeId' and nullif(trim(payload->>'programmeId'),'') is not null then
+      if not exists(select 1 from public.schools_programmes where id=(payload->>'programmeId')::uuid and institution_id=institution and archived_at is null) then
+        raise exception 'Programme not found in this institution' using errcode='23503';
+      end if;
+    end if;
     insert into public.schools_cohorts(
       institution_id, name, enrolment_code, created_by, campus, faculty, programme, programme_id
     )
@@ -166,7 +179,7 @@ begin
       nullif(trim(payload->>'campus'),''),
       nullif(trim(payload->>'faculty'),''),
       nullif(trim(payload->>'programme'),''),
-      (payload->>'programmeId')::uuid
+      nullif(trim(payload->>'programmeId'),'')::uuid
     )
     returning id into created;
 
@@ -178,12 +191,17 @@ begin
 
   elsif operation='edit_cohort' then
     if not (administrator or adviser) then raise exception 'Cohort educator or admin access required' using errcode='42501'; end if;
+    if payload ? 'programmeId' and nullif(trim(payload->>'programmeId'),'') is not null then
+      if not exists(select 1 from public.schools_programmes where id=(payload->>'programmeId')::uuid and institution_id=institution and archived_at is null) then
+        raise exception 'Programme not found in this institution' using errcode='23503';
+      end if;
+    end if;
     update public.schools_cohorts set
       name=coalesce(nullif(trim(payload->>'name'),''), name),
       campus=case when payload ? 'campus' then nullif(trim(payload->>'campus'),'') else campus end,
       faculty=case when payload ? 'faculty' then nullif(trim(payload->>'faculty'),'') else faculty end,
       programme=case when payload ? 'programme' then nullif(trim(payload->>'programme'),'') else programme end,
-      programme_id=case when payload ? 'programmeId' then (payload->>'programmeId')::uuid else programme_id end
+      programme_id=case when payload ? 'programmeId' then nullif(trim(payload->>'programmeId'),'')::uuid else programme_id end
     where id=cohort and institution_id=institution and archived_at is null
     returning to_jsonb(schools_cohorts.*) into result;
 
@@ -245,7 +263,7 @@ begin
 
   elsif operation='edit_assignment' then
     if not adviser then raise exception 'Assigned adviser access required' using errcode='42501'; end if;
-    select * into existing_asgn from public.schools_assignments where id=asgn;
+    select * into existing_asgn from public.schools_assignments where id=asgn and cohort_id=cohort;
     if existing_asgn.id is null then raise exception 'Assignment not found' using errcode='42501'; end if;
 
     select exists(select 1 from public.schools_assignment_attempts where assignment_id=asgn) into has_attempts;
@@ -297,7 +315,7 @@ begin
 
   elsif operation='duplicate_assignment' then
     if not adviser then raise exception 'Assigned adviser access required' using errcode='42501'; end if;
-    select * into existing_asgn from public.schools_assignments where id=asgn;
+    select * into existing_asgn from public.schools_assignments where id=asgn and cohort_id=cohort;
     if existing_asgn.id is null then raise exception 'Assignment not found' using errcode='42501'; end if;
 
     insert into public.schools_assignments(

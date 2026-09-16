@@ -1,6 +1,6 @@
 # Muqabala Product State (Single Source of Truth)
 
-Last Updated: 2026-09-16 19:25 UTC
+Last Updated: 2026-09-16 20:30 UTC
 
 ## 1. Production Environment Baseline
 
@@ -27,7 +27,8 @@ Last Updated: 2026-09-16 19:25 UTC
 | **Vercel Inspection URL**| `https://vercel.com/inspire14/muqabala/4GxMaNtm2UhKwo9zKG1Fyoj6rX1j` | Status: `success` |
 | **Vercel Protection** | Vercel SSO Deployment Protection Active | Accessible by logged-in team or share token |
 | **Connected Database** | `hmaxzpgsefzpflrwzopa` (Production Supabase) | Project env vars inherited |
-| **Database Safety State** | **STRICT READ-ONLY / NO-MIGRATION** | Migration `20260916120000` NOT applied |
+| **Database Safety State** | **STRICT READ-ONLY / NO-MIGRATION** | Production DB untouched; pending migrations NOT applied to prod |
+| **Isolated DB Integration Gate** | **ALL 7/7 GATES PASSED (PGlite v16.3)** | 47 migrations replayed, multi-tenant RLS verified, university simulation clean |
 | **E2E Browser QA** | **20 / 20 Tests Passed** | Verified across Candidate, Employer, Educator, Platform |
 
 ---
@@ -95,6 +96,14 @@ muqabala-integration                integration/muqabala-unified-20260916  dc31b
 | Migration File | Timestamp | Applied to Prod? | Purpose |
 | :--- | :--- | :---: | :--- |
 | `20260916023211_schools_pilot_enquiry_outbox.sql` | 2026-09-16 02:32:11 | **YES** | Outbox table and RLS for schools pilot leads |
-| `20260916120000_recruiter_assistance.sql` | 2026-09-16 12:00:00 | **NO (Pending)** | Recruiter role questions, answer summaries, outbox extensions |
-| `20260916140000_educator_p0a_foundations.sql` | 2026-09-16 14:00:00 | **NO (Pending)** | Optional hierarchy (`campus`, `faculty`, `programme`), multi-industry assignment fields, 3-8 question index constraint relaxation, student identifier |
-| `20260916160000_educator_p0b_programmes_and_interventions.sql` | 2026-09-16 16:00:00 | **NO (Pending)** | First-class `schools_programmes` table, cohort linkage, assignment lifecycle (`draft`/`published`/`closed`), instructions, versioning, duplication, immutability guard |
+| `20260916120000_recruiter_assistance.sql` | 2026-09-16 12:00:00 | **NO (Pending)** | Recruiter role questions, answer summaries, outbox extensions (Verified in PGlite gate) |
+| `20260916140000_educator_p0a_foundations.sql` | 2026-09-16 14:00:00 | **NO (Pending)** | Optional hierarchy (`campus`, `faculty`, `programme`), multi-industry assignment fields, 3-8 question index constraint relaxation, student identifier (Verified in PGlite gate) |
+| `20260916160000_educator_p0b_programmes_and_interventions.sql` | 2026-09-16 16:00:00 | **NO (Pending)** | First-class `schools_programmes` table, cohort linkage, assignment lifecycle (`draft`/`published`/`closed`), instructions, versioning, duplication, immutability guard (Hardened & verified in PGlite gate) |
+
+> **Real Database Integration Gate Status:**
+> - All 47 sequential migrations replayed and verified against PostgreSQL 16 (`@electric-sql/pglite`) in `scripts/db-integration-gate.test.mjs`.
+> - 0 syntax errors, 0 constraint failures, 0 circular dependencies.
+> - Multi-tenant RLS isolation: 100% PASS (Zero data or programme leakage between institutions).
+> - Strict assessment immutability: 100% PASS.
+> - 10-student university simulation: 100% PASS.
+

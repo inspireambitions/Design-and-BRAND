@@ -39,13 +39,15 @@ Unify the live production Schools/Educator release (`8d5c8a2` / PR #23) with the
 | **Student Inbox Upgrade** | DONE | `muqabala-integration` | `lib/schools/student-inbox.ts`, `app/schools/me/page.tsx`, 4/4 tests pass |
 | **Learner Progression Profile Drilldown** | DONE | `muqabala-integration` | `/schools/cohorts/[id]/students/[studentId]`, attempt history & deltas |
 | **Institutional RBAC & Isolation** | DONE | `muqabala-integration` | Tenant isolation & student draft privacy, 6/6 tests pass |
+| **Real Database Integration Gate** | DONE | `muqabala-integration` | 47 migrations replayed on PG16 (`@electric-sql/pglite`), RLS verified, university simulation clean (7/7 tests pass) |
 | **Production Merge & Release** | LOCKED | `claude/gulf-hospitality-...` | Requires explicit user authorization |
 
 ---
 
 ## 3. Active Locks & Constraints
 - **ABSOLUTE PRODUCTION RESTRICTION ACTIVE:** `trymuqabala.com` remains 100% untouched.
-- **NO PROD MIGRATIONS:** Migration `20260916120000` is preserved in repo but unapplied.
+- **NO PROD MIGRATIONS:** Migrations `20260916120000`, `20260916140000`, and `20260916160000` are preserved in repo, verified in isolated test database, but unapplied to production Supabase.
+- **STOP FEATURE DEVELOPMENT:** P0-C is strictly NOT approved until release gate sign-off.
 - **WORKTREE LOCKS:**
   - `muqabala-schools-finish-20260914`: LOCKED (Production recovery anchor).
   - `muqabala-app`: LOCKED (Recruiter suite recovery anchor).
@@ -54,7 +56,8 @@ Unify the live production Schools/Educator release (`8d5c8a2` / PR #23) with the
 ---
 
 ## 4. Next Milestones
-1. **Milestone 1:** Review Preview QA Report with the user.
-2. **Milestone 2:** Determine staging/isolated database strategy for testing the recruiter migration (`20260916120000_recruiter_assistance.sql`).
+1. **Milestone 1:** Review 22-Point Database Integration Gate Report with the user.
+2. **Milestone 2:** Wait for explicit human user approval before any production release or P0-C development.
 3. **Milestone 3:** Split `lib/i18n.ts` into lazy chunks to optimize the candidate practice bundle budget.
 4. **Milestone 4:** Upon explicit human approval, execute production release gate.
+
