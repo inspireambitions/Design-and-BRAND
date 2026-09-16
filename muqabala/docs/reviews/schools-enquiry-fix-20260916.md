@@ -15,16 +15,17 @@ The public Schools page labelled an enquiry as “Start a pilot”. Existing acc
 - Founder inbox pagination, unanswered-first ordering, reply ownership, reference, received time and new/replied/closed status. Marking a status does not send a reply.
 - Provider acceptance is distinguished from inbox delivery. Existing verified webhook events supply delivery/bounce information when available.
 - Earlier enquiries remain visible and receive no retrospective automatic email.
+- Retry-question URLs are consumed once and removed from browser history so refreshing a draft and submitting cannot silently create another draft.
 
 Reply responsibility is assigned to the Muqabala Schools control inbox. A human must monitor it and reply; software cannot establish a staffed response-time commitment. No reply deadline is advertised.
 
 ## Verification
 
-- Automated regression suite: **603/603 passed** in the final full run.
+- Automated regression suite: **608/608 passed** after direct computer-use testing and the retry correction (603 previously; five new retry regression cases).
 - Focused Schools suite: 102 passed at the initial run.
 - TypeScript and production build passed.
 - Dependency audit: zero known vulnerabilities.
-- Repository lint: zero errors; 71 existing warnings.
+- Repository lint: zero errors; 72 warnings in the follow-up run (71 previously). The revised retry effect adds one non-blocking `react-hooks/set-state-in-effect` warning; its async retry operation deliberately updates loading state. Warnings are not described as resolved.
 - Release ancestry includes employer-reliability and design baselines. All 69 catalogue pages remain within the strict 200 KB gzipped bundle budget.
 - Independent agent code review: no P0/P1 findings. Both P2 findings were repaired and browser-tested.
 - Staging migration applied to `okrsezhospztwtptqhpo` before application deployment.
@@ -47,7 +48,22 @@ Chrome automation against localhost and the existing staging database passed:
 10. A different student receives HTTP 404 for the private report.
 11. Founder enquiry inbox renders.
 
-The student report used a deterministic, explicitly synthetic feedback fixture. This run does not establish live AI quality, physical-phone behaviour or human comprehension. The Mac was locked when computer-control testing was attempted; desktop browser automation ran separately.
+The automated student report used a deterministic, explicitly synthetic feedback fixture. This run does not establish live AI quality, physical-phone behaviour or human comprehension.
+
+### Direct computer-use follow-up, 16 September 2026, 02:22 UTC
+
+After the owner unlocked the Mac, the actual browser UI was exercised against localhost:3110 and staging. Student and adviser sessions used separate browsers and existing synthetic accounts; Neb's invitation was not redeemed.
+
+- Inspected the public enquiry/access distinction and student email sign-in instructions.
+- Student authentication reached `/schools/me`; adviser authentication reached `/schools/cohorts`.
+- Opened a question retry, edited a fictional answer, saved and refreshed: the text persisted. Adviser review still displayed only attempt 1, not the new draft.
+- Found an additional defect: refreshing a draft with `?retry=1` left the automatic retry effect armed, so submitting immediately opened another draft and replaced the confirmation. The submission itself was saved, but the screen was misleading.
+- Fixed the defect by consuming the URL intent once and removing only the `retry` parameter. Added five component regression cases covering refreshed drafts, submitted attempts, empty assignments, closed assignments and retry failure.
+- Repeated refresh and submission after the fix: the UI displayed “Your answers have been submitted” and attempt 3 stayed submitted after another refresh. Adviser saw that exact new answer and a fresh review state.
+- Saved an adviser comment for the new attempt. The student assignment list showed “Read your adviser's comment”; following it displayed the exact saved comment in the private report.
+- New staging submissions remain awaiting feedback processing. No live AI worker or email delivery was claimed or simulated in these direct UI checks.
+
+The direct computer-use gap is now closed for these desktop journeys. Physical iPhone/Android checks, live AI processing and production email delivery remain separate release evidence requirements.
 
 Local screenshots and machine-readable evidence:
 
@@ -57,6 +73,10 @@ Local screenshots and machine-readable evidence:
 - `output/schools-enquiry-20260916/student-report.png`
 - `output/schools-enquiry-20260916/founder-inbox.png`
 - `output/schools-enquiry-20260916/results.json`
+- `output/schools-enquiry-20260916/cua-student-report.png`
+- `output/schools-enquiry-20260916/cua-adviser-review.png`
+- `/tmp/muqabala-cua-regression-20260916.log`
+- `/tmp/muqabala-cua-lint-20260916.log`
 - `/tmp/muqabala-schools-landing-review/results.json`
 
 Generated screenshots and browser credentials are excluded from Git. Credentials and Neb's access fragment must never be copied into this report.

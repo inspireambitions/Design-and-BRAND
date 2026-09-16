@@ -36,7 +36,13 @@ export function SchoolsPractice({assignmentId,cohortId,questions,initial,dueAt,r
     finally{locked.current=false;setBusy(false);}
   },[attempt,closed]);
   useEffect(()=>{
-    if(retryQuestion&&submitted&&!closed&&!retryStarted.current){retryStarted.current=true;void startRetry(retryQuestion);}
+    if(!retryQuestion||retryStarted.current)return;
+    // A retry URL is a one-time navigation intent, not a standing instruction
+    // to create another draft after the current draft is submitted.
+    retryStarted.current=true;
+    const url=new URL(window.location.href);url.searchParams.delete('retry');
+    window.history.replaceState(null,'',url.pathname+url.search+url.hash);
+    if(submitted&&!closed)void startRetry(retryQuestion);
   },[retryQuestion,submitted,closed,startRetry]);
   async function save(submit=false) {
     if(submitted||closed)return;
