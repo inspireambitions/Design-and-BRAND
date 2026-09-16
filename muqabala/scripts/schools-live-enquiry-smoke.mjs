@@ -16,6 +16,7 @@ const statePath=privateDir+'/'+role+'.json';
 const browser=await chromium.launch({channel:'chrome',headless:true});
 const context=await browser.newContext({viewport:{width:1280,height:900},...(process.argv.includes('--login')?{}:{storageState:statePath})});
 const page=await context.newPage();
+let stage='start';
 try{
   if(process.argv.includes('--login')){
     await page.goto(origin+'/schools/sign-in');
@@ -35,15 +36,15 @@ try{
   }else if(process.argv.includes('--neb-link')){
     assert(role==='educator');
     const cohort=process.env.SCHOOLS_QA_COHORT;assert(/^[0-9a-f-]{36}$/.test(cohort??''));
-    await page.goto(origin+'/schools/cohorts/'+cohort);
+    stage='cohort';await page.goto(origin+'/schools/cohorts/'+cohort);
     await page.getByRole('heading',{name:'Neb Educators Suite – Controlled QA',exact:true}).waitFor();
-    await page.getByText('Student enrolment and recovery',{exact:true}).click();
-    await page.getByLabel('Student display name',{exact:true}).fill('Neb – controlled learner test');
-    await page.getByLabel('Account method',{exact:true}).selectOption('pseudonymous');
-    const result=page.waitForResponse(r=>r.url().endsWith('/api/schools/access')&&r.request().method()==='POST');
+    stage='open enrolment controls';await page.locator('summary').filter({hasText:'Student enrolment and recovery'}).click();
+    stage='fill learner display name';await page.getByLabel('Student display name',{exact:true}).fill('Neb – controlled learner test');
+    stage='select learner method';await page.getByLabel('Account method').selectOption('pseudonymous');
+    stage='issue link';const result=page.waitForResponse(r=>r.url().endsWith('/api/schools/access')&&r.request().method()==='POST');
     await page.getByRole('button',{name:'Create private student link',exact:true}).click();
     const response=await result;assert(response.ok());const grant=await response.json();
-    const link=await page.getByLabel('Copy this private link',{exact:true}).inputValue();
+    stage='read issued link';const link=await page.getByLabel('Copy this private link',{exact:true}).inputValue();
     assert(link.startsWith(origin+'/schools/enrol#'));
     await writeFile(privateDir+'/neb-invitation.json',JSON.stringify({link,expiresAt:grant.expiresAt},null,2),{mode:0o600});
     console.log(JSON.stringify({created:true,learnerOnly:true,expiresAt:grant.expiresAt,privateLinkPrinted:false}));
@@ -54,5 +55,5 @@ try{
   }
 }catch(error){
   // Browser call logs may contain access secrets. Report safe diagnostics only.
-  console.error(JSON.stringify({failed:true,role,path:new URL(page.url()).pathname,errorType:error.name}));process.exitCode=1;
+  console.error(JSON.stringify({failed:true,stage,role,path:new URL(page.url()).pathname,errorType:error.name,status:await page.getByRole('status').allTextContents().catch(()=>[])}));process.exitCode=1;
 }finally{await browser.close();}
