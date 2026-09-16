@@ -13,7 +13,7 @@ export default async function ReviewPage({params,searchParams}:{params:Promise<{
   const ids=assignments?.map(a=>a.id)??[];
   if(query.assignment&&!ids.includes(query.assignment))notFound();
   const {data:attempts}=ids.length?await client.from('schools_assignment_attempts').select('id,student_user_id,attempt_number,answers,submitted_at,assignment_id,evidence_detail').in('assignment_id',query.assignment?[query.assignment]:ids).eq('status','submitted').order('submitted_at'):{data:[]};
-  const {data:reviews}=attempts?.length?await client.from('schools_reviews').select('assignment_attempt_id,state,comment,revision,educator_id').in('assignment_attempt_id',attempts.map(a=>a.id)):{data:[]};
+  const {data:reviews}=attempts?.length?await client.from('schools_reviews').select('assignment_attempt_id,state,comment,internal_notes,revision,educator_id').in('assignment_attempt_id',attempts.map(a=>a.id)):{data:[]};
   const current=query.attempt?attempts?.find(a=>a.id===query.attempt):attempts?.find(a=>!reviews?.some(r=>r.assignment_attempt_id===a.id));
   if(query.attempt&&!current)notFound();
   if(!current)return <><h1>Submitted work</h1><p>No submitted attempts await review.</p><Link href={'/schools/cohorts/'+id}>Back to cohort</Link></>;

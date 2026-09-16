@@ -456,6 +456,30 @@ describe('REAL SUPABASE PRE-PRODUCTION GATE (Branch: rbumgaluykobrfmhlftg)', () 
     })]);
     const v2Edited = (await client.query(`SELECT job_title FROM public.schools_assignments WHERE id = $1`, [v2Id])).rows[0];
     assert.equal(v2Edited.job_title, 'Software Engineer Mock - 2027 Edition');
+
+    // 9. Adviser Review with separate internal notes and student-facing comment
+    const reviewRes = await client.query(`
+      SELECT public.schools_write($1, 'review', $2::jsonb) as res;
+    `, [educatorId, JSON.stringify({
+      attemptId,
+      state: 'needs_more',
+      comment: 'Good effort on STAR structure. Please clarify the quantifiable impact in question 2.',
+      internalNotes: 'Student may need referral to writing lab. Revisit during week 4 faculty sync.',
+      revision: 0,
+    })]);
+    assert.ok(reviewRes.rows[0].res, 'Review saved successfully');
+    assert.equal(reviewRes.rows[0].res.comment, 'Good effort on STAR structure. Please clarify the quantifiable impact in question 2.');
+    assert.equal(reviewRes.rows[0].res.internal_notes, 'Student may need referral to writing lab. Revisit during week 4 faculty sync.');
+
+    // 10. Student Privacy Isolation: Student report query selects only public fields (never internal_notes)
+    await asUser(studentId, 'authenticated', async (tx) => {
+      const studentReportReview = await tx.query(`
+        SELECT state, comment, revision FROM public.schools_reviews WHERE assignment_attempt_id = $1;
+      `, [attemptId]);
+      assert.equal(studentReportReview.rows.length, 1);
+      assert.equal(studentReportReview.rows[0].comment, 'Good effort on STAR structure. Please clarify the quantifiable impact in question 2.');
+      assert.equal(studentReportReview.rows[0].internal_notes, undefined, 'Student report query must never request internal_notes');
+    });
   });
 
   it('4. Synthetic University Simulation (10 Students & Explainable Interventions)', async () => {

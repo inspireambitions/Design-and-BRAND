@@ -298,12 +298,18 @@ test('an off-topic answer gets one redirect and then moves on', () => {
   assert.equal(second.action, 'MOVE_ON');
 });
 
-test('no-example offers one hypothetical and then moves on', () => {
+test('no-example exercises the 3-level evidence fallback hierarchy and moves on', () => {
   let state = stateFor();
   const precheck = precheckAnswer('No example');
+  // Level 1 -> Level 2: For behavioural question, broaden setting first
   const first = decideTurn(state, precheck, null);
-  assert.equal(first.action, 'OFFER_HYPOTHETICAL');
+  assert.equal(first.action, 'BROADEN_SETTING');
   state = applyImmediateDecision(state, first, null);
+  // Level 2 -> Level 3: Still no example, offer realistic hypothetical
+  const second = decideTurn(state, precheck, null);
+  assert.equal(second.action, 'OFFER_HYPOTHETICAL');
+  state = applyImmediateDecision(state, second, null);
+  // Level 3 -> Move on: Still no example, move to next question
   assert.equal(decideTurn(state, precheck, null).action, 'MOVE_ON');
 });
 

@@ -53,6 +53,7 @@ export type TurnAction =
   | 'PROBE_REASONING'
   | 'CLARIFY'
   | 'REDIRECT'
+  | 'BROADEN_SETTING'
   | 'OFFER_HYPOTHETICAL'
   | 'REPHRASE'
   | 'SKIP'
@@ -157,7 +158,7 @@ export type ExtractionResult = {
     unsupported_claims: string[];
     same_example_as: string | null;
   };
-  recommended_action: Exclude<TurnAction, 'OFFER_HYPOTHETICAL' | 'REPHRASE' | 'SKIP' | 'COMPLETE'>;
+  recommended_action: Exclude<TurnAction, 'BROADEN_SETTING' | 'OFFER_HYPOTHETICAL' | 'REPHRASE' | 'SKIP' | 'COMPLETE'>;
   probe_target: string;
   possible_inconsistency: PossibleInconsistency | null;
 };
@@ -238,6 +239,7 @@ export type InterviewState = {
   examples_used: string[];
   dedupe_keys: string[];
   clarified_inconsistencies: string[];
+  transferable_offered_for: number[];
   hypothetical_offered_for: number[];
   executive_ownership_probe_used: boolean;
   pattern_flags: {

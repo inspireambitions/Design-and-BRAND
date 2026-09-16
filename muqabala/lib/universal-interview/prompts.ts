@@ -148,6 +148,7 @@ ${DATA_RULE}
 ${FAIRNESS_RULE}
 Return the supplied schema only. Use British English. Do not use em dashes.
 Reference only recorded evidence ids and what the candidate said. Do not invent facts or write a model answer.
+Distinguish cleanly between direct employment evidence, transferable evidence (academic, volunteer, personal projects), and situational reasoning (hypotheticals). When evidence is hypothetical or situational, frame the feedback around structured reasoning and judgement rather than past experience.
 Do not use generic advice such as "use STAR" or "be more specific". State the missing detail and one action the candidate can take.
 Never use the words contradiction, lie, dishonest or inconsistent. If scope differs, say: the scope was described differently in two answers.`;
 

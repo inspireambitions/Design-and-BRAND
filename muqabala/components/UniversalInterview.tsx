@@ -84,6 +84,11 @@ export function UniversalInterview() {
   const [industry, setIndustry] = useState('');
   const [careerChange, setCareerChange] = useState(false);
   const [managementExperience, setManagementExperience] = useState(false);
+  const [showStudentContext, setShowStudentContext] = useState(false);
+  const [academicField, setAcademicField] = useState('');
+  const [qualification, setQualification] = useState('');
+  const [academicStage, setAcademicStage] = useState('');
+  const [projectHighlight, setProjectHighlight] = useState('');
   const [jobDescription, setJobDescription] = useState('');
   const [discovery, setDiscovery] = useState<DiscoverResponse | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
@@ -227,6 +232,10 @@ export function UniversalInterview() {
           career_change: careerChange,
           management_experience: managementExperience,
           language: 'en',
+          ...(academicField.trim() ? { academic_field: academicField.trim() } : {}),
+          ...(qualification.trim() ? { qualification: qualification.trim() } : {}),
+          ...(academicStage.trim() ? { academic_stage: academicStage.trim() } : {}),
+          ...(projectHighlight.trim() ? { project_highlight: projectHighlight.trim() } : {}),
         },
         job_description: jobDescription,
       });
@@ -386,6 +395,60 @@ export function UniversalInterview() {
           <label><input type="checkbox" checked={careerChange} onChange={(event) => setCareerChange(event.target.checked)} /> {t('brainCareerChange')}</label>
           <label><input type="checkbox" checked={managementExperience} onChange={(event) => setManagementExperience(event.target.checked)} /> {t('brainManagementExperience')}</label>
         </div>
+        <div style={{ marginTop: '0.25rem', marginBottom: '0.25rem' }}>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            style={{ fontSize: '0.85rem', padding: '0.35rem 0.6rem', textAlign: 'left' }}
+            onClick={() => setShowStudentContext((prev) => !prev)}
+          >
+            {showStudentContext ? '− Hide education & practical background' : `+ ${t('brainStudentContextToggle')}`}
+          </button>
+        </div>
+        {showStudentContext && (
+          <div className="card stack-sm" style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+            <div className="brain-form-grid">
+              <label className="stack-sm" htmlFor="brain-academic-field">
+                <span className="rate-label">{t('brainAcademicField')}</span>
+                <input id="brain-academic-field" className="text-input" value={academicField} maxLength={120}
+                  placeholder={t('brainAcademicFieldPlaceholder')} onChange={(event) => setAcademicField(event.target.value)} />
+              </label>
+              <label className="stack-sm" htmlFor="brain-qualification">
+                <span className="rate-label">{t('brainQualification')}</span>
+                <input id="brain-qualification" className="text-input" value={qualification} maxLength={120}
+                  placeholder={t('brainQualificationPlaceholder')} onChange={(event) => setQualification(event.target.value)} />
+              </label>
+            </div>
+            <div className="brain-form-grid">
+              <label className="stack-sm" htmlFor="brain-academic-stage">
+                <span className="rate-label">{t('brainAcademicStage')}</span>
+                <input id="brain-academic-stage" className="text-input" value={academicStage} maxLength={120}
+                  placeholder={t('brainAcademicStagePlaceholder')} onChange={(event) => setAcademicStage(event.target.value)} />
+              </label>
+              <label className="stack-sm" htmlFor="brain-project-highlight">
+                <span className="rate-label">{t('brainProjectHighlight')}</span>
+                <input id="brain-project-highlight" className="text-input" value={projectHighlight} maxLength={300}
+                  placeholder={t('brainProjectHighlightPlaceholder')} onChange={(event) => setProjectHighlight(event.target.value)} />
+              </label>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                style={{ fontSize: '0.8rem', color: '#64748b' }}
+                onClick={() => {
+                  setAcademicField('');
+                  setQualification('');
+                  setAcademicStage('');
+                  setProjectHighlight('');
+                  setShowStudentContext(false);
+                }}
+              >
+                Skip for now
+              </button>
+            </div>
+          </div>
+        )}
         <label className="stack-sm" htmlFor="brain-jd">
           <span className="rate-label">{t('brainJobDescription')}</span>
           <textarea id="brain-jd" className="answer-box" value={jobDescription} maxLength={20000}

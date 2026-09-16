@@ -1,8 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
-export function SchoolsReview({attemptId,initial}:{attemptId:string;initial:{state:string;comment:string;revision:number}|null}) {
+export function SchoolsReview({attemptId,initial}:{attemptId:string;initial:{state:string;comment:string;internal_notes?:string|null;revision:number}|null}) {
   const [state,setState]=useState(initial?.state??'on_track');
   const [comment,setComment]=useState(initial?.comment??'');
+  const [internalNotes,setInternalNotes]=useState(initial?.internal_notes??'');
   const [revision,setRevision]=useState(initial?.revision??0);
   const [undo,setUndo]=useState(false);
   const [message,setMessage]=useState('');
@@ -12,9 +13,10 @@ export function SchoolsReview({attemptId,initial}:{attemptId:string;initial:{sta
   async function send(operation:'review'|'undo_review') {
     setBusy(true);setMessage('');
     try{const response=await fetch('/api/schools',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-      operation,payload:operation==='review'?{attemptId,state,comment,revision}:{attemptId,revision}})});
+      operation,payload:operation==='review'?{attemptId,state,comment,internalNotes,revision}:{attemptId,revision}})});
       const body=await response.json();if(!response.ok)throw new Error(body.error);
       setRevision(body.result?.revision??0);setState(body.result?.state??'on_track');setComment(body.result?.comment??'');
+      setInternalNotes(body.result?.internal_notes??'');
       setUndo(operation==='review');setMessage(operation==='review'?'Review saved. Undo is available for 10 seconds.':'Previous review restored.');
     }catch(error){setMessage(error instanceof Error?error.message:'Could not save. Please retry.');}finally{setBusy(false);}
   }
@@ -27,6 +29,17 @@ export function SchoolsReview({attemptId,initial}:{attemptId:string;initial:{sta
         <option value="needs_more">Needs more evidence</option>
         <option value="discuss">Schedule discussion</option>
       </select>
+      <label htmlFor="adviser-internal-notes">
+        Internal Adviser Deliberation Notes <span style={{ fontWeight: 'normal', color: '#dc2626' }}>(Internal staff only &mdash; never visible to student)</span>
+      </label>
+      <textarea
+        id="adviser-internal-notes"
+        maxLength={1000}
+        value={internalNotes}
+        placeholder="Staff-only observations, context, or notes for colleagues..."
+        onChange={(e) => setInternalNotes(e.target.value)}
+        rows={2}
+      />
       <label htmlFor="adviser-comment">
         Student-Facing Formative Feedback <span style={{ fontWeight: 'normal', color: '#64748b' }}>(Visible directly to student on their private report)</span>
       </label>
@@ -40,7 +53,7 @@ export function SchoolsReview({attemptId,initial}:{attemptId:string;initial:{sta
       />
       <div className="schools-actions">
         <button disabled={busy} onClick={() => void send('review')}>
-          Save Student Feedback
+          Save Review &amp; Feedback
         </button>
         {undo && (
           <button disabled={busy} onClick={() => void send('undo_review')}>
