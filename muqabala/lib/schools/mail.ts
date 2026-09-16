@@ -3,17 +3,28 @@ import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
 import {createAdminClient} from '../supabase/admin';
 import {configuredOrigin} from '../server/security';
-import {ResendEmailProvider,type EmailMessage} from '../practice-plan/email-provider';
+import {ResendEmailProvider,type EmailMessage,type EmailProvider} from '../practice-plan/email-provider';
 import {openSchoolsMail} from './mail-crypto';
 import {requireSchoolsEnabled} from './access';
+import {processSchoolsPilotMail} from './pilot-mail';
 const staffMessage=z.object({to:z.string().email(),url:z.string().url()}).strict();
 const htmlEscape=(value:string)=>value.replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]!));
 export async function processSchoolsMail(){
   requireSchoolsEnabled();const admin=createAdminClient();if(!admin)throw new Error('Storage unavailable');
   const key=process.env.SCHOOLS_RESEND_API_KEY;
   if(!key)throw new Error('Schools email provider is not configured');
+  const provider=new ResendEmailProvider(key);
+  // Both bounded batches run together. The route's 120-second budget leaves
+  // headroom for database calls beyond the 45-second provider timeout budget.
+  const [institution,pilot]=await Promise.allSettled([
+    processInstitutionMail(admin,provider),processSchoolsPilotMail(admin,provider),
+  ]);
+  if(institution.status==='rejected'||pilot.status==='rejected')throw new Error('Schools mail worker unavailable');
+  return {sent:institution.value.sent,pilotAccepted:pilot.value.accepted,failed:institution.value.failed+pilot.value.failed};
+}
+async function processInstitutionMail(admin:NonNullable<ReturnType<typeof createAdminClient>>,provider:EmailProvider){
   const cleanup=await admin.rpc('schools_cleanup_operations');if(cleanup.error)throw new Error('Expired invitation cleanup failed');
-  const provider=new ResendEmailProvider(key);const claim=randomUUID();
+  const claim=randomUUID();
   const {data:jobs,error}=await admin.rpc('schools_claim_mail',{claim});if(error)throw new Error('Could not claim emails');
   let sent=0;let failed=0;
   for(const job of jobs??[]) {

@@ -17,7 +17,15 @@ export default async function CohortsPage() {
     .select('cohort_id')
     .eq('educator_user_id', user.id);
   if (assignedResult.error) throw new Error('Could not load your cohorts');
-  if (!assignedResult.data?.length) notFound();
+  if (!assignedResult.data?.length) {
+    const membership = await client.from('schools_institution_members').select('institution_id')
+      .eq('user_id', user.id).eq('role', 'educator').not('accepted_at', 'is', null).limit(1);
+    if (membership.error) throw new Error('Could not load your educator access');
+    if (!membership.data?.length) notFound();
+    return <section className="schools-card"><p className="schools-eyebrow">Educator workspace</p>
+      <h1>No cohorts assigned yet</h1><p>Your educator invitation is accepted. Your institution administrator still needs to assign you to a cohort before you can review student work.</p>
+      <p>Contact your institution administrator to arrange your cohort access.</p><Link href="/schools/access">About educator and student access</Link></section>;
+  }
 
   const cohortIds = assignedResult.data.map((row) => row.cohort_id);
   const [cohortsResult, membersResult, assignmentsResult] = await Promise.all([

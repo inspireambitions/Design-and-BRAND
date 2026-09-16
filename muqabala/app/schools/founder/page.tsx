@@ -3,16 +3,35 @@ import {schoolsContext} from '@/lib/schools/server';
 import {createAdminClient} from '@/lib/supabase/admin';
 import {SchoolsManagementForm} from '@/components/schools/ManagementForm';
 import {SchoolsStaffInvite} from '@/components/schools/StaffInvitation';
-export default async function FounderPage({searchParams}:{searchParams:Promise<{institution?:string;from?:string;to?:string}>}){
+import Link from 'next/link';
+import {PilotInboxItem,type PilotEnquiry} from '@/components/schools/PilotInbox';
+import {statusAfterEvent,type DeliveryStatus} from '@/lib/practice-plan/delivery-events';
+export default async function FounderPage({searchParams}:{searchParams:Promise<{institution?:string;from?:string;to?:string;enquiries?:string}>}){
   const {user}=await schoolsContext();const admin=createAdminClient();if(!admin)notFound();
   const {data:staff}=await admin.from('schools_staff').select('user_id').eq('user_id',user.id).maybeSingle();if(!staff)notFound();
   const {data:institutions}=await admin.from('schools_institutions').select('id,name,language,setup_complete,dpa_complete').order('created_at');
   const {data:events}=await admin.from('schools_audit_log').select('id,action,created_at').order('created_at',{ascending:false}).limit(30);
-  const {data:enquiries}=await admin.rpc('schools_pilot_inbox');
+  const query=await searchParams;
+  const offset=/^\d{1,7}$/.test(query.enquiries??'')?Number(query.enquiries):0;
+  const inbox=await admin.rpc('schools_pilot_inbox_page',{actor:user.id,page_size:25,page_offset:offset});
+  const enquiries=inbox.data as {items:PilotEnquiry[];total:number;nextOffset:number|null}|null;
+  const providerIds=enquiries?.items.flatMap(item=>item.mail.flatMap(mail=>mail.providerMessageId?[mail.providerMessageId]:[]))??[];
+  const deliveryEvents=providerIds.length?await admin.from('resend_webhook_events').select('provider_message_id,event_type,occurred_at')
+    .in('provider_message_id',providerIds).order('occurred_at',{ascending:true}):{data:[],error:null};
+  for(const enquiry of enquiries?.items??[])for(const mail of enquiry.mail){
+    if(mail.status!=='accepted'||!mail.providerMessageId)continue;
+    let state:DeliveryStatus='sent';
+    for(const event of deliveryEvents.data??[])if(event.provider_message_id===mail.providerMessageId)state=statusAfterEvent(state,event.event_type);
+    mail.deliveryStatus=state;
+  }
+  const inboxLink=(nextOffset:number)=>{
+    const params=new URLSearchParams();
+    for(const key of ['institution','from','to'] as const)if(query[key])params.set(key,query[key]!);
+    params.set('enquiries',String(nextOffset));return '/schools/founder?'+params.toString()+'#pilot-enquiries';
+  };
   const {data:operations}=await admin.rpc('schools_operations_status',{actor:user.id});
   const {data:failedMail}=await admin.rpc('schools_failed_mail',{actor:user.id});
   const {data:failedFeedback}=await admin.rpc('schools_failed_feedback',{actor:user.id});
-  const query=await searchParams;
   const periodValid=/^\d{4}-\d{2}-\d{2}$/.test(query.from??'')&&/^\d{4}-\d{2}-\d{2}$/.test(query.to??'')&&Date.parse(query.from!)<Date.parse(query.to!);
   const metrics=periodValid&&institutions?.some(i=>i.id===query.institution)?await admin.rpc('schools_pilot_metrics',{actor:user.id,institution:query.institution,period_start:query.from+'T00:00:00Z',period_end:query.to+'T00:00:00Z'}):{data:null};
   const m=metrics.data;
@@ -27,7 +46,16 @@ export default async function FounderPage({searchParams}:{searchParams:Promise<{
     {(failedMail??[]).map((mail:{id:string;kind:string;canRetry:boolean})=><article className="schools-card" key={mail.id}><h3>Delivery needs attention</h3><p>Reference: {mail.id}. Type: {mail.kind}.</p>{mail.canRetry?<SchoolsManagementForm operation="retry_mail" fixed={{messageId:mail.id}} button="Retry delivery" fields={[]}/>:<p>Check the email provider’s delivery record before arranging a replacement. Automatic retry has closed to prevent duplicate delivery.</p>}</article>)}
     <h2>Feedback recovery</h2><p>Investigate the failure before opening a fresh retry allowance. Saved answers stay unchanged. The student can then retry feedback from their report.</p>
     {(failedFeedback??[]).map((attempt:{id:string;failure:string|null;tries:number})=><article className="schools-card" key={attempt.id}><h3>Attempt reference {attempt.id}</h3><p>{attempt.failure??'Failure details unavailable'}. {attempt.tries} tries.</p><SchoolsManagementForm operation="retry_feedback" fixed={{attemptId:attempt.id}} button="Allow feedback retry" fields={[]}/></article>)}
-    <h2>Pilot enquiries</h2>{(enquiries??[]).map((enquiry:{id:string;institution:string;contact_name:string;email:string;message:string})=><article className="schools-card" key={enquiry.id}><h3>{enquiry.institution}</h3><p>{enquiry.contact_name}: {enquiry.email}</p><p style={{whiteSpace:'pre-wrap'}}>{enquiry.message}</p></article>)}
+    <section id="pilot-enquiries"><h2>Pilot enquiries</h2>
+      <p>The Muqabala Schools team at hello@trymuqabala.com owns replies. Check this inbox regularly even if an email notification does not arrive. Requests needing a reply appear first.</p>
+      {deliveryEvents.error&&<p role="alert">Email delivery updates are unavailable. Provider acceptance does not confirm inbox delivery.</p>}
+      {inbox.error?<p role="alert">The enquiry inbox could not be loaded. Refresh this page to retry.</p>:<>
+        <p>{enquiries?.total??0} enquiries. Retained for 90 days.</p>
+        {enquiries?.items.length?enquiries.items.map(enquiry=><PilotInboxItem key={enquiry.id+':'+enquiry.status} enquiry={enquiry}/>):<p>No enquiries on this page.</p>}
+        <nav aria-label="Pilot enquiry pages">{offset>0&&<Link href={inboxLink(Math.max(0,offset-25))}>Previous enquiries</Link>}{' '}
+          {enquiries?.nextOffset!=null&&<Link href={inboxLink(enquiries.nextOffset)}>More enquiries</Link>}</nav>
+      </>}
+    </section>
     <h2>Complete a verified deletion</h2><p>Record references only after all supplier copies have been handled and the institution has received confirmation. Do not enter student names, answers or contact details.</p>
     <SchoolsManagementForm operation="finish_privacy" button="Confirm evidence and complete deletion" fields={[{name:'jobId',label:'Deletion reference'},{name:'supplierReference',label:'Evidence reference for all suppliers and backups'},{name:'notificationReference',label:'Institution confirmation reference'}]}/>
     <h2>Recent audit events</h2><ul>{events?.map(e=><li key={e.id}>{e.action}: {new Date(e.created_at).toISOString()}</li>)}</ul></>;
