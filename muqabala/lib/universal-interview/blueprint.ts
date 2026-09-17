@@ -185,7 +185,16 @@ export function fallbackPlan(blueprint: DiscoveredCompetency[], profile: Candida
     question(5, q5Text, 'BEHAVIOURAL', behavioural, 'CHALLENGE_OR_CONFLICT', profile.experience_level),
     question(6, bank[1]?.candidate_text ?? 'What would you do first if your priorities changed suddenly?', 'SITUATIONAL', situational, 'SITUATIONAL_JUDGEMENT', profile.experience_level),
     question(7, q7Text, questionTypeFor(fourth), fourth, fourth.id, profile.experience_level),
-    question(8, 'What example best shows your fit for this role?', questionTypeFor(fifth), fifth, 'HIGHEST_VALUE_UNCOVERED', profile.experience_level),
+    question(
+      8,
+      isEarlyCareer
+        ? 'What project, practical experience or achievement best shows your readiness for this role?'
+        : 'What example best shows your fit for this role?',
+      questionTypeFor(fifth),
+      fifth,
+      'HIGHEST_VALUE_UNCOVERED',
+      profile.experience_level,
+    ),
   ];
 }
 
