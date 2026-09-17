@@ -226,14 +226,15 @@ export async function getOrCreateAdaptiveAssignmentSession(input: {
     candidateProfile,
   );
 
-  // Activate directly using canonical questions
-  const activeState = activateInterview(
-    initialState,
-    assignedCompetencies.slice(0, 5).map((c) => c.id),
-    plannedQuestions,
-  );
-  activeState.plan = plannedQuestions;
-  activeState.current_question = plannedQuestions[0] ? { ...plannedQuestions[0], kind: 'MAIN' } : null;
+  // Directly activate with canonical questions
+  const activeState: InterviewState = {
+    ...initialState,
+    phase: 'ACTIVE',
+    confirmed_by_candidate: true,
+    blueprint: assignedCompetencies,
+    plan: plannedQuestions,
+    current_question: plannedQuestions[0] ? { ...plannedQuestions[0], kind: 'MAIN' } : null,
+  };
 
   // Persist to universal_interviews
   const { error: uiErr } = await admin.from('universal_interviews').insert({
