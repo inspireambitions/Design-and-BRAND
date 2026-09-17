@@ -781,5 +781,156 @@ describe('REAL SUPABASE PRE-PRODUCTION GATE (Branch: rbumgaluykobrfmhlftg)', () 
     const optOutRow = (await client.query(`SELECT opted_out_at FROM public.role_invites WHERE id = $1`, [inviteId])).rows[0];
     assert.ok(optOutRow.opted_out_at !== null, 'Opt-out timestamp recorded');
   });
+
+  it('11. ADAPTIVE_V2 Architecture & Isolation: Verifies canonical assignment, adaptive delivery mode, and audit snapshots', async () => {
+    const instId = crypto.randomUUID();
+    const cohortId = crypto.randomUUID();
+    const asgnFormId = crypto.randomUUID();
+    const asgnAdaptiveId = crypto.randomUUID();
+    const adviserId = crypto.randomUUID();
+    const studentId = crypto.randomUUID();
+    const attemptId = crypto.randomUUID();
+    const universalId = crypto.randomUUID();
+
+    await createAuthUser(adviserId);
+    await createAuthUser(studentId);
+
+    // Setup institution, cohort, adviser
+    await client.query(`
+      INSERT INTO public.schools_institutions (id, name, country, language, setup_complete, dpa_complete)
+      VALUES ($1, 'Adaptive Pilot Univ', 'GB', 'en', false, false);
+    `, [instId]);
+
+    const code = randomCode8();
+    await client.query(`
+      INSERT INTO public.schools_cohorts (id, institution_id, name, enrolment_code, created_by)
+      VALUES ($1, $2, 'Adaptive Cohort', $3, $4);
+    `, [cohortId, instId, code, adviserId]);
+
+    await client.query(`
+      INSERT INTO public.schools_institution_members (institution_id, user_id, role, accepted_at)
+      VALUES ($1, $2, 'educator', now());
+    `, [instId, adviserId]);
+
+    await client.query(`
+      INSERT INTO public.schools_cohort_educators (cohort_id, educator_user_id)
+      VALUES ($1, $2);
+    `, [cohortId, adviserId]);
+
+    await client.query(`
+      INSERT INTO public.schools_cohort_members (cohort_id, student_user_id, display_name, status, adult_confirmed_at)
+      VALUES ($1, $2, 'Amina Hassan (Student)', 'active', now());
+    `, [cohortId, studentId]);
+
+    // 1. Verify default delivery_mode is 'form_v1'
+    await client.query(`
+      INSERT INTO public.schools_assignments (id, cohort_id, role_id, job_title, status, due_at, created_by)
+      VALUES ($1, $2, 'financial-analyst', 'Junior Analyst Form', 'published', now() + interval '14 days', $3);
+    `, [asgnFormId, cohortId, adviserId]);
+
+    const formRow = (await client.query(`SELECT delivery_mode FROM public.schools_assignments WHERE id = $1`, [asgnFormId])).rows[0];
+    assert.equal(formRow.delivery_mode, 'form_v1', 'Default delivery_mode must be form_v1');
+
+    // 2. Verify creating ADAPTIVE_V2 assignment via schools_manage RPC
+    const qv1 = crypto.randomUUID();
+    const qv2 = crypto.randomUUID();
+    const qv3 = crypto.randomUUID();
+    await client.query(`
+      INSERT INTO public.schools_question_versions (id, institution_id, question_key, version, role_id, language, question_text, rubric, approved_by, no_example_follow_up)
+      VALUES
+        ($1, $4, 'q_1', 1, 'financial-analyst', 'en', 'Describe an analytical problem you solved.', '["r1","r2","r3","r4"]'::jsonb, $5, 'Think about a coursework or project challenge.'),
+        ($2, $4, 'q_2', 1, 'financial-analyst', 'en', 'Tell me about a time you handled a project disagreement.', '["r1","r2","r3","r4"]'::jsonb, $5, 'Think about a team or group assignment.'),
+        ($3, $4, 'q_3', 1, 'financial-analyst', 'en', 'How do you prioritize competing deadlines?', '["r1","r2","r3","r4"]'::jsonb, $5, 'Think about exam periods or competing milestones.');
+    `, [qv1, qv2, qv3, instId, adviserId]);
+
+    const asgnRes = await client.query(`
+      SELECT public.schools_manage($1, 'assignment', $2) as res;
+    `, [
+      adviserId,
+      JSON.stringify({
+        cohortId,
+        roleId: 'financial-analyst',
+        jobTitle: 'Graduate Financial Analyst (Adaptive)',
+        questionIds: [qv1, qv2, qv3],
+        dueAt: new Date(Date.now() + 86400000 * 14).toISOString(),
+        deliveryMode: 'adaptive_v2',
+        status: 'published',
+      }),
+    ]);
+
+    const createdAsgn = asgnRes.rows[0].res;
+    assert.equal(createdAsgn.delivery_mode, 'adaptive_v2', 'schools_manage must support deliveryMode = adaptive_v2');
+    assert.equal(createdAsgn.status, 'published');
+
+    // 3. Test universal_interviews row creation and attempt linkage
+    await client.query(`
+      INSERT INTO public.universal_interviews (id, owner_token_hash, state_ciphertext, status)
+      VALUES ($1, 'dummy_token_hash', 'v1.dummy_iv.dummy_tag.dummy_ciphertext', 'ACTIVE');
+    `, [universalId]);
+
+    await client.query(`
+      INSERT INTO public.universal_interview_accounts (interview_id, user_id)
+      VALUES ($1, $2);
+    `, [universalId, studentId]);
+
+    const canonicalSnapshot = [
+      { questionIndex: 0, text: 'Describe an analytical problem you solved.' },
+      { questionIndex: 1, text: 'Tell me about a time you handled a project disagreement.' },
+      { questionIndex: 2, text: 'How do you prioritize competing deadlines?' },
+    ];
+
+    const turns = [
+      { turnNumber: 1, questionNumber: 1, questionText: 'Describe an analytical problem you solved.', answerText: 'I built a DCF model for my university valuation project.', action: 'PROBE_ACTION' },
+      { turnNumber: 2, questionNumber: 1, questionText: 'What specific sensitivity checks did you implement?', answerText: 'I varied WACC between 8% and 12% and tested terminal growth rates.', action: 'MOVE_ON' },
+    ];
+
+    const evidence = [
+      { id: 'E01', question_number: 1, summary: 'Valuation project DCF modeling', evidence_type: 'ACADEMIC', competencies: { c_analytical_thinking: 'STRONG' } },
+    ];
+
+    await client.query(`
+      INSERT INTO public.schools_assignment_attempts (
+        id, assignment_id, student_user_id, attempt_number, status, submitted_at, delivery_mode,
+        universal_interview_id, engine_version, canonical_questions_snapshot,
+        adaptive_turns, evidence_ledger, evidence_sources, answers
+      )
+      VALUES (
+        $1, $2, $3, 1, 'submitted', now(), 'adaptive_v2',
+        $4, 'universal-brain-v2.0.1', $5,
+        $6, $7, '["ACADEMIC", "PERSONAL_PROJECT"]'::jsonb, '["Answer 1 with probe", "", ""]'::jsonb
+      );
+    `, [
+      attemptId, createdAsgn.id, studentId,
+      universalId, JSON.stringify(canonicalSnapshot),
+      JSON.stringify(turns), JSON.stringify(evidence),
+    ]);
+
+    // 4. Verify attempt query back
+    const attemptRow = (await client.query(`
+      SELECT delivery_mode, universal_interview_id, engine_version,
+             canonical_questions_snapshot, adaptive_turns, evidence_ledger
+      FROM public.schools_assignment_attempts
+      WHERE id = $1;
+    `, [attemptId])).rows[0];
+
+    assert.equal(attemptRow.delivery_mode, 'adaptive_v2');
+    assert.equal(attemptRow.universal_interview_id, universalId);
+    assert.equal(attemptRow.engine_version, 'universal-brain-v2.0.1');
+    assert.equal(attemptRow.canonical_questions_snapshot.length, 3);
+    assert.equal(attemptRow.adaptive_turns.length, 2);
+    assert.equal(attemptRow.evidence_ledger[0].evidence_type, 'ACADEMIC');
+
+    // 5. Verify delivery_mode check constraint rejects invalid strings
+    await assert.rejects(
+      async () => {
+        await client.query(`
+          INSERT INTO public.schools_assignments (id, cohort_id, role_id, due_at, created_by, delivery_mode)
+          VALUES ($1, $2, 'financial-analyst', now() + interval '7 days', $3, 'invalid_mode');
+        `, [crypto.randomUUID(), cohortId, adviserId]);
+      },
+      /check/i,
+      'Should reject delivery_mode not in (form_v1, adaptive_v2)'
+    );
+  });
 });
 

@@ -39,6 +39,7 @@ export function SchoolsAssign({
   const [due, setDue] = useState(() =>
     new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10)
   );
+  const [deliveryMode, setDeliveryMode] = useState<'form_v1' | 'adaptive_v2'>('form_v1');
   const [maxAttempts, setMaxAttempts] = useState<number | ''>(3);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
@@ -164,6 +165,7 @@ export function SchoolsAssign({
               jobDescription: jobDescription.trim() || undefined,
               instructions: instructions.trim() || undefined,
               status,
+              deliveryMode,
               competencies: competencies
                 .split(',')
                 .map((c) => c.trim())
@@ -563,6 +565,19 @@ export function SchoolsAssign({
                 <option value="published">Published — Immediately active &amp; visible in student inboxes</option>
                 <option value="draft">Draft — Private to educators until explicitly published</option>
               </select>
+            </label>
+
+            <label>
+              Interview Delivery Format
+              <select value={deliveryMode} onChange={(e) => setDeliveryMode(e.target.value as 'form_v1' | 'adaptive_v2')}>
+                <option value="form_v1">Standard Written Form — Simultaneous multi-question written assignment with autosave</option>
+                <option value="adaptive_v2">Adaptive Conversational Interview (Recommended) — One question at a time with AI follow-up probing and experience fallbacks</option>
+              </select>
+              <span style={{ fontSize: '12px', color: '#718096' }}>
+                {deliveryMode === 'adaptive_v2'
+                  ? 'The Universal Engine adapts probing and offers student experience fallbacks while strictly evaluating against your approved rubric.'
+                  : 'Traditional assignment format where learners draft and submit all written answers at once.'}
+              </span>
             </label>
 
             <label>

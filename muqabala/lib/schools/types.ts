@@ -33,6 +33,8 @@ export type RosterParseResult = {
   invalid: { line: number; raw: string; error: string }[];
 };
 
+export type DeliveryMode = 'form_v1' | 'adaptive_v2';
+
 export type FlexibleAssignmentPayload = {
   cohortId: string;
   roleId: string;
@@ -45,6 +47,7 @@ export type FlexibleAssignmentPayload = {
   maxAttempts?: number | null;
   instructions?: string | null;
   status?: 'draft' | 'published' | 'closed';
+  deliveryMode?: DeliveryMode;
 };
 
 export type ProgrammeEntity = {
@@ -142,4 +145,44 @@ export function extractCompetenciesWithMetadata(jobText: string): CompetencyExtr
   };
 }
 
+export type CanonicalQuestionData = {
+  versionId: string;
+  questionIndex: number;
+  questionText: string;
+  noExampleFollowUp?: string | null;
+  rubric: { id: string; label: string; description: string }[];
+};
 
+import type { ExperienceLevel, PlannedQuestion, QuestionType } from '../universal-interview/types.ts';
+
+export function buildAdaptivePlanFromCanonical(
+  canonicalQuestions: CanonicalQuestionData[],
+  competencies: { id: string; name: string }[],
+  profile: { experience_level: ExperienceLevel }
+): PlannedQuestion[] {
+  return canonicalQuestions.map((q, index) => {
+    const assignedComp = competencies[index % competencies.length] || { id: `c_canonical_${index + 1}`, name: 'Core Criterion' };
+    const isIntro = index === 0;
+    let cleanText = q.questionText.trim();
+    if (cleanText.endsWith('.')) cleanText = cleanText.slice(0, -1);
+    if (!cleanText.endsWith('?')) cleanText = `${cleanText}?`;
+    const qType: QuestionType = isIntro ? 'INTRODUCTION' : 'BEHAVIOURAL';
+    return {
+      question_id: `canonical_${index + 1}`,
+      candidate_text: cleanText,
+      interviewer_intent: isIntro ? 'ROLE_RELEVANCE' : 'CHALLENGE_OR_EXECUTION',
+      probe_targets: q.rubric.map((r) => r.id),
+      question_type: qType,
+      target_competencies: [assignedComp.id],
+      seniority: profile.experience_level,
+      language: 'en',
+      source: 'BANK',
+      prompt_version: '1.0',
+      validated: true,
+      rephrase_text: isIntro ? 'What experience from your background is most relevant here?' : 'What is one relevant example from your experience?',
+      framework: 'STAR',
+      kind: 'MAIN',
+      slot: index + 1,
+    };
+  });
+}
