@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { SchoolsFeedback } from './Feedback';
 import type { ExperienceLevel, EvidenceType } from '@/lib/universal-interview/types';
 
@@ -23,8 +23,17 @@ type CanonicalQuestion = {
   rubric: { id: string; label: string; description?: string }[];
 };
 
+import {
+  saveDraft,
+  loadDraft,
+  clearDraft as clearStoredDraft,
+  pruneExpiredDrafts,
+} from '@/lib/schools/draft-storage';
+
 export function SchoolsAdaptivePractice({
   assignmentId,
+  cohortId,
+  studentUserId,
   questions,
   initial,
   dueAt,
@@ -32,13 +41,14 @@ export function SchoolsAdaptivePractice({
 }: {
   assignmentId: string;
   cohortId: string;
+  studentUserId?: string;
   questions: CanonicalQuestion[];
   initial: Attempt | null;
   dueAt: string;
   roleTitle: string;
 }) {
   const [attempt, setAttempt] = useState(initial);
-  const [step, setStep] = useState<'profile_check' | 'interview' | 'complete'>('profile_check');
+  const [step, setStep] = useState<'profile_check' | 'interview' | 'finalizing' | 'finalize_failed' | 'complete'>('profile_check');
   const [currentQuestion, setCurrentQuestion] = useState<{
     text: string;
     kind: string;
@@ -52,10 +62,13 @@ export function SchoolsAdaptivePractice({
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
+  // Fallback confirmation dialog state (non-destructive fallback architecture)
+  const [showFallbackConfirm, setShowFallbackConfirm] = useState(false);
+  const preservedTypedDraft = useRef('');
+
   // Student progressive context state (editable before starting interview)
   const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>('ENTRY');
   const [academicField, setAcademicField] = useState('');
-  const [qualification, setQualification] = useState('');
   const [academicStage, setAcademicStage] = useState('');
   const [evidenceSources, setEvidenceSources] = useState<EvidenceType[]>(['ACADEMIC', 'PERSONAL_PROJECT']);
 
@@ -63,6 +76,60 @@ export function SchoolsAdaptivePractice({
   // eslint-disable-next-line react-hooks/purity
   const closed = Date.now() >= new Date(dueAt).getTime();
   const submitted = attempt?.status === 'submitted';
+
+  // Identifier for draft persistence: assignmentId + attemptId + questionNumber + probeCount
+  const turnKey = `${questionNumber}_${probeCount}`;
+
+  // Restore draft when moving to a new question/turn or on initial load
+  useEffect(() => {
+    if (step !== 'interview' || !attempt?.id || !studentUserId) return;
+    pruneExpiredDrafts();
+    const savedDraft = loadDraft(studentUserId, assignmentId, attempt.id, turnKey);
+    if (savedDraft && savedDraft.trim()) {
+      setAnswerText(savedDraft);
+    }
+  }, [step, attempt?.id, studentUserId, assignmentId, turnKey]);
+
+  // Persist draft to localStorage on edit (automatically handles TTL timestamp)
+  const handleAnswerChange = (value: string) => {
+    setAnswerText(value);
+    if (!attempt?.id || !studentUserId) return;
+    saveDraft(studentUserId, assignmentId, attempt.id, turnKey, value);
+  };
+
+  const clearDraft = (turnId: string) => {
+    if (!attempt?.id || !studentUserId) return;
+    clearStoredDraft(studentUserId, assignmentId, attempt.id, turnId);
+  };
+
+  // Finalize submission function with idempotent retry capability
+  const executeFinalize = async (attemptId: string) => {
+    setStep('finalizing');
+    setBusy(true);
+    setError('');
+    try {
+      const res = await fetch('/api/schools/adaptive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'finalize',
+          payload: { attemptId },
+        }),
+      });
+
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || 'Failed to finalize interview');
+
+      setAttempt((prev) => (prev ? { ...prev, status: 'submitted' } : null));
+      setStep('complete');
+      setMessage('Interview complete! Your answers and evidence breakdown have been saved.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not finalize interview. Please retry.');
+      setStep('finalize_failed');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   // Initialize or resume session
   const initSession = async (retry = false) => {
@@ -79,7 +146,6 @@ export function SchoolsAdaptivePractice({
             studentProfile: {
               experience_level: experienceLevel,
               academic_field: academicField || undefined,
-              qualification: qualification || undefined,
               academic_stage: academicStage || undefined,
               evidence_sources: evidenceSources,
             },
@@ -121,10 +187,12 @@ export function SchoolsAdaptivePractice({
     }
   };
 
-  const handleSendAnswer = async () => {
-    if (!attempt?.id || !answerText.trim() || busy) return;
+  const handleSendAnswer = async (overrideAnswer?: string) => {
+    const textToSend = (overrideAnswer !== undefined ? overrideAnswer : answerText).trim();
+    if (!attempt?.id || !textToSend || busy) return;
     setBusy(true);
     setError('');
+    const submittedTurnKey = turnKey;
     try {
       const res = await fetch('/api/schools/adaptive', {
         method: 'POST',
@@ -133,7 +201,7 @@ export function SchoolsAdaptivePractice({
           action: 'submit_turn',
           payload: {
             attemptId: attempt.id,
-            answerText: answerText.trim(),
+            answerText: textToSend,
           },
         }),
       });
@@ -141,31 +209,53 @@ export function SchoolsAdaptivePractice({
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || 'Could not process turn');
 
+      // Clear draft only after successful server acceptance of that answer
+      clearDraft(submittedTurnKey);
       setAnswerText('');
+      setShowFallbackConfirm(false);
+      preservedTypedDraft.current = '';
+
       setCurrentQuestion(body.result.currentQuestion);
       setQuestionNumber(body.result.questionNumber);
       setTotalQuestions(body.result.totalQuestions);
       setProbeCount(body.result.probeCount);
 
       if (body.result.completed) {
-        setStep('complete');
-        // Finalize submission automatically
-        await fetch('/api/schools/adaptive', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'finalize',
-            payload: { attemptId: attempt.id },
-          }),
-        });
-        setAttempt((prev) => prev ? { ...prev, status: 'submitted' } : null);
-        setMessage('Interview complete! Your answers and evidence breakdown have been saved.');
+        await executeFinalize(attempt.id);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not send answer');
     } finally {
       setBusy(false);
     }
+  };
+
+  // Fallback button action: Non-destructive architecture
+  const handleFallbackClick = () => {
+    const trimmed = answerText.trim();
+    if (!trimmed) {
+      // Empty textarea: submit fallback intent directly
+      void handleSendAnswer("I don't have a direct professional example for this.");
+      return;
+    }
+
+    // Candidate has already typed text: preserve it and prompt for confirmation
+    preservedTypedDraft.current = answerText;
+    setShowFallbackConfirm(true);
+  };
+
+  const handleConfirmFallback = () => {
+    // Send fallback action while leaving preservedTypedDraft recoverable
+    setShowFallbackConfirm(false);
+    void handleSendAnswer("I don't have a direct professional example for this.");
+  };
+
+  const handleCancelFallback = () => {
+    // Restore preserved draft to textarea if needed
+    if (preservedTypedDraft.current) {
+      setAnswerText(preservedTypedDraft.current);
+    }
+    setShowFallbackConfirm(false);
   };
 
   // If already submitted, display completed view and feedback
@@ -308,16 +398,49 @@ export function SchoolsAdaptivePractice({
             value={answerText}
             placeholder="Describe your specific actions, what you contributed, and the outcome or result..."
             disabled={busy || closed}
-            onChange={(e) => setAnswerText(e.target.value)}
+            onChange={(e) => handleAnswerChange(e.target.value)}
           />
+
+          {showFallbackConfirm && (
+            <div
+              role="alertdialog"
+              aria-label="Confirm alternative question"
+              style={{
+                background: '#fef3c7',
+                border: '1px solid #f59e0b',
+                borderRadius: '8px',
+                padding: '14px 16px',
+                margin: '12px 0',
+                color: '#92400e',
+              }}
+            >
+              <p style={{ margin: '0 0 10px', fontSize: '14px', fontWeight: 600 }}>
+                You have already typed an answer. Would you like to keep editing your response, or switch to an alternative question / broader setting?
+              </p>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={handleCancelFallback}
+                  style={{ background: '#075c50', color: '#fff', fontSize: '13px', padding: '8px 14px' }}
+                >
+                  Keep my response &amp; continue editing
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmFallback}
+                  style={{ background: '#ffffff', color: '#92400e', border: '1px solid #f59e0b', fontSize: '13px', padding: '8px 14px' }}
+                >
+                  I don&apos;t have a direct example (Proceed)
+                </button>
+              </div>
+            </div>
+          )}
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
             <button
               type="button"
               disabled={busy || closed}
-              onClick={() => {
-                setAnswerText("I don't have a direct professional example for this.");
-              }}
+              onClick={handleFallbackClick}
               style={{ background: '#f1f5f9', color: '#475569', fontSize: '12px' }}
             >
               I don&apos;t have a direct example
@@ -333,7 +456,34 @@ export function SchoolsAdaptivePractice({
         </section>
       )}
 
-      {/* STEP 3: INTERVIEW COMPLETE */}
+      {/* STEP 3: FINALIZING IN PROGRESS */}
+      {step === 'finalizing' && (
+        <section className="schools-card" style={{ textAlign: 'center', padding: '32px' }}>
+          <h2>Recording and Finalizing Your Practice Interview...</h2>
+          <p style={{ color: '#4b5563', fontSize: '15px' }}>
+            Please wait while we record your final evidence breakdown and link your completed attempt for adviser review.
+          </p>
+        </section>
+      )}
+
+      {/* STEP 4: FINALIZE FAILED (RECOVERABLE RETRY) */}
+      {step === 'finalize_failed' && (
+        <section className="schools-card" style={{ textAlign: 'center', padding: '32px', borderColor: '#fca5a5' }}>
+          <h2 style={{ color: '#dc2626' }}>Submission Finalization Incomplete</h2>
+          <p style={{ color: '#4b5563', fontSize: '15px', marginBottom: '20px' }}>
+            All your interview turns have been safely recorded, but final submission could not be verified by the server.
+          </p>
+          {error && <p role="alert" style={{ color: '#dc2626', fontWeight: 'bold', marginBottom: '20px' }}>{error}</p>}
+          <button
+            disabled={busy}
+            onClick={() => attempt?.id && void executeFinalize(attempt.id)}
+          >
+            {busy ? 'Retrying finalization...' : 'Retry Finalization →'}
+          </button>
+        </section>
+      )}
+
+      {/* STEP 5: INTERVIEW COMPLETE */}
       {step === 'complete' && (
         <section className="schools-card" style={{ textAlign: 'center', padding: '32px' }}>
           <h2>🎉 Practice Interview Completed!</h2>

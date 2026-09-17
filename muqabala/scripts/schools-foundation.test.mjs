@@ -86,6 +86,14 @@ await db.exec('reset role');
     await t.test('institution admin cannot read answer contents',async()=>{
       assert.equal((await as(6,'select * from public.schools_assignment_attempts')).rows.length,0);
     });
+    await t.test('institution admin has layout navigation entitlement to view cohorts',async()=>{
+      const assigned = (await as(6, "select cohort_id from public.schools_cohort_educators where educator_user_id = '" + id(6) + "' limit 1")).rows;
+      const memberships = (await as(6, "select id from public.schools_institution_members where user_id = '" + id(6) + "' and role = 'institution_admin' and accepted_at is not null limit 1")).rows;
+      assert.equal(assigned.length, 0, 'Admin is not assigned as an educator');
+      assert.equal(memberships.length, 1, 'Admin has accepted institution_admin membership');
+      const canViewCohorts = !!assigned.length || !!memberships.length;
+      assert.equal(canViewCohorts, true, 'Admin can view cohorts in navigation');
+    });
     await t.test('an employer identity cannot read any schools table',async()=>{
       await db.exec('reset role');
       const tables=(await db.query("select tablename from pg_tables where schemaname='public' and tablename like 'schools_%'")).rows;

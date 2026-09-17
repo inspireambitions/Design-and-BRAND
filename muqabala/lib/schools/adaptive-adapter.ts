@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { createAdminClient } from '../supabase/admin.ts';
-import { createInterviewState, activateInterview } from '../universal-interview/engine.ts';
+import { createInterviewState } from '../universal-interview/engine.ts';
 import { processUniversalTurn } from '../universal-interview/process-turn.ts';
 import { sealInterviewState, openInterviewState } from '../universal-interview/crypto.ts';
 import { makeBankQuestion } from '../universal-interview/questions.ts';
@@ -406,17 +406,32 @@ export async function finalizeAdaptiveAssignmentSubmission(input: {
   if (error || !attempt) throw new Error('Attempt not found');
   if (attempt.status === 'submitted') return; // Already submitted
 
-  // Mark attempt submitted
-  const { error: submitErr } = await admin
+  // Mark attempt submitted atomically only if status is still draft
+  const { data: updated, error: submitErr } = await admin
     .from('schools_assignment_attempts')
     .update({
       status: 'submitted',
       submitted_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
-    .eq('id', attempt.id);
+    .eq('id', attempt.id)
+    .eq('status', 'draft')
+    .select('id');
 
   if (submitErr) throw new Error(`Submission failed: ${submitErr.message}`);
+  // If another concurrent finalize call already transitioned the status, return safely
+  if (!updated || updated.length === 0) return;
+
+  // Complete universal interview if linked
+  if (attempt.universal_interview_id) {
+    await admin
+      .from('universal_interviews')
+      .update({
+        status: 'COMPLETE',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', attempt.universal_interview_id);
+  }
 
   // Fetch assignment cohort for audit log
   const { data: asgn } = await admin
@@ -433,13 +448,22 @@ export async function finalizeAdaptiveAssignmentSubmission(input: {
       .single();
 
     if (cohort) {
-      await admin.from('schools_audit_log').insert({
-        actor_user_id: input.studentUserId,
-        action: 'attempt_submitted',
-        target_table: 'schools_assignment_attempts',
-        target_id: attempt.id,
-        institution_id: cohort.institution_id,
-      });
+      const { data: existingAudit } = await admin
+        .from('schools_audit_log')
+        .select('id')
+        .eq('action', 'attempt_submitted')
+        .eq('target_id', attempt.id)
+        .limit(1);
+
+      if (!existingAudit || existingAudit.length === 0) {
+        await admin.from('schools_audit_log').insert({
+          actor_user_id: input.studentUserId,
+          action: 'attempt_submitted',
+          target_table: 'schools_assignment_attempts',
+          target_id: attempt.id,
+          institution_id: cohort.institution_id,
+        });
+      }
     }
   }
 }

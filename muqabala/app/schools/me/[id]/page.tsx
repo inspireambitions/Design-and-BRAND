@@ -30,6 +30,7 @@ export default async function AssignmentPage({params,searchParams}:{params:Promi
         <SchoolsAdaptivePractice
           assignmentId={id}
           cohortId={assignment.cohort_id}
+          studentUserId={user.id}
           questions={questions.map(q=>({text:q!.question_text,followUp:q!.no_example_follow_up,rubric:q!.rubric}))}
           initial={current}
           dueAt={assignment.due_at}

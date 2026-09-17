@@ -3,7 +3,13 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { SchoolsSignOut } from './SignOut';
 
-export function SchoolsNavigation({ canViewCohorts = false }: { canViewCohorts?: boolean }) {
+export function SchoolsNavigation({
+  canViewCohorts = false,
+  userId,
+}: {
+  canViewCohorts?: boolean;
+  userId?: string;
+}) {
   const path = usePathname();
 
   if (path === '/schools') {
@@ -47,7 +53,7 @@ export function SchoolsNavigation({ canViewCohorts = false }: { canViewCohorts?:
       <Link href="/schools/me/settings" aria-current={path === '/schools/me/settings' ? 'page' : undefined}>
         Account
       </Link>
-      <SchoolsSignOut />
+      <SchoolsSignOut studentUserId={userId} />
     </nav>
   );
 }
