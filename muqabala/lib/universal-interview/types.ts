@@ -77,6 +77,11 @@ export type CandidateProfile = {
   academic_stage?: string;
   evidence_sources?: EvidenceType[];
   project_highlight?: string;
+  // Global education terminology and institutional context (optional)
+  country_code?: string;
+  education_system?: string;
+  preferred_education_terms?: Partial<Record<string, string>>;
+  institution_context_id?: string;
 };
 
 export type DiscoveredCompetency = {

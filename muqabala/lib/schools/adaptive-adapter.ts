@@ -174,6 +174,10 @@ export async function getOrCreateAdaptiveAssignmentSession(input: {
     qualification: input.studentProfile?.qualification,
     academic_stage: input.studentProfile?.academic_stage,
     evidence_sources: input.studentProfile?.evidence_sources || ['ACADEMIC', 'PERSONAL_PROJECT'],
+    country_code: input.studentProfile?.country_code,
+    education_system: input.studentProfile?.education_system,
+    preferred_education_terms: input.studentProfile?.preferred_education_terms,
+    institution_context_id: input.studentProfile?.institution_context_id,
   };
 
   const assignedCompetencies: DiscoveredCompetency[] = canonicalQuestions.map((q, idx) => ({

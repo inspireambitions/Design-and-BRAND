@@ -169,7 +169,7 @@ export async function processUniversalTurn(
         state,
         generated ?? (competencyId
           ? validatedBankFallback(state, competencyId, kind)
-          : fallbackGeneratedQuestion(decision.action, state.current_question, decision.probe_target)),
+          : fallbackGeneratedQuestion(decision.action, state.current_question, decision.probe_target, state.profile)),
       );
       fallbackUsed ||= !generated;
     }

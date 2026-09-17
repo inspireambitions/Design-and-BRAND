@@ -247,6 +247,27 @@ test('2. Candidate Spectrum & Stage Realism Validation', () => {
       expectedPrefix: 'Your practical project demonstrated',
     },
     {
+      name: 'Experienced MBA Student (8 years Operations)',
+      profile: {
+        experience_level: 'PROFESSIONAL',
+        years_experience: 8,
+        current_or_previous_role: 'Operations Supervisor',
+        target_role: 'Operations Manager',
+        industry_background: 'Supply Chain & Manufacturing',
+        career_change: false,
+        management_experience: true,
+        language: 'en',
+        academic_field: 'MBA',
+        qualification: 'Executive MBA',
+        academic_stage: 'Enrolled Part-Time MBA',
+        evidence_sources: ['EMPLOYMENT', 'ACADEMIC'],
+        project_highlight: 'Reduced warehouse cycle time by 22% across 3 distribution hubs',
+      },
+      evidenceType: 'EMPLOYMENT',
+      summary: 'Directed shift leads and implemented Kanban throughput system across distribution facilities.',
+      expectedPrefix: 'Your example showed',
+    },
+    {
       name: 'Career Changer: Secondary Teacher -> Corporate L&D',
       profile: {
         experience_level: 'PROFESSIONAL',

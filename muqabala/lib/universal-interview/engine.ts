@@ -8,6 +8,7 @@ import {
   isSufficient,
   makeValidatedQuestion,
 } from './questions.ts';
+import { detectStudentTerminologyCorrection } from './terminology.ts';
 import type {
   CandidateProfile,
   CoverageStatus,
@@ -164,13 +165,24 @@ export function activateInterview(
   return next;
 }
 
-export function applyExtraction(
+export function recordAnswer(
   state: InterviewState,
   extraction: ExtractionResult,
   answer: string,
 ): InterviewState {
   if (!state.current_question) throw new Error('No active question.');
   const next = structuredClone(state);
+
+  // Student Terminology Adaptation: If student explicitly corrects/clarifies terminology,
+  // adapt preferred_education_terms for the remainder of the interview without awkward repetition.
+  const termCorrection = detectStudentTerminologyCorrection(answer);
+  if (termCorrection) {
+    if (!next.profile.preferred_education_terms) {
+      next.profile.preferred_education_terms = {};
+    }
+    next.profile.preferred_education_terms[termCorrection.concept] = termCorrection.term;
+  }
+
   const currentQuestion = next.current_question;
   if (!currentQuestion) throw new Error('No active question.');
   const normalisedExtraction = structuredClone(extraction);
@@ -227,6 +239,8 @@ export function applyExtraction(
   }
   return next;
 }
+
+export const applyExtraction = recordAnswer;
 
 export function decideTurn(
   state: InterviewState,
@@ -310,12 +324,12 @@ export function applyImmediateDecision(
   if (decision.action === 'BROADEN_SETTING') {
     if (!next.transferable_offered_for) next.transferable_offered_for = [];
     next.transferable_offered_for.push(next.question_number);
-    next.current_question = fallbackGeneratedQuestion('BROADEN_SETTING', next.current_question, '');
+    next.current_question = fallbackGeneratedQuestion('BROADEN_SETTING', next.current_question, '', next.profile);
     return next;
   }
   if (decision.action === 'OFFER_HYPOTHETICAL') {
     next.hypothetical_offered_for.push(next.question_number);
-    next.current_question = fallbackGeneratedQuestion('OFFER_HYPOTHETICAL', next.current_question, '');
+    next.current_question = fallbackGeneratedQuestion('OFFER_HYPOTHETICAL', next.current_question, '', next.profile);
     return next;
   }
   if (decision.action === 'CLARIFY' && extraction?.possible_inconsistency) {

@@ -133,10 +133,13 @@ export function questionQualityGate(
   return { ok: true };
 }
 
+import { buildBroadenSettingPrompt } from './terminology.ts';
+
 export function fallbackGeneratedQuestion(
   action: string,
   current: GeneratedQuestion,
   _probeTarget: string,
+  profile?: CandidateProfile,
 ): GeneratedQuestion {
   const textByAction: Record<string, string> = {
     PROBE_TASK: 'What was your responsibility in that situation?',
@@ -148,7 +151,7 @@ export function fallbackGeneratedQuestion(
     PROBE_REASONING: 'What reasoning led you to that decision?',
     CLARIFY: 'Earlier you described the scope differently. Which scope applies to your example?',
     REDIRECT: 'What relevant example from your experience answers the original question?',
-    BROADEN_SETTING: 'What example from your university, project, volunteering or other practical experience could you share instead?',
+    BROADEN_SETTING: buildBroadenSettingPrompt(profile),
     OFFER_HYPOTHETICAL: 'If you faced this situation, what would you do first?',
   };
   const kind: GeneratedQuestion['kind'] = action === 'CLARIFY'
