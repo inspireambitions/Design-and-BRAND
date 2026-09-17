@@ -48,25 +48,35 @@ export function deterministicFeedbackFallback(state: InterviewState): FeedbackMo
         .filter(([, status]) => status === 'MISSING' || status === 'WEAK')
         .map(([criterion]) => criterion.replaceAll('_', ' '));
       const summary = latest?.summary.trim().replaceAll('—', ',').slice(0, 360) ?? '';
+
+      let workedPrefix = `Your example showed ${competency.name.toLowerCase()}: `;
+      if (latest?.evidence_type === 'HYPOTHETICAL') {
+        workedPrefix = `In the situational scenario, your structured reasoning showed ${competency.name.toLowerCase()}: `;
+      } else if (latest?.evidence_type === 'ACADEMIC') {
+        workedPrefix = `Your academic project demonstrated ${competency.name.toLowerCase()}: `;
+      } else if (latest?.evidence_type === 'VOLUNTEER' || latest?.evidence_type === 'PERSONAL_PROJECT') {
+        workedPrefix = `Your practical project demonstrated ${competency.name.toLowerCase()}: `;
+      } else if (latest?.evidence_type === 'INTERNSHIP') {
+        workedPrefix = `Your internship experience demonstrated ${competency.name.toLowerCase()}: `;
+      }
+
       return {
         id: competency.id,
-        what_worked: summary
-          ? `Your example showed ${competency.name.toLowerCase()}: ${summary}`
-          : '',
+        what_worked: summary ? `${workedPrefix}${summary}` : '',
         what_is_missing: evidenceIds.length
-          ? (missing.length ? `The example still needs clearer ${missing.slice(0, 2).join(' and ')}.` : '')
-          : `No example yet showed ${competency.name.toLowerCase()}.`,
+          ? (missing.length ? `The response still needs clearer ${missing.slice(0, 2).join(' and ')}.` : '')
+          : `No direct example or situational reasoning yet showed ${competency.name.toLowerCase()}.`,
         improve_this: evidenceIds.length
           ? (missing.length
-              ? `Add the ${missing[0]} to the example you gave for ${competency.name.toLowerCase()}.`
-              : `Keep the result clear when you describe ${competency.name.toLowerCase()}.`)
-          : `Give one example that shows ${competency.name.toLowerCase()}, your action and the result.`,
+              ? `Add the ${missing[0]} to your response for ${competency.name.toLowerCase()}.`
+              : `Keep the key outcome or result clear when addressing ${competency.name.toLowerCase()}.`)
+          : `Give an example from university, projects, work or explain how you would tackle a realistic scenario showing ${competency.name.toLowerCase()}.`,
         evidence_ids: evidenceIds,
       };
     }),
     patterns: [],
     single_highest_value_improvement: recommended
-      ? `Strengthen your example of ${recommended.competency.name.toLowerCase()} with the missing action or result.`
+      ? `Strengthen your response for ${recommended.competency.name.toLowerCase()} with the missing action or outcome.`
       : 'Keep your strongest examples concise and specific.',
     retry_recommended_question: Math.max(1, Math.min(state.plan.length, recommended
       ? state.plan.find((question) => question.target_competencies.includes(recommended.competency.id))?.slot ?? 1

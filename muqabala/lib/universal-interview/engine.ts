@@ -8,6 +8,7 @@ import {
   isSufficient,
   makeValidatedQuestion,
 } from './questions.ts';
+import { detectStudentTerminologyCorrection } from './terminology.ts';
 import type {
   CandidateProfile,
   CoverageStatus,
@@ -132,6 +133,7 @@ export function createInterviewState(input: {
     examples_used: [],
     dedupe_keys: [],
     clarified_inconsistencies: [],
+    transferable_offered_for: [],
     hypothetical_offered_for: [],
     executive_ownership_probe_used: false,
     pattern_flags: { repeated_example: 0, weak_ownership: 0, unsupported_claims: 0, no_result_given: 0 },
@@ -163,13 +165,24 @@ export function activateInterview(
   return next;
 }
 
-export function applyExtraction(
+export function recordAnswer(
   state: InterviewState,
   extraction: ExtractionResult,
   answer: string,
 ): InterviewState {
   if (!state.current_question) throw new Error('No active question.');
   const next = structuredClone(state);
+
+  // Student Terminology Adaptation: If student explicitly corrects/clarifies terminology,
+  // adapt preferred_education_terms for the remainder of the interview without awkward repetition.
+  const termCorrection = detectStudentTerminologyCorrection(answer);
+  if (termCorrection) {
+    if (!next.profile.preferred_education_terms) {
+      next.profile.preferred_education_terms = {};
+    }
+    next.profile.preferred_education_terms[termCorrection.concept] = termCorrection.term;
+  }
+
   const currentQuestion = next.current_question;
   if (!currentQuestion) throw new Error('No active question.');
   const normalisedExtraction = structuredClone(extraction);
@@ -227,14 +240,27 @@ export function applyExtraction(
   return next;
 }
 
+export const applyExtraction = recordAnswer;
+
 export function decideTurn(
   state: InterviewState,
   precheck: PrecheckResult,
   extraction: ExtractionResult | null,
 ): TurnDecision {
   if (precheck.kind === 'NO_EXAMPLE') {
-    const offered = state.hypothetical_offered_for.includes(state.question_number);
-    return { action: offered ? 'MOVE_ON' : 'OFFER_HYPOTHETICAL', probe_target: '', counts_as_probe: false, override_reason: 'precheck_no_example' };
+    const transferableOffered = state.transferable_offered_for?.includes(state.question_number) ?? false;
+    const hypotheticalOffered = state.hypothetical_offered_for.includes(state.question_number);
+    const isBehaviouralOrIntro = state.current_question?.question_type === 'BEHAVIOURAL'
+      || state.current_question?.question_type === 'INTRODUCTION'
+      || state.current_question?.question_type === 'CAREER_HISTORY';
+
+    if (isBehaviouralOrIntro && !transferableOffered) {
+      return { action: 'BROADEN_SETTING', probe_target: '', counts_as_probe: false, override_reason: 'precheck_no_example_broaden' };
+    }
+    if (!hypotheticalOffered) {
+      return { action: 'OFFER_HYPOTHETICAL', probe_target: '', counts_as_probe: false, override_reason: 'precheck_no_example_hypothetical' };
+    }
+    return { action: 'MOVE_ON', probe_target: '', counts_as_probe: false, override_reason: 'precheck_no_example_exhausted' };
   }
   if (precheck.kind === 'REPHRASE_REQUEST') {
     return { action: 'REPHRASE', probe_target: '', counts_as_probe: false, override_reason: 'precheck_rephrase' };
@@ -295,9 +321,15 @@ export function applyImmediateDecision(
     });
     return next;
   }
+  if (decision.action === 'BROADEN_SETTING') {
+    if (!next.transferable_offered_for) next.transferable_offered_for = [];
+    next.transferable_offered_for.push(next.question_number);
+    next.current_question = fallbackGeneratedQuestion('BROADEN_SETTING', next.current_question, '', next.profile);
+    return next;
+  }
   if (decision.action === 'OFFER_HYPOTHETICAL') {
     next.hypothetical_offered_for.push(next.question_number);
-    next.current_question = fallbackGeneratedQuestion('OFFER_HYPOTHETICAL', next.current_question, '');
+    next.current_question = fallbackGeneratedQuestion('OFFER_HYPOTHETICAL', next.current_question, '', next.profile);
     return next;
   }
   if (decision.action === 'CLARIFY' && extraction?.possible_inconsistency) {

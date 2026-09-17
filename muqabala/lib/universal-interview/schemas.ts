@@ -50,6 +50,11 @@ export const CandidateProfileSchema = z.object({
   career_change: z.boolean(),
   management_experience: z.boolean(),
   language: z.literal('en'),
+  academic_field: z.string().trim().max(120).optional(),
+  qualification: z.string().trim().max(120).optional(),
+  academic_stage: z.string().trim().max(120).optional(),
+  evidence_sources: z.array(z.enum(['EMPLOYMENT', 'INTERNSHIP', 'ACADEMIC', 'VOLUNTEER', 'PERSONAL_PROJECT', 'HYPOTHETICAL'])).max(10).optional(),
+  project_highlight: z.string().trim().max(300).optional(),
 }).strict();
 
 export const DiscoverySchema = z.object({

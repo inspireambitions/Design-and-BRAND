@@ -25,6 +25,7 @@ const schema = z.discriminatedUnion('operation', [
   z.object({ operation: z.literal('review'), payload: z.object({
     attemptId:z.string().uuid(),revision:z.number().int().nonnegative(),
     state:z.enum(['on_track','needs_more','discuss']),comment:z.string().max(280),
+    internalNotes:z.string().max(1000).optional(),
   }).strict() }),
   z.object({ operation: z.literal('undo_review'), payload: z.object({
     attemptId:z.string().uuid(),revision:z.number().int().nonnegative(),

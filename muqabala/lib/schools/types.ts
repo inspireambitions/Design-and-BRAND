@@ -33,6 +33,8 @@ export type RosterParseResult = {
   invalid: { line: number; raw: string; error: string }[];
 };
 
+export type DeliveryMode = 'form_v1' | 'adaptive_v2';
+
 export type FlexibleAssignmentPayload = {
   cohortId: string;
   roleId: string;
@@ -45,6 +47,7 @@ export type FlexibleAssignmentPayload = {
   maxAttempts?: number | null;
   instructions?: string | null;
   status?: 'draft' | 'published' | 'closed';
+  deliveryMode?: DeliveryMode;
 };
 
 export type ProgrammeEntity = {
@@ -101,3 +104,85 @@ export type StudentAssignmentCard = {
   actionHref: string;
 };
 
+export const STANDARD_INSTITUTIONAL_COMPETENCIES = [
+  { id: 'analytical_thinking', label: 'Analytical Thinking', keywords: ['analys', 'data', 'metrics', 'evaluate', 'investigate', 'research', 'critical'] },
+  { id: 'communication', label: 'Verbal & Written Communication', keywords: ['communicat', 'present', 'write', 'report', 'explain', 'articulate', 'client'] },
+  { id: 'collaboration', label: 'Teamwork & Collaboration', keywords: ['team', 'collaborat', 'cross-functional', 'partner', 'relationship', 'stakeholder'] },
+  { id: 'problem_solving', label: 'Structured Problem Solving', keywords: ['problem', 'solve', 'troubleshoot', 'diagnos', 'resolve', 'innovat', 'root cause'] },
+  { id: 'leadership', label: 'Initiative & Leadership', keywords: ['lead', 'initiat', 'owner', 'drive', 'coordinate', 'manage', 'mentoring'] },
+  { id: 'adaptability', label: 'Adaptability & Resilience', keywords: ['adapt', 'resilien', 'fast-paced', 'change', 'agile', 'pressure', 'flexible'] },
+  { id: 'commercial_awareness', label: 'Commercial & Industry Awareness', keywords: ['commercial', 'business', 'market', 'financial', 'revenue', 'cost', 'industry'] },
+  { id: 'attention_to_detail', label: 'Attention to Detail', keywords: ['detail', 'accuracy', 'precise', 'quality', 'compliance', 'standards', 'rigour'] },
+  { id: 'project_management', label: 'Planning & Organisation', keywords: ['plan', 'organis', 'priorit', 'deadline', 'deliver', 'milestone', 'timeline'] },
+  { id: 'technical_proficiency', label: 'Technical Proficiency', keywords: ['technical', 'software', 'tools', 'system', 'methodology', 'framework', 'code'] }
+];
+
+export type CompetencyExtractionResult = {
+  competencies: string[];
+  arabicDetected: boolean;
+};
+
+export function extractCompetenciesFromJobText(jobText: string): string[] {
+  return extractCompetenciesWithMetadata(jobText).competencies;
+}
+
+export function extractCompetenciesWithMetadata(jobText: string): CompetencyExtractionResult {
+  if (!jobText || jobText.trim().length < 20) {
+    return { competencies: [], arabicDetected: false };
+  }
+
+  const arabicRegex = /[\u0600-\u06FF]/;
+  const hasArabic = arabicRegex.test(jobText);
+
+  const lower = jobText.toLowerCase();
+  const matched = STANDARD_INSTITUTIONAL_COMPETENCIES.filter((comp) =>
+    comp.keywords.some((kw) => lower.includes(kw))
+  ).map((c) => c.label);
+
+  return {
+    competencies: matched.slice(0, 5),
+    arabicDetected: hasArabic,
+  };
+}
+
+export type CanonicalQuestionData = {
+  versionId: string;
+  questionIndex: number;
+  questionText: string;
+  noExampleFollowUp?: string | null;
+  rubric: { id: string; label: string; description: string }[];
+};
+
+import type { ExperienceLevel, PlannedQuestion, QuestionType } from '../universal-interview/types.ts';
+
+export function buildAdaptivePlanFromCanonical(
+  canonicalQuestions: CanonicalQuestionData[],
+  competencies: { id: string; name: string }[],
+  profile: { experience_level: ExperienceLevel }
+): PlannedQuestion[] {
+  return canonicalQuestions.map((q, index) => {
+    const assignedComp = competencies[index % competencies.length] || { id: `c_canonical_${index + 1}`, name: 'Core Criterion' };
+    const isIntro = index === 0;
+    let cleanText = q.questionText.trim();
+    if (cleanText.endsWith('.')) cleanText = cleanText.slice(0, -1);
+    if (!cleanText.endsWith('?')) cleanText = `${cleanText}?`;
+    const qType: QuestionType = isIntro ? 'INTRODUCTION' : 'BEHAVIOURAL';
+    return {
+      question_id: `canonical_${index + 1}`,
+      candidate_text: cleanText,
+      interviewer_intent: isIntro ? 'ROLE_RELEVANCE' : 'CHALLENGE_OR_EXECUTION',
+      probe_targets: q.rubric.map((r) => r.id),
+      question_type: qType,
+      target_competencies: [assignedComp.id],
+      seniority: profile.experience_level,
+      language: 'en',
+      source: 'BANK',
+      prompt_version: '1.0',
+      validated: true,
+      rephrase_text: isIntro ? 'What experience from your background is most relevant here?' : 'What is one relevant example from your experience?',
+      framework: 'STAR',
+      kind: 'MAIN',
+      slot: index + 1,
+    };
+  });
+}

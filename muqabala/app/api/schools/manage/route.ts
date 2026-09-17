@@ -59,6 +59,7 @@ const schema=z.discriminatedUnion('operation',[
     maxAttempts:z.number().int().min(1).max(20).optional(),
     instructions:z.string().trim().max(2000).optional(),
     status:z.enum(['draft','published','closed']).optional(),
+    deliveryMode:z.enum(['form_v1','adaptive_v2']).optional(),
   }).strict()}),
   z.object({operation:z.literal('edit_assignment'),payload:z.object({
     assignmentId:uuid,
@@ -72,10 +73,12 @@ const schema=z.discriminatedUnion('operation',[
     maxAttempts:z.number().int().min(1).max(20).optional(),
     instructions:z.string().trim().max(2000).optional(),
     status:z.enum(['draft','published','closed']).optional(),
+    deliveryMode:z.enum(['form_v1','adaptive_v2']).optional(),
   }).strict()}),
   z.object({operation:z.literal('duplicate_assignment'),payload:z.object({
     assignmentId:uuid,
     dueAt:z.string().datetime({offset:true}).optional(),
+    deliveryMode:z.enum(['form_v1','adaptive_v2']).optional(),
   }).strict()}),
 ]);
 export async function POST(request:Request){
