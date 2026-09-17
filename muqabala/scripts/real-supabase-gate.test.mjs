@@ -4,7 +4,13 @@ import { Client } from 'pg';
 import crypto from 'node:crypto';
 import { detectInterventionSignals } from '../lib/schools/intervention.ts';
 
-const CONNECTION_STRING = 'postgresql://postgres.rbumgaluykobrfmhlftg:ekdw7iEOlWkF7ukDbp3MheAuglfqp95Y@aws-0-ap-south-1.pooler.supabase.com:6543/postgres';
+const CONNECTION_STRING = process.env.REAL_SUPABASE_DATABASE_URL;
+
+if (!CONNECTION_STRING) {
+  throw new Error(
+    'REAL_SUPABASE_DATABASE_URL is not set. Set it to the pre-production branch Postgres connection string before running this gate test.'
+  );
+}
 
 describe('REAL SUPABASE PRE-PRODUCTION GATE (Branch: rbumgaluykobrfmhlftg)', () => {
   let client;
