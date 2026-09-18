@@ -15,7 +15,7 @@ import type {
 import { PROMPT_VERSION } from '../universal-interview/types.ts';
 import { newOpaqueToken, tokenHash } from '../server/security.ts';
 import {
-  CanonicalQuestionData,
+  type CanonicalQuestionData,
   buildAdaptivePlanFromCanonical,
 } from './types.ts';
 
@@ -76,9 +76,17 @@ export async function getOrCreateAdaptiveAssignmentSession(input: {
   assignmentId: string;
   studentUserId: string;
   studentProfile?: Partial<CandidateProfile>;
-  retry?: boolean;
+  retry?: boolean | number;
+  targetQuestion?: number;
+  client?: unknown;
 }): Promise<AdaptiveAssignmentSession> {
-  const admin = createAdminClient();
+  const isNumericRetry = typeof input.retry === 'number';
+  const isRetry = isNumericRetry ? true : Boolean(input.retry);
+  const targetQuestion = isNumericRetry
+    ? (input.retry as number)
+    : (input.targetQuestion ?? (typeof input.retry === 'number' ? input.retry : undefined));
+
+  const admin = (input.client as ReturnType<typeof createAdminClient>) || createAdminClient();
   if (!admin) throw new Error('Database admin client unavailable');
 
   // 1. Fetch assignment details
@@ -126,13 +134,13 @@ export async function getOrCreateAdaptiveAssignmentSession(input: {
   const maxAttemptNum = existingAttempts?.reduce((max, a) => Math.max(max, a.attempt_number), 0) || 0;
 
   // If retry requested and no draft exists
-  if (input.retry && !activeDraft) {
+  if (isRetry && !activeDraft) {
     const allowed = assignment.max_attempts == null || maxAttemptNum < assignment.max_attempts;
     if (!allowed) throw new Error('Maximum attempt limit reached');
   }
 
   // 4. Resume existing draft if available and has universal_interview_id
-  if (activeDraft && activeDraft.universal_interview_id && !input.retry) {
+  if (activeDraft && activeDraft.universal_interview_id && !isRetry) {
     const { data: storedRow } = await admin
       .from('universal_interviews')
       .select('id, state_ciphertext, status')
@@ -226,14 +234,19 @@ export async function getOrCreateAdaptiveAssignmentSession(input: {
     candidateProfile,
   );
 
-  // Directly activate with canonical questions
+  const targetIndex = targetQuestion && targetQuestion >= 1 && targetQuestion <= plannedQuestions.length
+    ? targetQuestion - 1
+    : 0;
+
+  // Directly activate with canonical questions, targeting the requested question index on retry with guidance
   const activeState: InterviewState = {
     ...initialState,
     phase: 'ACTIVE',
     confirmed_by_candidate: true,
     blueprint: assignedCompetencies,
     plan: plannedQuestions,
-    current_question: plannedQuestions[0] ? { ...plannedQuestions[0], kind: 'MAIN' } : null,
+    question_number: targetIndex + 1,
+    current_question: plannedQuestions[targetIndex] ? { ...plannedQuestions[targetIndex], kind: 'MAIN' } : null,
   };
 
   // Persist to universal_interviews
@@ -259,29 +272,40 @@ export async function getOrCreateAdaptiveAssignmentSession(input: {
   }));
 
   // Create or update schools_assignment_attempts
-  if (activeDraft) {
-    await admin.from('schools_assignment_attempts').update({
-      delivery_mode: 'adaptive_v2',
-      universal_interview_id: universalInterviewId,
-      engine_version: PROMPT_VERSION,
-      canonical_questions_snapshot: canonicalSnapshot,
-      answers: Array(canonicalQuestions.length).fill(''),
-      updated_at: new Date().toISOString(),
-    }).eq('id', activeDraft.id);
-  } else {
-    await admin.from('schools_assignment_attempts').insert({
-      id: attemptId,
-      assignment_id: input.assignmentId,
-      student_user_id: input.studentUserId,
-      attempt_number: attemptNumber,
-      status: 'draft',
-      delivery_mode: 'adaptive_v2',
-      universal_interview_id: universalInterviewId,
-      engine_version: PROMPT_VERSION,
-      canonical_questions_snapshot: canonicalSnapshot,
-      answers: Array(canonicalQuestions.length).fill(''),
-    });
-  }
+    const initialAnswers = Array(canonicalQuestions.length).fill('');
+    const previousAttempt = existingAttempts?.find((a) => a.status === 'submitted');
+    if (previousAttempt && Array.isArray(previousAttempt.answers)) {
+      for (let i = 0; i < targetIndex; i++) {
+        if (typeof previousAttempt.answers[i] === 'string') {
+          initialAnswers[i] = previousAttempt.answers[i];
+        }
+      }
+    }
+
+    if (activeDraft) {
+      await admin.from('schools_assignment_attempts').update({
+        delivery_mode: 'adaptive_v2',
+        universal_interview_id: universalInterviewId,
+        engine_version: PROMPT_VERSION,
+        canonical_questions_snapshot: canonicalSnapshot,
+        answers: initialAnswers,
+        updated_at: new Date().toISOString(),
+      }).eq('id', activeDraft.id);
+    } else {
+      await admin.from('schools_assignment_attempts').insert({
+        id: attemptId,
+        assignment_id: input.assignmentId,
+        student_user_id: input.studentUserId,
+        attempt_number: attemptNumber,
+        status: 'draft',
+        delivery_mode: 'adaptive_v2',
+        universal_interview_id: universalInterviewId,
+        engine_version: PROMPT_VERSION,
+        canonical_questions_snapshot: canonicalSnapshot,
+        answers: initialAnswers,
+        copied_from_attempt_id: previousAttempt?.id || null,
+      });
+    }
 
   return {
     attemptId,

@@ -8,7 +8,7 @@ export default async function AssignmentPage({params,searchParams}:{params:Promi
   const query=await searchParams;const retryQuestion=['1','2','3','4','5','6','7','8'].includes(query.retry??'')?Number(query.retry):undefined;
   if(!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const {client,user}=await schoolsContext();
-  const {data:assignment}=await client.from('schools_assignments').select('id,cohort_id,due_at,role_id,job_title,delivery_mode').eq('id',id).maybeSingle();
+  const {data:assignment}=await client.from('schools_assignments').select('id,cohort_id,due_at,role_id,job_title,delivery_mode,max_attempts').eq('id',id).maybeSingle();
   if(!assignment) notFound();
   const {data:membership}=await client.from('schools_cohort_members').select('id').eq('cohort_id',assignment.cohort_id).eq('student_user_id',user.id).eq('status','active').maybeSingle();
   if(!membership) notFound();
@@ -21,11 +21,12 @@ export default async function AssignmentPage({params,searchParams}:{params:Promi
   const current=attempts?.[0]??null;
 
   const isAdaptive = assignment.delivery_mode === 'adaptive_v2';
+  const maxAttempts = assignment.max_attempts ?? 3;
 
   return (
     <>
       <h1>{assignment.job_title||assignment.role_id}</h1>
-      <p>{questions.length} questions. {isAdaptive ? 'Conversational practice interview adapted by the Universal Engine.' : 'Use examples from your own experience.'}</p>
+      <p>{questions.length} questions. {isAdaptive ? 'Conversational practice interview tailored to your experience.' : 'Use examples from your own experience.'}</p>
       {isAdaptive ? (
         <SchoolsAdaptivePractice
           assignmentId={id}
@@ -35,6 +36,8 @@ export default async function AssignmentPage({params,searchParams}:{params:Promi
           initial={current}
           dueAt={assignment.due_at}
           roleTitle={assignment.job_title||assignment.role_id}
+          maxAttempts={maxAttempts}
+          retryQuestion={retryQuestion}
         />
       ) : (
         <SchoolsPractice

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { SchoolsFeedback } from './Feedback';
 import type { ExperienceLevel, EvidenceType } from '@/lib/universal-interview/types';
 
@@ -38,6 +38,8 @@ export function SchoolsAdaptivePractice({
   initial,
   dueAt,
   roleTitle,
+  maxAttempts = 3,
+  retryQuestion,
 }: {
   assignmentId: string;
   cohortId: string;
@@ -46,6 +48,8 @@ export function SchoolsAdaptivePractice({
   initial: Attempt | null;
   dueAt: string;
   roleTitle: string;
+  maxAttempts?: number;
+  retryQuestion?: number;
 }) {
   const [attempt, setAttempt] = useState(initial);
   const [step, setStep] = useState<'profile_check' | 'interview' | 'finalizing' | 'finalize_failed' | 'complete'>('profile_check');
@@ -80,6 +84,8 @@ export function SchoolsAdaptivePractice({
   // Identifier for draft persistence: assignmentId + attemptId + questionNumber + probeCount
   const turnKey = `${questionNumber}_${probeCount}`;
 
+  const retryStarted = useRef(false);
+
   // Restore draft when moving to a new question/turn or on initial load
   useEffect(() => {
     if (step !== 'interview' || !attempt?.id || !studentUserId) return;
@@ -102,39 +108,11 @@ export function SchoolsAdaptivePractice({
     clearStoredDraft(studentUserId, assignmentId, attempt.id, turnId);
   };
 
-  // Finalize submission function with idempotent retry capability
-  const executeFinalize = async (attemptId: string) => {
-    setStep('finalizing');
-    setBusy(true);
-    setError('');
-    try {
-      const res = await fetch('/api/schools/adaptive', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'finalize',
-          payload: { attemptId },
-        }),
-      });
-
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error || 'Failed to finalize interview');
-
-      setAttempt((prev) => (prev ? { ...prev, status: 'submitted' } : null));
-      setStep('complete');
-      setMessage('Interview complete! Your answers and evidence breakdown have been saved.');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not finalize interview. Please retry.');
-      setStep('finalize_failed');
-    } finally {
-      setBusy(false);
-    }
-  };
-
   // Initialize or resume session
-  const initSession = async (retry = false) => {
+  const initSession = useCallback(async (retry: boolean | number = false, targetQuestion?: number) => {
     setBusy(true);
     setError('');
+    const resolvedTarget = typeof retry === 'number' ? retry : targetQuestion;
     try {
       const res = await fetch('/api/schools/adaptive', {
         method: 'POST',
@@ -149,7 +127,8 @@ export function SchoolsAdaptivePractice({
               academic_stage: academicStage || undefined,
               evidence_sources: evidenceSources,
             },
-            retry,
+            retry: typeof retry === 'number' ? retry : (resolvedTarget ? resolvedTarget : retry),
+            targetQuestion: resolvedTarget,
           },
         }),
       });
@@ -182,6 +161,47 @@ export function SchoolsAdaptivePractice({
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not start interview');
+    } finally {
+      setBusy(false);
+    }
+  }, [assignmentId, experienceLevel, academicField, academicStage, evidenceSources]);
+
+  // Handle one-time retry navigation intent
+  useEffect(() => {
+    if (!retryQuestion || retryStarted.current) return;
+    retryStarted.current = true;
+    const url = new URL(window.location.href);
+    url.searchParams.delete('retry');
+    window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+    if (submitted && !closed) {
+      void initSession(retryQuestion, retryQuestion);
+    }
+  }, [retryQuestion, submitted, closed, initSession]);
+
+  // Finalize submission function with idempotent retry capability
+  const executeFinalize = async (attemptId: string) => {
+    setStep('finalizing');
+    setBusy(true);
+    setError('');
+    try {
+      const res = await fetch('/api/schools/adaptive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'finalize',
+          payload: { attemptId },
+        }),
+      });
+
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || 'Failed to finalize interview');
+
+      setAttempt((prev) => (prev ? { ...prev, status: 'submitted' } : null));
+      setStep('complete');
+      setMessage('Interview complete! Your answers and evidence breakdown have been saved.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not finalize interview. Please retry.');
+      setStep('finalize_failed');
     } finally {
       setBusy(false);
     }
@@ -260,10 +280,11 @@ export function SchoolsAdaptivePractice({
 
   // If already submitted, display completed view and feedback
   if (submitted) {
+    const remainingAttempts = Math.max(0, maxAttempts - (attempt.attempt_number ?? 1));
     return (
       <>
         <section className="schools-card" style={{ maxWidth: '840px', margin: '20px auto' }}>
-          <h2>Interview Completed (Attempt {attempt.attempt_number})</h2>
+          <h2>Interview Completed (Attempt {attempt.attempt_number} of {maxAttempts})</h2>
           <p>
             Your adaptive interview has been submitted and stored for adviser review.
           </p>
@@ -273,19 +294,25 @@ export function SchoolsAdaptivePractice({
           attemptId={attempt.id}
           rubrics={questions.map((q) => q.rubric)}
           assignmentId={assignmentId}
-          onRetry={() => void initSession(true)}
+          onRetry={(q) => void initSession(true, q)}
           retryBusy={busy}
           status={attempt.feedback_status}
           detail={attempt.evidence_detail}
           covered={attempt.evidence_covered}
         />
 
-        {!closed && (
+        {!closed && remainingAttempts > 0 && (
           <div style={{ textAlign: 'center', marginTop: '24px' }}>
             <button disabled={busy} onClick={() => void initSession(true)}>
-              {busy ? 'Preparing new attempt...' : 'Start a New Practice Attempt'}
+              {busy ? 'Preparing new attempt...' : `Start a new practice attempt (${remainingAttempts} remaining)`}
             </button>
           </div>
+        )}
+
+        {!closed && remainingAttempts <= 0 && (
+          <p style={{ textAlign: 'center', color: '#64748b', marginTop: '20px', fontSize: '14px' }}>
+            You have completed all {maxAttempts} practice attempts for this assignment.
+          </p>
         )}
       </>
     );
@@ -301,7 +328,7 @@ export function SchoolsAdaptivePractice({
         <section className="schools-card">
           <h2>Adaptive Interview Setup: {roleTitle}</h2>
           <p style={{ color: '#4b5563', fontSize: '15px' }}>
-            The Universal Interview Engine adapts its questioning and probing to your background. Confirm your details before beginning:
+            Your practice interview adapts its questioning and probing to your background. Confirm your details before beginning:
           </p>
 
           <label>
@@ -328,12 +355,22 @@ export function SchoolsAdaptivePractice({
 
           <label>
             Academic Stage / Status
-            <input
-              type="text"
-              placeholder="e.g. Final Year Undergraduate, Masters Student, Recent Graduate"
+            <select
               value={academicStage}
               onChange={(e) => setAcademicStage(e.target.value)}
-            />
+            >
+              <option value="">Select your academic stage...</option>
+              <option value="First year">First year</option>
+              <option value="Second year">Second year</option>
+              <option value="Third year">Third year</option>
+              <option value="Fourth year or later">Fourth year or later</option>
+              <option value="Final year">Final year</option>
+              <option value="Postgraduate / Master's">Postgraduate / Master&apos;s</option>
+              <option value="Doctoral">Doctoral</option>
+              <option value="Recent graduate">Recent graduate</option>
+              <option value="Diploma / vocational">Diploma / vocational</option>
+              <option value="Other">Other</option>
+            </select>
           </label>
 
           <div style={{ margin: '16px 0' }}>
@@ -377,13 +414,8 @@ export function SchoolsAdaptivePractice({
         <section className="schools-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '16px' }}>
             <span style={{ fontSize: '13px', fontWeight: 600, color: '#075c50', textTransform: 'uppercase' }}>
-              Question {questionNumber} of {totalQuestions}
+              Question {questionNumber} of {totalQuestions} · Attempt {attempt?.attempt_number ?? 1} of {maxAttempts}
             </span>
-            {probeCount > 0 && (
-              <span style={{ fontSize: '12px', background: '#fef3c7', color: '#92400e', padding: '3px 8px', borderRadius: '12px', fontWeight: 'bold' }}>
-                Follow-up Probe
-              </span>
-            )}
           </div>
 
           <h3 style={{ fontSize: '18px', color: '#163e39', lineHeight: 1.4, margin: '0 0 16px' }}>
@@ -450,7 +482,7 @@ export function SchoolsAdaptivePractice({
               disabled={busy || closed || !answerText.trim()}
               onClick={() => void handleSendAnswer()}
             >
-              {busy ? 'Evaluating response...' : 'Submit Answer & Continue →'}
+              {busy ? 'One moment…' : 'Continue'}
             </button>
           </div>
         </section>
@@ -486,12 +518,12 @@ export function SchoolsAdaptivePractice({
       {/* STEP 5: INTERVIEW COMPLETE */}
       {step === 'complete' && (
         <section className="schools-card" style={{ textAlign: 'center', padding: '32px' }}>
-          <h2>🎉 Practice Interview Completed!</h2>
+          <h2>Practice interview complete</h2>
           <p style={{ color: '#4b5563', fontSize: '15px', marginBottom: '24px' }}>
             Your responses across all {totalQuestions} questions have been finalized and recorded.
           </p>
           <button onClick={() => window.location.reload()}>
-            View Formative Feedback &amp; Evidence Breakdown →
+            View formative feedback &amp; evidence breakdown
           </button>
         </section>
       )}

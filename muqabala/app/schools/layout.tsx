@@ -22,8 +22,9 @@ export default async function SchoolsLayout({children}:{children:React.ReactNode
     ]);
     canViewCohorts = !!assigned?.data?.length || !!memberships?.data?.length;
   }
+  const homeHref = canViewCohorts ? '/schools/home' : (user ? '/schools/me' : '/schools');
   return <div className="schools-shell"><a className="schools-skip" href="#schools-main">Skip to content</a>
-    <header className="schools-header"><div className="schools-brand"><Link href="/">Muqabala</Link><p>Higher Education &amp; Career Centres</p></div>
+    <header className="schools-header"><div className="schools-brand"><Link href={homeHref}>Muqabala</Link><p>Higher Education &amp; Career Centres</p></div>
       <SchoolsNavigation canViewCohorts={canViewCohorts} userId={user?.id}/>
     </header><main id="schools-main">{children}</main>
     <footer><p className="schools-footer-brand">Muqabala by <a href="https://inspireambitions.com/">Inspire Ambitions</a></p>

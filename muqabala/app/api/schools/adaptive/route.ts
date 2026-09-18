@@ -33,7 +33,8 @@ const schema = z.discriminatedUnion('action', [
         preferred_education_terms: z.record(z.string(), z.string()).optional(),
         institution_context_id: z.string().optional(),
       }).optional(),
-      retry: z.boolean().optional(),
+      retry: z.union([z.boolean(), z.number().int().min(1).max(8)]).optional(),
+      targetQuestion: z.number().int().min(1).max(8).optional(),
     }).strict(),
   }),
   z.object({
@@ -85,6 +86,7 @@ export async function POST(request: Request) {
         studentUserId,
         studentProfile: parsed.data.payload.studentProfile,
         retry: parsed.data.payload.retry,
+        targetQuestion: parsed.data.payload.targetQuestion,
       });
 
       return Response.json({

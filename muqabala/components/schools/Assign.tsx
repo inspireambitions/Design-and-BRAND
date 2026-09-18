@@ -575,7 +575,7 @@ export function SchoolsAssign({
               </select>
               <span style={{ fontSize: '12px', color: '#718096' }}>
                 {deliveryMode === 'adaptive_v2'
-                  ? 'The Universal Engine adapts probing and offers student experience fallbacks while strictly evaluating against your approved rubric.'
+                  ? 'The interview adapts probing and offers student experience fallbacks while strictly evaluating against your approved rubric.'
                   : 'Traditional assignment format where learners draft and submit all written answers at once.'}
               </span>
             </label>
@@ -586,15 +586,16 @@ export function SchoolsAssign({
             </label>
 
             <label>
-              Maximum Practice Attempts per Student (1–20, or blank for unlimited)
-              <input
-                type="number"
-                min={1}
-                max={20}
-                value={maxAttempts}
-                onChange={(e) => setMaxAttempts(e.target.value === '' ? '' : Number(e.target.value))}
-              />
-              <span style={{ fontSize: '12px', color: '#718096' }}>
+              Maximum Practice Attempts per Student
+              <select
+                value={maxAttempts === '' ? 3 : maxAttempts}
+                onChange={(e) => setMaxAttempts(Number(e.target.value))}
+              >
+                <option value={1}>1 attempt (Single assessment)</option>
+                <option value={2}>2 attempts (Initial + 1 revision)</option>
+                <option value={3}>3 attempts (Recommended — practice &amp; progress)</option>
+              </select>
+              <span style={{ fontSize: '12px', color: '#718096', display: 'block', marginTop: '4px' }}>
                 Students can practice multiple attempts and compare their own development between revisions.
               </span>
             </label>

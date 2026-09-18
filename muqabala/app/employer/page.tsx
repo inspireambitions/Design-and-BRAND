@@ -265,7 +265,7 @@ export default async function EmployerDashboardPage({ searchParams }: { searchPa
     <EmployerReviewPanelProvider>
     <div className={styles.page}>
       <header className={styles.header}>
-        <Link href="/" className={styles.brand} aria-label="Muqabala home">
+        <Link href="/employer" className={styles.brand} aria-label="Muqabala hiring overview">
           <span className={styles.brandMark} aria-hidden="true"><VideoCamera weight="fill" /></span>
           <span>Muqabala</span>
           <span className={styles.workspaceName}>Evidence Desk</span>

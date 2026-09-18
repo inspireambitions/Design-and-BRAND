@@ -100,7 +100,7 @@ export default async function EmployerInterviewReportPage({ params }: { params: 
     <div className={styles.page}>
       <LoadTiming event="report_load_ms" />
       <header className={styles.header}>
-        <Link href="/" className={styles.brand}>Muqabala</Link>
+        <Link href="/employer" className={styles.brand}>Muqabala</Link>
         <nav aria-label="Employer navigation"><Link href="/employer">All interviews</Link></nav>
       </header>
       <main className={styles.main}>
