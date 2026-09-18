@@ -2,8 +2,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { SchoolsFeedback } from './Feedback';
 type Attempt={id:string;status:string;answers:string[];revision:number;attempt_number:number;feedback_status:string;evidence_detail:unknown;evidence_covered:number|null};
-export function SchoolsPractice({assignmentId,cohortId,questions,initial,dueAt,retryQuestion}:{
-  assignmentId:string;cohortId:string;questions:{text:string;followUp:string;rubric:{id:string;label:string}[]}[];initial:Attempt|null;dueAt:string;retryQuestion?:number;
+export function SchoolsPractice({assignmentId,cohortId,questions,initial,dueAt,retryQuestion,maxAttempts}:{
+  assignmentId:string;cohortId:string;questions:{text:string;followUp:string;rubric:{id:string;label:string}[]}[];initial:Attempt|null;dueAt:string;retryQuestion?:number;maxAttempts?:number|null;
 }) {
   const defaultAnswers=initial?.answers&&initial.answers.length===questions.length?initial.answers:Array.from({length:questions.length},(_,i)=>initial?.answers?.[i]??'');
   const [answers,setAnswers]=useState<string[]>(defaultAnswers);
@@ -22,10 +22,12 @@ export function SchoolsPractice({assignmentId,cohortId,questions,initial,dueAt,r
   // eslint-disable-next-line react-hooks/purity
   const closed=Date.now()>=new Date(dueAt).getTime();
   const submitted=attempt?.status==='submitted';
+  // Mirrors the server rule in schools_retry: no new attempt once max_attempts is used up.
+  const attemptsExhausted=maxAttempts!=null&&(attempt?.attempt_number??0)>=maxAttempts;
   useEffect(()=>{if(!submitted&&retryQuestion)document.getElementById('answer-'+(retryQuestion-1))?.focus();},[submitted,retryQuestion]);
   const retryStarted=useRef(false);
   const startRetry=useCallback(async (question?:number) => {
-    if(locked.current||!attempt||closed)return;
+    if(locked.current||!attempt||closed||attemptsExhausted)return;
     locked.current=true;setBusy(true);setError('');
     try {
       const response=await fetch('/api/schools',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({operation:'retry',payload:{attemptId:attempt.id}}),signal:AbortSignal.timeout(25000)});
@@ -35,7 +37,7 @@ export function SchoolsPractice({assignmentId,cohortId,questions,initial,dueAt,r
       requestAnimationFrame(()=>document.getElementById('answer-'+((question??1)-1))?.focus());
     }catch(error){setError(error instanceof Error?error.message:'Could not start a retry. Please try again.');}
     finally{locked.current=false;setBusy(false);}
-  },[attempt,closed]);
+  },[attempt,closed,attemptsExhausted]);
   useEffect(()=>{
     if(!retryQuestion||retryStarted.current)return;
     // A retry URL is a one-time navigation intent, not a standing instruction
@@ -77,7 +79,8 @@ export function SchoolsPractice({assignmentId,cohortId,questions,initial,dueAt,r
   return <><p role="status" aria-live="polite">{message}</p>{error&&<p role="alert">{error}</p>}
     {submitted?<section className="schools-card"><h2>Your answers are saved</h2><p>Attempt {attempt.attempt_number}. {attempt.feedback_status==='ready'?'Your feedback is available.':'Your feedback is awaiting processing. Your submitted answers are safe.'}</p></section>:null}
     {submitted&&<SchoolsFeedback attemptId={attempt.id} rubrics={questions.map(question=>question.rubric)} assignmentId={assignmentId} onRetry={startRetry} retryBusy={busy} status={initial?.id===attempt.id?initial.feedback_status:attempt.feedback_status} detail={initial?.id===attempt.id?initial.evidence_detail:attempt.evidence_detail} covered={initial?.id===attempt.id?initial.evidence_covered:attempt.evidence_covered}/>}
-    {submitted&&!closed&&<button disabled={busy} onClick={()=>void startRetry(retryQuestion)}>{busy?'Opening your new draft...':retryQuestion?'Retry question '+retryQuestion:'Start a new attempt'}</button>}
+    {submitted&&!closed&&!attemptsExhausted&&<button disabled={busy} onClick={()=>void startRetry(retryQuestion)}>{busy?'Opening your new draft...':retryQuestion?'Retry question '+retryQuestion:'Start a new attempt'}</button>}
+    {submitted&&!closed&&attemptsExhausted&&<p>You have used all {maxAttempts} attempts for this assignment. Your answers and feedback stay available here.</p>}
     {questions.map((question,index)=><fieldset key={index}><legend>Question {index+1}: {question.text}</legend>
       <label htmlFor={'answer-'+index}>Your answer</label><textarea id={'answer-'+index} rows={8} maxLength={12000} value={answers[index]} disabled={submitted||closed}
         onChange={e=>{const next=[...answers];next[index]=e.target.value;latest.current=next;setAnswers(next);}} onBlur={()=>void save()}/>

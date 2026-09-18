@@ -47,6 +47,7 @@ export default async function AssignmentPage({params,searchParams}:{params:Promi
           initial={current}
           dueAt={assignment.due_at}
           retryQuestion={retryQuestion}
+          maxAttempts={assignment.max_attempts}
         />
       )}
     </>
