@@ -382,8 +382,9 @@ try {
   const instB = crypto.randomUUID();
   made.institutions.push(instA, instB);
   // schools_write refuses draft/submit unless the institution has completed setup and the DPA.
-  await db.query(`INSERT INTO public.schools_institutions (id,name,country,language,setup_complete,dpa_complete) VALUES ($1,'Acceptance Uni A','AE','en',true,true)`, [instA]);
-  await db.query(`INSERT INTO public.schools_institutions (id,name,country,language,setup_complete,dpa_complete) VALUES ($1,'Acceptance Uni B','AE','en',true,true)`, [instB]);
+  // schools_institutions_check: setup_complete requires dpa_complete, dpa_reference, approved_by and approved_at.
+  await db.query(`INSERT INTO public.schools_institutions (id,name,country,language,setup_complete,dpa_complete,dpa_reference,approved_by,approved_at) VALUES ($1,'Acceptance Uni A','AE','en',true,true,'ACCEPTANCE-DPA',$2,now())`, [instA, educator.id]);
+  await db.query(`INSERT INTO public.schools_institutions (id,name,country,language,setup_complete,dpa_complete,dpa_reference,approved_by,approved_at) VALUES ($1,'Acceptance Uni B','AE','en',true,true,'ACCEPTANCE-DPA',$2,now())`, [instB, educatorB.id]);
   await db.query(`INSERT INTO public.schools_institution_members (institution_id,user_id,role,accepted_at) VALUES ($1,$2,'educator',now())`, [instA, educator.id]);
   await db.query(`INSERT INTO public.schools_institution_members (institution_id,user_id,role,accepted_at) VALUES ($1,$2,'educator',now())`, [instB, educatorB.id]);
 
@@ -668,12 +669,12 @@ try {
     );
     await attachFeedback(otherAttempt, peerAnswers);
     const internalNote = `INTERNAL-${crypto.randomBytes(4).toString('hex')}`;
+    // A failed insert here would make the internal-notes check vacuous, so it must throw.
     await db.query(
-      `INSERT INTO public.schools_reviews (id, assignment_attempt_id, educator_user_id, state, comment, internal_notes, revision)
-       VALUES ($1,$2,$3,'on_track','Well done', $4, 0)
-       ON CONFLICT DO NOTHING`,
+      `INSERT INTO public.schools_reviews (id, assignment_attempt_id, educator_id, state, comment, internal_notes, revision)
+       VALUES ($1,$2,$3,'on_track','Well done', $4, 0)`,
       [crypto.randomUUID(), otherAttempt, educator.id, internalNote],
-    ).catch(() => {});
+    );
 
     await signInBrowserAs(student);
     const peerRead = await nodeFetch(`/schools/me/reports/${otherAttempt}`);
@@ -792,6 +793,7 @@ try {
   notPerformed('SEO_GUARDRAILS', 'not implemented as a measured check in this harness');
 } catch (err) {
   console.error('HARNESS ERROR:', err);
+  record('HARNESS', 'FAIL', `harness crashed before all gates ran: ${String(err.message || err).slice(0, 200)}`);
   exitCode = 4;
 } finally {
   // -------------------------------------------------------------- cross-cutting
@@ -843,6 +845,10 @@ try {
   // ------------------------------------------------------------------ cleanup
   try {
     for (const id of made.assignments) {
+      await db.query(`DELETE FROM public.schools_reviews WHERE assignment_attempt_id IN (SELECT id FROM public.schools_assignment_attempts WHERE assignment_id=$1)`, [id]).catch(() => {});
+      await db.query(`DELETE FROM public.schools_evidence_corrections WHERE assignment_attempt_id IN (SELECT id FROM public.schools_assignment_attempts WHERE assignment_id=$1)`, [id]).catch(() => {});
+      await db.query(`UPDATE public.schools_assignment_attempts SET feedback_status='pending', feedback_version_id=NULL WHERE assignment_id=$1`, [id]).catch(() => {});
+      await db.query(`DELETE FROM public.schools_feedback_versions WHERE assignment_attempt_id IN (SELECT id FROM public.schools_assignment_attempts WHERE assignment_id=$1)`, [id]).catch(() => {});
       await db.query(`DELETE FROM public.schools_assignment_attempts WHERE assignment_id=$1`, [id]).catch(() => {});
       await db.query(`DELETE FROM public.schools_assignment_questions WHERE assignment_id=$1`, [id]).catch(() => {});
       await db.query(`DELETE FROM public.schools_assignments WHERE id=$1`, [id]).catch(() => {});
