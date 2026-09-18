@@ -476,19 +476,57 @@ try {
       notPerformed('NO_EXAMPLE_SAFETY', 'the adaptive interview room needs OPENAI_API_KEY to reach the question step; not present in .env.preview.local');
       return;
     }
-    const outcome = await evaluate(`(() => {
-      const ta = document.querySelector('textarea');
-      if (!ta) return { ran: false };
-      ta.value = 'MY OWN TYPED ANSWER';
-      ta.dispatchEvent(new Event('input', { bubbles: true }));
-      const btn = [...document.querySelectorAll('button')].find(b => /don.t have a direct example/i.test(b.innerText));
-      if (!btn) return { ran: false };
-      btn.click();
-      return { ran: true, value: document.querySelector('textarea').value };
-    })()`);
-    if (!outcome.ran) { notPerformed('NO_EXAMPLE_SAFETY', 'the control was not reachable on this screen'); return; }
-    gatePass('NO_EXAMPLE_SAFETY', outcome.value.includes('MY OWN TYPED ANSWER'),
-      `typed answer ${outcome.value.includes('MY OWN TYPED ANSWER') ? 'preserved' : 'was overwritten'} by the no-example control`);
+    // Drives the adaptive room as the signed-in student through the same API the
+    // page uses. Required path: no direct experience -> BROADEN_SETTING -> still
+    // nothing -> OFFER_HYPOTHETICAL -> hypothetical answer stays labelled as such.
+    const adaptive = (action, payload) => pageFetch('/api/schools/adaptive', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, payload }),
+    });
+    const parse = (r) => { try { return JSON.parse(r.body); } catch { return {}; } };
+    const opened = await adaptive('get_or_create', {
+      assignmentId: adaptiveRoomAsgn,
+      studentProfile: { experience_level: 'ENTRY', academic_field: 'BSc Hospitality Management', academic_stage: 'Second year', evidence_sources: ['ACADEMIC'] },
+    });
+    const openedBody = parse(opened);
+    if (opened.status !== 200 || !openedBody.result?.attemptId) {
+      record('NO_EXAMPLE_SAFETY', 'FAIL', `could not open the adaptive room: http ${opened.status} ${(openedBody.error || '').slice(0, 120)}`);
+      return;
+    }
+    const attemptId = openedBody.result.attemptId;
+    const actions = [];
+    const questions = [];
+    let turn = await adaptive('submit_turn', { attemptId, answerText: "I don't have that experience" });
+    let body = parse(turn);
+    actions.push(body.result?.action || `http ${turn.status}`);
+    questions.push(body.result?.currentQuestion || null);
+    if (body.result?.action === 'BROADEN_SETTING') {
+      turn = await adaptive('submit_turn', { attemptId, answerText: 'I have no experience with that' });
+      body = parse(turn);
+      actions.push(body.result?.action || `http ${turn.status}`);
+      questions.push(body.result?.currentQuestion || null);
+    }
+    const broadened = actions[0] === 'BROADEN_SETTING';
+    const hypotheticalOffered = actions.includes('OFFER_HYPOTHETICAL');
+    const offerQuestion = questions[actions.indexOf('OFFER_HYPOTHETICAL')] || null;
+    const offerLabelled = !!offerQuestion && (
+      /HYPOTHETICAL/i.test(`${offerQuestion.kind || ''} ${offerQuestion.interviewerIntent || ''}`) || /if you faced|what would you do|imagine/i.test(offerQuestion.text || ''));
+    let answeredAction = null;
+    let ledgerEntry = null;
+    let fabricated = null;
+    if (hypotheticalOffered) {
+      const answered = await adaptive('submit_turn', { attemptId,
+        answerText: 'If I faced that, I would first listen to the guest without interrupting, apologise for the problem, offer two options to put it right, and check back with them before the end of their stay.' });
+      answeredAction = parse(answered).result?.action || `http ${answered.status}`;
+      const row = (await db.query(`SELECT evidence_ledger, adaptive_turns FROM public.schools_assignment_attempts WHERE id=$1`, [attemptId])).rows[0];
+      const ledger = Array.isArray(row?.evidence_ledger) ? row.evidence_ledger : [];
+      ledgerEntry = ledger.find((e) => e.question_number === 1) || null;
+      fabricated = ledger.some((e) => e.question_number === 1 && e.evidence_type && e.evidence_type !== 'HYPOTHETICAL');
+    }
+    const labelled = !!ledgerEntry && ledgerEntry.evidence_type === 'HYPOTHETICAL';
+    const credited = !!ledgerEntry && Object.keys(ledgerEntry.competencies || {}).length > 0;
+    const continued = !!answeredAction && !/^http/.test(answeredAction) && answeredAction !== 'OFFER_HYPOTHETICAL';
+    gatePass('NO_EXAMPLE_SAFETY', broadened && hypotheticalOffered && offerLabelled && labelled && credited && !fabricated && continued,
+      `actions=${[...actions, answeredAction].filter(Boolean).join(' -> ')}, broaden first=${broadened}, hypothetical offered=${hypotheticalOffered}, offer labelled=${offerLabelled}, ledger evidence_type=${ledgerEntry?.evidence_type ?? 'none'}, credited=${credited}, fabricated experience=${fabricated === null ? 'n/a' : fabricated}, interview continued=${continued}`);
   });
 
   // ================================================ GATE: FORM_V1 + drafts
