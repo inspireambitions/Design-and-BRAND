@@ -222,26 +222,156 @@ export function SchoolsFeedback({
         </div>
       )}
 
-      {/* ACTION PLAN: ADD THIS FIRST */}
+      {/* 1. WHAT YOU DID WELL */}
+      <div style={{ marginBottom: '28px' }}>
+        <h3 style={{ fontSize: '16px', color: '#166534', margin: '0 0 12px' }}>
+          1. What you did well
+        </h3>
+        <div style={{ display: 'grid', gap: '8px' }}>
+          {parsed.data.questions.flatMap((q) =>
+            q.elements
+              .filter((e) => e.present)
+              .map((e) => {
+                const rubricLabel = rubrics?.[q.questionIndex]?.find((elem) => elem.id === e.id)?.label ?? e.id;
+                return (
+                  <div
+                    key={`well_${q.questionIndex}_${e.id}`}
+                    style={{
+                      background: '#f0fdf4',
+                      border: '1px solid #bbf7d0',
+                      borderRadius: '6px',
+                      padding: '10px 14px',
+                      display: 'flex',
+                      alignItems: 'baseline',
+                      justifyContent: 'space-between',
+                      gap: '12px',
+                    }}
+                  >
+                    <div>
+                      <strong style={{ fontSize: '13px', color: '#166534' }}>
+                        Question {q.questionIndex + 1}: {rubricLabel}
+                      </strong>
+                      {e.supportingText && (
+                        <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#334155', fontStyle: 'italic' }}>
+                          &ldquo;{e.supportingText}&rdquo;
+                        </p>
+                      )}
+                    </div>
+                    <span style={{ fontSize: '11px', fontWeight: 600, color: '#15803d', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                      Demonstrated
+                    </span>
+                  </div>
+                );
+              })
+          )}
+          {resolvedCovered === 0 && (
+            <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
+              No criteria met the threshold in this attempt. Review the suggestions below to build your evidence.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* 2. WHAT TO STRENGTHEN */}
+      <div style={{ marginBottom: '28px' }}>
+        <h3 style={{ fontSize: '16px', color: '#9a3412', margin: '0 0 12px' }}>
+          2. What to strengthen
+        </h3>
+        <div style={{ display: 'grid', gap: '8px' }}>
+          {parsed.data.questions.flatMap((q) =>
+            q.elements
+              .filter((e) => !e.present)
+              .map((e) => {
+                const rubricLabel = rubrics?.[q.questionIndex]?.find((elem) => elem.id === e.id)?.label ?? e.id;
+                return (
+                  <div
+                    key={`strengthen_${q.questionIndex}_${e.id}`}
+                    style={{
+                      background: '#fff7ed',
+                      border: '1px solid #fed7aa',
+                      borderRadius: '6px',
+                      padding: '10px 14px',
+                      display: 'flex',
+                      alignItems: 'baseline',
+                      justifyContent: 'space-between',
+                      gap: '12px',
+                    }}
+                  >
+                    <div>
+                      <strong style={{ fontSize: '13px', color: '#9a3412' }}>
+                        Question {q.questionIndex + 1}: {rubricLabel}
+                      </strong>
+                      <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#7c2d12' }}>
+                        Include a specific example showing how you handled this situation and what the outcome was.
+                      </p>
+                    </div>
+                    <span style={{ fontSize: '11px', fontWeight: 600, color: '#c2410c', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                      To develop
+                    </span>
+                  </div>
+                );
+              })
+          )}
+        </div>
+      </div>
+
+      {/* 3. EVIDENCE FROM YOUR RESPONSE */}
+      <div style={{ marginBottom: '28px' }}>
+        <h3 style={{ fontSize: '16px', color: '#1e293b', margin: '0 0 12px' }}>
+          3. Evidence from your response
+        </h3>
+        <div style={{ display: 'grid', gap: '10px' }}>
+          {parsed.data.questions.flatMap((q) =>
+            q.elements
+              .filter((e) => e.present && e.supportingText)
+              .map((e) => {
+                const rubricLabel = rubrics?.[q.questionIndex]?.find((elem) => elem.id === e.id)?.label ?? e.id;
+                return (
+                  <blockquote
+                    key={`quote_${q.questionIndex}_${e.id}`}
+                    style={{
+                      margin: 0,
+                      padding: '10px 14px',
+                      background: '#f8fafc',
+                      borderLeft: '3px solid #059669',
+                      borderRadius: '0 6px 6px 0',
+                      fontSize: '13px',
+                      color: '#334155',
+                    }}
+                  >
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#047857', marginBottom: '4px', textTransform: 'uppercase' }}>
+                      Question {q.questionIndex + 1} &middot; {rubricLabel}
+                    </div>
+                    &ldquo;{e.supportingText}&rdquo;
+                  </blockquote>
+                );
+              })
+          )}
+          {parsed.data.questions.every((q) => q.elements.every((e) => !e.present || !e.supportingText)) && (
+            <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
+              No direct quotation excerpts were extracted. Practice providing concrete examples with actions and outcomes.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* 4. WHAT TO PRACTISE NEXT */}
       {firstPriority && (
         <div
           style={{
-            background: '#fffbeb',
-            border: '1px solid #fef3c7',
-            borderLeft: '4px solid #d97706',
+            background: '#f0fdf4',
+            border: '1px solid #bbf7d0',
+            borderLeft: '4px solid #16a34a',
             borderRadius: '6px',
             padding: '16px 20px',
             marginBottom: '28px',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-            <span style={{ fontSize: '18px' }}>🎯</span>
-            <h3 style={{ margin: 0, fontSize: '16px', color: '#92400e' }}>
-              Action Plan: Highest Priority Improvement
-            </h3>
-          </div>
-          <p style={{ margin: '6px 0 12px', fontSize: '14px', color: '#78350f', lineHeight: 1.5 }}>
-            Focus on Question {firstPriority.questionIndex + 1}: {firstPriority.improvement}
+          <h3 style={{ margin: '0 0 8px', fontSize: '16px', color: '#166534' }}>
+            4. What to practise next
+          </h3>
+          <p style={{ margin: '0 0 12px', fontSize: '14px', color: '#14532d', lineHeight: 1.5 }}>
+            <strong>Highest priority area &mdash; Question {firstPriority.questionIndex + 1}:</strong> {firstPriority.improvement}
           </p>
           <div>
             {onRetry ? (
@@ -250,7 +380,7 @@ export function SchoolsFeedback({
                 onClick={() => onRetry(firstPriority.questionIndex + 1)}
                 style={{ fontSize: '13px', padding: '8px 14px' }}
               >
-                {retryBusy ? 'Opening draft...' : `Retry Question ${firstPriority.questionIndex + 1} with Guidance`}
+                {retryBusy ? 'Opening draft...' : `Practise Question ${firstPriority.questionIndex + 1}`}
               </button>
             ) : (
               assignmentId && (
@@ -267,7 +397,7 @@ export function SchoolsFeedback({
                     textDecoration: 'none',
                   }}
                 >
-                  Retry Question {firstPriority.questionIndex + 1} with Guidance &rarr;
+                  Practise Question {firstPriority.questionIndex + 1} &rarr;
                 </Link>
               )
             )}
@@ -275,103 +405,93 @@ export function SchoolsFeedback({
         </div>
       )}
 
-      {/* PER-QUESTION EVIDENCE BREAKDOWN */}
-      <h3 style={{ fontSize: '18px', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px', marginBottom: '16px' }}>
-        Question-by-Question Rubric Evaluation
-      </h3>
+      {/* 5. SECONDARY RUBRIC BREAKDOWN */}
+      <details
+        style={{
+          marginTop: '20px',
+          borderTop: '1px solid #e2e8f0',
+          paddingTop: '16px',
+        }}
+      >
+        <summary
+          style={{
+            fontSize: '14px',
+            fontWeight: 600,
+            color: '#475569',
+            cursor: 'pointer',
+            padding: '6px 0',
+          }}
+        >
+          5. Secondary rubric breakdown (Click to expand detailed evaluation)
+        </summary>
 
-      <div style={{ display: 'grid', gap: '20px' }}>
-        {parsed.data.questions.map((q) => {
-          const coveredCount = q.elements.filter((e) => e.present).length;
-          return (
-            <div
-              key={q.questionIndex}
-              style={{
-                background: '#fff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '8px',
-                padding: '16px 20px',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <h4 style={{ margin: 0, fontSize: '16px', color: '#163e39' }}>
-                  Question {q.questionIndex + 1}
-                </h4>
-                <span
-                  style={{
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    padding: '3px 8px',
-                    borderRadius: '12px',
-                    background: coveredCount === 4 ? '#dcfce7' : coveredCount >= 2 ? '#fef9c3' : '#fee2e2',
-                    color: coveredCount === 4 ? '#166534' : coveredCount >= 2 ? '#854d0e' : '#991b1b',
-                  }}
-                >
-                  {coveredCount} of 4 criteria demonstrated
-                </span>
-              </div>
+        <div style={{ display: 'grid', gap: '16px', marginTop: '14px' }}>
+          {parsed.data.questions.map((q) => {
+            const coveredCount = q.elements.filter((e) => e.present).length;
+            return (
+              <div
+                key={`rubric_breakdown_${q.questionIndex}`}
+                style={{
+                  background: '#fff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  padding: '14px 18px',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <h4 style={{ margin: 0, fontSize: '15px', color: '#163e39' }}>
+                    Question {q.questionIndex + 1}
+                  </h4>
+                  <span
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      background: coveredCount === 4 ? '#dcfce7' : coveredCount >= 2 ? '#fef9c3' : '#fee2e2',
+                      color: coveredCount === 4 ? '#166534' : coveredCount >= 2 ? '#854d0e' : '#991b1b',
+                    }}
+                  >
+                    {coveredCount} of 4 criteria demonstrated
+                  </span>
+                </div>
 
-              {/* Rubric Elements Checklist */}
-              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 14px' }}>
-                {q.elements.map((e) => {
-                  const rubricLabel = rubrics?.[q.questionIndex]?.find((elem) => elem.id === e.id)?.label ?? e.id;
-                  return (
-                    <li
-                      key={e.id}
-                      style={{
-                        padding: '8px 10px',
-                        borderRadius: '6px',
-                        marginBottom: '6px',
-                        background: e.present ? '#f0fdf4' : '#fafafa',
-                        border: e.present ? '1px solid #bbf7d0' : '1px dashed #e2e8f0',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: e.present ? '#166534' : '#64748b' }}>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                  {q.elements.map((e) => {
+                    const rubricLabel = rubrics?.[q.questionIndex]?.find((elem) => elem.id === e.id)?.label ?? e.id;
+                    return (
+                      <li
+                        key={e.id}
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: '4px',
+                          marginBottom: '4px',
+                          background: e.present ? '#f0fdf4' : '#fafafa',
+                          border: e.present ? '1px solid #bbf7d0' : '1px dashed #e2e8f0',
+                          fontSize: '13px',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <span style={{ color: e.present ? '#166534' : '#64748b', fontWeight: e.present ? 600 : 400 }}>
                           {e.present ? '✓' : '○'} {rubricLabel}
                         </span>
-                        <span
-                          style={{
-                            fontSize: '11px',
-                            fontWeight: 'bold',
-                            textTransform: 'uppercase',
-                            color: e.present ? '#15803d' : '#94a3b8',
-                          }}
-                        >
+                        <span style={{ fontSize: '11px', fontWeight: 600, color: e.present ? '#15803d' : '#94a3b8', textTransform: 'uppercase' }}>
                           {e.present ? 'Demonstrated' : 'Not observed'}
                         </span>
-                      </div>
-                      {e.present && e.supportingText && (
-                        <blockquote
-                          style={{
-                            margin: '6px 0 0',
-                            padding: '6px 10px',
-                            background: '#fff',
-                            borderLeft: '3px solid #22c55e',
-                            fontSize: '12px',
-                            color: '#334155',
-                            fontStyle: 'italic',
-                          }}
-                        >
-                          &ldquo;{e.supportingText}&rdquo;
-                        </blockquote>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-
-              {/* Coaching Improvement */}
-              <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '6px', fontSize: '13px', color: '#475569' }}>
-                <strong>Adviser Recommendation:</strong> {q.improvement}
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      </details>
 
       <p style={{ fontSize: '12px', color: '#64748b', marginTop: '24px', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
-        <strong>Formative Feedback Notice:</strong> Criteria counts reflect objective behavioral evidence found in your written responses. They are designed exclusively for developmental learning, do not constitute psychometric profiling, and do not predict employer hiring outcomes.
+        <strong>Formative Feedback Notice:</strong> Criteria counts reflect objective behavioral evidence found in your written responses. They are designed exclusively for developmental learning and do not constitute psychometric profiling.
       </p>
     </section>
   );
