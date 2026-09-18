@@ -138,10 +138,7 @@ export default async function SchoolsHomePage() {
           gap: '16px',
         }}>
           {/* Awaiting Review Card */}
-          <div className="schools-card" style={{
-            margin: 0,
-            borderLeft: pendingReviewCount > 0 ? '4px solid #b44e0d' : '4px solid #075c50',
-          }}>
+          <div className="schools-card" style={{ margin: 0 }}>
             <p className="schools-eyebrow" style={{ margin: 0 }}>Human Review</p>
             <h2 style={{ fontSize: '1.2rem', margin: '6px 0' }}>
               {pendingReviewCount > 0
@@ -163,10 +160,7 @@ export default async function SchoolsHomePage() {
           </div>
 
           {/* Student Support Requests Card */}
-          <div className="schools-card" style={{
-            margin: 0,
-            borderLeft: openSupportCount > 0 ? '4px solid #d97706' : '4px solid #075c50',
-          }}>
+          <div className="schools-card" style={{ margin: 0 }}>
             <p className="schools-eyebrow" style={{ margin: 0 }}>Learner Guidance</p>
             <h2 style={{ fontSize: '1.2rem', margin: '6px 0' }}>
               {openSupportCount > 0
@@ -188,10 +182,7 @@ export default async function SchoolsHomePage() {
           </div>
 
           {/* Approaching Deadlines Card */}
-          <div className="schools-card" style={{
-            margin: 0,
-            borderLeft: closingSoonAssignments.length > 0 ? '4px solid #3b82f6' : '4px solid #c9d8d0',
-          }}>
+          <div className="schools-card" style={{ margin: 0 }}>
             <p className="schools-eyebrow" style={{ margin: 0 }}>Assignment Deadlines</p>
             <h2 style={{ fontSize: '1.2rem', margin: '6px 0' }}>
               {closingSoonAssignments.length > 0
