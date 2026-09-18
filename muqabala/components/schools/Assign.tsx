@@ -392,7 +392,7 @@ export function SchoolsAssign({
                   fontSize: '13px',
                 }}
               >
-                {showStudentPreview ? 'Hide Student Preview' : '👁 Preview as Student'}
+                {showStudentPreview ? 'Hide student preview' : 'Preview as student'}
               </button>
             </div>
 

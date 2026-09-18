@@ -68,7 +68,7 @@ export function EvaluationReportView({
                     ) : (
                       <div className={styles.staticTicket}>
                         <strong>Q{line.question_number} {formatPlaybackTime(line.timestamp_seconds)}</strong>
-                        <code>{line.evidence_id}</code>
+                        <code>{sample ? `EVD-Q${line.question_number}-${String(line.timestamp_seconds).padStart(3, '0')}` : line.evidence_id}</code>
                       </div>
                     )}
                   </li>
