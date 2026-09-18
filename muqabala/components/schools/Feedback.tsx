@@ -186,9 +186,9 @@ export function SchoolsFeedback({
     <section className="schools-card" style={{ maxWidth: '840px', margin: '20px auto' }}>
       <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '16px', marginBottom: '20px' }}>
         <span style={{ fontSize: '12px', fontWeight: 600, color: '#075c50', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-          Formative Practice Evaluation
+          Your practice feedback
         </span>
-        <h2 style={{ margin: '4px 0 8px' }}>Your Evidence-Based Feedback</h2>
+        <h2 style={{ margin: '4px 0 8px' }}>Here is how your answers came across</h2>
         <p style={{ color: '#4a5568', margin: 0, fontSize: '15px' }}>
           Evidence demonstrated: <strong>{resolvedCovered ?? 0}</strong> of <strong>{totalPossible}</strong> criteria across {parsed.data.questions.length} questions.
         </p>
@@ -491,7 +491,7 @@ export function SchoolsFeedback({
       </details>
 
       <p style={{ fontSize: '12px', color: '#64748b', marginTop: '24px', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
-        <strong>Formative Feedback Notice:</strong> Criteria counts reflect objective behavioral evidence found in your written responses. They are designed exclusively for developmental learning and do not constitute psychometric profiling.
+        A note from your coach: these points come only from what you wrote in your answers. They are here to help you practise and improve. They are not a judgement of you as a person and they are not shared with employers.
       </p>
     </section>
   );

@@ -326,13 +326,13 @@ export function SchoolsAdaptivePractice({
       {/* STEP 1: CONTEXT CHECK */}
       {step === 'profile_check' && (
         <section className="schools-card">
-          <h2>Adaptive Interview Setup: {roleTitle}</h2>
+          <h2>Before we start: {roleTitle}</h2>
           <p style={{ color: '#4b5563', fontSize: '15px' }}>
-            Your practice interview adapts its questioning and probing to your background. Confirm your details before beginning:
+            Tell us a little about where you are right now, so the questions fit your experience. It takes less than a minute.
           </p>
 
           <label>
-            Career / Study Stage
+            Where are you in your career or studies?
             <select
               value={experienceLevel}
               onChange={(e) => setExperienceLevel(e.target.value as ExperienceLevel)}
@@ -344,7 +344,7 @@ export function SchoolsAdaptivePractice({
           </label>
 
           <label>
-            Degree or Subject Field (optional)
+            Your degree or subject (optional)
             <input
               type="text"
               placeholder="e.g. BSc Finance &amp; Accounting, BEng Software Engineering"
@@ -354,12 +354,12 @@ export function SchoolsAdaptivePractice({
           </label>
 
           <label>
-            Academic Stage / Status
+            Your year of study
             <select
               value={academicStage}
               onChange={(e) => setAcademicStage(e.target.value)}
             >
-              <option value="">Select your academic stage...</option>
+              <option value="">Choose your year of study</option>
               <option value="First year">First year</option>
               <option value="Second year">Second year</option>
               <option value="Third year">Third year</option>
@@ -375,7 +375,7 @@ export function SchoolsAdaptivePractice({
 
           <div style={{ margin: '16px 0' }}>
             <span style={{ fontWeight: 'bold', fontSize: '14px', display: 'block', marginBottom: '8px' }}>
-              Available Evidence Sources to Draw From
+              Where could your examples come from? Tick all that apply.
             </span>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px' }}>
               {[
@@ -404,7 +404,7 @@ export function SchoolsAdaptivePractice({
           </div>
 
           <button disabled={busy || closed} onClick={() => void initSession(false)} style={{ marginTop: '16px' }}>
-            {busy ? 'Preparing interview...' : 'Begin Adaptive Interview →'}
+            {busy ? 'Getting your first question ready...' : 'Start the practice interview'}
           </button>
         </section>
       )}

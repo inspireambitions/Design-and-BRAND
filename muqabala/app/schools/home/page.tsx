@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { schoolsContext } from '@/lib/schools/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { buildSchoolsCohortSummaries } from '@/lib/schools/dashboard';
 
 type CohortDetailRow = {
@@ -39,15 +40,24 @@ export default async function SchoolsHomePage() {
     redirect(students.data?.length ? '/schools/me' : '/schools/access');
   }
 
+  // Cohort rows are read with the service client once the caller's role is
+  // established above. The authenticated role only holds column-level SELECT on
+  // schools_cohorts (id, name, campus, faculty, programme, programme_id), so
+  // filtering on institution_id or archived_at through the user client raises
+  // "permission denied for table schools_cohorts".
+  const admin = createAdminClient();
+  if (!admin) throw new Error('Schools storage is not configured');
+
   // Load cohorts assigned to educator or in institution if admin
   let cohortIds: string[] = [];
   if (isInstitutionAdmin) {
     const instId = memberships.data.find((m) => m.role === 'institution_admin')?.institution_id;
-    const allCohorts = await client
+    const allCohorts = await admin
       .from('schools_cohorts')
       .select('id')
       .eq('institution_id', instId)
       .is('archived_at', null);
+    if (allCohorts.error) throw new Error('Could not load institution cohorts');
     cohortIds = (allCohorts.data || []).map((c) => c.id);
   } else {
     const assignedResult = await client
@@ -59,7 +69,7 @@ export default async function SchoolsHomePage() {
 
   const [cohortsResult, membersResult, assignmentsResult, supportResult] = await Promise.all([
     cohortIds.length
-      ? client.from('schools_cohorts').select('id,name,programme,faculty,campus,programme_id').in('id', cohortIds).is('archived_at', null)
+      ? admin.from('schools_cohorts').select('id,name,programme,faculty,campus,programme_id').in('id', cohortIds).is('archived_at', null)
       : { data: [], error: null },
     cohortIds.length
       ? client.from('schools_cohort_members').select('cohort_id,student_user_id,status,display_name').in('cohort_id', cohortIds).eq('status', 'active')
