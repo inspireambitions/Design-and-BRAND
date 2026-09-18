@@ -4,6 +4,9 @@ import { createClient } from '@/lib/supabase/server';
 import { hasTrustedOrigin } from '@/lib/server/security';
 import { prepareSchoolsFeedback } from '@/lib/schools/feedback';
 import { touchSchoolsSession } from '@/lib/schools/session';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { isEligibleForFeedbackRecovery, recoverStuckFeedbackAttempts } from '@/lib/schools/feedback-recovery';
+
 export const maxDuration=60;
 export async function POST(request:Request) {
   const unavailable=schoolsUnavailable();if(unavailable)return unavailable;
@@ -13,8 +16,15 @@ export async function POST(request:Request) {
   if(!await touchSchoolsSession(client))return Response.json({error:'Your session ended. Sign in again.'},{status:401});
   const parsed=z.object({attemptId:z.string().uuid()}).strict().safeParse(await request.json().catch(()=>null));
   if(!parsed.success)return Response.json({error:'Invalid request'},{status:400});
-  const {data:attempt}=await client.from('schools_assignment_attempts').select('id,status,feedback_status').eq('id',parsed.data.attemptId).eq('student_user_id',user.user.id).eq('status','submitted').maybeSingle();
+  const {data:attempt}=await client.from('schools_assignment_attempts').select('id,status,feedback_status,feedback_tries,feedback_failure_code').eq('id',parsed.data.attemptId).eq('student_user_id',user.user.id).eq('status','submitted').maybeSingle();
   if(!attempt)return Response.json({error:'Not found'},{status:404});
+
+  // If attempt was stuck at claim ceiling due to the confirmed defect, recover it boundedly
+  if(attempt.feedback_status==='failed'&&isEligibleForFeedbackRecovery(attempt)){
+    const admin=createAdminClient();
+    if(admin)await recoverStuckFeedbackAttempts(admin);
+  }
+
   const ready=attempt.feedback_status==='ready'||await prepareSchoolsFeedback(attempt.id);
   return Response.json({ready},{status:ready?200:202,headers:{'Cache-Control':'no-store'}});
 }

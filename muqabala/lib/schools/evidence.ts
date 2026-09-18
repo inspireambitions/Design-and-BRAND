@@ -31,33 +31,79 @@ export const schoolsProviderFeedbackSchema=z.object({questions:z.array(z.object(
 }).strict()).min(3).max(8)}).strict();
 
 /** Offsets always refer to the original stored answer, including its spelling. */
-export function answerExcerpts(answer:string){
-  const excerpts:{index:number;text:string;start:number;end:number}[]=[];
-  for(const part of new Intl.Segmenter('en',{granularity:'sentence'}).segment(answer)){
-    for(let offset=0;offset<part.segment.length;){
-      let end=Math.min(offset+1200,part.segment.length);
-      if(end<part.segment.length){const boundary=part.segment.lastIndexOf(' ',end);if(boundary>offset)end=boundary;}
-      const lastUnit=part.segment.charCodeAt(end-1);if(end<part.segment.length&&lastUnit>=0xD800&&lastUnit<=0xDBFF)end--;
-      const slice=part.segment.slice(offset,end),text=slice.trim();
-      if(text){const start=part.index+offset+slice.indexOf(text);excerpts.push({index:excerpts.length,text,start,end:start+text.length});}
-      offset=end;
+export function answerExcerpts(answer: string | null | undefined) {
+  if (!answer || typeof answer !== 'string') return [];
+  const excerpts: { index: number; text: string; start: number; end: number }[] = [];
+  for (const part of new Intl.Segmenter('en', { granularity: 'sentence' }).segment(answer)) {
+    for (let offset = 0; offset < part.segment.length; ) {
+      let end = Math.min(offset + 1200, part.segment.length);
+      if (end < part.segment.length) {
+        const boundary = part.segment.lastIndexOf(' ', end);
+        if (boundary > offset) end = boundary;
+      }
+      const lastUnit = part.segment.charCodeAt(end - 1);
+      if (end < part.segment.length && lastUnit >= 0xd800 && lastUnit <= 0xdbff) end--;
+      const slice = part.segment.slice(offset, end),
+        text = slice.trim();
+      if (text) {
+        const start = part.index + offset + slice.indexOf(text);
+        excerpts.push({ index: excerpts.length, text, start, end: start + text.length });
+      }
+      offset = end;
     }
   }
   return excerpts;
 }
 
+/**
+ * Normalizes attempt answers array to align strictly with the expected canonical question count (3-8).
+ * Guarantees that every item is a valid string, missing items are defaulted to "",
+ * and length strictly matches expectedCount.
+ */
+export function normalizeAttemptAnswers(answers: unknown, expectedCount: number): string[] {
+  const targetLength = Math.max(3, Math.min(8, expectedCount));
+  const list = Array.isArray(answers) ? answers : [];
+  const normalized: string[] = [];
+  for (let i = 0; i < targetLength; i++) {
+    const val = list[i];
+    normalized.push(typeof val === 'string' ? val : '');
+  }
+  return normalized;
+}
+
 /** The provider selects source spans. It never supplies the quotation displayed to a learner. */
-export function resolveSchoolsFeedback(raw:unknown,answers:string[]):SchoolsFeedback {
-  const provider=schoolsProviderFeedbackSchema.parse(raw);
-  const excerpts=answers.map(answerExcerpts);
-  return schoolsFeedbackSchema.parse({questions:provider.questions.map(question=>({...question,
-    elements:question.elements.map(({firstExcerpt,lastExcerpt,...element})=>{
-      if(!element.present){if(firstExcerpt!==null||lastExcerpt!==null)throw new Error('Absent elements must not claim supporting text');return {...element,supportingText:''};}
-      const parts=excerpts[question.questionIndex];
-      if(firstExcerpt===null||lastExcerpt===null||lastExcerpt<firstExcerpt||!parts?.[firstExcerpt]||!parts[lastExcerpt])throw new Error('Unexpected excerpt selection');
-      return {...element,supportingText:answers[question.questionIndex].slice(parts[firstExcerpt].start,parts[lastExcerpt].end)};
-    }),
-  }))});
+export function resolveSchoolsFeedback(raw: unknown, answers: string[]): SchoolsFeedback {
+  const provider = schoolsProviderFeedbackSchema.parse(raw);
+  const normalizedAnswers = normalizeAttemptAnswers(answers, provider.questions.length);
+  const excerpts = normalizedAnswers.map(answerExcerpts);
+  return schoolsFeedbackSchema.parse({
+    questions: provider.questions.map((question) => ({
+      ...question,
+      elements: question.elements.map(({ firstExcerpt, lastExcerpt, ...element }) => {
+        if (!element.present) {
+          if (firstExcerpt !== null || lastExcerpt !== null)
+            throw new Error('Absent elements must not claim supporting text');
+          return { ...element, supportingText: '' };
+        }
+        const parts = excerpts[question.questionIndex];
+        if (
+          firstExcerpt === null ||
+          lastExcerpt === null ||
+          lastExcerpt < firstExcerpt ||
+          !parts?.[firstExcerpt] ||
+          !parts[lastExcerpt]
+        )
+          throw new Error('Unexpected excerpt selection');
+        return {
+          ...element,
+          supportingText: normalizedAnswers[question.questionIndex].slice(
+            parts[firstExcerpt].start,
+            parts[lastExcerpt].end
+          ),
+        };
+      }),
+    })),
+  });
 }
 
 /** Only validated answer excerpts can contribute to the count. Client totals are never read. */

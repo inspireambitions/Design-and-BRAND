@@ -106,20 +106,36 @@ export function SchoolsFeedback({
   if (!ready) {
     return (
       <section className="schools-card" aria-busy={busy}>
-        <h2>Your Practice Feedback</h2>
-        <p role="status">{message || 'Preparing your evidence-based feedback. Your answers are saved.'}</p>
+        <h2>Interview Complete</h2>
+        <p role="status">{message || "We're preparing your feedback. Your answers are saved."}</p>
+        <p style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
+          Your answers are saved securely. You can wait here or leave and return to your assignments at any time.
+        </p>
         {busy ? (
-          <progress aria-label="Preparing your feedback" style={{ width: '100%', height: '8px' }} />
+          <progress aria-label="Preparing your feedback" style={{ width: '100%', height: '8px', marginTop: '12px' }} />
         ) : (
-          <button
-            onClick={() => {
-              setBusy(true);
-              setMessage('Preparing your feedback. Allow up to two minutes. Your answers are saved.');
-              setCycle((value) => value + 1);
-            }}
-          >
-            Check feedback again
-          </button>
+          <div style={{ display: 'flex', gap: '16px', marginTop: '16px', alignItems: 'center' }}>
+            <button
+              type="button"
+              onClick={() => {
+                setBusy(true);
+                setMessage("We're preparing your feedback. Your answers are saved.");
+                setCycle((value) => value + 1);
+              }}
+            >
+              Check feedback again
+            </button>
+            <Link
+              href="/schools/me"
+              style={{
+                fontSize: '14px',
+                color: '#075c50',
+                textDecoration: 'underline',
+              }}
+            >
+              Return to my assignments
+            </Link>
+          </div>
         )}
       </section>
     );
